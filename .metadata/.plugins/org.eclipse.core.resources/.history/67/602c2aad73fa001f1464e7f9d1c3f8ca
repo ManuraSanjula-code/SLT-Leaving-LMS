@@ -1,0 +1,510 @@
+package com.slt.peotv.userservice.lms.service.impl;
+
+import com.slt.peotv.userservice.lms.entity.AddressEntity;
+import com.slt.peotv.userservice.lms.entity.PasswordResetTokenEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
+import com.slt.peotv.userservice.lms.repository.*;
+import com.slt.peotv.userservice.lms.security.UserPrincipal;
+import com.slt.peotv.userservice.lms.service.UserService;
+import com.slt.peotv.userservice.lms.shared.Messaging.UserEventPublisher;
+import com.slt.peotv.userservice.lms.shared.Utils;
+import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
+import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    Utils utils;
+
+    @Autowired
+    BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    @Autowired
+    PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    RoleRepository roleRepository;
+
+    @Autowired
+    AddressRepository addressRepository;
+
+    @Autowired
+    ProfilesRepo profilesRepo;
+
+    @Autowired
+    SectionRepo sectionRepo;
+
+    @Autowired
+    AuthorityRepository authorityRepo;
+
+    @Autowired
+    UserEventPublisher eventPublisher;
+
+    private final ModelMapper modelMapper = new ModelMapper();
+
+    private static final String UPLOAD_DIR = System.getProperty("user.home") + "/uploads/";
+
+    @Override
+    public UserDto createUser(UserDto user) {
+        if (userRepository.findByEmail(user.getEmail()) != null)
+            throw new UserServiceException("Record already exists");
+
+        for (int i = 0; i < user.getAddresses().size(); i++) {
+            AddressDTO address = user.getAddresses().get(i);
+            address.setUserDetails(user);
+            address.setAddressId(utils.generateAddressId(30));
+            user.getAddresses().set(i, address);
+        }
+
+        /// ===============================================================
+
+        List<SectionEntity> sectionEntities = new ArrayList<>();
+        List<ProfilesEntity> profilesEntities = new ArrayList<>();
+        
+        user.getSections().forEach(sect->{
+            SectionEntity bySection = sectionRepo.findBySection(sect);
+            sectionEntities.add(bySection);
+
+        });
+        
+        user.getProfiles().forEach(profile->{
+            ProfilesEntity byName = profilesRepo.findByName(profile);
+            profilesEntities.add(byName);
+        });;
+       
+        /// ==============================================================
+
+        //BeanUtils.copyProperties(user, userEntity);
+        UserEntity userEntity = modelMapper.map(user, UserEntity.class);
+
+        String publicUserId = utils.generateUserId(30);
+        userEntity.setUserId(publicUserId);
+        userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+        userEntity.setEmailVerificationToken(utils.generateEmailVerificationToken(publicUserId));
+
+        /// ========================================
+
+        userEntity.setSections(sectionEntities);
+        userEntity.setProfiles(profilesEntities);
+
+        /// =========================================
+        Collection<RoleEntity> roleEntities = new HashSet<>();
+        for (String role : user.getRoles()) {
+            RoleEntity roleEntity = roleRepository.findByName(role);
+            if (roleEntity != null) {
+                roleEntities.add(roleEntity);
+            }
+        }
+
+        userEntity.setRoles(roleEntities);
+
+        /// ======================================== ********************************************
+
+        List<SectionEntity> sections_list = new ArrayList<>();
+        List<ProfilesEntity> profile_list = new ArrayList<>();
+
+        user.getSections().forEach(sect->{
+            SectionEntity sec = sectionRepo.findBySection(sect);
+            sections_list.add(sec);
+
+        });
+        user.getProfiles().forEach(profile->{
+            ProfilesEntity pr = profilesRepo.findByName(profile);
+            profile_list.add(pr);
+        });
+        
+        userEntity.setSections(sectionEntities);
+        userEntity.setProfiles(profilesEntities);
+       
+        /// ======================================== ********************************************
+
+        
+        // Send an email message to user to verify their email address
+        //amazonSES.verifyEmail(returnValue);
+
+        UserEntity storedUserDetails = userRepository.save(userEntity);
+        
+        List<SectionEntity> sections_list_save = (List<SectionEntity>) storedUserDetails.getSections();
+        List<ProfilesEntity> profile_list_save = (List<ProfilesEntity>) storedUserDetails.getProfiles();
+        
+        sections_list_save.forEach(en->{
+        	List<UserEntity> user_list = (List<UserEntity>) en.getUsers();
+        	
+        	if(user_list.isEmpty())
+        		user_list = new ArrayList<>();
+        	
+        	user_list.add(storedUserDetails);
+            Collection<UserEntity> collection = user_list;
+
+        	en.setUsers(collection);
+        	sectionRepo.save(en);
+        });
+        
+        profile_list_save.forEach(en->{
+        	List<UserEntity> user_list = (List<UserEntity>) en.getUsers();
+        	
+        	if(user_list.isEmpty())
+        		user_list = new ArrayList<>();
+        	
+        	user_list.add(storedUserDetails);
+            Collection<UserEntity> collection = user_list;
+
+        	en.setUsers(collection);
+        	profilesRepo.save(en);
+        });
+
+        return modelMapper.map(storedUserDetails, UserDto.class);
+    }
+
+    @Override
+    public UserDto updateUserProfile(MultipartFile file, String userid) throws Exception {
+        UserEntity user = userRepository.findByUserId(userid);
+        if (user == null)
+            throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Files.createDirectories(uploadPath);
+
+        String fileName = utils.generateUserId(10) + file.getOriginalFilename();
+        user.setProfilePic(fileName);
+
+        Path filePath = uploadPath.resolve(Objects.requireNonNull(fileName));
+        file.transferTo(filePath.toFile());
+
+        UserEntity save = userRepository.save(user);
+        return modelMapper.map(save, UserDto.class);
+    }
+
+    @Override
+    public UserDto getUser(String email) {
+        UserEntity userEntity = userRepository.findByEmail(email);
+
+        if (userEntity == null)
+            throw new UsernameNotFoundException(email);
+
+        return modelMapper.map(userEntity, UserDto.class);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        UserEntity userEntity = userRepository.findByEmail(email);
+
+        if (userEntity == null)
+            throw new UsernameNotFoundException(email);
+
+        return new UserPrincipal(userEntity);
+    }
+
+    @Override
+    public UserDto getUserByUserId(String userId) {
+        UserEntity userEntity = userRepository.findByUserId(userId);
+
+        if (userEntity == null)
+            throw new UsernameNotFoundException("User with ID: " + userId + " not found");
+
+        UserDto userDto = modelMapper.map(userEntity, UserDto.class);
+        List<String> roles = new ArrayList<>();
+        List<String> auths = new ArrayList<>();
+
+        userEntity.getRoles().forEach(roleEntity -> {
+            roles.add(roleEntity.getName());
+            roleEntity.getAuthorities().forEach(authorityEntity -> {
+                auths.add(authorityEntity.getName());
+            });
+        });
+
+        userDto.setAuthorities(auths);
+        userDto.setRoles(roles);
+        return userDto;
+    }
+    
+    @Override
+    public UserDto updateUser(String userId, UserDto userDto) {
+        // Find the user entity by userId
+        UserEntity userEntity = userRepository.findByUserId(userId);
+
+        if (userEntity == null) {
+            throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        }
+
+        // Update user details if provided in the DTO
+        if (userDto.getFirstName() != null && !userDto.getFirstName().trim().isEmpty()) {
+            userEntity.setFirstName(userDto.getFirstName());
+        }
+
+        if (userDto.getLastName() != null && !userDto.getLastName().trim().isEmpty()) {
+            userEntity.setLastName(userDto.getLastName());
+        }
+
+        if (userDto.getEmail() != null && !userDto.getEmail().trim().isEmpty()) {
+            userEntity.setEmail(userDto.getEmail());
+        }
+
+        if (userDto.getPhone() != null) {
+            userEntity.setPhone(userDto.getPhone());
+        }
+
+        if (userDto.getGender() != null) {
+            userEntity.setGender(userDto.getGender());
+        }
+
+        if (userDto.getIsSltEmp() != null) {
+            userEntity.setIsSltEmp(userDto.getIsSltEmp());
+        }
+
+        if (userDto.getIsSltIntern() != null) {
+            userEntity.setIsSltIntern(userDto.getIsSltIntern());
+        }      
+
+        // Save the updated user entity
+        UserEntity updatedUserEntity = userRepository.save(userEntity);
+
+        // Return the updated user as a DTO
+        return new ModelMapper().map(updatedUserEntity, UserDto.class);
+    }
+
+    @Transactional
+    @Override
+    public void deleteUser(String userId) {
+        UserEntity userEntity = userRepository.findByUserId(userId);
+
+        if (userEntity == null)
+            throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        userRepository.delete(userEntity);
+
+    }
+
+    @Override
+    public List<UserDto> getUsers(int page, int limit) {
+        List<UserDto> returnValue = new ArrayList<>();
+
+        if (page > 0) page = page - 1;
+
+        Pageable pageableRequest = PageRequest.of(page, limit);
+
+        Page<UserEntity> usersPage = userRepository.findAll(pageableRequest);
+        List<UserEntity> users = usersPage.getContent();
+
+        for (UserEntity userEntity : users) {
+        	
+        	Collection<String> roles = new ArrayList();
+        	Collection<String> authorities =  new ArrayList();
+        	Collection<String> sections =  new ArrayList();
+        	Collection<String> profiles = new ArrayList();
+        	
+        	userEntity.getRoles().forEach(role->{
+        		roles.add(role.getName());
+        		role.getAuthorities().forEach(aut->{
+            		authorities.add(aut.getName());
+        		});
+        	});
+        	
+        	userEntity.getSections().forEach(sec->{
+        		sections.add(sec.getSection());
+        	});
+        	
+        	userEntity.getProfiles().forEach(sec->{
+        		profiles.add(sec.getName());
+        	});
+        	
+        	UserDto userDto = new UserDto();
+            BeanUtils.copyProperties(userEntity, userDto);
+            
+            userDto.setSections(sections);
+            userDto.setAuthorities(authorities);
+            userDto.setRoles(roles);
+            userDto.setProfiles(profiles);
+            
+            returnValue.add(userDto);
+        }
+
+        return returnValue;
+    }
+
+    @Override
+    public boolean verifyEmailToken(String token) {
+        boolean returnValue = false;
+
+        // Find user by token
+        UserEntity userEntity = userRepository.findUserByEmailVerificationToken(token);
+
+        if (userEntity != null) {
+            boolean hastokenExpired = Utils.hasTokenExpired(token);
+            if (!hastokenExpired) {
+                userEntity.setEmailVerificationToken(null);
+                userEntity.setEmailVerificationStatus(Boolean.TRUE);
+                userRepository.save(userEntity);
+                returnValue = true;
+            }
+        }
+
+        return returnValue;
+    }
+
+    @Override
+    public boolean requestPasswordReset(String email) {
+
+        boolean returnValue = false;
+
+        UserEntity userEntity = userRepository.findByEmail(email);
+
+        if (userEntity == null) {
+            return returnValue;
+        }
+
+        String token = new Utils().generatePasswordResetToken(userEntity.getUserId());
+
+        PasswordResetTokenEntity passwordResetTokenEntity = new PasswordResetTokenEntity();
+        passwordResetTokenEntity.setToken(token);
+        passwordResetTokenEntity.setUserDetails(userEntity);
+        passwordResetTokenRepository.save(passwordResetTokenEntity);
+
+        return !returnValue;
+    }
+
+    @Override
+    public boolean resetPassword(String token, String password) {
+        boolean returnValue = false;
+
+        if (Utils.hasTokenExpired(token)) {
+            return returnValue;
+        }
+
+        PasswordResetTokenEntity passwordResetTokenEntity = passwordResetTokenRepository.findByToken(token);
+
+        if (passwordResetTokenEntity == null) {
+            return returnValue;
+        }
+
+        // Prepare new password
+        String encodedPassword = bCryptPasswordEncoder.encode(password);
+
+        // Update User password in database
+        UserEntity userEntity = passwordResetTokenEntity.getUserDetails();
+        userEntity.setEncryptedPassword(encodedPassword);
+        UserEntity savedUserEntity = userRepository.save(userEntity);
+
+        // Verify if password was saved successfully
+        if (savedUserEntity != null && savedUserEntity.getEncryptedPassword().equalsIgnoreCase(encodedPassword)) {
+            returnValue = true;
+        }
+
+        // Remove Password Reset token from database
+        passwordResetTokenRepository.delete(passwordResetTokenEntity);
+
+        return returnValue;
+    }
+
+    @Override
+    public Resource loadImageAsResource(String imageName) throws MalformedURLException {
+        Path filePath = Paths.get(UPLOAD_DIR).resolve(imageName).normalize();
+        Resource resource = new UrlResource(filePath.toUri());
+        if (resource.exists()) {
+            return resource;
+        } else {
+            throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        }
+    }
+
+    @Override
+    public UserEntity getUserByE(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public Resource getImage(String userId) throws MalformedURLException {
+        String profilePic = userRepository.findByUserId(userId).getProfilePic();
+        return this.loadImageAsResource(profilePic);
+    }
+
+    @Override
+    public void resetPassWord(UserPasswordReset userPasswordReset) {
+        UserEntity user = userRepository.findByUserId(userPasswordReset.getUserId());
+        if (bCryptPasswordEncoder.matches(userPasswordReset.getCurrentPassword(), user.getEncryptedPassword())) {
+            if (userPasswordReset.getNewPassword().equals(userPasswordReset.getConfirmPassword())) {
+                user.setEncryptedPassword(bCryptPasswordEncoder.encode(userPasswordReset.getNewPassword()));
+                userRepository.save(user);
+            }
+        }
+    }
+
+    @Override
+    public boolean userAddress(String userId) {
+        UserEntity userEntity = userRepository.findByUserId(userId);
+        if (userEntity.getAddresses() == null) {
+            return false;
+        } else if (userEntity.getAddresses().isEmpty()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public ProfilesEntity createProfiles(String name, ProfileReq req) {
+        if (getProfiles(name) == null) {
+            ProfilesEntity map = modelMapper.map(req, ProfilesEntity.class);
+            map.setPublicId(utils.generateAddressId(30));
+            map.setName(name);
+            return profilesRepo.save(map);
+        } else
+            return null;
+
+    }
+
+    @Override
+    public SectionEntity createSection(String name) {
+        if (getSection(name) == null) {
+
+            SectionEntity sectionEntity = new SectionEntity();
+            sectionEntity.setPublicId(utils.generateAddressId(30));
+            sectionEntity.setSection(name);
+
+            return sectionRepo.save(sectionEntity);
+        } else
+            return null;
+    }
+
+    @Override
+    public SectionEntity getSection(String name) {
+        return sectionRepo.findBySection(name);
+    }
+
+    @Override
+    public ProfilesEntity getProfiles(String name) {
+        return profilesRepo.findByName(name);
+    }
+
+}

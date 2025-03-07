@@ -1,0 +1,177 @@
+package com.slt.peotv.userservice.lms;
+
+import java.util.Arrays;
+import java.util.Collection;
+import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.repository.*;
+import com.slt.peotv.userservice.lms.service.UserService;
+import com.slt.peotv.userservice.lms.shared.Roles;
+import com.slt.peotv.userservice.lms.shared.Utils;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+
+@Component
+public class InitialUsersSetup {
+
+    @Autowired
+    AuthorityRepository authorityRepository;
+
+    @Autowired
+    RoleRepository roleRepository;
+
+    @Autowired
+    ProfilesRepo profilesRepo;
+
+    @Autowired
+    BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    @Autowired
+    Utils utils;
+
+    @Autowired
+    UserRepository userRepository;
+    
+    private final ModelMapper modelMapper = new ModelMapper();
+
+    @Autowired
+    private SectionRepo sectionRepo;
+
+    @Autowired
+    private UserService userService;
+
+    @EventListener
+    @Transactional
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        System.out.println("From Application ready event...");
+
+        AuthorityEntity readAuthority = createAuthority("READ_AUTHORITY");
+        AuthorityEntity writeAuthority = createAuthority("WRITE_AUTHORITY");
+        AuthorityEntity deleteAuthority = createAuthority("DELETE_AUTHORITY");
+
+        createRole(Roles.ROLE_USER.name(), Arrays.asList(readAuthority,writeAuthority));
+        
+        RoleEntity roleAdmin = createRole(Roles.ROLE_ADMIN.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
+        RoleEntity roleCEO = createRole(Roles.ROLE_CEO.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
+        RoleEntity roleEMPLOYEE = createRole(Roles.ROLE_EMPLOYEE.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
+        RoleEntity roleHOD = createRole(Roles.ROLE_HOD.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
+        RoleEntity roleSUPAVISOR = createRole(Roles.ROLE_SUPERVISOR.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
+        
+
+        try{
+            SectionEntity he_mcr = userService.createSection("HE/MCR");
+            SectionEntity is_var = userService.createSection("IS/VAS");
+            SectionEntity finance = userService.createSection("FINANCE");
+            SectionEntity sales = userService.createSection("SALES");
+            SectionEntity admin = userService.createSection("ADMIN");
+            SectionEntity leagal = userService.createSection("LEAGAL");
+            SectionEntity marketing = userService.createSection("MARKETING");
+            SectionEntity media = userService.createSection("MEDIA");
+            
+            
+            createProfiles("VC-VAS", getProfile());
+            createProfiles("HEADQUARTERS-EMPLOYEE", getProfile());
+            createProfiles("OUT-STATION-STAFF", getProfile());
+
+        }catch (Exception e){
+            System.out.println(e.getMessage());
+        }
+
+        if(roleAdmin == null) return;
+
+        UserEntity adminUser = new UserEntity();
+        adminUser.setFirstName("Admin");
+        adminUser.setLastName("nullable");
+        adminUser.setEmail("admin@test.com");
+        adminUser.setEmailVerificationStatus(false);
+        adminUser.setUserId(utils.generateUserId(30));
+        adminUser.setEncryptedPassword(bCryptPasswordEncoder.encode("12345678"));
+        adminUser.setRoles(Arrays.asList(roleAdmin, roleCEO,roleEMPLOYEE, roleHOD , roleSUPAVISOR));
+
+        UserEntity storedUserDetails = userRepository.findByEmail("manura@test.com");
+        if (storedUserDetails == null) {
+            userRepository.save(adminUser);
+        }
+    }
+
+    @Transactional
+    protected AuthorityEntity createAuthority(String name) {
+
+        AuthorityEntity authority = authorityRepository.findByName(name);
+        if (authority == null) {
+            authority = new AuthorityEntity(name);
+            authorityRepository.save(authority);
+        }
+        return authority;
+    }
+
+    @Transactional
+    protected RoleEntity createRole(
+            String name, Collection<AuthorityEntity> authorities) {
+
+        RoleEntity role = roleRepository.findByName(name);
+        if (role == null) {
+            role = new RoleEntity(name);
+            role.setAuthorities(authorities);
+            roleRepository.save(role);
+        }
+        return role;
+    }
+    
+    protected ProfileReq getProfile() {
+    	ProfileReq req = new ProfileReq();
+    	
+    	req.setWorkEnds("17:00:00");
+    	req.setHdStart("13:00:59");
+    	
+    	req.setGracePeriodeStart("09:00:59"); 
+
+    	req.setSlStartMorning("10:00:59");
+    	req.setSlStartEvening("15:30:00");
+    	
+    	req.setDefaultHrs("8.5");
+    	req.setHdHrs("4");
+    	req.setMinHrsForSl("7");
+    	req.setFlexiDays("0");
+    	
+    	req.setFlexiHrsStart("08:59:59");
+    	req.setHdEndsMorning("12:29:59");
+    	req.setIgnoreSl("0");
+    	req.setShortLeaveCount("2");
+    	req.setMinHrsForSl("7");
+    	req.setFlexiHrsStart("08:59:59");
+    	
+    	req.setPossibleFpLocations("*");
+    	req.setWorkStart("08:30:00");
+    	
+    	return req;
+    }
+        
+    @Transactional
+    protected ProfilesEntity createProfiles(String name, ProfileReq req) {
+        ProfilesEntity map = modelMapper.map(req, ProfilesEntity.class);
+        map.setPublicId(utils.generateAddressId(30));
+        map.setName(name);
+        return profilesRepo.save(map);
+    }
+
+    @Transactional
+    protected SectionEntity createSection(String name) {
+        SectionEntity section = new SectionEntity();
+        section.setPublicId(utils.generateAddressId(30));
+        section.setSection(name);
+        return sectionRepo.save(section);
+    }
+
+
+}
