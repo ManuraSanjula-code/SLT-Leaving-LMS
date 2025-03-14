@@ -48,7 +48,7 @@ const authSlice = createSlice({
       state.errorMessage = action.payload;
       state.successMessage = null;
     },
-    clearAuth: (state, bool) => {
+    clearAuth: (state) => {
       state.jwt = null;
       state.userId = null;
       state.userDetails = {

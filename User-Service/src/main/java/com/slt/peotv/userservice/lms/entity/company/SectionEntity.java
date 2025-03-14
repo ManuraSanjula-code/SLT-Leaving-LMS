@@ -1,15 +1,22 @@
 package com.slt.peotv.userservice.lms.entity.company;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name="section")
@@ -67,7 +74,9 @@ public class SectionEntity implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         SectionEntity that = (SectionEntity) o;
         return id == that.id && Objects.equals(section, that.section) && Objects.equals(publicId, that.publicId) && Objects.equals(users, that.users);
     }

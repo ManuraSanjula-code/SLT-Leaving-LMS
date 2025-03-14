@@ -17,8 +17,9 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import axios from "axios";
-import { useRouter } from 'next/navigation'; 
-import { setCredentials } from '../redux/authSlice'; // Replace with the correct path
+import { useRouter } from 'next/navigation';
+import { setCredentials, setUserDetails } from '../redux/authSlice'; // Replace with the correct path
+
 const LoginPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false); // State for Snackbar visibility
   const [snackbarMessage, setSnackbarMessage] = useState(""); // Message to display
@@ -41,31 +42,43 @@ const LoginPage = () => {
         password,
       }, { withCredentials: true });
 
-      const token = response.headers['authentication']?.replace('Bearer ', '');
+      // After successful login
+      const authorizationHeader = response.headers['authorization']?.replace('Bearer ', '');
       const userId = response.headers['userid'];
 
-      // Dispatch to Redux
+      // First set local storage
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('jwt', authorizationHeader);
+
+      // Then dispatch credentials
       dispatch(setCredentials({
-        jwt: token,
+        jwt: authorizationHeader,
         userId: userId
       }));
 
-      // Handle successful login
-      console.log("Login successful:", response.data);
-      setSnackbarMessage("Login successful!"); // Set success message
-      setSeverity("success"); // Set severity to success
-      setOpenSnackbar(true); // Show Snackbar
+      // Fetch user details
+      try {
+        const userDetailsRes = await axios.get(`http://localhost:8080/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${authorizationHeader}`
+          }
+        });
 
-      const userDetailsRes = await axios.get(`http://localhost:8080/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    
-      // Dispatch user details with roles
-      dispatch(setUserDetails(userDetailsRes.data)); 
+        // Dispatch user details
+        dispatch(setUserDetails(userDetailsRes.data));
 
-      return router.push('/dashboard');
-      
+        // Wait for state updates
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Redirect only after all state is updated
+        router.push('/dashboard');
+      } catch (error) {
+        console.error("Failed to fetch user details:", error);
+        handleLogout();
+      }
+
     } catch (error) {
+      console.log(error)
       // Handle login error
       console.error("Login failed:", error.response ? error.response.data : error.message);
       setSnackbarMessage(

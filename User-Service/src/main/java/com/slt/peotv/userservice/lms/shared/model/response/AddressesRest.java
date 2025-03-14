@@ -9,7 +9,7 @@ public class AddressesRest extends RepresentationModel<AddressesRest> {
 	private String streetName;
 	private String postalCode;
 	private Boolean isDefault;
-	
+
 	public Boolean getIsDefault() {
 		return isDefault;
 	}

@@ -1,6 +1,37 @@
 package com.slt.peotv.userservice.lms.contoller;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.slt.peotv.userservice.lms.UserServiceApplication;
 import com.slt.peotv.userservice.lms.entity.RoleEntity;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
@@ -9,25 +40,6 @@ import com.slt.peotv.userservice.lms.repository.UserRepository;
 import com.slt.peotv.userservice.lms.service.UserService;
 import com.slt.peotv.userservice.lms.shared.Roles;
 import com.slt.peotv.userservice.lms.shared.Utils;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.io.InputStream;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 class LMSResponse{
@@ -45,7 +57,7 @@ class LMSResponse{
 		super();
 		this.message = message;
 	}
-	
+
 }
 
 @RestController
@@ -62,7 +74,6 @@ public class FileUploadController {
     private RoleRepository roleRepository;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final Map<String, String> tempPasswords = new ConcurrentHashMap<>();
 
     @PostMapping("/json")
     public ResponseEntity<String> uploadJson(@RequestParam("file") MultipartFile file) {
@@ -135,7 +146,7 @@ public class FileUploadController {
 
             } else {
                 String tempPassword = UUID.randomUUID().toString();
-                tempPasswords.put(user.getEmail(), passwordEncoder.encode(tempPassword));
+                UserServiceApplication.tempPasswords.put(user.getEmail(), passwordEncoder.encode(tempPassword));
                 user.setEncryptedPassword(tempPassword); // Store unencrypted password in DB
                 userRepository.save(user);
             }
@@ -200,8 +211,9 @@ public class FileUploadController {
                 List<SectionEntity> sectionEntities = new ArrayList<>();
                 String section_  = record.get(21);
                 SectionEntity section = userService.getSection(section_);
-                if(section == null)
-                    section = userService.createSection(section_);
+                if(section == null) {
+					section = userService.createSection(section_);
+				}
 
                 sectionEntities.add(section);
                 user.setSections(sectionEntities);

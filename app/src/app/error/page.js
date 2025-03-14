@@ -3,7 +3,7 @@
 import { Container, Typography, Button, Box } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import { useRouter } from "next/navigation";
-import NavBar from "@/app/components/navbar/NavBar";
+import NavBar from "../components/navbar/NavBar";
 
 export default function ErrorPage() {
   const router = useRouter();

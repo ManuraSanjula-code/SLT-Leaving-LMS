@@ -1,22 +1,17 @@
 package com.slt.peotv.userservice.lms.service.impl;
 
-import com.slt.peotv.userservice.lms.entity.AddressEntity;
-import com.slt.peotv.userservice.lms.entity.PasswordResetTokenEntity;
-import com.slt.peotv.userservice.lms.entity.RoleEntity;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
-import com.slt.peotv.userservice.lms.repository.*;
-import com.slt.peotv.userservice.lms.security.UserPrincipal;
-import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.shared.Messaging.UserEventPublisher;
-import com.slt.peotv.userservice.lms.shared.Utils;
-import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
-import com.slt.peotv.userservice.lms.shared.dto.UserDto;
-import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
-import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
-import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,11 +27,30 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import com.slt.peotv.userservice.lms.entity.AddressEntity;
+import com.slt.peotv.userservice.lms.entity.PasswordResetTokenEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
+import com.slt.peotv.userservice.lms.repository.AddressRepository;
+import com.slt.peotv.userservice.lms.repository.AuthorityRepository;
+import com.slt.peotv.userservice.lms.repository.PasswordResetTokenRepository;
+import com.slt.peotv.userservice.lms.repository.ProfilesRepo;
+import com.slt.peotv.userservice.lms.repository.RoleRepository;
+import com.slt.peotv.userservice.lms.repository.SectionRepo;
+import com.slt.peotv.userservice.lms.repository.UserRepository;
+import com.slt.peotv.userservice.lms.security.UserPrincipal;
+import com.slt.peotv.userservice.lms.service.UserService;
+import com.slt.peotv.userservice.lms.shared.Utils;
+import com.slt.peotv.userservice.lms.shared.Messaging.UserEventPublisher;
+import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto_;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
+import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -77,123 +91,85 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public UserDto createUser(UserDto user) {
-		if (userRepository.findByEmail(user.getEmail()) != null)
-			throw new UserServiceException("Record already exists");
+	    if (userRepository.findByEmail(user.getEmail()) != null) {
+	        throw new UserServiceException("Record already exists");
+	    }
 
-		for (int i = 0; i < user.getAddresses().size(); i++) {
-			AddressDTO address = user.getAddresses().get(i);
-			address.setUserDetails(user);
-			address.setAddressId(utils.generateAddressId(30));
-			user.getAddresses().set(i, address);
-		}
+	    UserEntity userEntity = modelMapper.map(user, UserEntity.class);
+	    String publicUserId = utils.generateUserId(30);
+	    userEntity.setUserId(publicUserId);
+	    userEntity.setJoin_date(new Date());
+	    // Initialize the addresses list
+	    List<AddressEntity> addressEntities = new ArrayList<>();
+	    for (AddressDTO addressDto : user.getAddresses()) {
+	        AddressEntity addressEntity = modelMapper.map(addressDto, AddressEntity.class);
+	        addressEntity.setUserDetails(userEntity); // Associate with UserEntity
+	        String publicAddressId = utils.generateUserId(30);
+	        addressEntity.setAddressId(publicAddressId);
+	        addressEntities.add(addressEntity);
+	    }
+	    userEntity.setAddresses(addressEntities); // Set the addresses list
 
-		/// ===============================================================
+	    userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
 
-		List<SectionEntity> sectionEntities = new ArrayList<>();
-		List<ProfilesEntity> profilesEntities = new ArrayList<>();
+	    // Handle roles, sections, and profiles
+	    Collection<SectionEntity> sectionEntities = new HashSet<>();
+	    Collection<ProfilesEntity> profilesEntities = new HashSet<>();
+	    Collection<RoleEntity> roleEntities = new HashSet<>();
 
-		user.getSections().forEach(sect -> {
-			SectionEntity bySection = sectionRepo.findBySection(sect);
-			sectionEntities.add(bySection);
+	    for (String role : user.getRoles()) {
+	        RoleEntity roleEntity = roleRepository.findByName(role);
+	        if (roleEntity != null) {
+	            roleEntities.add(roleEntity);
+	        }
+	    }
 
-		});
+	    user.getSections().forEach(sect -> {
+	        SectionEntity sec = sectionRepo.findBySection(sect);
+	        if (sec != null) {
+	            sectionEntities.add(sec);
+	        }
+	    });
 
-		user.getProfiles().forEach(profile -> {
-			ProfilesEntity byName = profilesRepo.findByName(profile);
-			profilesEntities.add(byName);
-		});
-		;
+	    user.getProfiles().forEach(profile -> {
+	        ProfilesEntity pr = profilesRepo.findByName(profile);
+	        if (pr != null) {
+	            profilesEntities.add(pr);
+	        }
+	    });
 
-		/// ==============================================================
+	    userEntity.setRoles(roleEntities);
+	    userEntity.setSections(sectionEntities);
+	    userEntity.setProfiles(profilesEntities);
 
-		// BeanUtils.copyProperties(user, userEntity);
-		UserEntity userEntity = modelMapper.map(user, UserEntity.class);
+	    // Save the user entity, which should cascade to addresses
+	    UserEntity storedUserDetails = userRepository.save(userEntity);
 
-		String publicUserId = utils.generateUserId(30);
-		userEntity.setUserId(publicUserId);
-		userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-		userEntity.setEmailVerificationToken(utils.generateEmailVerificationToken(publicUserId));
+	    // Update the sections, profiles, and roles with the new user
+	    storedUserDetails.getSections().forEach(sec -> {
+	        sec.getUsers().add(storedUserDetails);
+	        sectionRepo.save(sec);
+	    });
 
-		/// ========================================
+	    storedUserDetails.getProfiles().forEach(pro -> {
+	        pro.getUsers().add(storedUserDetails);
+	        profilesRepo.save(pro);
+	    });
 
-		userEntity.setSections(sectionEntities);
-		userEntity.setProfiles(profilesEntities);
+	    storedUserDetails.getRoles().forEach(role -> {
+	        role.getUsers().add(storedUserDetails);
+	        roleRepository.save(role);
+	    });
 
-		/// =========================================
-		Collection<RoleEntity> roleEntities = new HashSet<>();
-		for (String role : user.getRoles()) {
-			RoleEntity roleEntity = roleRepository.findByName(role);
-			if (roleEntity != null) {
-				roleEntities.add(roleEntity);
-			}
-		}
-
-		userEntity.setRoles(roleEntities);
-
-		/// ========================================
-		/// ********************************************
-
-		List<SectionEntity> sections_list = new ArrayList<>();
-		List<ProfilesEntity> profile_list = new ArrayList<>();
-
-		user.getSections().forEach(sect -> {
-			SectionEntity sec = sectionRepo.findBySection(sect);
-			sections_list.add(sec);
-
-		});
-		user.getProfiles().forEach(profile -> {
-			ProfilesEntity pr = profilesRepo.findByName(profile);
-			profile_list.add(pr);
-		});
-
-		userEntity.setSections(sectionEntities);
-		userEntity.setProfiles(profilesEntities);
-
-		/// ========================================
-		/// ********************************************
-
-		// Send an email message to user to verify their email address
-		// amazonSES.verifyEmail(returnValue);
-
-		UserEntity storedUserDetails = userRepository.save(userEntity);
-
-		List<SectionEntity> sections_list_save = (List<SectionEntity>) storedUserDetails.getSections();
-		List<ProfilesEntity> profile_list_save = (List<ProfilesEntity>) storedUserDetails.getProfiles();
-
-		sections_list_save.forEach(en -> {
-			List<UserEntity> user_list = (List<UserEntity>) en.getUsers();
-
-			if (user_list.isEmpty())
-				user_list = new ArrayList<>();
-
-			user_list.add(storedUserDetails);
-			Collection<UserEntity> collection = user_list;
-
-			en.setUsers(collection);
-			sectionRepo.save(en);
-		});
-
-		profile_list_save.forEach(en -> {
-			List<UserEntity> user_list = (List<UserEntity>) en.getUsers();
-
-			if (user_list.isEmpty())
-				user_list = new ArrayList<>();
-
-			user_list.add(storedUserDetails);
-			Collection<UserEntity> collection = user_list;
-
-			en.setUsers(collection);
-			profilesRepo.save(en);
-		});
-
-		return modelMapper.map(storedUserDetails, UserDto.class);
+	    return modelMapper.map(storedUserDetails, UserDto.class);
 	}
 
 	@Override
 	public UserDto updateUserProfile(MultipartFile file, String userid) throws Exception {
 		UserEntity user = userRepository.findByUserId(userid);
-		if (user == null)
+		if (user == null) {
 			throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+		}
 
 		Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
 		Files.createDirectories(uploadPath);
@@ -212,8 +188,9 @@ public class UserServiceImpl implements UserService {
 	public UserDto getUser(String email) {
 		UserEntity userEntity = userRepository.findByEmail(email);
 
-		if (userEntity == null)
+		if (userEntity == null) {
 			throw new UsernameNotFoundException(email);
+		}
 
 		return modelMapper.map(userEntity, UserDto.class);
 	}
@@ -222,8 +199,9 @@ public class UserServiceImpl implements UserService {
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 		UserEntity userEntity = userRepository.findByEmail(email);
 
-		if (userEntity == null)
+		if (userEntity == null) {
 			throw new UsernameNotFoundException(email);
+		}
 
 		return new UserPrincipal(userEntity);
 	}
@@ -232,8 +210,9 @@ public class UserServiceImpl implements UserService {
 	public UserDto getUserByUserId(String userId) {
 		UserEntity userEntity = userRepository.findByUserId(userId);
 
-		if (userEntity == null)
+		if (userEntity == null) {
 			throw new UsernameNotFoundException("User with ID: " + userId + " not found");
+		}
 
 		UserDto userDto = modelMapper.map(userEntity, UserDto.class);
 		List<String> roles = new ArrayList<>();
@@ -293,52 +272,50 @@ public class UserServiceImpl implements UserService {
 		// Return the updated user as a DTO
 		return new ModelMapper().map(updatedUserEntity, UserDto.class);
 	}
-	
+
 	private List<AddressEntity> handleAddresses(UserEntity userEntity, List<AddressDTO> addressDtos) {
-	    List<AddressEntity> updatedAddresses = new ArrayList<>();
+		List<AddressEntity> updatedAddresses = new ArrayList<>();
 
-	    for (AddressDTO addressDto : addressDtos) {
-	        AddressEntity addressEntity;
+		for (AddressDTO addressDto : addressDtos) {
+			AddressEntity addressEntity;
 
-	        if (addressDto.getAddressId() == null || addressDto.getAddressId().isEmpty()) {
-	            // Create a new address
-	            addressEntity = new AddressEntity();
-	            addressEntity.setAddressId(UUID.randomUUID().toString()); // Generate a unique ID
-	            addressEntity.setUserDetails(userEntity);
-	        } else {
-	            // Try to find an existing address
-	            addressEntity = userEntity.getAddresses().stream()
-	                    .filter(addr -> addr.getAddressId().equals(addressDto.getAddressId()))
-	                    .findFirst()
-	                    .orElse(null);
+			if (addressDto.getAddressId() == null || addressDto.getAddressId().isEmpty()) {
+				// Create a new address
+				addressEntity = new AddressEntity();
+				addressEntity.setAddressId(UUID.randomUUID().toString()); // Generate a unique ID
+				addressEntity.setUserDetails(userEntity);
+			} else {
+				// Try to find an existing address
+				addressEntity = userEntity.getAddresses().stream()
+						.filter(addr -> addr.getAddressId().equals(addressDto.getAddressId())).findFirst().orElse(null);
 
-	            if (addressEntity == null) {
-	                // If the address is not found, treat it as a new address
-	                addressEntity = new AddressEntity();
-	                addressEntity.setAddressId(utils.generateAddressId(10)); // Generate a new unique ID
-	                addressEntity.setUserDetails(userEntity);
-	            }
-	        }
+				if (addressEntity == null) {
+					// If the address is not found, treat it as a new address
+					addressEntity = new AddressEntity();
+					addressEntity.setAddressId(utils.generateAddressId(10)); // Generate a new unique ID
+					addressEntity.setUserDetails(userEntity);
+				}
+			}
 
-	        // Update address details
-	        addressEntity.setCity(addressDto.getCity());
-	        addressEntity.setCountry(addressDto.getCountry());
-	        addressEntity.setStreetName(addressDto.getStreetName());
-	        addressEntity.setPostalCode(addressDto.getPostalCode());
+			// Update address details
+			addressEntity.setCity(addressDto.getCity());
+			addressEntity.setCountry(addressDto.getCountry());
+			addressEntity.setStreetName(addressDto.getStreetName());
+			addressEntity.setPostalCode(addressDto.getPostalCode());
 
-	        // Handle default address logic
-	        if (Boolean.TRUE.equals(addressDto.getIsDefault())) {
-	            // Set all other addresses to non-default
-	            userEntity.getAddresses().forEach(addr -> addr.setIsDefault(false));
-	            addressEntity.setIsDefault(true);
-	        } else {
-	            addressEntity.setIsDefault(false);
-	        }
+			// Handle default address logic
+			if (Boolean.TRUE.equals(addressDto.getIsDefault())) {
+				// Set all other addresses to non-default
+				userEntity.getAddresses().forEach(addr -> addr.setIsDefault(false));
+				addressEntity.setIsDefault(true);
+			} else {
+				addressEntity.setIsDefault(false);
+			}
 
-	        updatedAddresses.add(addressEntity);
-	    }
+			updatedAddresses.add(addressEntity);
+		}
 
-	    return updatedAddresses;
+		return updatedAddresses;
 	}
 
 	private List<AddressEntity> handleAddresses_(UserEntity userEntity, List<AddressDTO> addressDtos) {
@@ -384,8 +361,9 @@ public class UserServiceImpl implements UserService {
 	public void deleteUser(String userId) {
 		UserEntity userEntity = userRepository.findByUserId(userId);
 
-		if (userEntity == null)
+		if (userEntity == null) {
 			throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+		}
 
 		userRepository.delete(userEntity);
 
@@ -395,8 +373,9 @@ public class UserServiceImpl implements UserService {
 	public List<UserDto> getUsers(int page, int limit) {
 		List<UserDto> returnValue = new ArrayList<>();
 
-		if (page > 0)
+		if (page > 0) {
 			page = page - 1;
+		}
 
 		Pageable pageableRequest = PageRequest.of(page, limit);
 
@@ -565,8 +544,9 @@ public class UserServiceImpl implements UserService {
 			map.setPublicId(utils.generateAddressId(30));
 			map.setName(name);
 			return profilesRepo.save(map);
-		} else
+		} else {
 			return null;
+		}
 
 	}
 
@@ -579,8 +559,9 @@ public class UserServiceImpl implements UserService {
 			sectionEntity.setSection(name);
 
 			return sectionRepo.save(sectionEntity);
-		} else
+		} else {
 			return null;
+		}
 	}
 
 	@Override
@@ -591,6 +572,44 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public ProfilesEntity getProfiles(String name) {
 		return profilesRepo.findByName(name);
+	}
+
+	@Override
+	public List<UserDto_> findByRoleName(String roleName) {
+		List<UserDto_> returnValue = new ArrayList<>();
+
+		userRepository.findByRoleName(roleName.toUpperCase()).forEach(user->{
+			UserDto_ userDto = new UserDto_();
+
+			userDto.setUserId(user.getUserId());
+			userDto.setFirstName(user.getFirstName());
+			userDto.setLastName(user.getLastName());
+			userDto.setEmail(user.getEmail());
+			userDto.setEmployeeId(user.getEmployeeId());
+			userDto.setSltId(user.getSltId());
+			returnValue.add(userDto);
+		});;
+		
+		return returnValue;
+	}
+
+	@Override
+	public List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative() {
+		List<UserDto_> returnValue = new ArrayList<>();
+
+		userRepository.findUsersWithOnlyChairmanAndCeoRolesNative().forEach(user->{
+			UserDto_ userDto = new UserDto_();
+			
+			userDto.setUserId(user.getUserId());
+			userDto.setFirstName(user.getFirstName());
+			userDto.setLastName(user.getLastName());
+			userDto.setEmail(user.getEmail());
+			userDto.setEmployeeId(user.getEmployeeId());
+			userDto.setSltId(user.getSltId());
+			returnValue.add(userDto);
+		});;
+		
+		return returnValue;
 	}
 
 }

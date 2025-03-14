@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { useEffect } from "react";
 import { Box, Typography, Button, Container, Paper, Grid } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
-import NavBar from "@/app/components/navbar/NavBar";
+import NavBar from "../components/navbar/NavBar";
 
 export default function UnauthorizedPage() {
   const router = useRouter();

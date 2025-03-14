@@ -1,19 +1,20 @@
 package com.slt.peotv.userservice.lms.security;
 
-import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
-import com.slt.peotv.userservice.lms.entity.RoleEntity;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
+import java.util.Collection;
+import java.util.HashSet;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.HashSet;
+import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
 
 public class UserPrincipal implements UserDetails {
 
 	private static final long serialVersionUID = -7530187709860249942L;
-	
+
 	private UserEntity userEntity;
 	private String userId;
 
@@ -24,24 +25,26 @@ public class UserPrincipal implements UserDetails {
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		
+
 		Collection<GrantedAuthority> authorities = new HashSet<>();
 		Collection<AuthorityEntity> authorityEntities = new HashSet<>();
-		
+
 		// Get user Roles
 		Collection<RoleEntity> roles = userEntity.getRoles();
-		
-        if(roles == null) return authorities;
-        
+
+        if(roles == null) {
+			return authorities;
+		}
+
         roles.forEach((role) -> {
             authorities.add(new SimpleGrantedAuthority(role.getName()));
             authorityEntities.addAll(role.getAuthorities());
        });
-        
+
         authorityEntities.forEach((authorityEntity) ->{
             authorities.add(new SimpleGrantedAuthority(authorityEntity.getName()));
         });
-		
+
 		return authorities;
 	}
 

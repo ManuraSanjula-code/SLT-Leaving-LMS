@@ -1,15 +1,22 @@
 package com.slt.peotv.userservice.lms.entity.company;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name="profile")
@@ -231,7 +238,9 @@ public class ProfilesEntity implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
         ProfilesEntity that = (ProfilesEntity) o;
         return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(publicId, that.publicId) && Objects.equals(workStart, that.workStart) && Objects.equals(workEnds, that.workEnds) && Objects.equals(ignoreSl, that.ignoreSl) && Objects.equals(gracePeriodeStart, that.gracePeriodeStart) && Objects.equals(hdStart, that.hdStart) && Objects.equals(slStartMorning, that.slStartMorning) && Objects.equals(slStartEvening, that.slStartEvening) && Objects.equals(possibleFpLocations, that.possibleFpLocations) && Objects.equals(defaultHrs, that.defaultHrs) && Objects.equals(hdHrs, that.hdHrs) && Objects.equals(minHrsForSl, that.minHrsForSl) && Objects.equals(shortLeaveCount, that.shortLeaveCount) && Objects.equals(hdEndsMorning, that.hdEndsMorning) && Objects.equals(flexiDays, that.flexiDays) && Objects.equals(flexiHrsStart, that.flexiHrsStart) && Objects.equals(users, that.users);
     }

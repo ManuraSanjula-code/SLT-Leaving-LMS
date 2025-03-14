@@ -1,97 +1,105 @@
 package com.slt.peotv.userservice.lms.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import jakarta.persistence.*;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+
 @Entity
-@Table(name="users")
+@Table(name = "users")
 public class UserEntity implements Serializable {
- 
+
 	private static final long serialVersionUID = 5313493413859894403L;
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@JsonIgnore
 	private long id;
-	
+
 	private String userId;
 
 	private String employeeId;
-	
+
 	private String sltId;
 
-	private String firstName;
-	
-	private String lastName;
-	
-	private String email;
-	
-	@Column(nullable=false)
+	private String firstName; //-
+
+	private String lastName; //-
+
+	private String email; //-
+
+	@Column(nullable = false)
 	@JsonIgnore
 	private String encryptedPassword;
-	
+
 	@JsonIgnore
 	private String emailVerificationToken;
-	
+
 	@JsonIgnore
 	private Boolean emailVerificationStatus = false;
 
-	@OneToMany(mappedBy="userDetails", cascade=CascadeType.ALL)
-	private List<AddressEntity> addresses;
-	
+	@OneToMany(mappedBy = "userDetails", cascade = CascadeType.ALL, orphanRemoval = true)
+	@JsonManagedReference
+	private List<AddressEntity> addresses; //-
+
 	private String profilePic;
 
 	@Column(name = "gender", length = 1)
-	private String gender;
+	private String gender; //-
 
 	@Column(name = "phone", length = 45)
-	private String phone;
+	private String phone; //-
 
-	@Column(name = "is_slt_emp",columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltEmp;
-	@Column(name = "is_slt_intern",columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltIntern;
+	@Column(name = "is_slt_emp", columnDefinition = "int(10) unsigned default 0")
+	private Integer isSltEmp; //-
+	@Column(name = "is_slt_intern", columnDefinition = "int(10) unsigned default 0")
+	private Integer isSltIntern; //-
 
-	@Column(nullable=false)
-	private Integer active = 1;
+	@Column(nullable = false)
+	private Integer active = 1; //-
 
-	@ManyToMany(cascade= { CascadeType.PERSIST }, fetch = FetchType.EAGER )
-	@JoinTable(name="users_roles",
-			joinColumns=@JoinColumn(name="users_id",referencedColumnName="id"),
-			inverseJoinColumns=@JoinColumn(name="roles_id",referencedColumnName="id"))
-	@Column(nullable=false)
+	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
+	@JoinTable(name = "users_roles", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "roles_id", referencedColumnName = "id"))
+	@Column(nullable = false)
 	@JsonManagedReference
-	private Collection<RoleEntity> roles;
+	private Collection<RoleEntity> roles; //-
 
-	@ManyToMany(cascade= { CascadeType.PERSIST }, fetch = FetchType.EAGER )
-	@JoinTable(name="users_profile",
-			joinColumns=@JoinColumn(name="users_id",referencedColumnName="id"),
-			inverseJoinColumns=@JoinColumn(name="profile_id",referencedColumnName="id"))
-	@Column(nullable=false)
-	private Collection<ProfilesEntity> profiles;
+	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
+	@JoinTable(name = "users_profile", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "profile_id", referencedColumnName = "id"))
+	@Column(nullable = false)
+	private Collection<ProfilesEntity> profiles; //-
 
-	@ManyToMany(cascade= { CascadeType.PERSIST }, fetch = FetchType.EAGER )
-	@JoinTable(name="users_section",
-			joinColumns=@JoinColumn(name="users_id",referencedColumnName="id"),
-			inverseJoinColumns=@JoinColumn(name="section_id",referencedColumnName="id"))
-	@Column(nullable=false)
-	private Collection<SectionEntity> sections;
-	
+	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
+	@JoinTable(name = "users_section", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "section_id", referencedColumnName = "id"))
+	@Column(nullable = false)
+	private Collection<SectionEntity> sections; //-
+
 	private Date join_date;
-	
+
 	@OneToOne
 	private UserEntity hod;
 	@OneToOne
 	private UserEntity supervisor;
-	
+
 	private Boolean roaster;
 
 	public String getSltId() {
@@ -217,6 +225,7 @@ public class UserEntity implements Serializable {
 	public void setAddresses(List<AddressEntity> addresses) {
 		this.addresses = addresses;
 	}
+
 	public String getProfilePic() {
 		return profilePic;
 	}
@@ -294,12 +303,12 @@ public class UserEntity implements Serializable {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if ((obj == null) || (getClass() != obj.getClass())) {
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		}
 		UserEntity other = (UserEntity) obj;
 		return Objects.equals(active, other.active) && Objects.equals(addresses, other.addresses)
 				&& Objects.equals(email, other.email)

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy element &apos;UserDto.java&apos; to &apos;com.slt.peotv.userservice.lms.shared.dto.UserDto.java&apos;&#x0A;- Original project: &apos;User-Service&apos;&#x0A;- Destination element: &apos;com.slt.peotv.userservice.lms.shared.dto.UserDto.java&apos;&#x0A;- Original element: &apos;com.slt.peotv.userservice.lms.shared.dto.UserDto.java&apos;" description="Copy compilation unit" destination="/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.slt.peotv.userservice.lms.shared.dto{UserDto.java" element1="/src\/main\/java=/optional=/true=/=/maven.pomderived=/true=/&lt;com.slt.peotv.userservice.lms.shared.dto{UserDto.java" files="0" flags="589830" folders="0" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyResources" stamp="1741945712615" units="1" version="1.0"/>
+</session>

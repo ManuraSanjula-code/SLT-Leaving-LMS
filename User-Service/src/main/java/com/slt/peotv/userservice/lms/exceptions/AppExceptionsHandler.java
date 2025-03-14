@@ -13,12 +13,12 @@ import java.util.NoSuchElementException;
 
 @ControllerAdvice
 public class AppExceptionsHandler {
-	
+
 	@ExceptionHandler(value = {UserServiceException.class})
 	public ResponseEntity<Object> handleUserServiceException(UserServiceException ex, WebRequest request)
 	{
 		ErrorMessage errorMessage = new ErrorMessage(new Date(), ex.getMessage());
-		
+
 		return new ResponseEntity<>(errorMessage, new HttpHeaders(), HttpStatus.BAD_REQUEST);
 	}
 
@@ -37,13 +37,13 @@ public class AppExceptionsHandler {
 
 		return new ResponseEntity<>(errorMessage, new HttpHeaders(), HttpStatus.NOT_FOUND);
 	}
-	
-	
+
+
 	@ExceptionHandler(value = {Exception.class})
 	public ResponseEntity<Object> handleOtherExceptions(Exception ex, WebRequest request)
 	{
 		ErrorMessage errorMessage = new ErrorMessage(new Date(), ex.getMessage());
-		
+
 		return new ResponseEntity<>(errorMessage, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 

@@ -2,16 +2,7 @@ package com.slt.peotv.userservice.lms;
 
 import java.util.Arrays;
 import java.util.Collection;
-import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
-import com.slt.peotv.userservice.lms.entity.RoleEntity;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import com.slt.peotv.userservice.lms.repository.*;
-import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.shared.Roles;
-import com.slt.peotv.userservice.lms.shared.Utils;
-import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,6 +10,20 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.repository.AuthorityRepository;
+import com.slt.peotv.userservice.lms.repository.ProfilesRepo;
+import com.slt.peotv.userservice.lms.repository.RoleRepository;
+import com.slt.peotv.userservice.lms.repository.SectionRepo;
+import com.slt.peotv.userservice.lms.repository.UserRepository;
+import com.slt.peotv.userservice.lms.service.UserService;
+import com.slt.peotv.userservice.lms.shared.Roles;
+import com.slt.peotv.userservice.lms.shared.Utils;
 import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
 
 @Component
@@ -41,7 +46,7 @@ public class InitialUsersSetup {
 
     @Autowired
     UserRepository userRepository;
-    
+
     private final ModelMapper modelMapper = new ModelMapper();
 
     @Autowired
@@ -60,7 +65,7 @@ public class InitialUsersSetup {
         AuthorityEntity deleteAuthority = createAuthority("DELETE_AUTHORITY");
 
         createRole(Roles.ROLE_USER.name(), Arrays.asList(readAuthority,writeAuthority));
-        
+
         RoleEntity roleAdmin = createRole(Roles.ROLE_ADMIN.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
         RoleEntity roleCEO = createRole(Roles.ROLE_CEO.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
         RoleEntity roleEMPLOYEE = createRole(Roles.ROLE_EMPLOYEE.name(), Arrays.asList(readAuthority,writeAuthority, deleteAuthority));
@@ -77,8 +82,8 @@ public class InitialUsersSetup {
             SectionEntity leagal = userService.createSection("LEAGAL");
             SectionEntity marketing = userService.createSection("MARKETING");
             SectionEntity media = userService.createSection("MEDIA");
-            
-            
+
+
             createProfiles("VC-VAS", getProfile());
             createProfiles("HEADQUARTERS-EMPLOYEE", getProfile());
             createProfiles("OUT-STATION-STAFF", getProfile());
@@ -87,7 +92,9 @@ public class InitialUsersSetup {
             System.out.println(e.getMessage());
         }
 
-        if(roleAdmin == null) return;
+        if(roleAdmin == null) {
+			return;
+		}
 
         UserEntity adminUser = new UserEntity();
         adminUser.setFirstName("Admin");
@@ -128,50 +135,59 @@ public class InitialUsersSetup {
         }
         return role;
     }
-    
+
     protected ProfileReq getProfile() {
     	ProfileReq req = new ProfileReq();
-    	
+
     	req.setWorkEnds("17:00:00");
     	req.setHdStart("13:00:59");
-    	
-    	req.setGracePeriodeStart("09:00:59"); 
+
+    	req.setGracePeriodeStart("09:00:59");
 
     	req.setSlStartMorning("10:00:59");
     	req.setSlStartEvening("15:30:00");
-    	
+
     	req.setDefaultHrs("8.5");
     	req.setHdHrs("4");
     	req.setMinHrsForSl("7");
     	req.setFlexiDays("0");
-    	
+
     	req.setFlexiHrsStart("08:59:59");
     	req.setHdEndsMorning("12:29:59");
     	req.setIgnoreSl("0");
     	req.setShortLeaveCount("2");
     	req.setMinHrsForSl("7");
     	req.setFlexiHrsStart("08:59:59");
-    	
+
     	req.setPossibleFpLocations("*");
     	req.setWorkStart("08:30:00");
-    	
+
     	return req;
     }
-        
+
     @Transactional
     protected ProfilesEntity createProfiles(String name, ProfileReq req) {
-        ProfilesEntity map = modelMapper.map(req, ProfilesEntity.class);
-        map.setPublicId(utils.generateAddressId(30));
-        map.setName(name);
-        return profilesRepo.save(map);
+    	ProfilesEntity profile = profilesRepo.findByName(name);
+    	if(profile == null) {
+    		ProfilesEntity map = modelMapper.map(req, ProfilesEntity.class);
+            map.setPublicId(utils.generateAddressId(30));
+            map.setName(name);
+            return profilesRepo.save(map);
+    	}
+        return profile;
     }
 
     @Transactional
     protected SectionEntity createSection(String name) {
-        SectionEntity section = new SectionEntity();
-        section.setPublicId(utils.generateAddressId(30));
-        section.setSection(name);
-        return sectionRepo.save(section);
+    	SectionEntity section_ = sectionRepo.findBySection(name);
+    	if(section_ == null)
+    	{
+    		SectionEntity section = new SectionEntity();
+            section.setPublicId(utils.generateAddressId(30));
+            section.setSection(name);
+            return sectionRepo.save(section);
+    	}
+    	return section_;
     }
 
 

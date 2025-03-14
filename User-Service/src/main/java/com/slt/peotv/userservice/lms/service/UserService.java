@@ -1,20 +1,19 @@
 package com.slt.peotv.userservice.lms.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.slt.peotv.userservice.lms.entity.RoleEntity;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import com.slt.peotv.userservice.lms.shared.dto.UserDto;
-import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
-import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
+import java.net.MalformedURLException;
+import java.util.List;
+
 import org.springframework.core.io.Resource;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.List;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto_;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
 
 public interface UserService extends UserDetailsService{
 	UserDto createUser(UserDto user) throws Exception;
@@ -38,4 +37,7 @@ public interface UserService extends UserDetailsService{
 
 	SectionEntity getSection(String name);
 	ProfilesEntity getProfiles(String name);
+	List<UserDto_> findByRoleName(String roleName);
+	List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative();
+
 }

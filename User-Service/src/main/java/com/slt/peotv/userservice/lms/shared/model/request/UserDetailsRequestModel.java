@@ -1,24 +1,24 @@
 package com.slt.peotv.userservice.lms.shared.model.request;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.Getter;
+import lombok.Setter;
+
 @Setter
 @Getter
 public class UserDetailsRequestModel {
-	
+
 	private String firstName;
 	private String lastName;
 	private String email;
 	private String password;
 	private List<AddressRequestModel> addresses = new ArrayList<>();
 	private String name;
-	private String section;	
+	private String section;
 	private String userId;
 	private String profilePic;
 	private Collection<String> roles;
@@ -32,7 +32,7 @@ public class UserDetailsRequestModel {
 	private Boolean isDefault;
 
 //	private List<AddressesRest> addresses;
-	
+
 
 	public String getName() {
 		return name;
@@ -88,12 +88,12 @@ public class UserDetailsRequestModel {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if ((obj == null) || (getClass() != obj.getClass())) {
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		}
 		UserDetailsRequestModel other = (UserDetailsRequestModel) obj;
 		return Objects.equals(active, other.active) && Objects.equals(addresses, other.addresses)
 				&& Objects.equals(email, other.email) && Objects.equals(firstName, other.firstName)

@@ -1,20 +1,6 @@
 package com.slt.peotv.userservice.lms.security.jwt.token.creator;
 
-import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.DirectEncrypter;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import com.slt.peotv.userservice.lms.security.SecurityConstants;
-import com.slt.peotv.userservice.lms.security.UserPrincipal;
-import com.slt.peotv.userservice.lms.security.jwt.property.JwtConfiguration;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.stereotype.Service;
+import static java.util.stream.Collectors.toList;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -24,7 +10,31 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static java.util.stream.Collectors.toList;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.stereotype.Service;
+
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.DirectEncrypter;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.slt.peotv.userservice.lms.security.SecurityConstants;
+import com.slt.peotv.userservice.lms.security.UserPrincipal;
+import com.slt.peotv.userservice.lms.security.jwt.property.JwtConfiguration;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))

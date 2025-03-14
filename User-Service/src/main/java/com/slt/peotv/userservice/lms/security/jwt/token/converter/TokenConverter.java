@@ -1,5 +1,12 @@
 package com.slt.peotv.userservice.lms.security.jwt.token.converter;
 
+import java.text.ParseException;
+import java.util.Date;
+import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.crypto.DirectDecrypter;
@@ -10,14 +17,9 @@ import com.nimbusds.jwt.SignedJWT;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.repository.UserRepository;
 import com.slt.peotv.userservice.lms.security.jwt.property.JwtConfiguration;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.text.ParseException;
-import java.util.Date;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -50,8 +52,9 @@ public class TokenConverter {
 
         UserEntity user = userRepo.findByEmail(signedJWT.getPayload().toJSONObject().get("sub").toString());
 
-        if (user == null)
-            return null;
+        if (user == null) {
+			return null;
+		}
 
 //        if (user.getPasswordResetToken() == null)
 //            return null;
@@ -63,16 +66,19 @@ public class TokenConverter {
         final Date expiration = claimsSet.getExpirationTime();
         Date todayDate = new Date();
 
-        if (expiration.before(todayDate))
-            return null;
+        if (expiration.before(todayDate)) {
+			return null;
+		}
 
         RSAKey publicKey = RSAKey.parse(signedJWT.getHeader().getJWK().toJSONObject());
-        if (!signedJWT.verify(new RSASSAVerifier(publicKey)))
-            return null;
+        if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
+			return null;
+		}
 
         String email = user.getEmail();
-        if (email == null)
-            return null;
+        if (email == null) {
+			return null;
+		}
         return email;
     }
 
@@ -83,23 +89,26 @@ public class TokenConverter {
         final Date expiration = claimsSet.getExpirationTime();
         Date todayDate = new Date();
 
-        if (expiration.before(todayDate))
-            return null;
+        if (expiration.before(todayDate)) {
+			return null;
+		}
 
         RSAKey publicKey = RSAKey.parse(signedJWT.getHeader().getJWK().toJSONObject());
 
-        if (!signedJWT.verify(new RSASSAVerifier(publicKey)))
-            return null;
+        if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
+			return null;
+		}
 
         UserEntity user = userRepo.findByUserId(signedJWT.getPayload().toJSONObject().get("sub").toString());
 
         String requestURI = request.getRequestURI();
         String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
 
-        if (user == null || !(Objects.equals(user.getUserId(), id)))
-            return null;
-        else
-            return user.getUserId();
+        if (user == null || !(Objects.equals(user.getUserId(), id))) {
+			return null;
+		} else {
+			return user.getUserId();
+		}
     }
 
 }

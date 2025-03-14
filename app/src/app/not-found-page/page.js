@@ -1,7 +1,7 @@
 // src/pages/NotFoundPage.js
 import { Box, Typography, Button } from "@mui/material";
 import { useRouter } from "next/navigation";
-import NavBar from "@/app/components/navbar/NavBar";
+import NavBar from "../components/navbar/NavBar";
 
 export default function NotFoundPage() {
   const router = useRouter();

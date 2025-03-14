@@ -13,6 +13,8 @@ public class UserDto implements Serializable{
     private String firstName;
     private String lastName;
     private String email;
+	private String employeeId;
+	private String sltId;
     private String password;
     private String encryptedPassword;
 	private String profilePic;
@@ -22,14 +24,47 @@ public class UserDto implements Serializable{
     private Collection<String> roles;
 	private Collection<String> Authorities;
 	private Collection<String> sections;
-	private Collection<String> profiles;	
+	private Collection<String> profiles;
 	private Integer isSltEmp;
 	private Integer isSltIntern;
 	private Integer active = 1;
 	private String phone;
 	private String gender;
-	
-	
+	private String hod;
+	private String supervisor;
+
+	public String getHod() {
+		return hod;
+	}
+
+	public void setHod(String hod) {
+		this.hod = hod;
+	}
+
+	public String getSupervisor() {
+		return supervisor;
+	}
+
+	public void setSupervisor(String supervisor) {
+		this.supervisor = supervisor;
+	}
+
+	public String getSltId() {
+		return sltId;
+	}
+
+	public void setSltId(String sltId) {
+		this.sltId = sltId;
+	}
+
+	public String getEmployeeId() {
+		return employeeId;
+	}
+
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
+	}
+
 	public Integer getIsSltEmp() {
 		return isSltEmp;
 	}
@@ -179,12 +214,12 @@ public class UserDto implements Serializable{
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if ((obj == null) || (getClass() != obj.getClass())) {
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
+		}
 		UserDto other = (UserDto) obj;
 		return Objects.equals(Authorities, other.Authorities) && Objects.equals(active, other.active)
 				&& Objects.equals(addresses, other.addresses) && Objects.equals(email, other.email)

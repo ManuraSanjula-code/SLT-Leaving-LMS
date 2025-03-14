@@ -1,14 +1,19 @@
 package com.slt.peotv.userservice.lms.entity;
 
-import jakarta.persistence.*;
-
 import java.io.Serializable;
- 
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+
 @Entity(name = "password_reset_tokens")
 public class PasswordResetTokenEntity implements Serializable {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 8051324316462829780L;
 

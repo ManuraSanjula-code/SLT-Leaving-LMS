@@ -1,26 +1,22 @@
 package com.slt.peotv.userservice.lms.contoller;
 
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
-import com.slt.peotv.userservice.lms.exceptions.UserUnAuthorizedServiceException;
-import com.slt.peotv.userservice.lms.repository.UserRepository;
-import com.slt.peotv.userservice.lms.service.AddressService;
-import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.shared.Roles;
-import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
-import com.slt.peotv.userservice.lms.shared.dto.UserDto;
-import com.slt.peotv.userservice.lms.shared.model.request.AddressRequestModel;
-import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
-import com.slt.peotv.userservice.lms.shared.model.request.UserDetailsRequestModel;
-import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
-import com.slt.peotv.userservice.lms.shared.model.response.*;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
@@ -29,22 +25,42 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.nio.file.Files;
-import java.util.*;
-import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
+import com.slt.peotv.userservice.lms.exceptions.UserUnAuthorizedServiceException;
+import com.slt.peotv.userservice.lms.repository.UserRepository;
+import com.slt.peotv.userservice.lms.service.AddressService;
+import com.slt.peotv.userservice.lms.service.UserService;
+import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto;
+import com.slt.peotv.userservice.lms.shared.dto.UserDto_;
+import com.slt.peotv.userservice.lms.shared.model.request.AddressRequestModel;
+import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
+import com.slt.peotv.userservice.lms.shared.model.request.UserDetailsRequestModel;
+import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
+import com.slt.peotv.userservice.lms.shared.model.response.AddressesRest;
+import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
+import com.slt.peotv.userservice.lms.shared.model.response.OperationStatusModel;
+import com.slt.peotv.userservice.lms.shared.model.response.RequestOperationStatus;
+import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
-	
+
 	public class UserMapper {
 	    public static UserDto mapToUserDto(UserDetailsRequestModel requestModel) {
 	        UserDto userDto = new UserDto();
@@ -63,7 +79,7 @@ public class UserController {
 	        userDto.setRoles(requestModel.getRoles());
 	        userDto.setSections(requestModel.getSections());
 	        userDto.setProfiles(requestModel.getProfiles());
-	        
+
 	        // Map AddressRequestModel list to AddressDTO list
 	        List<AddressDTO> addressDTOs = requestModel.getAddresses().stream().map(UserMapper::mapToAddressDTO).collect(Collectors.toList());
 	        userDto.setAddresses(addressDTOs);
@@ -133,15 +149,27 @@ public class UserController {
 
 	@Autowired
 	AddressService addressesService;
-	
+
 	@Autowired
-	UserRepository userRepo; 
+	UserRepository userRepo;
 
 	@GetMapping(path = "/{userid}")
 	public UserRest getUser(@PathVariable String userid) {
 		UserDto userDto = userService.getUserByUserId(userid);
 		ModelMapper modelMapper = new ModelMapper();
 		return modelMapper.map(userDto, UserRest.class);
+	}
+	
+	@GetMapping(path = "/get-role/{name}")
+	public List<UserDto_> getRole(@PathVariable String name) {
+		List<UserDto_> userDto = userService.findByRoleName(name);
+		return userDto;
+	}
+	
+	@GetMapping(path = "/get-role/ceo-chair")
+	public List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative(@PathVariable String userid) {
+		List<UserDto_> userDto = userService.findUsersWithOnlyChairmanAndCeoRolesNative();
+		return userDto;
 	}
 
 	@PostMapping("/profiles/{name}")
@@ -168,7 +196,7 @@ public class UserController {
 	public boolean checkAddress(@PathVariable String userid) {
 		return userService.userAddress(userid);
 	}
-	
+
 	@PutMapping("/upload-pic/{userid}")
 	public UserRest updateUserProfile(@PathVariable String userid, @RequestParam("image") MultipartFile file) throws Exception {
 		ModelMapper modelMapper = new ModelMapper();
@@ -176,26 +204,16 @@ public class UserController {
 		return modelMapper.map(createdUser, UserRest.class);
 	}
 
-	@PostMapping()
-	public UserRest createUser(@RequestBody UserDetailsRequestModel userDetails) throws Exception {
-		UserRest returnValue = new UserRest();
-
-		ModelMapper modelMapper = new ModelMapper();
-		UserDto userDto = modelMapper.map(userDetails, UserDto.class);
-		userDto.setRoles(new HashSet<>(Arrays.asList(Roles.ROLE_USER.name())));
-
-		UserDto createdUser = userService.createUser(userDto);
-		returnValue = modelMapper.map(createdUser, UserRest.class);
-
-		return returnValue;
+	@PostMapping("/add/employees/{userid}")
+	public UserDto createEmployee(@PathVariable String userid, @RequestBody UserDto userDetails) throws Exception {
+		return userService.createUser(userDetails);
 	}
-
 
 	@PutMapping(path = "/{userid}")
 	public UserRest updateUser(@PathVariable String userid, @RequestBody UserDetailsRequestModel userDetails) {
-	
+
 		UserDto updateUser = userService.updateUser(userid, UserMapper.mapToUserDto(userDetails));
-		
+
 		return UserMapper.mapUserDtoToUserRest(updateUser);
 	}
 
@@ -216,7 +234,7 @@ public class UserController {
 		List<UserRest> returnValue = new ArrayList<>();
 
 		List<UserDto> users = userService.getUsers(page, limit);
- 
+
 		for (UserDto userDto : users) {
 			UserRest userModel = new UserRest();
 			BeanUtils.copyProperties(userDto, userModel);
@@ -225,13 +243,13 @@ public class UserController {
 
 		return returnValue;
 	}
-	
+
 
     @GetMapping("/all")
     public Page<UserEntity> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         Pageable pageable = PageRequest.of(page, size);
         return userRepo.findAll(pageable);
     }
@@ -247,16 +265,16 @@ public class UserController {
 			Type listType = new TypeToken<List<AddressesRest>>() {
 			}.getType();
 			returnValue = new ModelMapper().map(addressesDTO, listType);
-			
+
 			for (AddressesRest addressRest : returnValue) {
 				Link selfLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class)
 						.getUserAddress(addressId, addressRest.getAddressId()))
 						.withSelfRel();
 				addressRest.add(selfLink);
 			}
-			
+
 		}
-		
+
 		Link userLink = WebMvcLinkBuilder.linkTo(UserController.class).slash(addressId).withRel("user");
 		Link selfLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class)
 				.getUserAddresses(addressId))
@@ -272,7 +290,7 @@ public class UserController {
 
 		ModelMapper modelMapper = new ModelMapper();
 		AddressesRest returnValue = modelMapper.map(addressesDto, AddressesRest.class);
-		
+
 		Link userLink = WebMvcLinkBuilder.linkTo(UserController.class).slash(userId).withRel("user");
 		Link userAddressesLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserAddresses(userId))
 				.withRel("addresses");
@@ -280,7 +298,7 @@ public class UserController {
 				.getUserAddress(userId, addressId))
 				.withSelfRel();
 
- 	
+
 		return EntityModel.of(returnValue, Arrays.asList(userLink,userAddressesLink, selfLink));
 	}
 
@@ -290,11 +308,13 @@ public class UserController {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		String username = authentication.getName();
 
-		if(!Objects.equals(username, userId))
+		if(!Objects.equals(username, userId)) {
 			throw new UserUnAuthorizedServiceException(ErrorMessages.AUTHENTICATION_FAILED.getErrorMessage());
+		}
 
-		if(!userPasswordReset.getNewPassword().equals(userPasswordReset.getNewPassword()))
+		if(!userPasswordReset.getNewPassword().equals(userPasswordReset.getNewPassword())) {
 			throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+		}
 
 		userService.resetPassWord(userPasswordReset);
 	}

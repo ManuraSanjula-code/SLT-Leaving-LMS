@@ -1,17 +1,19 @@
 package com.slt.peotv.userservice.lms.security.jwt.util;
 
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import com.slt.peotv.userservice.lms.entity.UserEntity;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import static java.util.stream.Collectors.toList;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class SecurityContextUtil {
@@ -21,14 +23,19 @@ public class SecurityContextUtil {
 
     public static void setSecurityContext(SignedJWT signedJWT) {
         try {
-            if(signedJWT == null) return;
+            if(signedJWT == null) {
+				return;
+			}
 
             JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-            if(claims == null) return;
+            if(claims == null) {
+				return;
+			}
 
             String username = claims.getSubject();
-            if (username == null)
-                return;
+            if (username == null) {
+				return;
+			}
             List<String> authorities = claims.getStringListClaim("authorities");
             UserEntity applicationUser = new UserEntity();
             applicationUser.setFirstName(username);

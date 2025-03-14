@@ -1,129 +1,81 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { hasAccess } from "./roleAccess";
-import UnauthorizedPage from "./unauthorized/page";
 import { Box, CircularProgress } from "@mui/material";
-import {clearAuth } from "./redux/authSlice"
+import { clearAuth } from "./redux/authSlice";
 
 export default function ClientProtectedRoute({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const reduxUser = useSelector((state) => state.auth); // Use the correct slice name
+  const dispatch = useDispatch();
+  const reduxUser = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUnauthorized, setIsUnauthorized] = useState(false);
-  const [isServerError, setIsServerError] = useState(false); // New state for server errors
 
   const handleLogout = () => {
-    document.cookie = "userId=; path=/;";
-    document.cookie = "jwt=; path=/;";
-    dispatch(clearAuth()); // Now dispatch is defined
-    router.push("/login");
-  };
-
-
-  // Get cookies
-  const getUserIdFromCookie = () => {
-    return document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("userId="))
-      ?.split("=")[1];
-  };
-
-  const getJwtFromCookie = () => {
-    return document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("jwt="))
-      ?.split("=")[1];
+    try {
+      localStorage.removeItem('userId');
+      localStorage.removeItem('jwt');
+      dispatch(clearAuth());
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   useEffect(() => {
-    // Handle login route
+    const verifyAuth = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        const jwt = localStorage.getItem('jwt');
 
-    // if (pathname === "/login") {
-    //   if (reduxUser?.userId && getJwtFromCookie()) {
-    //     router.replace("/dashboard"); // Redirect authenticated users
-    //     return;
-    //   }
-    //   setIsLoading(false);
-    //   return;
-    // }
+        // Skip protection checks for these routes
+        if (["/login", "/error", "/unauthorized"].includes(pathname)) {
+          if (pathname === "/login" && (userId || reduxUser?.userId)) {
+            router.replace("/dashboard");
+          }
+          setIsLoading(false);
+          return;
+        }
 
-    if (pathname === "/login" || pathname === "/error") {
-      if (pathname === "/login" && reduxUser?.userId && getJwtFromCookie()) {
-        router.replace("/dashboard");
-        return;
+        if (!userId || !jwt) {
+          await handleLogout();
+          return;
+        }
+
+        if (reduxUser.loading) return;
+
+        if (!reduxUser.userId || reduxUser.userId !== userId) {
+          await handleLogout();
+          return;
+        }
+
+        const roles = reduxUser.userDetails?.roles || [];
+        
+        if (roles.length === 0) {
+          console.error("No roles found - server error");
+          await handleLogout();
+          return;
+        }
+
+        const hasRouteAccess = hasAccess(roles, pathname);
+        
+        if (!hasRouteAccess) {
+          router.push("/unauthorized");
+          return;
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Auth verification error:", error);
+        await handleLogout();
       }
-      setIsLoading(false);
-      return;
-    }
+    };
 
-    // Check authentication
-    const userIdCookie = getUserIdFromCookie();
-    const jwtCookie = getJwtFromCookie();
-
-    if (!userIdCookie || !jwtCookie) {
-      router.push("/login");
-      setIsLoading(false);
-      return;
-    }
-
-    // Wait for user data to be fetched and validated
-    if (reduxUser.loading) {
-      return; // Still loading, do nothing
-    }
-
-    // Validate user data
-    if (!reduxUser.userId || reduxUser.userId !== userIdCookie) {
-      router.push("/login");
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if roles are available
-    const roles = reduxUser.userDetails?.roles || [];
-
-    // if (roles.length === 0) {
-    //   // No roles found, likely due to server error
-    //   // setIsServerError(true);
-    //   // setIsLoading(false);
-    //   handleLogout();
-    //   return;
-    // }
-
-    if (roles.length === 0 && pathname !== '/error') {
-      router.push('/error'); // Redirect to generic error instead of logout
-      setIsLoading(false);
-      return;
-    }
-
-    if (roles.length === 0) {
-      if (pathname !== '/error') {
-        router.push('/error');
-      }
-      setIsLoading(false);
-      return;
-    }
-
-    // Check role access
-    const hasRouteAccess = hasAccess(roles, pathname);
-
-    if (!hasRouteAccess) {
-      setIsUnauthorized(true);
-    }
-
-    setIsLoading(false);
-  }, [pathname, reduxUser, router]);
-
-  // Redirect for unauthorized access
-  useEffect(() => {
-    if (isUnauthorized) {
-      router.push("/unauthorized");
-    }
-  }, [isUnauthorized, router]);
+    verifyAuth();
+  }, [pathname, reduxUser, router, dispatch]);
 
   if (isLoading) {
     return (
@@ -136,14 +88,6 @@ export default function ClientProtectedRoute({ children }) {
         <CircularProgress size={60} thickness={4} />
       </Box>
     );
-  }
-
-  if (isServerError) {
-    return <UnauthorizedPage />;
-  }
-
-  if (isUnauthorized) {
-    return <UnauthorizedPage />;
   }
 
   return children;

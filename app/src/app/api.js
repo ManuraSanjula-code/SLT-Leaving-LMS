@@ -1,5 +1,3 @@
-/// After user been created it assign automataci leaves and it has own critiria upto 3 years
-
 import axios from 'axios';
 
 const apiClient = axios.create({
@@ -7,12 +5,24 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (!error.response) {
-      // No response from server (network error)
-      const router = useRouter();
-      router.push("/network-error"); // Redirect to network error page
+  response => response,
+  error => {
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          console.error("Unauthorized - redirecting to login");
+          localStorage.clear();
+          window.location.href = '/login';
+          break;
+        case 403:
+          console.error("Forbidden - redirecting to unauthorized");
+          window.location.href = '/unauthorized';
+          break;
+        default:
+          console.error("API Error:", error.response.data);
+      }
+    } else {
+      console.error("Network Error:", error.message);
     }
     return Promise.reject(error);
   }
@@ -22,6 +32,7 @@ export const fetchData = async (endpoint, jwt) => {
   try {
     const response = await apiClient.get(endpoint, {
       headers: { Authorization: `Bearer ${jwt}` },
+      withCredentials: true
     });
     return response.data;
   } catch (error) {
@@ -29,6 +40,24 @@ export const fetchData = async (endpoint, jwt) => {
     throw new Error('Failed to fetch data');
   }
 };
+
+
+export const fetchData_ = async (userId, jwt) => {
+  try {
+    const response = await apiClient.get(`/users/${userId}`);
+    
+    // Validate response structure
+    if (!response.data || !response.data.roles) {
+      throw new Error("Invalid user data response");
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("User details fetch failed:", error);
+    throw error;
+  }
+};
+
 
 export const putUserData = async (endpoint, jwt, payload) => {
   try {

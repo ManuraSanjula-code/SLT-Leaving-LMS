@@ -1,39 +1,49 @@
 package com.slt.peotv.userservice.lms.entity;
 
+import java.io.Serializable;
+import java.util.Collection;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
 
-import java.io.Serializable;
-import java.util.Collection;
- 
 @Entity
 @Table(name="roles")
 public class RoleEntity implements Serializable {
 
 	private static final long serialVersionUID = 5605260522147928803L;
-	
+
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)
 	private long id;
-	
+
 	@Column(nullable=false, length=20)
 	private String name;
-	
+
 	@ManyToMany(mappedBy="roles")
 	@JsonBackReference
 	@JsonIgnore
 	private Collection<UserEntity> users;
-	
+
 	@ManyToMany(cascade= { CascadeType.PERSIST }, fetch = FetchType.EAGER )
-	@JoinTable(name="roles_authorities", 
-			joinColumns=@JoinColumn(name="roles_id",referencedColumnName="id"), 
+	@JoinTable(name="roles_authorities",
+			joinColumns=@JoinColumn(name="roles_id",referencedColumnName="id"),
 			inverseJoinColumns=@JoinColumn(name="authorities_id",referencedColumnName="id"))
 	private Collection<AuthorityEntity> authorities;
- 	
+
 	public RoleEntity() {}
-	
+
 	public RoleEntity(String name) {
 		 this.name = name;
 	}

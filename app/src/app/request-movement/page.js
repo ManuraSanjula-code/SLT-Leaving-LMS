@@ -3,7 +3,7 @@
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import RequestMovement from '../components/employee/RequestMovement';
-import NavBar from "@/app/components/navbar/NavBar";
+import NavBar from "../components/navbar/NavBar";
 
 function App() {
   return (

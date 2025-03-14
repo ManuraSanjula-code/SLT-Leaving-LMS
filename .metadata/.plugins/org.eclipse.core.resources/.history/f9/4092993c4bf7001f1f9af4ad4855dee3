@@ -1,5 +1,0 @@
-package com.slt.peotv.lmsmangmentservice.feign_client;
-
-public class UserClient {
-
-}

@@ -1,18 +1,21 @@
 package com.slt.peotv.userservice.lms.shared;
 
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Random;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.stereotype.Service;
+
 import com.slt.peotv.userservice.lms.security.SecurityConstants;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.SecretKey;
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.util.Date;
-import java.util.Random;
 
 @Service
 public class Utils {
