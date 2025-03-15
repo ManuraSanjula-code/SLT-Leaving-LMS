@@ -166,12 +166,6 @@ public class UserController {
 		return userDto;
 	}
 	
-	@GetMapping(path = "/get-role/ceo-chair")
-	public List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative(@PathVariable String userid) {
-		List<UserDto_> userDto = userService.findUsersWithOnlyChairmanAndCeoRolesNative();
-		return userDto;
-	}
-
 	@PostMapping("/profiles/{name}")
 	public ProfilesEntity createProfiles(@PathVariable String name, @RequestBody ProfileReq req){
 		return userService.createProfiles(name, req);

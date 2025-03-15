@@ -46,6 +46,8 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
     const [gender, setGender] = useState(employee?.gender || '');
     const [isSltEmp, setIsSltEmp] = useState(employee?.isSltEmp || 0);
     const [isSltIntern, setIsSltIntern] = useState(employee?.isSltIntern || 0);
+    const [isRoaster, setIsRoaster] = useState(employee?.isRoaster || 0);
+
     const [active, setActive] = useState(employee?.active || 1);
 
     const [employeeId, setEmployeeId] = useState(employee?.employeeId || '');
@@ -62,11 +64,12 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
     const [supervisorDialogOpen, setSupervisorDialogOpen] = useState(false);
     const [otherEmployeeDialogOpen, setOtherEmployeeDialogOpen] = useState(false);
 
-    const [selectedHod, setSelectedHod] = useState(employee?.hod || null);
-    const [selectedSupervisor, setSelectedSupervisor] = useState(employee?.supervisor || null);
-    const [selectedOtherEmployee, setSelectedOtherEmployee] = useState(employee?.otherEmployee || null);
+    const [selectedHod, setSelectedHod] = useState('');
+    const [selectedSupervisor, setSelectedSupervisor] = useState('');
+    const [selectedOtherEmployee, setSelectedOtherEmployee] = useState('');
     const [hodRoles, setHodRoles] = useState([]);
     const [sup, setSup] = useState([]);
+    const [otherRoles, setOtherRoles] = useState([]);
 
     const handleSelectHod = (hod) => {
         setSelectedHod(hod);
@@ -87,40 +90,57 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
         fetch("http://localhost:8080/users/get-role/ROLE_HOD")
             .then((response) => response.json())
             .then((result) => {
-                setHodRoles(result); // Updates state asynchronously
+                setHodRoles(result);
             })
             .catch((error) => console.error(error));
 
         fetch("http://localhost:8080/users/get-role/ROLE_SUPERVISOR")
             .then((response) => response.json())
             .then((result) => {
-                setSup(result); // Updates state asynchronously
+                setSup(result);
+            })
+            .catch((error) => console.error(error));
+
+        fetch("http://localhost:8080/users/get-role/ROLE_CEO")
+            .then((response) => response.json())
+            .then((result) => {
+                setOtherRoles(result);
+            })
+            .catch((error) => console.error(error));
+
+        fetch("http://localhost:8080/users/get-role/ROLE_CHAIRMAN")
+            .then((response) => response.json())
+            .then((result) => {
+                setOtherRoles(result);
             })
             .catch((error) => console.error(error));
     }, []);
 
     useEffect(() => {
 
-    }, [hodRoles, sup]);
+    }, [hodRoles, sup, otherRoles]);
 
     React.useEffect(() => {
         if (employee) {
             setSelectedRoles(employee.roles.map(role => role.name) || []);
             setSelectedSections(employee.sections.map(section => section.section) || []);
             setSelectedProfiles(employee.profiles.map(profile => profile.name) || []);
+            setSelectedHod(employee.hod)
+            setSelectedSupervisor(employee.supervisor)
+
         } else {
             setSelectedRoles([]);
             setSelectedSections([]);
             setSelectedProfiles([]);
         }
-    }, [employee]);
+    }, [employee, selectedHod, selectedSupervisor]);
 
     const handleSave = () => {
         const addressData = addresses.map(addr => ({
             city: addr.city,
             country: 'LK', // Hardcoded for simplicity
-            streetName: addr.street,
-            postalCode: addr.zip,
+            streetName: addr.streetName,
+            postalCode: addr.postalCode,
             isDefault: addr.isDefault,
         }));
         const newEmployee = {
@@ -138,10 +158,12 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
             isSltEmp: isSltEmp,
             isSltIntern: isSltIntern,
             active: active,
+            roaster: isRoaster,
             phone,
             gender,
-            hod: null, // Assuming this is not required
-            supervisor: null, // Assuming this is not required
+            hod: selectedHod.id,
+            supervisor: selectedSupervisor.id,
+            other: selectedOtherEmployee.id
         };
         onSave(newEmployee);
     };
@@ -149,10 +171,10 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
     const handleAddAddress = () => {
         const newAddress = {
             id: addresses.length + 1,
-            street: '',
+            streetName: '',
             city: '',
             state: '',
-            zip: '',
+            postalCode: '',
             isDefault: false,
         };
         setAddresses([...addresses, newAddress]);
@@ -346,8 +368,8 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                     label="Is SLT Intern"
                 />
                 <FormControlLabel
-                    control={<Checkbox checked={isSltIntern === 1}
-                        onChange={(e) => setIsSltIntern(e.target.checked ? 1 : 0)} />}
+                    control={<Checkbox checked={isRoaster === 1}
+                        onChange={(e) => setIsRoaster(e.target.checked ? 1 : 0)} />}
                     label="Is Roaster"
                 />
                 <FormControlLabel
@@ -367,7 +389,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                                 label="Street"
                                 value={address.streetName}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'Street', e.target.value)
+                                    handleAddressChange(address.id, 'streetName', e.target.value)
                                 }
                             />
                         </Grid>
@@ -387,7 +409,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                                 label="Postal Code"
                                 value={address.postalCode}
                                 onChange={(e) =>
-                                    handleAddressChange(address.postalCode, 'city', e.target.value)
+                                    handleAddressChange(address.id, 'postalCode', e.target.value)
                                 }
                             />
                         </Grid>
@@ -397,7 +419,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                                 label="Country"
                                 value={address.country}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'Country', e.target.value)
+                                    handleAddressChange(address.id, 'country', e.target.value)
                                 }
                             />
                         </Grid>
@@ -438,7 +460,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                         <TextField
                             fullWidth
                             label="HOD"
-                            value={selectedHod ? selectedHod.id : ''}
+                            value={selectedHod ? selectedHod.employeeId : ''}
                             InputProps={{
                                 readOnly: true,
                             }}
@@ -455,7 +477,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                         <TextField
                             fullWidth
                             label="Supervisor"
-                            value={selectedSupervisor ? selectedSupervisor.id : ''}
+                            value={selectedSupervisor ? selectedSupervisor.employeeId : ''}
                             InputProps={{
                                 readOnly: true,
                             }}
@@ -472,7 +494,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                         <TextField
                             fullWidth
                             label="Other Employee"
-                            value={selectedOtherEmployee ? selectedOtherEmployee.id : ''}
+                            value={selectedOtherEmployee ? selectedOtherEmployee.employeeId : ''}
                             InputProps={{
                                 readOnly: true,
                             }}
@@ -491,7 +513,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                     onClose={() => setHodDialogOpen(false)}
                     onSelect={handleSelectHod}
                     employees={hodRoles.map(hod => ({
-                        id: hod.employeeId, // Using userId as a unique identifier
+                        employeeId: hod.employeeId, // Using userId as a unique identifier
                         name: `${hod.firstName} ${hod.lastName}` // Combining first and last name
                     }))}
                     title="Select HOD"
@@ -502,7 +524,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                     onClose={() => setSupervisorDialogOpen(false)}
                     onSelect={handleSelectSupervisor}
                     employees={sup.map(sup => ({
-                        id: sup.employeeId, // Using userId as a unique identifier
+                        employeeId: sup.employeeId, // Using userId as a unique identifier
                         name: `${sup.firstName} ${sup.lastName}` // Combining first and last name
                     }))}
                     title="Select Supervisor"
@@ -512,11 +534,10 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                     open={otherEmployeeDialogOpen}
                     onClose={() => setOtherEmployeeDialogOpen(false)}
                     onSelect={handleSelectOtherEmployee}
-                    employees={[
-                        { id: '5', name: 'Other Employee 1' },
-                        { id: '6', name: 'Other Employee 2' },
-                        // Add more Other Employees here
-                    ]}
+                    employees={otherRoles.map(other => ({
+                        employeeId: other.employeeId, // Using userId as a unique identifier
+                        name: `${other.firstName} ${other.lastName}` // Combining first and last name
+                    }))}
                     title="Select Other Employee"
                 />
             </DialogContent>

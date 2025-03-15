@@ -18,7 +18,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	UserEntity findByEmail(String email);
 	UserEntity findByUserId(String userId);
 	UserEntity findUserByEmailVerificationToken(String token);
-
+	UserEntity findByEmployeeId(String employeeId);
     @Override
 	Page<UserEntity> findAll(Pageable pageable);
 
@@ -64,15 +64,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     // Custom query to find users by multiple roles
     @Query("SELECT u FROM UserEntity u JOIN u.roles r WHERE r.name IN :roleNames")
     List<UserEntity> findByRoleNames(@Param("roleNames") List<String> roleNames);
-    
-    @Query(value = "SELECT u.* FROM users u " +
-            "JOIN users_roles ur ON u.id = ur.users_id " +
-            "JOIN roles r ON ur.roles_id = r.id " +
-            "WHERE r.name IN ('ROLE_CHAIRMAN', 'ROLE_CEO') " +
-            "GROUP BY u.id " +
-            "HAVING COUNT(DISTINCT r.name) = 2 " +
-            "AND COUNT(DISTINCT r.name) = (SELECT COUNT(*) FROM users_roles ur2 WHERE ur2.users_id = u.id)",
-    nativeQuery = true)
-    List<UserEntity> findUsersWithOnlyChairmanAndCeoRolesNative();
-
+   
 }

@@ -37,15 +37,15 @@ public class UserEntity implements Serializable {
 
 	private String userId;
 
-	private String employeeId;
+	private String employeeId; //--
 
-	private String sltId;
+	private String sltId; //--
 
-	private String firstName; //-
+	private String firstName; //--
 
-	private String lastName; //-
+	private String lastName; //--
 
-	private String email; //-
+	private String email; //--
 
 	@Column(nullable = false)
 	@JsonIgnore
@@ -59,39 +59,38 @@ public class UserEntity implements Serializable {
 
 	@OneToMany(mappedBy = "userDetails", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference
-	private List<AddressEntity> addresses; //-
+	private List<AddressEntity> addresses; //--
 
 	private String profilePic;
 
 	@Column(name = "gender", length = 1)
-	private String gender; //-
+	private String gender; //--
 
 	@Column(name = "phone", length = 45)
-	private String phone; //-
+	private String phone; //--
 
 	@Column(name = "is_slt_emp", columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltEmp; //-
+	private Integer isSltEmp; //--
+	
 	@Column(name = "is_slt_intern", columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltIntern; //-
+	private Integer isSltIntern; //--
 
 	@Column(nullable = false)
-	private Integer active = 1; //-
+	private Integer active = 1;
 
-	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
-	@JoinTable(name = "users_roles", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "roles_id", referencedColumnName = "id"))
-	@Column(nullable = false)
-	@JsonManagedReference
-	private Collection<RoleEntity> roles; //-
+	@ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+	@JoinTable(name = "user_sections", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "section_id"))
+	private Collection<SectionEntity> sections;
 
-	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
-	@JoinTable(name = "users_profile", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "profile_id", referencedColumnName = "id"))
-	@Column(nullable = false)
-	private Collection<ProfilesEntity> profiles; //-
+	@ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+	@JoinTable(name = "user_profiles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
+	private Collection<ProfilesEntity> profiles;
 
-	@ManyToMany(cascade = { CascadeType.PERSIST }, fetch = FetchType.EAGER)
-	@JoinTable(name = "users_section", joinColumns = @JoinColumn(name = "users_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "section_id", referencedColumnName = "id"))
-	@Column(nullable = false)
-	private Collection<SectionEntity> sections; //-
+	@ManyToMany(fetch = FetchType.EAGER) // Eagerly fetch roles
+    @JoinTable(name = "user_roles",
+               joinColumns = @JoinColumn(name = "user_id"),
+               inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Collection<RoleEntity> roles;
 
 	private Date join_date;
 
@@ -99,6 +98,15 @@ public class UserEntity implements Serializable {
 	private UserEntity hod;
 	@OneToOne
 	private UserEntity supervisor;
+	@OneToOne
+	private UserEntity other;
+	public UserEntity getOther() {
+		return other;
+	}
+
+	public void setOther(UserEntity other) {
+		this.other = other;
+	}
 
 	private Boolean roaster;
 

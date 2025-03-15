@@ -32,6 +32,24 @@ public class UserDto implements Serializable{
 	private String gender;
 	private String hod;
 	private String supervisor;
+	private String other;
+	private Boolean roaster;
+	
+	public String getOther() {
+		return other;
+	}
+
+	public void setOther(String other) {
+		this.other = other;
+	}
+
+	public Boolean getRoaster() {
+		return roaster;
+	}
+
+	public void setRoaster(Boolean roaster) {
+		this.roaster = roaster;
+	}
 
 	public String getHod() {
 		return hod;

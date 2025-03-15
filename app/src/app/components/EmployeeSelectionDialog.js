@@ -33,8 +33,8 @@ const EmployeeSelectionDialog = ({ open, onClose, onSelect, title, employees }) 
                 />
                 <List>
                     {filteredEmployees.map((employee) => (
-                        <ListItem button key={employee.id} onClick={() => onSelect(employee)}>
-                            <ListItemText primary={employee.name} secondary={employee.id} />
+                        <ListItem button key={employee.employeeId} onClick={() => onSelect(employee)}>
+                            <ListItemText primary={employee.name} secondary={employee.employeeId} />
                         </ListItem>
                     ))}
                 </List>

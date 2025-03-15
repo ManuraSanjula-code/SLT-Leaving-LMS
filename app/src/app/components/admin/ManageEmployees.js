@@ -165,7 +165,9 @@ const ManageEmployees = () => {
     setOpenDialog(false);
     setCurrentEmployee(null);
   };
+
   const handleSaveEmployee = (employee) => {
+    
     const userId = localStorage.getItem('userId');
     if (!userId) {
       console.error("User ID not found in localStorage");
@@ -181,7 +183,7 @@ const ManageEmployees = () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(employee), // Convert JS object to JSON
+      body: JSON.stringify(employee).trim(), // Convert JS object to JSON
     })
       .then(response => {
         if (!response.ok) {

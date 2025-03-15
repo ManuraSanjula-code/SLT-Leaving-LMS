@@ -38,6 +38,4 @@ public interface UserService extends UserDetailsService{
 	SectionEntity getSection(String name);
 	ProfilesEntity getProfiles(String name);
 	List<UserDto_> findByRoleName(String roleName);
-	List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative();
-
 }
