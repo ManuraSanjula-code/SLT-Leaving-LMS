@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -254,6 +255,30 @@ public class UserServiceImpl implements UserService {
 		userDto.setRoles(roles);
 		return userDto;
 	}
+	
+
+	public class AddressComparator {
+	    public static boolean areEqual(AddressDTO dto, AddressEntity entity) {
+	        if (dto == null && entity == null) {
+	            return true;
+	        }
+	        if (dto == null || entity == null) {
+	            return false;
+	        }
+
+	        return new EqualsBuilder()
+	                .append(dto.getId(), entity.getId())
+	                .append(dto.getAddressId(), entity.getAddressId())
+	                .append(dto.getCity(), entity.getCity())
+	                .append(dto.getCountry(), entity.getCountry())
+	                .append(dto.getStreetName(), entity.getStreetName())
+	                .append(dto.getPostalCode(), entity.getPostalCode())
+	                .append(dto.getIsDefault(), entity.getIsDefault())
+	                .append(dto.getUserDetails() != null ? dto.getUserDetails().getId() : null,
+	                        entity.getUserDetails() != null ? entity.getUserDetails().getId() : null)
+	                .isEquals();
+	    }
+	}
 
 	@Override
 	public UserDto updateUser(String userId, UserDto userDto) {
@@ -298,9 +323,55 @@ public class UserServiceImpl implements UserService {
 		if (userDto.getActive() != null) {
 			userEntity.setActive(userDto.getActive());
 		}
+		if (userDto.getHod() != null) {
+			String hod = userDto.getHod();
+			UserEntity userHod = userRepository.findByEmployeeId(hod);
+			if (userHod != null) {
+				userEntity.setHod(userHod);
+			}
+		}
+		if (userDto.getSupervisor() != null) {
+			String sup = userDto.getHod();
+			UserEntity userSup = userRepository.findByEmployeeId(sup);
+			if (userSup != null) {
+				userEntity.setSupervisor(userSup);
+			}
+		}
+		if(userDto.getOther() != null) {
+			String other = userDto.getOther();
+			UserEntity userOther = userRepository.findByEmployeeId(other);
+			if (userOther != null) {
+				userEntity.setOther(userOther);
+			}
+		}
 		// Handle addresses
-		List<AddressEntity> updatedAddresses = handleAddresses(userEntity, userDto.getAddresses());
-		userEntity.setAddresses(updatedAddresses);
+		List<AddressDTO> address_dto = userDto.getAddresses();
+		List<AddressEntity> addresses = userEntity.getAddresses();
+		
+		if(addresses.isEmpty()) {
+			
+			if(address_dto.isEmpty()) {
+				
+				addresses.forEach(address->{
+					if(address != null) {
+						address_dto.forEach(dto->{
+							if(dto != null) {
+								if(!AddressComparator.areEqual(dto, address)) {
+									AddressEntity addressEntity = modelMapper.map(dto, AddressEntity.class);
+									addressEntity.setUserDetails(userEntity); // Associate with UserEntity
+									String publicAddressId = utils.generateUserId(30);
+									addressEntity.setAddressId(publicAddressId);
+									addresses.add(address);
+								}
+							}
+						});
+					}
+				});
+				
+			}
+			
+		}
+		userEntity.setAddresses(addresses);
 		
 		Collection<RoleEntity> role_user = userEntity.getRoles();
 		Collection<ProfilesEntity> profile_user = userEntity.getProfiles();
@@ -347,6 +418,9 @@ public class UserServiceImpl implements UserService {
 
 		// Save the updated user entity
 		UserEntity updatedUserEntity = userRepository.save(userEntity);
+		System.out.print(updatedUserEntity.getEmail());
+
+		System.out.print(updatedUserEntity.getOther().getEmail());
 		
 		updatedUserEntity.getSections().forEach(sec -> {
 			sec.getUsers().add(updatedUserEntity);

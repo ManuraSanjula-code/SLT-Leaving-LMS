@@ -203,11 +203,21 @@ public class UserController {
 		return userService.createUser(userDetails);
 	}
 
+	@PutMapping(path = "/{employeeId}/{userid}")
+	public UserRest updateEmployee(@PathVariable String userid, @PathVariable String employeeId, @RequestBody UserDto userDetails) {
+		System.out.println("=================================");
+		System.out.print(userDetails.getEmail());
+		
+		UserDto updateUser = userService.updateUser(employeeId, userDetails);		
+		return UserMapper.mapUserDtoToUserRest(updateUser);
+	}
+	
 	@PutMapping(path = "/{userid}")
-	public UserRest updateUser(@PathVariable String userid, @RequestBody UserDetailsRequestModel userDetails) {
-
-		UserDto updateUser = userService.updateUser(userid, UserMapper.mapToUserDto(userDetails));
-
+	public UserRest updateUser(@PathVariable String userid, @RequestBody UserDto userDetails) {
+		System.out.println("=================================");
+		System.out.print(userDetails.getEmail());
+		
+		UserDto updateUser = userService.updateUser(userid, userDetails);		
 		return UserMapper.mapUserDtoToUserRest(updateUser);
 	}
 

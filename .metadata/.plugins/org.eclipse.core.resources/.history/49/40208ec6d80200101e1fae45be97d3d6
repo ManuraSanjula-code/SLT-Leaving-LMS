@@ -91,77 +91,102 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public UserDto createUser(UserDto user) {
-	    if (userRepository.findByEmail(user.getEmail()) != null) {
-	        throw new UserServiceException("Record already exists");
-	    }
+		if (userRepository.findByEmail(user.getEmail()) != null) {
+			throw new UserServiceException("Record already exists");
+		}
 
-	    UserEntity userEntity = modelMapper.map(user, UserEntity.class);
-	    String publicUserId = utils.generateUserId(30);
-	    userEntity.setUserId(publicUserId);
-	    userEntity.setJoin_date(new Date());
-	    // Initialize the addresses list
-	    List<AddressEntity> addressEntities = new ArrayList<>();
-	    for (AddressDTO addressDto : user.getAddresses()) {
-	        AddressEntity addressEntity = modelMapper.map(addressDto, AddressEntity.class);
-	        addressEntity.setUserDetails(userEntity); // Associate with UserEntity
-	        String publicAddressId = utils.generateUserId(30);
-	        addressEntity.setAddressId(publicAddressId);
-	        addressEntities.add(addressEntity);
-	    }
-	    userEntity.setAddresses(addressEntities); // Set the addresses list
+		UserEntity userEntity = modelMapper.map(user, UserEntity.class);
+		String publicUserId = utils.generateUserId(30);
+		userEntity.setUserId(publicUserId);
+		userEntity.setJoin_date(new Date());
+		userEntity.setRoaster(user.getRoaster());
 
-	    userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+		if (user.getHod() != null) {
+			String hod = user.getHod();
+			UserEntity userHod = userRepository.findByEmployeeId(hod);
+			if (userHod != null) {
+				userEntity.setHod(userHod);
+			}
+		}
+		if (user.getSupervisor() != null) {
+			String sup = user.getHod();
+			UserEntity userSup = userRepository.findByEmployeeId(sup);
+			if (userSup != null) {
+				userEntity.setSupervisor(userSup);
+			}
+		}
+		
+		if(user.getOther() != null) {
+			String other = user.getOther();
+			UserEntity userOther = userRepository.findByEmployeeId(other);
+			if (userOther != null) {
+				userEntity.setOther(userOther);
+			}
+		}
 
-	    // Handle roles, sections, and profiles
-	    Collection<SectionEntity> sectionEntities = new HashSet<>();
-	    Collection<ProfilesEntity> profilesEntities = new HashSet<>();
-	    Collection<RoleEntity> roleEntities = new HashSet<>();
+		// Initialize the addresses list
+		List<AddressEntity> addressEntities = new ArrayList<>();
+		for (AddressDTO addressDto : user.getAddresses()) {
+			AddressEntity addressEntity = modelMapper.map(addressDto, AddressEntity.class);
+			addressEntity.setUserDetails(userEntity); // Associate with UserEntity
+			String publicAddressId = utils.generateUserId(30);
+			addressEntity.setAddressId(publicAddressId);
+			addressEntities.add(addressEntity);
+		}
+		userEntity.setAddresses(addressEntities); // Set the addresses list
 
-	    for (String role : user.getRoles()) {
-	        RoleEntity roleEntity = roleRepository.findByName(role);
-	        if (roleEntity != null) {
-	            roleEntities.add(roleEntity);
-	        }
-	    }
+		userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
 
-	    user.getSections().forEach(sect -> {
-	        SectionEntity sec = sectionRepo.findBySection(sect);
-	        if (sec != null) {
-	            sectionEntities.add(sec);
-	        }
-	    });
+		// Handle roles, sections, and profiles
+		Collection<SectionEntity> sectionEntities = new HashSet<>();
+		Collection<ProfilesEntity> profilesEntities = new HashSet<>();
+		Collection<RoleEntity> roleEntities = new HashSet<>();
 
-	    user.getProfiles().forEach(profile -> {
-	        ProfilesEntity pr = profilesRepo.findByName(profile);
-	        if (pr != null) {
-	            profilesEntities.add(pr);
-	        }
-	    });
+		for (String role : user.getRoles()) {
+			RoleEntity roleEntity = roleRepository.findByName(role);
+			if (roleEntity != null) {
+				roleEntities.add(roleEntity);
+			}
+		}
 
-	    userEntity.setRoles(roleEntities);
-	    userEntity.setSections(sectionEntities);
-	    userEntity.setProfiles(profilesEntities);
+		user.getSections().forEach(sect -> {
+			SectionEntity sec = sectionRepo.findBySection(sect);
+			if (sec != null) {
+				sectionEntities.add(sec);
+			}
+		});
 
-	    // Save the user entity, which should cascade to addresses
-	    UserEntity storedUserDetails = userRepository.save(userEntity);
+		user.getProfiles().forEach(profile -> {
+			ProfilesEntity pr = profilesRepo.findByName(profile);
+			if (pr != null) {
+				profilesEntities.add(pr);
+			}
+		});
 
-	    // Update the sections, profiles, and roles with the new user
-	    storedUserDetails.getSections().forEach(sec -> {
-	        sec.getUsers().add(storedUserDetails);
-	        sectionRepo.save(sec);
-	    });
+		userEntity.setRoles(roleEntities);
+		userEntity.setSections(sectionEntities);
+		userEntity.setProfiles(profilesEntities);
 
-	    storedUserDetails.getProfiles().forEach(pro -> {
-	        pro.getUsers().add(storedUserDetails);
-	        profilesRepo.save(pro);
-	    });
+		// Save the user entity first
+		UserEntity storedUserDetails = userRepository.save(userEntity);
 
-	    storedUserDetails.getRoles().forEach(role -> {
-	        role.getUsers().add(storedUserDetails);
-	        roleRepository.save(role);
-	    });
+		// Update the sections, profiles, and roles with the new user
+		storedUserDetails.getSections().forEach(sec -> {
+			sec.getUsers().add(storedUserDetails);
+			sectionRepo.save(sec);
+		});
 
-	    return modelMapper.map(storedUserDetails, UserDto.class);
+		storedUserDetails.getProfiles().forEach(pro -> {
+			pro.getUsers().add(storedUserDetails);
+			profilesRepo.save(pro);
+		});
+
+		storedUserDetails.getRoles().forEach(role -> {
+			role.getUsers().add(storedUserDetails);
+			roleRepository.save(role);
+		});
+
+		return modelMapper.map(storedUserDetails, UserDto.class);
 	}
 
 	@Override
@@ -262,12 +287,120 @@ public class UserServiceImpl implements UserService {
 			userEntity.setIsSltIntern(userDto.getIsSltIntern());
 		}
 
+		if (userDto.getSltId() != null) {
+			userEntity.setSltId(userDto.getSltId());;
+		}
+		
+		if (userDto.getEmployeeId() != null) {
+			userEntity.setEmployeeId(userDto.getEmployeeId());
+		}
+		
+		if (userDto.getActive() != null) {
+			userEntity.setActive(userDto.getActive());
+		}
+		if (userDto.getHod() != null) {
+			String hod = userDto.getHod();
+			UserEntity userHod = userRepository.findByEmployeeId(hod);
+			if (userHod != null) {
+				userEntity.setHod(userHod);
+			}
+		}
+		if (userDto.getSupervisor() != null) {
+			String sup = userDto.getHod();
+			UserEntity userSup = userRepository.findByEmployeeId(sup);
+			if (userSup != null) {
+				userEntity.setSupervisor(userSup);
+			}
+		}
+		if(userDto.getOther() != null) {
+			String other = userDto.getOther();
+			UserEntity userOther = userRepository.findByEmployeeId(other);
+			if (userOther != null) {
+				userEntity.setOther(userOther);
+			}
+		}
 		// Handle addresses
-		List<AddressEntity> updatedAddresses = handleAddresses(userEntity, userDto.getAddresses());
-		userEntity.setAddresses(updatedAddresses);
+		List<AddressDTO> address_dto = userDto.getAddresses();
+		List<AddressEntity> addresses = userEntity.getAddresses();
+		
+		if(addresses.isEmpty()) {
+			
+			if(address_dto.isEmpty()) {
+				
+				addresses.forEach(address->{
+					if(address != null) {
+						
+					}
+				});
+				
+			}
+			
+		}
+		
+		
+		Collection<RoleEntity> role_user = userEntity.getRoles();
+		Collection<ProfilesEntity> profile_user = userEntity.getProfiles();
+		Collection<SectionEntity> section_user = userEntity.getSections();
+
+		for (String role : userDto.getRoles()) {
+			RoleEntity roleEntity = roleRepository.findByName(role);
+			if (roleEntity != null) {
+				
+				role_user.forEach(role_->{
+					if( role_ != null && (!role_.getName().equals(roleEntity.getName()))) {
+						role_user.add(roleEntity);
+					}
+				});
+				
+			}
+		}
+
+		userDto.getSections().forEach(sect -> {
+			SectionEntity sec = sectionRepo.findBySection(sect);
+			if (sec != null) {
+				section_user.forEach(section->{
+					if( section != null && (!section.getSection().equals(sec.getSection()))) {
+						section_user.add(sec);
+					}
+				});
+			}
+		});
+
+		userDto.getProfiles().forEach(profile -> {
+			ProfilesEntity pr = profilesRepo.findByName(profile);
+			if (pr != null) {
+				profile_user.forEach(prof->{
+					if( prof != null && (!prof.getName().equals(prof.getName()))) {
+						profile_user.add(prof);
+					}
+				});
+			}
+		});
+
+		userEntity.setRoles(role_user);
+		userEntity.setSections(section_user);
+		userEntity.setProfiles(profile_user);
 
 		// Save the updated user entity
 		UserEntity updatedUserEntity = userRepository.save(userEntity);
+		System.out.print(updatedUserEntity.getEmail());
+
+		System.out.print(updatedUserEntity.getOther().getEmail());
+		
+		updatedUserEntity.getSections().forEach(sec -> {
+			sec.getUsers().add(updatedUserEntity);
+			sectionRepo.save(sec);
+		});
+
+		updatedUserEntity.getProfiles().forEach(pro -> {
+			pro.getUsers().add(updatedUserEntity);
+			profilesRepo.save(pro);
+		});
+
+		updatedUserEntity.getRoles().forEach(role -> {
+			role.getUsers().add(updatedUserEntity);
+			roleRepository.save(role);
+		});
 
 		// Return the updated user as a DTO
 		return new ModelMapper().map(updatedUserEntity, UserDto.class);
@@ -578,31 +711,19 @@ public class UserServiceImpl implements UserService {
 	public List<UserDto_> findByRoleName(String roleName) {
 		List<UserDto_> returnValue = new ArrayList<>();
 
-		userRepository.findByRoleName(roleName.toUpperCase()).forEach(user->{
+		userRepository.findByRoleName(roleName.toUpperCase()).forEach(user -> {
 			UserDto_ userDto = new UserDto_();
-			returnValue.add(userDto);
-		});;
-		
-		return returnValue;
-	}
 
-	@Override
-	public List<UserDto_> findUsersWithOnlyChairmanAndCeoRolesNative() {
-		List<UserDto_> returnValue = new ArrayList<>();
-
-		userRepository.findUsersWithOnlyChairmanAndCeoRolesNative().forEach(user->{
-			UserDto_ userDto = new UserDto_();
-			
 			userDto.setUserId(user.getUserId());
 			userDto.setFirstName(user.getFirstName());
 			userDto.setLastName(user.getLastName());
 			userDto.setEmail(user.getEmail());
 			userDto.setEmployeeId(user.getEmployeeId());
-
+			userDto.setSltId(user.getSltId());
 			returnValue.add(userDto);
-		});;
-		
+		});
+		;
+
 		return returnValue;
 	}
-
 }

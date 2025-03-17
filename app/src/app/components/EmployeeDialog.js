@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Radio,
     Container,
@@ -37,7 +37,7 @@ import dynamic from 'next/dynamic'
 const EmployeeSelectionDialog = dynamic(() => import('../components/EmployeeSelectionDialog'), {
     ssr: false,
 });
-const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, profiles }) => {
+const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sections, profiles }) => {
     const [firstName, setFirstName] = useState(employee?.firstName || '');
     const [lastName, setLastName] = useState(employee?.lastName || '');
     const [email, setEmail] = useState(employee?.email || '');
@@ -52,6 +52,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
 
     const [employeeId, setEmployeeId] = useState(employee?.employeeId || '');
     const [sltId, setSltId] = useState(employee?.sltId || '');
+    const [userId, setUserId] = useState(employee?.userId || '');
 
     const [selectedRoles, setSelectedRoles] = useState(employee?.roles.map(role => role.name) || []);
     const [selectedSections, setSelectedSections] = useState(employee?.sections.map(section => section.section) || []);
@@ -64,12 +65,14 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
     const [supervisorDialogOpen, setSupervisorDialogOpen] = useState(false);
     const [otherEmployeeDialogOpen, setOtherEmployeeDialogOpen] = useState(false);
 
-    const [selectedHod, setSelectedHod] = useState('');
-    const [selectedSupervisor, setSelectedSupervisor] = useState('');
-    const [selectedOtherEmployee, setSelectedOtherEmployee] = useState('');
+
     const [hodRoles, setHodRoles] = useState([]);
     const [sup, setSup] = useState([]);
     const [otherRoles, setOtherRoles] = useState([]);
+
+    const [selectedHod, setSelectedHod] = useState(employee?.hod || {});
+    const [selectedSupervisor, setSelectedSupervisor] = useState(employee?.supervisor || {});
+    const [selectedOtherEmployee, setSelectedOtherEmployee] = useState(employee?.other || {});
 
     const handleSelectHod = (hod) => {
         setSelectedHod(hod);
@@ -86,35 +89,42 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
         setOtherEmployeeDialogOpen(false);
     };
 
+    const memoizedHodRoles = useMemo(() => hodRoles.map(hod => ({
+        employeeId: hod.employeeId,
+        name: `${hod.firstName} ${hod.lastName}`
+    })), [hodRoles]);
+
+    const memoizedSupRoles = useMemo(() => sup.map(sup => ({
+        employeeId: sup.employeeId,
+        name: `${sup.firstName} ${sup.lastName}`
+    })), [sup]);
+
+    const memoizedOtherRoles = useMemo(() => otherRoles.map(other => ({
+        employeeId: other.employeeId,
+        name: `${other.firstName} ${other.lastName}`
+    })), [otherRoles]);
+
     useEffect(() => {
-        fetch("http://localhost:8080/users/get-role/ROLE_HOD")
-            .then((response) => response.json())
-            .then((result) => {
-                setHodRoles(result);
-            })
-            .catch((error) => console.error(error));
+        const fetchRoles = async () => {
+            try {
+                const hodResponse = await fetch("http://localhost:8080/users/get-role/ROLE_HOD");
+                const hodData = await hodResponse.json();
+                setHodRoles(hodData);
 
-        fetch("http://localhost:8080/users/get-role/ROLE_SUPERVISOR")
-            .then((response) => response.json())
-            .then((result) => {
-                setSup(result);
-            })
-            .catch((error) => console.error(error));
+                const supResponse = await fetch("http://localhost:8080/users/get-role/ROLE_SUPERVISOR");
+                const supData = await supResponse.json();
+                setSup(supData);
 
-        fetch("http://localhost:8080/users/get-role/ROLE_CEO")
-            .then((response) => response.json())
-            .then((result) => {
-                setOtherRoles(result);
-            })
-            .catch((error) => console.error(error));
+                const otherResponse = await fetch("http://localhost:8080/users/get-role/ROLE_CEO");
+                const otherData = await otherResponse.json();
+                setOtherRoles(otherData);
+            } catch (error) {
+                console.error("Error fetching roles:", error);
+            }
+        };
 
-        fetch("http://localhost:8080/users/get-role/ROLE_CHAIRMAN")
-            .then((response) => response.json())
-            .then((result) => {
-                setOtherRoles(result);
-            })
-            .catch((error) => console.error(error));
-    }, []);
+        fetchRoles();
+    }, []); // Empty dependency array to run only once
 
     useEffect(() => {
 
@@ -125,15 +135,18 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
             setSelectedRoles(employee.roles.map(role => role.name) || []);
             setSelectedSections(employee.sections.map(section => section.section) || []);
             setSelectedProfiles(employee.profiles.map(profile => profile.name) || []);
-            setSelectedHod(employee.hod)
-            setSelectedSupervisor(employee.supervisor)
-
+            setSelectedHod(employee['hod'] || {});
+            setSelectedSupervisor(employee['supervisor'] || {});
+            setSelectedOtherEmployee(employee['other'] || {});
         } else {
             setSelectedRoles([]);
             setSelectedSections([]);
             setSelectedProfiles([]);
+            setSelectedHod({});
+            setSelectedSupervisor({});
+            setSelectedOtherEmployee({});
         }
-    }, [employee, selectedHod, selectedSupervisor]);
+    }, [employee]); // Only `employee` is included in the dependency array
 
     const handleSave = () => {
         const addressData = addresses.map(addr => ({
@@ -145,6 +158,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
         }));
         const newEmployee = {
             id: employee?.id, // Optional if adding a new employee
+            userId: userId,
             firstName,
             lastName,
             email,
@@ -161,9 +175,9 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
             roaster: isRoaster,
             phone,
             gender,
-            hod: selectedHod.id,
-            supervisor: selectedSupervisor.id,
-            other: selectedOtherEmployee.id
+            hod: selectedHod.employeeId,
+            supervisor: selectedSupervisor.employeeId,
+            other: selectedOtherEmployee.employeeId
         };
         onSave(newEmployee);
     };
@@ -508,36 +522,26 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
                         </Button>
                     </Grid>
                 </Grid>
+                
                 <EmployeeSelectionDialog
                     open={hodDialogOpen}
                     onClose={() => setHodDialogOpen(false)}
                     onSelect={handleSelectHod}
-                    employees={hodRoles.map(hod => ({
-                        employeeId: hod.employeeId, // Using userId as a unique identifier
-                        name: `${hod.firstName} ${hod.lastName}` // Combining first and last name
-                    }))}
+                    employees={memoizedHodRoles}
                     title="Select HOD"
                 />
-
                 <EmployeeSelectionDialog
                     open={supervisorDialogOpen}
                     onClose={() => setSupervisorDialogOpen(false)}
                     onSelect={handleSelectSupervisor}
-                    employees={sup.map(sup => ({
-                        employeeId: sup.employeeId, // Using userId as a unique identifier
-                        name: `${sup.firstName} ${sup.lastName}` // Combining first and last name
-                    }))}
+                    employees={memoizedSupRoles}
                     title="Select Supervisor"
                 />
-
                 <EmployeeSelectionDialog
                     open={otherEmployeeDialogOpen}
                     onClose={() => setOtherEmployeeDialogOpen(false)}
                     onSelect={handleSelectOtherEmployee}
-                    employees={otherRoles.map(other => ({
-                        employeeId: other.employeeId, // Using userId as a unique identifier
-                        name: `${other.firstName} ${other.lastName}` // Combining first and last name
-                    }))}
+                    employees={memoizedOtherRoles}
                     title="Select Other Employee"
                 />
             </DialogContent>
@@ -550,7 +554,7 @@ const EmployeeDialog = ({ open, onClose, onSave, employee, roles, sections, prof
 
         </Dialog>
     );
-};
+});
 
 
 export default EmployeeDialog;

@@ -31,6 +31,9 @@ import { putUserData, putUserProfile } from '../../api';
 import { setUserDetails, setLoading } from '../../redux/authSlice';
 import { getCookie } from 'cookies-next';
 
+import SuccessDialog from '../../components/SuccessDialog';
+import ErrorDialog from '../../components/ErrorDialog';
+
 const UserProfile = () => {
   const { userDetails, loading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -53,6 +56,24 @@ const UserProfile = () => {
   // State for managing addresses dialog
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
+
+  const handleSuccessOpen = () => {
+    setSuccessOpen(true);
+  };
+
+  const handleSuccessClose = () => {
+    setSuccessOpen(false);
+  };
+
+  const handleErrorOpen = () => {
+    setErrorOpen(true);
+  };
+
+  const handleErrorClose = () => {
+    setErrorOpen(false);
+  };
 
   // Sync local state with Redux state
   useEffect(() => {
@@ -230,341 +251,357 @@ const UserProfile = () => {
   };
 
   return (
-    <Container component="main" maxWidth="md">
-      <CssBaseline />
-      <Box sx={{ mt: 4 }}>
-        {/* Profile Picture */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <IconButton
-            color="primary"
-            aria-label="upload picture"
-            onClick={handleOpen}
-            sx={{ position: 'relative' }}
-          >
-            <Avatar
-              // src={`http://localhost:8080/users/image/${previewImage || profile.profilePic}`}
-              src={`http://localhost:8080/users/image/${userDetails.userId}`}
-              sx={{ width: 150, height: 150, border: '2px solid #ccc' }}
-            />
-            <CameraIcon
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                backgroundColor: 'white',
-                borderRadius: '50%',
-                padding: 1,
-                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
-              }}
-            />
-          </IconButton>
+    <>
+      <SuccessDialog
+        open={successOpen}
+        onClose={handleSuccessClose}
+        title="Success!"
+        message="Your action was completed successfully."
+      />
 
-          <Dialog open={open} onClose={handleClose}>
-            <DialogTitle>Change Profile Picture</DialogTitle>
-            <DialogContent>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                <input
-                  accept="image/*"
-                  id="profile-picture-input"
-                  type="file"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-                <label htmlFor="profile-picture-input">
-                  <Button
-                    variant="contained"
-                    component="span"
-                    fullWidth
-                  >
-                    Select Image
-                  </Button>
-                </label>
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={errorOpen}
+        onClose={handleErrorClose}
+        title="Oops! Something Went Wrong"
+        message="There was an error processing your request. Please try again."
+      />
+      <Container component="main" maxWidth="md">
+        <CssBaseline />
+        <Box sx={{ mt: 4 }}>
+          {/* Profile Picture */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <IconButton
+              color="primary"
+              aria-label="upload picture"
+              onClick={handleOpen}
+              sx={{ position: 'relative' }}
+            >
+              <Avatar
+                // src={`http://localhost:8080/users/image/${previewImage || profile.profilePic}`}
+                src={`http://localhost:8080/users/image/${userDetails.userId}`}
+                sx={{ width: 150, height: 150, border: '2px solid #ccc' }}
+              />
+              <CameraIcon
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  padding: 1,
+                  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
+                }}
+              />
+            </IconButton>
 
-                {previewImage && (
-                  <Avatar
-                    src={previewImage}
-                    sx={{
-                      width: 200,
-                      height: 200,
-                      border: '2px solid #ccc',
-                      margin: '0 auto'
-                    }}
+            <Dialog open={open} onClose={handleClose}>
+              <DialogTitle>Change Profile Picture</DialogTitle>
+              <DialogContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                  <input
+                    accept="image/*"
+                    id="profile-picture-input"
+                    type="file"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
                   />
-                )}
+                  <label htmlFor="profile-picture-input">
+                    <Button
+                      variant="contained"
+                      component="span"
+                      fullWidth
+                    >
+                      Select Image
+                    </Button>
+                  </label>
+
+                  {previewImage && (
+                    <Avatar
+                      src={previewImage}
+                      sx={{
+                        width: 200,
+                        height: 200,
+                        border: '2px solid #ccc',
+                        margin: '0 auto'
+                      }}
+                    />
+                  )}
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleClose}>Cancel</Button>
+                <Button
+                  onClick={handleSave}
+                  variant="contained"
+                  disabled={!selectedFile}
+                >
+                  Save
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </Box>
+
+          {/* Personal Information */}
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Personal Information
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="firstName"
+                label="First Name"
+                name="firstName"
+                value={profile.firstName}
+                onChange={handleChange}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="lastName"
+                label="Last Name"
+                name="lastName"
+                value={profile.lastName}
+                onChange={handleChange}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email"
+                name="email"
+                type="email"
+                value={profile.email}
+                onChange={handleChange}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="normal"
+                fullWidth
+                id="phone"
+                label="Phone"
+                name="phone"
+                value={profile.phone}
+                onChange={handleChange}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="normal"
+                fullWidth
+                id="gender"
+                label="Gender"
+                name="gender"
+                value={profile.gender}
+                onChange={handleChange}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Roles */}
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Roles
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {userDetails?.roles?.map((role, index) => (
+                  <Chip key={index} label={role} color="primary" variant="outlined" />
+                ))}
               </Box>
+            </CardContent>
+          </Card>
+
+          {/* Sections and Profiles */}
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Sections & Profiles
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="subtitle1" gutterBottom>
+                Sections
+              </Typography>
+              {userDetails?.sections?.length > 0 ? (
+                <List>
+                  {userDetails.sections.map((section, index) => (
+                    <ListItem key={index}>
+                      <ListItemText primary={section} />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography>No sections assigned.</Typography>
+              )}
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Profiles
+              </Typography>
+              {userDetails?.profiles?.length > 0 ? (
+                <List>
+                  {userDetails.profiles.map((profile, index) => (
+                    <ListItem key={index}>
+                      <ListItemText primary={profile} />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography>No profiles assigned.</Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Employment Status */}
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Employment Status
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="body1">
+                SLT Employee: {userDetails?.isSltEmp ? 'Yes' : 'No'}
+              </Typography>
+              <Typography variant="body1">
+                SLT Intern: {userDetails?.isSltIntern ? 'Yes' : 'No'}
+              </Typography>
+              <Typography variant="body1">
+                Account Status: {userDetails?.active ? 'Active' : 'Inactive'}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* Addresses */}
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Addresses
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <List>
+                {profile.addresses.length > 0 ? (
+                  profile.addresses.map((address) => (
+                    <ListItem key={address.addressId}>
+                      <ListItemText
+                        primary={`${address.streetName}, ${address.city}, ${address.country}`}
+                        secondary={`Postal Code: ${address.postalCode}`}
+                      />
+                      <ListItemSecondaryAction>
+                        <Checkbox
+                          edge="end"
+                          checked={address.isDefault || false}
+                          onChange={() => handleSetDefaultAddress(address.addressId)}
+                        />
+                        <IconButton onClick={() => handleEditAddress(address)}>Edit</IconButton>
+                        <IconButton onClick={() => handleDeleteAddress(address.addressId)}>Delete</IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))
+                ) : (
+                  <Typography>No addresses added yet.</Typography>
+                )}
+              </List>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddAddress}
+                sx={{ mt: 2 }}
+              >
+                Add Address
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            color="secondary"
+            onClick={handleSubmit}
+            sx={{ py: 2, mt: 4 }}
+          >
+            Update Profile
+          </Button>
+
+          {/* Address Dialog */}
+          <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+            <DialogTitle>{selectedAddress ? 'Edit Address' : 'Add Address'}</DialogTitle>
+            <DialogContent>
+              <TextField
+                autoFocus
+                margin="dense"
+                id="streetName"
+                label="Street Name"
+                fullWidth
+                value={selectedAddress?.streetName || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, streetName: e.target.value }))
+                }
+              />
+              <TextField
+                margin="dense"
+                id="city"
+                label="City"
+                fullWidth
+                value={selectedAddress?.city || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, city: e.target.value }))
+                }
+              />
+              <TextField
+                margin="dense"
+                id="country"
+                label="Country"
+                fullWidth
+                value={selectedAddress?.country || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, country: e.target.value }))
+                }
+              />
+              <TextField
+                margin="dense"
+                id="postalCode"
+                label="Postal Code"
+                fullWidth
+                value={selectedAddress?.postalCode || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, postalCode: e.target.value }))
+                }
+              />
             </DialogContent>
             <DialogActions>
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button
-                onClick={handleSave}
-                variant="contained"
-                disabled={!selectedFile}
-              >
+              <Button onClick={() => setOpenDialog(false)} color="primary">
+                Cancel
+              </Button>
+              <Button onClick={() => handleSaveAddress(selectedAddress)} color="primary">
                 Save
               </Button>
             </DialogActions>
           </Dialog>
-        </Box>
 
-        {/* Personal Information */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Personal Information
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="firstName"
-              label="First Name"
-              name="firstName"
-              value={profile.firstName}
-              onChange={handleChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="lastName"
-              label="Last Name"
-              name="lastName"
-              value={profile.lastName}
-              onChange={handleChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              type="email"
-              value={profile.email}
-              onChange={handleChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="normal"
-              fullWidth
-              id="phone"
-              label="Phone"
-              name="phone"
-              value={profile.phone}
-              onChange={handleChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="normal"
-              fullWidth
-              id="gender"
-              label="Gender"
-              name="gender"
-              value={profile.gender}
-              onChange={handleChange}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Roles */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Roles
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {userDetails?.roles?.map((role, index) => (
-                <Chip key={index} label={role} color="primary" variant="outlined" />
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Sections and Profiles */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Sections & Profiles
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="subtitle1" gutterBottom>
-              Sections
-            </Typography>
-            {userDetails?.sections?.length > 0 ? (
-              <List>
-                {userDetails.sections.map((section, index) => (
-                  <ListItem key={index}>
-                    <ListItemText primary={section} />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography>No sections assigned.</Typography>
-            )}
-            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-              Profiles
-            </Typography>
-            {userDetails?.profiles?.length > 0 ? (
-              <List>
-                {userDetails.profiles.map((profile, index) => (
-                  <ListItem key={index}>
-                    <ListItemText primary={profile} />
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography>No profiles assigned.</Typography>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Employment Status */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Employment Status
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="body1">
-              SLT Employee: {userDetails?.isSltEmp ? 'Yes' : 'No'}
-            </Typography>
-            <Typography variant="body1">
-              SLT Intern: {userDetails?.isSltIntern ? 'Yes' : 'No'}
-            </Typography>
-            <Typography variant="body1">
-              Account Status: {userDetails?.active ? 'Active' : 'Inactive'}
-            </Typography>
-          </CardContent>
-        </Card>
-
-        {/* Addresses */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              Addresses
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <List>
-              {profile.addresses.length > 0 ? (
-                profile.addresses.map((address) => (
-                  <ListItem key={address.addressId}>
-                    <ListItemText
-                      primary={`${address.streetName}, ${address.city}, ${address.country}`}
-                      secondary={`Postal Code: ${address.postalCode}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <Checkbox
-                        edge="end"
-                        checked={address.isDefault || false}
-                        onChange={() => handleSetDefaultAddress(address.addressId)}
-                      />
-                      <IconButton onClick={() => handleEditAddress(address)}>Edit</IconButton>
-                      <IconButton onClick={() => handleDeleteAddress(address.addressId)}>Delete</IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))
-              ) : (
-                <Typography>No addresses added yet.</Typography>
-              )}
-            </List>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleAddAddress}
-              sx={{ mt: 2 }}
+          {/* Loading Spinner */}
+          {loading && (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+              }}
             >
-              Add Address
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          color="secondary"
-          onClick={handleSubmit}
-          sx={{ py: 2, mt: 4 }}
-        >
-          Update Profile
-        </Button>
-
-        {/* Address Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-          <DialogTitle>{selectedAddress ? 'Edit Address' : 'Add Address'}</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="streetName"
-              label="Street Name"
-              fullWidth
-              value={selectedAddress?.streetName || ''}
-              onChange={(e) =>
-                setSelectedAddress((prev) => ({ ...prev, streetName: e.target.value }))
-              }
-            />
-            <TextField
-              margin="dense"
-              id="city"
-              label="City"
-              fullWidth
-              value={selectedAddress?.city || ''}
-              onChange={(e) =>
-                setSelectedAddress((prev) => ({ ...prev, city: e.target.value }))
-              }
-            />
-            <TextField
-              margin="dense"
-              id="country"
-              label="Country"
-              fullWidth
-              value={selectedAddress?.country || ''}
-              onChange={(e) =>
-                setSelectedAddress((prev) => ({ ...prev, country: e.target.value }))
-              }
-            />
-            <TextField
-              margin="dense"
-              id="postalCode"
-              label="Postal Code"
-              fullWidth
-              value={selectedAddress?.postalCode || ''}
-              onChange={(e) =>
-                setSelectedAddress((prev) => ({ ...prev, postalCode: e.target.value }))
-              }
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDialog(false)} color="primary">
-              Cancel
-            </Button>
-            <Button onClick={() => handleSaveAddress(selectedAddress)} color="primary">
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Loading Spinner */}
-        {loading && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100vh',
-            }}
-          >
-            <CircularProgress size={60} thickness={4} />
-          </Box>
-        )}
-      </Box>
-    </Container>
+              <CircularProgress size={60} thickness={4} />
+            </Box>
+          )}
+        </Box>
+      </Container>
+    </>
   );
 };
 
