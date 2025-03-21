@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -18,7 +17,6 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.slt.peotv.userservice.lms.UserServiceApplication;
 import com.slt.peotv.userservice.lms.entity.RoleEntity;
@@ -128,7 +125,6 @@ public class FileUploadController {
     @Async
     @Transactional
     public LMSResponse processUsers(List<UserEntity> users) {
-        ModelMapper mapper = new ModelMapper();
         for (UserEntity user : users) {
             Optional<UserEntity> existingUser = Optional.ofNullable(userRepository.findByEmail(user.getEmail()));
             if (existingUser.isPresent()) {

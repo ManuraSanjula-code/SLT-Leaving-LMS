@@ -36,13 +36,14 @@ public class AddressEntity implements Serializable {
 	@Column(length=7, nullable=false)
 	private String postalCode;
 
+	@Column(nullable=false)
 	private Boolean isDefault;
 
 	public AddressEntity() {
 		this.isDefault = false;
 	}
 	@ManyToOne
-	@JoinColumn(name="users_id")
+	@JoinColumn(name="users_id", nullable=false)
 	@JsonBackReference
 	private UserEntity userDetails;
 

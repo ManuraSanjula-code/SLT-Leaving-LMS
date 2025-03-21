@@ -77,7 +77,7 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
 
 		String userId = null;
 		try {
-			userId = tokenConverter.validateTokenSignature(decryptedToken, request);
+			userId = tokenConverter.validateTokenSignature_(decryptedToken, request);
 		} catch (Exception e) {
 			System.err.println("Error validating token signature: " + e.getMessage());
 			return null;

@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import axios from "axios";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { setCredentials, setUserDetails } from '../redux/authSlice'; // Replace with the correct path
 
 const LoginPage = () => {
@@ -27,17 +27,23 @@ const LoginPage = () => {
   const router = useRouter();
   const dispatch = useDispatch();
 
+  const searchParams = useSearchParams();
+  const isTempLogin = searchParams.get('temp') === 'true'; // Check if temp=true
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-
+    const data = new FormData(event.currentTarget);    
     // Extract email and password from the form
     const email = data.get("email");
     const password = data.get("password");
 
+    const loginUrl = isTempLogin 
+        ? "http://localhost:8080/users/login/temp" // Temp endpoint
+        : "http://localhost:8080/users/login"; // Regular endpoint
+
     try {
       // Make a POST request to the login API
-      const response = await axios.post("http://localhost:8080/users/login", {
+      const response = await axios.post(loginUrl, {
         email,
         password,
       }, { withCredentials: true });
@@ -45,7 +51,6 @@ const LoginPage = () => {
       // After successful login
       const authorizationHeader = response.headers['authorization']?.replace('Bearer ', '');
       const userId = response.headers['userid'];
-
       // First set local storage
       localStorage.setItem('userId', userId);
       localStorage.setItem('jwt', authorizationHeader);
@@ -143,14 +148,9 @@ const LoginPage = () => {
             Sign In
           </Button>
           <Grid container>
-            <Grid item xs>
-              <Link href="#" variant="body2">
-                Forgot password?
-              </Link>
-            </Grid>
             <Grid item>
-              <Link href="#" variant="body2">
-                {"Don't have an account? Sign Up"}
+              <Link href="/login?temp=true" variant="body2">
+                {"Temp login ??"}
               </Link>
             </Grid>
           </Grid>

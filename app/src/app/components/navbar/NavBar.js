@@ -24,7 +24,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-// import { roleAccessRules } from "@/path/to/your/access-rules"; // Update import path
 
 const roleAccessRules = (() => {
   const ROLE_EMPLOYEE = [
@@ -37,14 +36,25 @@ const roleAccessRules = (() => {
     "/single-employee-activities",
     "/"
   ];
+  const ROLE_USER = [
+    "/dashboard",
+    "/apply-leave",
+    "/request-movement",
+    "/profile",
+    "/all-leaves",
+    "/all-movements",
+    "/single-employee-activities",
+    "/"
+  ];
 
   return {
     ROLE_EMPLOYEE,
-    ROLE_HOD: [...ROLE_EMPLOYEE, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
-    ROLE_SUPERVISOR: [...ROLE_EMPLOYEE, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
-    ROLE_ADMIN: [...ROLE_EMPLOYEE, "/manage-employees"],
-    ROLE_CEO: [...ROLE_EMPLOYEE, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
-    ROLE_CHAIRMAN: [...ROLE_EMPLOYEE, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_USER,
+    ROLE_HOD: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_SUPERVISOR: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_ADMIN: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-employees"],
+    ROLE_CEO: [...ROLE_EMPLOYEE, ...ROLE_USER, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_CHAIRMAN: [...ROLE_EMPLOYEE, ...ROLE_USER, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
   };
 })();
 

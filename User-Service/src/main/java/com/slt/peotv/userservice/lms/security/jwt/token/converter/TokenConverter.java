@@ -4,6 +4,9 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.Objects;
 
+import com.slt.peotv.userservice.lms.entity.TempUser;
+import com.slt.peotv.userservice.lms.repository.TempUserRepo;
+import com.slt.peotv.userservice.lms.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +30,7 @@ public class TokenConverter {
 
     private final JwtConfiguration jwtConfiguration;
     private final UserRepository userRepo;
-
+    private final TempUserRepo tempUserRepo;
     public String decryptToken(String encryptedToken) throws ParseException, JOSEException {
         JWEObject jweObject = JWEObject.parse(encryptedToken);
         DirectDecrypter directDecrypter = new DirectDecrypter(jwtConfiguration.getPrivateKey().getBytes());
@@ -35,51 +38,44 @@ public class TokenConverter {
         return jweObject.getPayload().toSignedJWT().serialize();
     }
 
-    public String passwordRestTokenValidating(String token) {
-        try {
-            String decryptUserToken = decryptToken(token);
-            return validateTokenSignature(decryptUserToken, token);
-        } catch (ParseException e) {
-            return null;
-        } catch (JOSEException e) {
-            return null;
-        }
-    }
-
-    public String validateTokenSignature(String signedToken, String token) throws ParseException, JOSEException {
+    public String validateTokenSignature_(String signedToken, HttpServletRequest request) throws ParseException, JOSEException {
 
         SignedJWT signedJWT = SignedJWT.parse(signedToken);
-
-        UserEntity user = userRepo.findByEmail(signedJWT.getPayload().toJSONObject().get("sub").toString());
-
-        if (user == null) {
-			return null;
-		}
-
-//        if (user.getPasswordResetToken() == null)
-//            return null;
-//
-//        if (!user.getPasswordResetToken().equals(token))
-//            return null;
-
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+
         final Date expiration = claimsSet.getExpirationTime();
         Date todayDate = new Date();
 
         if (expiration.before(todayDate)) {
-			return null;
-		}
+            return null;
+        }
 
         RSAKey publicKey = RSAKey.parse(signedJWT.getHeader().getJWK().toJSONObject());
-        if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
-			return null;
-		}
 
-        String email = user.getEmail();
-        if (email == null) {
-			return null;
-		}
-        return email;
+        if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
+            return null;
+        }
+        String[] parts = signedJWT.getPayload().toJSONObject().get("sub").toString().split(" ");
+        String email_ = parts[0];
+        String loginType = parts.length > 1 ? parts[1] : "DEFAULT";
+
+
+        String requestURI = request.getRequestURI();
+        String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
+
+        if("TEMP".equals(loginType)){
+            TempUser tempUser = tempUserRepo.findTempUserByUserId(email_);
+            if(tempUser != null || !(Objects.equals(tempUser.getUserId(), id)) ){
+                return tempUser.getUserId() +" " + "TEMP";
+            }
+
+        }else {
+            UserEntity user = userRepo.findByEmail(email_);
+            if (user != null || !(Objects.equals(user.getUserId(), id))) {
+                return user.getUserId();
+            }
+        }
+        return null;
     }
 
     public String validateTokenSignature(String signedToken, HttpServletRequest request) throws ParseException, JOSEException {

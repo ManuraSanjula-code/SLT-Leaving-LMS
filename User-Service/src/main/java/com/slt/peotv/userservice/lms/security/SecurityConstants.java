@@ -17,6 +17,17 @@ public class SecurityConstants {
     public static final String PASSWORD_RESET_URL = "/users/password-reset";
     public static final String IMAGE = "/users/image/**";
     public static final String GET_ROLE = "/users/get-role/**";
+    
+    public static final String GET_ROLE_ = "/users/roles";
+    public static final String GET_PROFILE = "/users/profile";
+    public static final String GET_SECTION = "/users/sections";
+    public static final String GET_AUTH = "/users/authorities";
+    public static final String GET_All_NAMES_ROLE = "/users/names/roles";
+    public static final String GET_All_NAMES_SECTIONS = "/users/names/sections";
+    public static final String GET_All_NAMES_PROFILES = "/users/names/profiles";
+
+    public static final String CHECK_ = "/users/check/**";
+    public static final String TEMP_USERS = "/users/temp";
 
     public static String getTokenSecret()
     {

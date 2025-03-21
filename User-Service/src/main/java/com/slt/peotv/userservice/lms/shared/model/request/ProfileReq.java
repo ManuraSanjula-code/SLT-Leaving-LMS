@@ -1,7 +1,10 @@
 package com.slt.peotv.userservice.lms.shared.model.request;
 
+import java.util.List;
 
 public class ProfileReq {
+    private String name;
+    private String publicId;
     private String workStart;
     private String workEnds;
     private String ignoreSl;
@@ -17,6 +20,40 @@ public class ProfileReq {
     private String hdEndsMorning;
     private String flexiDays;
     private String flexiHrsStart;
+    private List<String> addedUsers;
+    private List<String> deletedUsers;
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public List<String> getAddedUsers() {
+        return addedUsers;
+    }
+
+    public void setAddedUsers(List<String> addedUsers) {
+        this.addedUsers = addedUsers;
+    }
+
+    public List<String> getDeletedUsers() {
+        return deletedUsers;
+    }
+
+    public void setDeletedUsers(List<String> deletedUsers) {
+        this.deletedUsers = deletedUsers;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public String getWorkStart() {
         return workStart;

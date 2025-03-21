@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import com.slt.peotv.userservice.lms.entity.TempUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -55,6 +56,20 @@ public class TokenCreator {
 
     }
 
+    public SignedJWT createSignedJWT(Authentication auth, TempUser tempUser) throws NoSuchAlgorithmException, JOSEException {
+
+        UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
+        JWTClaimsSet jwtClaimSet = createJWTClaimSet(auth, applicationUser, tempUser);
+        KeyPair rsaKeys = generateKeyPair();
+        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
+        RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
+        signedJWT.sign(signer);
+        return signedJWT;
+
+    }
+
     public SignedJWT createSignedJWT(String email) throws NoSuchAlgorithmException, JOSEException {
         JWTClaimsSet jwtClaimSet = createJWTClaimSet(email);
         KeyPair rsaKeys = generateKeyPair();
@@ -69,7 +84,7 @@ public class TokenCreator {
 
     private JWTClaimsSet createJWTClaimSet(String email) {
         return new JWTClaimsSet.Builder().subject(email)
-                .issuer("Manura Sanjula").issueTime(new Date())
+                .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME)).build();
     }
 
@@ -78,16 +93,23 @@ public class TokenCreator {
             return new JWTClaimsSet.Builder().subject(applicationUser.getUserId())
                     .claim("authorities",
                         auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
-                .issuer("Manura Sanjula").issueTime(new Date())
+                .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME)).build();
     }
+    private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
 
+        return new JWTClaimsSet.Builder().subject(applicationUser.getUserId() + " " + "TEMP")
+                .claim("authorities",
+                        auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
+                .issuer("SLT PEO TV").issueTime(new Date())
+                .expirationTime(tempUser.getExpireTime()).build();
+    }
     private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, List<String> roles) {
 
         return new JWTClaimsSet.Builder().subject(applicationUser.getUsername())
                 .claim("authorities",
                         auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
-                .issuer("Manura Sanjula").issueTime(new Date())
+                .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME)).build();
     }
 

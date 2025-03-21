@@ -1,7 +1,7 @@
 package com.slt.peotv.userservice.lms.repository;
 
 import java.util.List;
-
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 
 @Repository
@@ -64,5 +63,14 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     // Custom query to find users by multiple roles
     @Query("SELECT u FROM UserEntity u JOIN u.roles r WHERE r.name IN :roleNames")
     List<UserEntity> findByRoleNames(@Param("roleNames") List<String> roleNames);
-   
+
+	@Query(
+			value = "SELECT id FROM users WHERE email = :email " +
+					"AND encrypted_password = SHA2(CONCAT(:password, salt), 256)",
+			nativeQuery = true
+	)
+	Optional<Long> findUserIdByEmailAndPassword(
+			@Param("email") String email,
+			@Param("password") String rawPassword // Plaintext password (INSECURE)
+	);
 }

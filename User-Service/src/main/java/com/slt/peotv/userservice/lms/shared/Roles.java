@@ -15,6 +15,8 @@ public enum Roles {
             throw new IllegalArgumentException("Role cannot be null");
         }
         switch (role.toUpperCase()) {
+            case "USER":
+                return ROLE_USER;
             case "EMP":
                 return ROLE_EMPLOYEE;
             case "HOD":

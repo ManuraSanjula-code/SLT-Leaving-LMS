@@ -8,4 +8,5 @@ import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
 @Repository
 public interface ProfilesRepo  extends CrudRepository<ProfilesEntity, Long> {
     ProfilesEntity findByName(String name);
+    ProfilesEntity findByPublicId(String publicId);
 }

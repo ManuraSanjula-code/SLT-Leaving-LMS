@@ -39,7 +39,7 @@ import UnsuccessfulLeaves from './components/employee/UnsuccessfulLeaves';
 import UnauthorizedLeaves from './components/employee/UnauthorizedLeaves';
 import AbsentEmployees from './components/employee/AbsentEmployees';
 import NoPayLeaves from './components/dashboard/NoPayLeaves';
-import ManageEmployees from './components/admin/ManageEmployees';
+import ManageEmployees from './components/admin/ManageEmployee/main/ManageEmployees';
 import ManageLeaveRequests from './components/admin/ManageLeaveRequests';
 import ManageMovementRequests from './components/admin/ManageMovementRequests';
 import EmployeeActivities from './components/admin/EmployeeActivities';

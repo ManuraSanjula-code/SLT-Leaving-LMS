@@ -1,334 +1,366 @@
 package com.slt.peotv.userservice.lms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import jakarta.persistence.*;
+
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-
 @Entity
 @Table(name = "users")
 public class UserEntity implements Serializable {
+    private static final long serialVersionUID = 5313493413859894403L;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @JsonIgnore
+    private long id;
 
-	private static final long serialVersionUID = 5313493413859894403L;
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	@JsonIgnore
-	private long id;
+    private String userId;
 
-	private String userId;
+    @Column(nullable = false)
+    private String employeeId;
 
-	private String employeeId; //--
+    @Column(nullable = false)
+    private String sltId;
 
-	private String sltId; //--
+    @Column(nullable = false)
+    private String firstName;
 
-	private String firstName; //--
+    @Column(nullable = false)
+    private String lastName;
 
-	private String lastName; //--
+    @Column(nullable = false, unique = true)
+    private String email;
 
-	private String email; //--
+    @Column(nullable = false)
+    @JsonIgnore
+    private String encryptedPassword;
 
-	@Column(nullable = false)
-	@JsonIgnore
-	private String encryptedPassword;
+    @JsonIgnore
+    private String emailVerificationToken;
 
-	@JsonIgnore
-	private String emailVerificationToken;
+    @JsonIgnore
+    private Boolean emailVerificationStatus = false;
 
-	@JsonIgnore
-	private Boolean emailVerificationStatus = false;
+    @OneToMany(mappedBy = "userDetails", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<AddressEntity> addresses;
 
-	@OneToMany(mappedBy = "userDetails", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
-	private List<AddressEntity> addresses; //--
+    private String profilePic;
 
-	private String profilePic;
+    @Column(name = "gender", length = 1, nullable = false)
+    private String gender;
 
-	@Column(name = "gender", length = 1)
-	private String gender; //--
+    @Column(name = "phone", length = 45, nullable = false)
+    private String phone;
 
-	@Column(name = "phone", length = 45)
-	private String phone; //--
+    @Column(name = "is_slt_emp", columnDefinition = "int(10) unsigned default 0", nullable = false)
+    private Integer isSltEmp;
 
-	@Column(name = "is_slt_emp", columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltEmp; //--
-	
-	@Column(name = "is_slt_intern", columnDefinition = "int(10) unsigned default 0")
-	private Integer isSltIntern; //--
+    @Column(name = "is_slt_intern", columnDefinition = "int(10) unsigned default 0", nullable = false)
+    private Integer isSltIntern;
 
-	@Column(nullable = false)
-	private Integer active = 1;
+    @Column(nullable = false)
+    private Integer active = 1;
 
-	@ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-	@JoinTable(name = "user_sections", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "section_id"))
-	private Collection<SectionEntity> sections;
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @Column(nullable = false)
+    @JoinTable(name = "user_sections", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "section_id"))
+    private Collection<SectionEntity> sections;
 
-	@ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-	@JoinTable(name = "user_profiles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
-	private Collection<ProfilesEntity> profiles;
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name = "user_profiles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
+    @Column(nullable = false)
+    private Collection<ProfilesEntity> profiles;
 
-	@ManyToMany(fetch = FetchType.EAGER) // Eagerly fetch roles
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
-               joinColumns = @JoinColumn(name = "user_id"),
-               inverseJoinColumns = @JoinColumn(name = "role_id"))
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Column(nullable = false)
     private Collection<RoleEntity> roles;
 
-	private Date join_date;
+    @Column(nullable = false)
+    private Date join_date;
 
-	@OneToOne
-	private UserEntity hod;
-	@OneToOne
-	private UserEntity supervisor;
-	@OneToOne
-	private UserEntity other;
-	public UserEntity getOther() {
-		return other;
-	}
+    @OneToOne
+    @JoinColumn(nullable = false)
+    private UserEntity hod;
 
-	public void setOther(UserEntity other) {
-		this.other = other;
-	}
+    @OneToOne
+    @JoinColumn(nullable = false)
+    private UserEntity supervisor;
 
-	private Boolean roaster;
+    @OneToOne
+    private UserEntity other;
 
-	public String getSltId() {
-		return sltId;
-	}
+    @Column(nullable = false)
+    private Boolean roaster;
 
-	public void setSltId(String sltId) {
-		this.sltId = sltId;
-	}
+    public UserEntity getOther() {
+        return other;
+    }
 
-	public UserEntity getHod() {
-		return hod;
-	}
+    public void setOther(UserEntity other) {
+        this.other = other;
+    }
 
-	public void setHod(UserEntity hod) {
-		this.hod = hod;
-	}
+    public String getSltId() {
+        return sltId;
+    }
 
-	public UserEntity getSupervisor() {
-		return supervisor;
-	}
+    public void setSltId(String sltId) {
+        this.sltId = sltId;
+    }
 
-	public void setSupervisor(UserEntity supervisor) {
-		this.supervisor = supervisor;
-	}
+    public UserEntity getHod() {
+        return hod;
+    }
 
-	public Boolean getRoaster() {
-		return roaster;
-	}
+    public void setHod(UserEntity hod) {
+        this.hod = hod;
+    }
 
-	public void setRoaster(Boolean roaster) {
-		this.roaster = roaster;
-	}
+    public UserEntity getSupervisor() {
+        return supervisor;
+    }
 
-	public Date getJoin_date() {
-		return join_date;
-	}
+    public void setSupervisor(UserEntity supervisor) {
+        this.supervisor = supervisor;
+    }
 
-	public void setJoin_date(Date join_date) {
-		this.join_date = join_date;
-	}
+    public Boolean getRoaster() {
+        return roaster;
+    }
 
-	public List<AddressEntity> getAddresses() {
-		return addresses;
-	}
+    public void setRoaster(Boolean roaster) {
+        this.roaster = roaster;
+    }
 
-	public Collection<RoleEntity> getRoles() {
-		return roles;
-	}
+    public Date getJoin_date() {
+        return join_date;
+    }
 
-	public long getId() {
-		return id;
-	}
+    public void setJoin_date(Date join_date) {
+        this.join_date = join_date;
+    }
 
-	public void setId(long id) {
-		this.id = id;
-	}
+    public List<AddressEntity> getAddresses() {
+        return addresses;
+    }
 
-	public String getUserId() {
-		return userId;
-	}
+    public void setAddresses(List<AddressEntity> addresses) {
+        this.addresses = addresses;
+    }
 
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
+    public Collection<RoleEntity> getRoles() {
+        return roles;
+    }
 
-	public String getEmployeeId() {
-		return employeeId;
-	}
+    public void setRoles(Collection<RoleEntity> roles) {
+        this.roles = roles;
+    }
 
-	public void setEmployeeId(String employeeId) {
-		this.employeeId = employeeId;
-	}
+    public long getId() {
+        return id;
+    }
 
-	public String getFirstName() {
-		return firstName;
-	}
+    public void setId(long id) {
+        this.id = id;
+    }
 
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
+    public String getUserId() {
+        return userId;
+    }
 
-	public String getLastName() {
-		return lastName;
-	}
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
+    public String getEmployeeId() {
+        return employeeId;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public String getFirstName() {
+        return firstName;
+    }
 
-	public String getEncryptedPassword() {
-		return encryptedPassword;
-	}
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
-	public void setEncryptedPassword(String encryptedPassword) {
-		this.encryptedPassword = encryptedPassword;
-	}
+    public String getLastName() {
+        return lastName;
+    }
 
-	public String getEmailVerificationToken() {
-		return emailVerificationToken;
-	}
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
 
-	public void setEmailVerificationToken(String emailVerificationToken) {
-		this.emailVerificationToken = emailVerificationToken;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public Boolean getEmailVerificationStatus() {
-		return emailVerificationStatus;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public void setEmailVerificationStatus(Boolean emailVerificationStatus) {
-		this.emailVerificationStatus = emailVerificationStatus;
-	}
+    public String getEncryptedPassword() {
+        return encryptedPassword;
+    }
 
-	public void setAddresses(List<AddressEntity> addresses) {
-		this.addresses = addresses;
-	}
+    public void setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword = encryptedPassword;
+    }
 
-	public String getProfilePic() {
-		return profilePic;
-	}
+    public String getEmailVerificationToken() {
+        return emailVerificationToken;
+    }
 
-	public void setProfilePic(String profilePic) {
-		this.profilePic = profilePic;
-	}
+    public void setEmailVerificationToken(String emailVerificationToken) {
+        this.emailVerificationToken = emailVerificationToken;
+    }
 
-	public String getGender() {
-		return gender;
-	}
+    public Boolean getEmailVerificationStatus() {
+        return emailVerificationStatus;
+    }
 
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
+    public void setEmailVerificationStatus(Boolean emailVerificationStatus) {
+        this.emailVerificationStatus = emailVerificationStatus;
+    }
 
-	public String getPhone() {
-		return phone;
-	}
+    public String getProfilePic() {
+        return profilePic;
+    }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
+    public void setProfilePic(String profilePic) {
+        this.profilePic = profilePic;
+    }
 
-	public Integer getIsSltEmp() {
-		return isSltEmp;
-	}
+    public String getGender() {
+        return gender;
+    }
 
-	public void setIsSltEmp(Integer isSltEmp) {
-		this.isSltEmp = isSltEmp;
-	}
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-	public Integer getIsSltIntern() {
-		return isSltIntern;
-	}
+    public String getPhone() {
+        return phone;
+    }
 
-	public void setIsSltIntern(Integer isSltIntern) {
-		this.isSltIntern = isSltIntern;
-	}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-	public Integer getActive() {
-		return active;
-	}
+    public Integer getIsSltEmp() {
+        return isSltEmp;
+    }
 
-	public void setActive(Integer active) {
-		this.active = active;
-	}
+    public void setIsSltEmp(Integer isSltEmp) {
+        this.isSltEmp = isSltEmp;
+    }
 
-	public void setRoles(Collection<RoleEntity> roles) {
-		this.roles = roles;
-	}
+    public Integer getIsSltIntern() {
+        return isSltIntern;
+    }
 
-	public Collection<ProfilesEntity> getProfiles() {
-		return profiles;
-	}
+    public void setIsSltIntern(Integer isSltIntern) {
+        this.isSltIntern = isSltIntern;
+    }
 
-	public void setProfiles(Collection<ProfilesEntity> profiles) {
-		this.profiles = profiles;
-	}
+    public Integer getActive() {
+        return active;
+    }
 
-	public Collection<SectionEntity> getSections() {
-		return sections;
-	}
+    public void setActive(Integer active) {
+        this.active = active;
+    }
 
-	public void setSections(Collection<SectionEntity> sections) {
-		this.sections = sections;
-	}
+    public Collection<ProfilesEntity> getProfiles() {
+        return profiles;
+    }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(active, addresses, email, emailVerificationStatus, emailVerificationToken, employeeId,
-				encryptedPassword, firstName, gender, id, isSltEmp, isSltIntern, join_date, lastName, phone, profilePic,
-				profiles, roles, sections, userId);
-	}
+    public void setProfiles(Collection<ProfilesEntity> profiles) {
+        this.profiles = profiles;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if ((obj == null) || (getClass() != obj.getClass())) {
-			return false;
-		}
-		UserEntity other = (UserEntity) obj;
-		return Objects.equals(active, other.active) && Objects.equals(addresses, other.addresses)
-				&& Objects.equals(email, other.email)
-				&& Objects.equals(emailVerificationStatus, other.emailVerificationStatus)
-				&& Objects.equals(emailVerificationToken, other.emailVerificationToken)
-				&& Objects.equals(employeeId, other.employeeId)
-				&& Objects.equals(encryptedPassword, other.encryptedPassword)
-				&& Objects.equals(firstName, other.firstName) && Objects.equals(gender, other.gender) && id == other.id
-				&& Objects.equals(isSltEmp, other.isSltEmp) && Objects.equals(isSltIntern, other.isSltIntern)
-				&& Objects.equals(join_date, other.join_date) && Objects.equals(lastName, other.lastName)
-				&& Objects.equals(phone, other.phone) && Objects.equals(profilePic, other.profilePic)
-				&& Objects.equals(profiles, other.profiles) && Objects.equals(roles, other.roles)
-				&& Objects.equals(sections, other.sections) && Objects.equals(userId, other.userId);
-	}
+    public Collection<SectionEntity> getSections() {
+        return sections;
+    }
+
+    public void setSections(Collection<SectionEntity> sections) {
+        this.sections = sections;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(active, addresses, email, emailVerificationStatus, emailVerificationToken, employeeId,
+                encryptedPassword, firstName, gender, id, isSltEmp, isSltIntern, join_date, lastName, phone, profilePic,
+                profiles, roles, sections, userId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if ((obj == null) || (getClass() != obj.getClass())) {
+            return false;
+        }
+        UserEntity other = (UserEntity) obj;
+        return Objects.equals(active, other.active) && Objects.equals(addresses, other.addresses)
+                && Objects.equals(email, other.email)
+                && Objects.equals(emailVerificationStatus, other.emailVerificationStatus)
+                && Objects.equals(emailVerificationToken, other.emailVerificationToken)
+                && Objects.equals(employeeId, other.employeeId)
+                && Objects.equals(encryptedPassword, other.encryptedPassword)
+                && Objects.equals(firstName, other.firstName) && Objects.equals(gender, other.gender) && id == other.id
+                && Objects.equals(isSltEmp, other.isSltEmp) && Objects.equals(isSltIntern, other.isSltIntern)
+                && Objects.equals(join_date, other.join_date) && Objects.equals(lastName, other.lastName)
+                && Objects.equals(phone, other.phone) && Objects.equals(profilePic, other.profilePic)
+                && Objects.equals(profiles, other.profiles) && Objects.equals(roles, other.roles)
+                && Objects.equals(sections, other.sections) && Objects.equals(userId, other.userId);
+    }
+
+    @Override
+    public String toString() {
+        return "UserEntity{" +
+                "id=" + id +
+                ", userId='" + userId + '\'' +
+                ", employeeId='" + employeeId + '\'' +
+                ", sltId='" + sltId + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", encryptedPassword='" + encryptedPassword + '\'' +
+                ", emailVerificationToken='" + emailVerificationToken + '\'' +
+                ", emailVerificationStatus=" + emailVerificationStatus +
+                ", addresses=" + addresses +
+                ", profilePic='" + profilePic + '\'' +
+                ", gender='" + gender + '\'' +
+                ", phone='" + phone + '\'' +
+                ", isSltEmp=" + isSltEmp +
+                ", isSltIntern=" + isSltIntern +
+                ", active=" + active +
+                ", sections=" + sections +
+                ", profiles=" + profiles +
+                ", roles=" + roles +
+                ", join_date=" + join_date +
+                ", hod=" + hod +
+                ", supervisor=" + supervisor +
+                ", other=" + other +
+                ", roaster=" + roaster +
+                '}';
+    }
 }

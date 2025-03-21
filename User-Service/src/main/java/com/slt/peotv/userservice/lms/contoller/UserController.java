@@ -1,16 +1,18 @@
 package com.slt.peotv.userservice.lms.contoller;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
+import com.slt.peotv.userservice.lms.entity.TempUser;
+import com.slt.peotv.userservice.lms.repository.*;
+import com.slt.peotv.userservice.lms.shared.dto.*;
+import com.slt.peotv.userservice.lms.shared.model.request.*;
+import com.slt.peotv.userservice.lms.utils.UpdateUtilsArchive;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -21,36 +23,19 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.slt.peotv.userservice.lms.entity.UserEntity;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
 import com.slt.peotv.userservice.lms.exceptions.UserUnAuthorizedServiceException;
-import com.slt.peotv.userservice.lms.repository.UserRepository;
 import com.slt.peotv.userservice.lms.service.AddressService;
 import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
-import com.slt.peotv.userservice.lms.shared.dto.UserDto;
-import com.slt.peotv.userservice.lms.shared.dto.UserDto_;
-import com.slt.peotv.userservice.lms.shared.model.request.AddressRequestModel;
-import com.slt.peotv.userservice.lms.shared.model.request.ProfileReq;
-import com.slt.peotv.userservice.lms.shared.model.request.UserDetailsRequestModel;
-import com.slt.peotv.userservice.lms.shared.model.request.UserPasswordReset;
 import com.slt.peotv.userservice.lms.shared.model.response.AddressesRest;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
 import com.slt.peotv.userservice.lms.shared.model.response.OperationStatusModel;
@@ -138,54 +123,202 @@ public class UserController {
 
 	        return userRest;
 	    }
+		public static AddressesRest mapToAddressRest(AddressDTO addressDTO) {
+			AddressesRest addressRest = new AddressesRest();
+			addressRest.setAddressId(addressDTO.getAddressId());
+			addressRest.setCity(addressDTO.getCity());
+			addressRest.setCountry(addressDTO.getCountry());
+			addressRest.setStreetName(addressDTO.getStreetName());
+			addressRest.setPostalCode(addressDTO.getPostalCode());
+			addressRest.setIsDefault(addressDTO.getIsDefault());
+			return addressRest;
+		}
+		public static AddressDTO mapToAddressDTO(AddressesRest addressRest) {
+			AddressDTO addressDTO = new AddressDTO();
+			addressDTO.setAddressId(addressRest.getAddressId());
+			addressDTO.setCity(addressRest.getCity());
+			addressDTO.setCountry(addressRest.getCountry());
+			addressDTO.setStreetName(addressRest.getStreetName());
+			addressDTO.setPostalCode(addressRest.getPostalCode());
+			addressDTO.setIsDefault(addressRest.getIsDefault());
+			return addressDTO;
+		}
+		public static UserDto mapToUserDto(UserRest userRest) {
+			UserDto userDto = new UserDto();
+			userDto.setUserId(userRest.getUserId());
+			userDto.setFirstName(userRest.getFirstName());
+			userDto.setLastName(userRest.getLastName());
+			userDto.setEmail(userRest.getEmail());
+			userDto.setProfilePic(userRest.getProfilePic());
+			userDto.setRoles(userRest.getRoles());
+			userDto.setSections(userRest.getSections());
+			userDto.setProfiles(userRest.getProfiles());
+			userDto.setIsSltEmp(userRest.getIsSltEmp());
+			userDto.setIsSltIntern(userRest.getIsSltIntern());
+			userDto.setActive(userRest.getActive());
+			userDto.setPhone(userRest.getPhone());
+			userDto.setGender(userRest.getGender());
+
+			// Map AddressesRest to AddressDTO
+			if (userRest.getAddresses() != null) {
+				List<AddressDTO> addressesDto = userRest.getAddresses().stream()
+						.map(UserMapper::mapToAddressDTO)
+						.collect(Collectors.toList());
+				userDto.setAddresses(addressesDto);
+			}
+
+			return userDto;
+		}
+		public static UserRest mapToUserRest(UserDto userDto) {
+			UserRest userRest = new UserRest();
+			userRest.setUserId(userDto.getUserId());
+			userRest.setFirstName(userDto.getFirstName());
+			userRest.setLastName(userDto.getLastName());
+			userRest.setEmail(userDto.getEmail());
+			userRest.setProfilePic(userDto.getProfilePic());
+			userRest.setRoles(userDto.getRoles());
+			userRest.setSections(userDto.getSections());
+			userRest.setProfiles(userDto.getProfiles());
+			userRest.setIsSltEmp(userDto.getIsSltEmp());
+			userRest.setIsSltIntern(userDto.getIsSltIntern());
+			userRest.setActive(userDto.getActive());
+			userRest.setPhone(userDto.getPhone());
+			userRest.setGender(userDto.getGender());
+
+			// Map AddressDTO to AddressesRest
+			if (userDto.getAddresses() != null) {
+				List<AddressesRest> addressesRest = userDto.getAddresses().stream()
+						.map(UserMapper::mapToAddressRest)
+						.collect(Collectors.toList());
+				userRest.setAddresses(addressesRest);
+			}
+
+			return userRest;
+		}
 	}
 
+	@Autowired
+	private UserService userService;
 
 	@Autowired
-	UserService userService;
+	private AddressService addressService;
 
 	@Autowired
-	AddressService addressService;
+	private AddressService addressesService;
 
 	@Autowired
-	AddressService addressesService;
+	private UpdateUtilsArchive updateUtils;
 
 	@Autowired
-	UserRepository userRepo;
+	private TempUserRepo tempUserRepo;
+
+	@GetMapping("/temp")
+	private List<TempUser> tempUsers(){
+		return (List<TempUser>) tempUserRepo.findAll();
+	}
+
+	@RequestMapping(value = "/auth/{userid}", method = {RequestMethod.POST, RequestMethod.PUT})
+	public AuthorityDTO saveAuth(@RequestBody AuthReq req, @PathVariable("userid") String userid) {
+		return userService.saveAuthority(req);
+	}
+
+	@DeleteMapping("/auth/{id}/{userid}")
+	public ResponseEntity<Void> deleteAuth(@PathVariable("id") String id, @PathVariable("userid") String userid) {
+		userService.deleteAuth(Long.parseLong(id));
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
+	@DeleteMapping("/section/{id}/{userid}")
+	public ResponseEntity<Void> deleteSection(@PathVariable("id") Long id, @PathVariable("userid") String userid) {
+		userService.deleteSection(id);
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/section/{userid}", method = {RequestMethod.POST, RequestMethod.PUT})
+	public SectionDTO saveSection(@RequestBody SectionReq req, @PathVariable("userid") String userid) {
+		return userService.saveSection(req);
+	}
+
+	@RequestMapping(value = "/profile/{userid}", method = {RequestMethod.POST, RequestMethod.PUT})
+	public ProfilesDTO saveProfile(@RequestBody ProfileReq req, @PathVariable("userid") String userid) {
+		return userService.saveProfile(req);
+	}
+	@DeleteMapping("/profile/{id}/{userid}")
+	public ResponseEntity<Void> deleteProfile(@PathVariable("id") Long id, @PathVariable("userid") String userid) {
+		userService.deleteProfile(id);
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
+	@GetMapping("/check/auth/{name}")
+	public boolean checkAuth(@PathVariable("name") String name) {
+		return userService.checkAuth(name);
+	}
+
+	@GetMapping(path="/names/roles")
+	public List<String> getAllRoleNames() {
+		return userService.getAllRoleNames();
+	}
+
+	@GetMapping(path="/names/sections")
+	public List<String> getAllSectionNames() {
+		return userService.getAllSectionNames();
+	}
+
+	@GetMapping(path="/names/profiles")
+	public List<String> getAllProfileNames() {
+		return userService.getAllProfileNames();
+	}
 
 	@GetMapping(path = "/{userid}")
-	public UserRest getUser(@PathVariable String userid) {
-		UserDto userDto = userService.getUserByUserId(userid);
-		ModelMapper modelMapper = new ModelMapper();
-		return modelMapper.map(userDto, UserRest.class);
+	public UserRest getUser(@PathVariable String userid, Authentication authentication) {
+		String name = authentication.getName();
+		String[] parts = name.split(" ");
+
+		String loginType = parts.length > 1 ? parts[1] : "DEFAULT";
+		if ("TEMP".equals(loginType)) {
+			return userService.getUserByUserId_(userid);
+		}else {
+			UserDto userDto = userService.getUserByUserId(userid);
+			return UserMapper.mapToUserRest(userDto);
+		}
 	}
 	
 	@GetMapping(path = "/get-role/{name}")
-	public List<UserDto_> getRole(@PathVariable String name) {
-		List<UserDto_> userDto = userService.findByRoleName(name);
+	public List<UserDtoArchive> getRole(@PathVariable String name) {
+		List<UserDtoArchive> userDto = userService.findByRoleName(name);
 		return userDto;
 	}
 	
-	@PostMapping("/profiles/{name}")
-	public ProfilesEntity createProfiles(@PathVariable String name, @RequestBody ProfileReq req){
-		return userService.createProfiles(name, req);
+	@GetMapping("/roles")
+	public List<RoleDTO> getAllRole(){
+		return userService.getRole();
+	}
+	
+	@GetMapping("/profile")
+	public List<ProfilesDTO> getAllSection(){
+		return userService.getProfile();
+	}
+	
+	@GetMapping("/sections")
+	public List<SectionDTO> getAllProfiles(){
+		return userService.getSection();
+	}
+	
+	@GetMapping("/authorities")
+	public List<Map<String, String>> getAuthority(){
+		return userService.getAuthority();
 	}
 
-	@PostMapping("/section/{name}")
-	public SectionEntity createSection(@PathVariable String name){
-		return userService.createSection(name);
+	@RequestMapping(value = "/roles/{userid}", method = {RequestMethod.POST, RequestMethod.PUT})
+	public RoleDTO createRoles(@RequestBody RoleReq req, @PathVariable String userid){
+		return userService.saveRole(req);
 	}
 
-	@PostMapping("/profiles/{name}/create")
-	public ProfilesEntity getProfiles(@PathVariable String name){
-		return userService.getProfiles(name);
-	}
+	@DeleteMapping("/delete/role/{id}/{userid}")
+	public void deleteRole(@PathVariable Long id, @PathVariable String userid){
+		userService.deleteRole(id);
 
-	@PostMapping("/section/{name}/create")
-	public SectionEntity getSection(@PathVariable String name){
-		return userService.getSection(name);
 	}
-
 	@GetMapping("/check-address/{userid}")
 	public boolean checkAddress(@PathVariable String userid) {
 		return userService.userAddress(userid);
@@ -193,9 +326,8 @@ public class UserController {
 
 	@PutMapping("/upload-pic/{userid}")
 	public UserRest updateUserProfile(@PathVariable String userid, @RequestParam("image") MultipartFile file) throws Exception {
-		ModelMapper modelMapper = new ModelMapper();
 		UserDto createdUser = userService.updateUserProfile(file, userid);
-		return modelMapper.map(createdUser, UserRest.class);
+		return UserMapper.mapToUserRest(createdUser);
 	}
 
 	@PostMapping("/add/employees/{userid}")
@@ -205,18 +337,12 @@ public class UserController {
 
 	@PutMapping(path = "/{employeeId}/{userid}")
 	public UserRest updateEmployee(@PathVariable String userid, @PathVariable String employeeId, @RequestBody UserDto userDetails) {
-		System.out.println("=================================");
-		System.out.print(userDetails.getEmail());
-		
-		UserDto updateUser = userService.updateUser(employeeId, userDetails);		
+		UserDto updateUser = updateUtils.updateUser(employeeId, userDetails);
 		return UserMapper.mapUserDtoToUserRest(updateUser);
 	}
 	
 	@PutMapping(path = "/{userid}")
-	public UserRest updateUser(@PathVariable String userid, @RequestBody UserDto userDetails) {
-		System.out.println("=================================");
-		System.out.print(userDetails.getEmail());
-		
+	public UserRest updateUser(@PathVariable String userid, @RequestBody UserDto userDetails) throws Exception {
 		UserDto updateUser = userService.updateUser(userid, userDetails);		
 		return UserMapper.mapUserDtoToUserRest(updateUser);
 	}
@@ -254,8 +380,7 @@ public class UserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
-        return userRepo.findAll(pageable);
+		return userService.getAllUsers(page, size);
     }
 
 	@GetMapping(path = "/{addressId}/addresses", produces = { MediaType.APPLICATION_XML_VALUE,
@@ -266,24 +391,20 @@ public class UserController {
 		List<AddressDTO> addressesDTO = addressesService.getAddresses(addressId);
 
 		if (addressesDTO != null && !addressesDTO.isEmpty()) {
-			Type listType = new TypeToken<List<AddressesRest>>() {
-			}.getType();
-			returnValue = new ModelMapper().map(addressesDTO, listType);
+			// Manually map AddressDTO to AddressesRest
+			for (AddressDTO addressDTO : addressesDTO) {
+                AddressesRest addressRest = UserMapper.mapToAddressRest(addressDTO);
 
-			for (AddressesRest addressRest : returnValue) {
 				Link selfLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class)
-						.getUserAddress(addressId, addressRest.getAddressId()))
+								.getUserAddress(addressId, addressRest.getAddressId()))
 						.withSelfRel();
 				addressRest.add(selfLink);
-			}
 
+				returnValue.add(addressRest);
+			}
 		}
 
-		Link userLink = WebMvcLinkBuilder.linkTo(UserController.class).slash(addressId).withRel("user");
-		Link selfLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class)
-				.getUserAddresses(addressId))
-				.withSelfRel();
-		return CollectionModel.of(returnValue, userLink, selfLink);
+		return CollectionModel.of(returnValue);
 	}
 
 	@GetMapping(path = "/{userId}/addresses/{addressId}", produces = { MediaType.APPLICATION_JSON_VALUE,
@@ -292,8 +413,7 @@ public class UserController {
 
 		AddressDTO addressesDto = addressService.getAddress(addressId);
 
-		ModelMapper modelMapper = new ModelMapper();
-		AddressesRest returnValue = modelMapper.map(addressesDto, AddressesRest.class);
+		AddressesRest returnValue = UserMapper.mapToAddressRest(addressesDto);
 
 		Link userLink = WebMvcLinkBuilder.linkTo(UserController.class).slash(userId).withRel("user");
 		Link userAddressesLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserAddresses(userId))

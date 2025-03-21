@@ -2,16 +2,11 @@ package com.slt.peotv.userservice.lms.entity;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 
 @Entity
@@ -22,13 +17,14 @@ public class AuthorityEntity implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
-	private long id;
+	private Long id;
 
 	@Column(nullable=false, length=20)
 	private String name;
 
 	@ManyToMany(mappedBy="authorities")
 	@JsonIgnore
+	@Column(nullable = false)
 	private Collection<RoleEntity> roles;
 
 	public AuthorityEntity() {}
@@ -37,11 +33,11 @@ public class AuthorityEntity implements Serializable {
 		 this.name = name;
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
@@ -61,4 +57,24 @@ public class AuthorityEntity implements Serializable {
 		this.roles = roles;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		AuthorityEntity authority = (AuthorityEntity) o;
+		return id == authority.id && Objects.equals(name, authority.name) && Objects.equals(roles, authority.roles);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, name, roles);
+	}
+
+	@Override
+	public String toString() {
+		return "AuthorityEntity{" +
+				"id=" + id +
+				", name='" + name + '\'' +
+				", roles=" + roles +
+				'}';
+	}
 }

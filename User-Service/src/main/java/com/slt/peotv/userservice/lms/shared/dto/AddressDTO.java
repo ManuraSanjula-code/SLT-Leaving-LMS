@@ -1,5 +1,7 @@
 package com.slt.peotv.userservice.lms.shared.dto;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 public class AddressDTO {
 	private long id;
 	private String addressId;
@@ -7,6 +9,7 @@ public class AddressDTO {
 	private String country;
 	private String streetName;
 	private String postalCode;
+	@JsonBackReference 
 	private UserDto userDetails;
 	private Boolean isDefault;
 

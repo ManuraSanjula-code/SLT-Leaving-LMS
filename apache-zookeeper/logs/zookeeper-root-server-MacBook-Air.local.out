@@ -1,104 +1,152 @@
-2025-03-17 07:39:19,874 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@177] - Reading configuration from: /Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf/zoo.cfg
-2025-03-17 07:39:19,876 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@440] - clientPortAddress is 0.0.0.0:2181
-2025-03-17 07:39:19,876 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@444] - secureClientPort is not set
-2025-03-17 07:39:19,876 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@460] - observerMasterPort is not set
-2025-03-17 07:39:19,876 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@477] - metricsProvider.className is org.apache.zookeeper.metrics.impl.DefaultMetricsProvider
-2025-03-17 07:39:19,877 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@78] - autopurge.snapRetainCount set to 3
-2025-03-17 07:39:19,877 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@79] - autopurge.purgeInterval set to 0
-2025-03-17 07:39:19,877 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@101] - Purge task is not scheduled.
-2025-03-17 07:39:19,877 [myid:] - WARN  [main:o.a.z.s.q.QuorumPeerMain@139] - Either no config or no quorum defined in config, running in standalone mode
-2025-03-17 07:39:19,877 [myid:] - INFO  [main:o.a.z.j.ManagedUtil@46] - Log4j 1.2 jmx support not found; jmx disabled.
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@177] - Reading configuration from: /Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf/zoo.cfg
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@440] - clientPortAddress is 0.0.0.0:2181
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@444] - secureClientPort is not set
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@460] - observerMasterPort is not set
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@477] - metricsProvider.className is org.apache.zookeeper.metrics.impl.DefaultMetricsProvider
-2025-03-17 07:39:19,878 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServerMain@123] - Starting server
-2025-03-17 07:39:19,882 [myid:] - INFO  [main:o.a.z.s.ServerMetrics@64] - ServerMetrics initialized with provider org.apache.zookeeper.metrics.impl.DefaultMetricsProvider@3febb011
-2025-03-17 07:39:19,883 [myid:] - INFO  [main:o.a.z.s.a.DigestAuthenticationProvider@51] - ACL digest algorithm is: SHA1
-2025-03-17 07:39:19,883 [myid:] - INFO  [main:o.a.z.s.a.DigestAuthenticationProvider@65] - zookeeper.DigestAuthenticationProvider.enabled = true
-2025-03-17 07:39:19,884 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@124] - zookeeper.snapshot.trust.empty : false
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] - 
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -   ______                  _                                          
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -  |___  /                 | |                                         
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -     / /    ___     ___   | | __   ___    ___   _ __     ___   _ __   
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -    / /    / _ \   / _ \  | |/ /  / _ \  / _ \ | '_ \   / _ \ | '__|
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -   / /__  | (_) | | (_) | |   <  |  __/ |  __/ | |_) | |  __/ | |    
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -  /_____|  \___/   \___/  |_|\_\  \___|  \___| | .__/   \___| |_|
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -                                               | |                     
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -                                               |_|                     
-2025-03-17 07:39:19,887 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] - 
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:zookeeper.version=3.9.3-c26634f34490bb0ea7a09cc51e05ede3b4e320ee, built on 2024-10-17 23:21 UTC
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:host.name=localhost
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.version=17.0.13
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.vendor=Amazon.com Inc.
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.home=/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.class.path=/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-metrics-providers/zookeeper-prometheus-metrics/target/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/target/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../build/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-metrics-providers/zookeeper-prometheus-metrics/target/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/target/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../build/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-prometheus-metrics-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-jute-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/snappy-java-1.1.10.5.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/slf4j-api-1.7.30.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_servlet-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_hotspot-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_common-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-native-unix-common-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-native-epoll-4.1.113.Final-linux-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-classes-epoll-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-classes-2.0.66.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-windows-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-osx-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-osx-aarch_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-linux-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-linux-aarch_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-resolver-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-handler-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-common-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-codec-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-buffer-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/metrics-core-4.1.12.1.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/logback-core-1.2.13.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/logback-classic-1.2.13.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jline-2.14.6.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-util-ajax-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-util-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-servlet-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-server-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-security-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-io-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-http-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/javax.servlet-api-3.1.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-databind-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-core-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-annotations-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/commons-io-2.17.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/commons-cli-1.5.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/audience-annotations-0.12.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/src/main/resources/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf:
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.library.path=/Users/manurasanjula/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.io.tmpdir=/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.compiler=<NA>
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.name=Mac OS X
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.arch=aarch64
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.version=15.3.2
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.name=root
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.home=/var/root
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.dir=/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.free=240MB
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.max=1000MB
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.total=258MB
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@149] - zookeeper.enableEagerACLCheck = false
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@162] - zookeeper.digest.enabled = true
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@166] - zookeeper.closeSessionTxn.enabled = true
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@2242] - zookeeper.serializeLastProcessedZxid.enabled = true
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1585] - zookeeper.flushDelay = 0 ms
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1594] - zookeeper.maxWriteQueuePollTime = 0 ms
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1603] - zookeeper.maxBatchSize=1000
-2025-03-17 07:39:19,888 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@287] - zookeeper.intBufferStartingSizeBytes = 1024
-2025-03-17 07:39:19,889 [myid:] - INFO  [main:o.a.z.s.BlueThrottle@141] - Weighed connection throttling is disabled
-2025-03-17 07:39:19,889 [myid:] - INFO  [main:o.a.z.s.AuthenticationHelper@66] - zookeeper.enforce.auth.enabled = false
-2025-03-17 07:39:19,889 [myid:] - INFO  [main:o.a.z.s.AuthenticationHelper@67] - zookeeper.enforce.auth.schemes = []
-2025-03-17 07:39:19,889 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1395] - minSessionTimeout set to 4000 ms
-2025-03-17 07:39:19,889 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1404] - maxSessionTimeout set to 40000 ms
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.ResponseCache@45] - getData response cache size is initialized with value 400.
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.ResponseCache@45] - getChildren response cache size is initialized with value 400.
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@109] - zookeeper.pathStats.slotCapacity = 60
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@110] - zookeeper.pathStats.slotDuration = 15
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@111] - zookeeper.pathStats.maxDepth = 6
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@112] - zookeeper.pathStats.initialDelay = 5
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@113] - zookeeper.pathStats.delay = 5
-2025-03-17 07:39:19,890 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@114] - zookeeper.pathStats.enabled = false
-2025-03-17 07:39:19,891 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1622] - The max bytes for all large requests are set to 104857600
-2025-03-17 07:39:19,891 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1636] - The large request threshold is set to -1
-2025-03-17 07:39:19,891 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@385] - Created server with tickTime 2000 ms minSessionTimeout 4000 ms maxSessionTimeout 40000 ms clientPortListenBacklog -1 dataLogdir /var/lib/zookeeper/version-2 snapdir /var/lib/zookeeper/version-2
-2025-03-17 07:39:19,900 [myid:] - INFO  [main:o.e.j.u.l.Log@170] - Logging initialized @275ms to org.eclipse.jetty.util.log.Slf4jLog
-2025-03-17 07:39:19,923 [myid:] - WARN  [main:o.e.j.s.h.ContextHandler@1662] - o.e.j.s.ServletContextHandler@58695725{/,null,STOPPED} contextPath ends with /*
-2025-03-17 07:39:19,923 [myid:] - WARN  [main:o.e.j.s.h.ContextHandler@1673] - Empty contextPath
-2025-03-17 07:39:19,930 [myid:] - INFO  [main:o.e.j.s.Server@375] - jetty-9.4.56.v20240826; built: 2024-08-26T17:15:05.868Z; git: ec6782ff5ead824dabdcf47fa98f90a4aedff401; jvm 17.0.13+11-LTS
-2025-03-17 07:39:19,941 [myid:] - INFO  [main:o.e.j.s.s.DefaultSessionIdManager@334] - DefaultSessionIdManager workerName=node0
-2025-03-17 07:39:19,941 [myid:] - INFO  [main:o.e.j.s.s.DefaultSessionIdManager@339] - No SessionScavenger set, using defaults
-2025-03-17 07:39:19,941 [myid:] - INFO  [main:o.e.j.s.s.HouseKeeper@132] - node0 Scavenging every 600000ms
-2025-03-17 07:39:19,943 [myid:] - WARN  [main:o.e.j.s.ConstraintSecurityHandler@759] - ServletContext@o.e.j.s.ServletContextHandler@58695725{/,null,STARTING} has uncovered http methods for path: /*
-2025-03-17 07:39:19,946 [myid:] - INFO  [main:o.e.j.s.h.ContextHandler@921] - Started o.e.j.s.ServletContextHandler@58695725{/,null,AVAILABLE}
-2025-03-17 07:39:19,951 [myid:] - INFO  [main:o.e.j.s.AbstractConnector@333] - Started ServerConnector@55536d9e{HTTP/1.1, (http/1.1)}{0.0.0.0:2001}
-2025-03-17 07:39:19,951 [myid:] - INFO  [main:o.e.j.s.Server@415] - Started @327ms
-2025-03-17 07:39:19,951 [myid:] - INFO  [main:o.a.z.s.a.JettyAdminServer@201] - Started AdminServer on address 0.0.0.0, port 2001 and command URL /commands
-2025-03-17 07:39:19,954 [myid:] - INFO  [main:o.a.z.s.ServerCnxnFactory@172] - Using org.apache.zookeeper.server.NIOServerCnxnFactory as server connection factory
-2025-03-17 07:39:19,954 [myid:] - WARN  [main:o.a.z.s.ServerCnxnFactory@337] - maxCnxns is not configured, using default value 0.
-2025-03-17 07:39:19,955 [myid:] - INFO  [main:o.a.z.s.NIOServerCnxnFactory@652] - Configuring NIO connection handler with 10s sessionless connection timeout, 2 selector thread(s), 16 worker threads, and 64 kB direct buffers.
-2025-03-17 07:39:19,955 [myid:] - INFO  [main:o.a.z.s.NIOServerCnxnFactory@660] - binding to port 0.0.0.0/0.0.0.0:2181
-2025-03-17 07:39:19,959 [myid:] - INFO  [main:o.a.z.s.w.WatchManagerFactory@42] - Using org.apache.zookeeper.server.watch.WatchManager as watch manager
-2025-03-17 07:39:19,959 [myid:] - INFO  [main:o.a.z.s.w.WatchManagerFactory@42] - Using org.apache.zookeeper.server.watch.WatchManager as watch manager
-2025-03-17 07:39:19,959 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@134] - zookeeper.snapshotSizeFactor = 0.33
-2025-03-17 07:39:19,959 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@154] - zookeeper.commitLogCount=500
-2025-03-17 07:39:19,961 [myid:] - INFO  [main:o.a.z.s.p.SnapStream@61] - zookeeper.snapshot.compression.method = CHECKED
-2025-03-17 07:39:19,966 [myid:] - INFO  [main:o.a.z.s.p.FileSnap@86] - Reading snapshot /var/lib/zookeeper/version-2/snapshot.9ec
-2025-03-17 07:39:19,967 [myid:] - INFO  [main:o.a.z.s.DataTree@1705] - The digest in the snapshot has digest version of 2, with zxid as 0x9ec, and digest value as 6498100806
-2025-03-17 07:39:19,973 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@372] - 64 txns loaded in 3 ms
-2025-03-17 07:39:19,973 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@291] - Snapshot loaded in 14 ms, highest zxid is 0xa2c, digest is 4511079065
-2025-03-17 07:39:19,973 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@480] - Snapshotting: 0xa2c to /var/lib/zookeeper/version-2/snapshot.a2c
-2025-03-17 07:39:19,973 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@589] - Snapshot taken in 0 ms
-2025-03-17 07:39:19,976 [myid:] - INFO  [ProcessThread(sid:0 cport:2181)::o.a.z.s.PrepRequestProcessor@138] - PrepRequestProcessor (sid:0) started, reconfigEnabled=false
-2025-03-17 07:39:19,976 [myid:] - INFO  [main:o.a.z.s.RequestThrottler@75] - zookeeper.request_throttler.shutdownTimeout = 10000 ms
-2025-03-17 07:39:19,980 [myid:] - INFO  [main:o.a.z.s.ContainerManager@83] - Using checkIntervalMs=60000 maxPerMinute=10000 maxNeverUsedIntervalMs=0
-2025-03-17 07:39:19,980 [myid:] - INFO  [main:o.a.z.a.ZKAuditProvider@42] - ZooKeeper audit is disabled.
-2025-03-17 07:40:59,026 [myid:] - INFO  [SyncThread:0:o.a.z.s.p.FileTxnLog@291] - Creating new log file: log.a2d
+2025-03-21 07:29:45,917 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@177] - Reading configuration from: /Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf/zoo.cfg
+2025-03-21 07:29:45,921 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@440] - clientPortAddress is 0.0.0.0:2181
+2025-03-21 07:29:45,921 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@444] - secureClientPort is not set
+2025-03-21 07:29:45,921 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@460] - observerMasterPort is not set
+2025-03-21 07:29:45,921 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@477] - metricsProvider.className is org.apache.zookeeper.metrics.impl.DefaultMetricsProvider
+2025-03-21 07:29:45,922 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@78] - autopurge.snapRetainCount set to 3
+2025-03-21 07:29:45,922 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@79] - autopurge.purgeInterval set to 0
+2025-03-21 07:29:45,922 [myid:] - INFO  [main:o.a.z.s.DatadirCleanupManager@101] - Purge task is not scheduled.
+2025-03-21 07:29:45,922 [myid:] - WARN  [main:o.a.z.s.q.QuorumPeerMain@139] - Either no config or no quorum defined in config, running in standalone mode
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.j.ManagedUtil@46] - Log4j 1.2 jmx support not found; jmx disabled.
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@177] - Reading configuration from: /Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf/zoo.cfg
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@440] - clientPortAddress is 0.0.0.0:2181
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@444] - secureClientPort is not set
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@460] - observerMasterPort is not set
+2025-03-21 07:29:45,923 [myid:] - INFO  [main:o.a.z.s.q.QuorumPeerConfig@477] - metricsProvider.className is org.apache.zookeeper.metrics.impl.DefaultMetricsProvider
+2025-03-21 07:29:45,924 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServerMain@123] - Starting server
+2025-03-21 07:29:45,928 [myid:] - INFO  [main:o.a.z.s.ServerMetrics@64] - ServerMetrics initialized with provider org.apache.zookeeper.metrics.impl.DefaultMetricsProvider@3febb011
+2025-03-21 07:29:45,929 [myid:] - INFO  [main:o.a.z.s.a.DigestAuthenticationProvider@51] - ACL digest algorithm is: SHA1
+2025-03-21 07:29:45,929 [myid:] - INFO  [main:o.a.z.s.a.DigestAuthenticationProvider@65] - zookeeper.DigestAuthenticationProvider.enabled = true
+2025-03-21 07:29:45,930 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@124] - zookeeper.snapshot.trust.empty : false
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] - 
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -   ______                  _                                          
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -  |___  /                 | |                                         
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -     / /    ___     ___   | | __   ___    ___   _ __     ___   _ __   
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -    / /    / _ \   / _ \  | |/ /  / _ \  / _ \ | '_ \   / _ \ | '__|
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -   / /__  | (_) | | (_) | |   <  |  __/ |  __/ | |_) | |  __/ | |    
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -  /_____|  \___/   \___/  |_|\_\  \___|  \___| | .__/   \___| |_|
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -                                               | |                     
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] -                                               |_|                     
+2025-03-21 07:29:45,933 [myid:] - INFO  [main:o.a.z.ZookeeperBanner@42] - 
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:zookeeper.version=3.9.3-c26634f34490bb0ea7a09cc51e05ede3b4e320ee, built on 2024-10-17 23:21 UTC
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:host.name=localhost
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.version=17.0.13
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.vendor=Amazon.com Inc.
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.home=/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.class.path=/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-metrics-providers/zookeeper-prometheus-metrics/target/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/target/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../build/classes:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-metrics-providers/zookeeper-prometheus-metrics/target/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/target/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../build/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-prometheus-metrics-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-jute-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/zookeeper-3.9.3.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/snappy-java-1.1.10.5.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/slf4j-api-1.7.30.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_servlet-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_hotspot-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient_common-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/simpleclient-0.9.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-native-unix-common-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-native-epoll-4.1.113.Final-linux-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-classes-epoll-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-transport-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-classes-2.0.66.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-windows-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-osx-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-osx-aarch_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-linux-x86_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-tcnative-boringssl-static-2.0.66.Final-linux-aarch_64.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-resolver-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-handler-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-common-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-codec-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/netty-buffer-4.1.113.Final.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/metrics-core-4.1.12.1.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/logback-core-1.2.13.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/logback-classic-1.2.13.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jline-2.14.6.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-util-ajax-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-util-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-servlet-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-server-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-security-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-io-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jetty-http-9.4.56.v20240826.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/javax.servlet-api-3.1.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-databind-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-core-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/jackson-annotations-2.15.2.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/commons-io-2.17.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/commons-cli-1.5.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../lib/audience-annotations-0.12.0.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../zookeeper-server/src/main/resources/lib/*.jar:/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin/../conf:
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.library.path=/Users/manurasanjula/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.io.tmpdir=/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:java.compiler=<NA>
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.name=Mac OS X
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.arch=aarch64
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.version=15.3.2
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.name=root
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.home=/var/root
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:user.dir=/Users/manurasanjula/SLT/Leave LMS/apache-zookeeper/bin
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.free=240MB
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.max=1000MB
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.Environment@98] - Server environment:os.memory.total=258MB
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@149] - zookeeper.enableEagerACLCheck = false
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@162] - zookeeper.digest.enabled = true
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@166] - zookeeper.closeSessionTxn.enabled = true
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@2242] - zookeeper.serializeLastProcessedZxid.enabled = true
+2025-03-21 07:29:45,935 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1585] - zookeeper.flushDelay = 0 ms
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1594] - zookeeper.maxWriteQueuePollTime = 0 ms
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1603] - zookeeper.maxBatchSize=1000
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@287] - zookeeper.intBufferStartingSizeBytes = 1024
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.BlueThrottle@141] - Weighed connection throttling is disabled
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.AuthenticationHelper@66] - zookeeper.enforce.auth.enabled = false
+2025-03-21 07:29:45,936 [myid:] - INFO  [main:o.a.z.s.AuthenticationHelper@67] - zookeeper.enforce.auth.schemes = []
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1395] - minSessionTimeout set to 4000 ms
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1404] - maxSessionTimeout set to 40000 ms
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.ResponseCache@45] - getData response cache size is initialized with value 400.
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.ResponseCache@45] - getChildren response cache size is initialized with value 400.
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@109] - zookeeper.pathStats.slotCapacity = 60
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@110] - zookeeper.pathStats.slotDuration = 15
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@111] - zookeeper.pathStats.maxDepth = 6
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@112] - zookeeper.pathStats.initialDelay = 5
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@113] - zookeeper.pathStats.delay = 5
+2025-03-21 07:29:45,937 [myid:] - INFO  [main:o.a.z.s.u.RequestPathMetricsCollector@114] - zookeeper.pathStats.enabled = false
+2025-03-21 07:29:45,939 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1622] - The max bytes for all large requests are set to 104857600
+2025-03-21 07:29:45,939 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@1636] - The large request threshold is set to -1
+2025-03-21 07:29:45,939 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@385] - Created server with tickTime 2000 ms minSessionTimeout 4000 ms maxSessionTimeout 40000 ms clientPortListenBacklog -1 dataLogdir /var/lib/zookeeper/version-2 snapdir /var/lib/zookeeper/version-2
+2025-03-21 07:29:45,948 [myid:] - INFO  [main:o.e.j.u.l.Log@170] - Logging initialized @318ms to org.eclipse.jetty.util.log.Slf4jLog
+2025-03-21 07:29:45,974 [myid:] - WARN  [main:o.e.j.s.h.ContextHandler@1662] - o.e.j.s.ServletContextHandler@58695725{/,null,STOPPED} contextPath ends with /*
+2025-03-21 07:29:45,974 [myid:] - WARN  [main:o.e.j.s.h.ContextHandler@1673] - Empty contextPath
+2025-03-21 07:29:45,981 [myid:] - INFO  [main:o.e.j.s.Server@375] - jetty-9.4.56.v20240826; built: 2024-08-26T17:15:05.868Z; git: ec6782ff5ead824dabdcf47fa98f90a4aedff401; jvm 17.0.13+11-LTS
+2025-03-21 07:29:45,993 [myid:] - INFO  [main:o.e.j.s.s.DefaultSessionIdManager@334] - DefaultSessionIdManager workerName=node0
+2025-03-21 07:29:45,993 [myid:] - INFO  [main:o.e.j.s.s.DefaultSessionIdManager@339] - No SessionScavenger set, using defaults
+2025-03-21 07:29:45,994 [myid:] - INFO  [main:o.e.j.s.s.HouseKeeper@132] - node0 Scavenging every 660000ms
+2025-03-21 07:29:45,995 [myid:] - WARN  [main:o.e.j.s.ConstraintSecurityHandler@759] - ServletContext@o.e.j.s.ServletContextHandler@58695725{/,null,STARTING} has uncovered http methods for path: /*
+2025-03-21 07:29:45,999 [myid:] - INFO  [main:o.e.j.s.h.ContextHandler@921] - Started o.e.j.s.ServletContextHandler@58695725{/,null,AVAILABLE}
+2025-03-21 07:29:46,004 [myid:] - INFO  [main:o.e.j.s.AbstractConnector@333] - Started ServerConnector@55536d9e{HTTP/1.1, (http/1.1)}{0.0.0.0:2001}
+2025-03-21 07:29:46,005 [myid:] - INFO  [main:o.e.j.s.Server@415] - Started @375ms
+2025-03-21 07:29:46,005 [myid:] - INFO  [main:o.a.z.s.a.JettyAdminServer@201] - Started AdminServer on address 0.0.0.0, port 2001 and command URL /commands
+2025-03-21 07:29:46,007 [myid:] - INFO  [main:o.a.z.s.ServerCnxnFactory@172] - Using org.apache.zookeeper.server.NIOServerCnxnFactory as server connection factory
+2025-03-21 07:29:46,008 [myid:] - WARN  [main:o.a.z.s.ServerCnxnFactory@337] - maxCnxns is not configured, using default value 0.
+2025-03-21 07:29:46,009 [myid:] - INFO  [main:o.a.z.s.NIOServerCnxnFactory@652] - Configuring NIO connection handler with 10s sessionless connection timeout, 2 selector thread(s), 16 worker threads, and 64 kB direct buffers.
+2025-03-21 07:29:46,009 [myid:] - INFO  [main:o.a.z.s.NIOServerCnxnFactory@660] - binding to port 0.0.0.0/0.0.0.0:2181
+2025-03-21 07:29:46,013 [myid:] - INFO  [main:o.a.z.s.w.WatchManagerFactory@42] - Using org.apache.zookeeper.server.watch.WatchManager as watch manager
+2025-03-21 07:29:46,013 [myid:] - INFO  [main:o.a.z.s.w.WatchManagerFactory@42] - Using org.apache.zookeeper.server.watch.WatchManager as watch manager
+2025-03-21 07:29:46,013 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@134] - zookeeper.snapshotSizeFactor = 0.33
+2025-03-21 07:29:46,013 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@154] - zookeeper.commitLogCount=500
+2025-03-21 07:29:46,016 [myid:] - INFO  [main:o.a.z.s.p.SnapStream@61] - zookeeper.snapshot.compression.method = CHECKED
+2025-03-21 07:29:46,022 [myid:] - INFO  [main:o.a.z.s.p.FileSnap@86] - Reading snapshot /var/lib/zookeeper/version-2/snapshot.f75
+2025-03-21 07:29:46,024 [myid:] - INFO  [main:o.a.z.s.DataTree@1705] - The digest in the snapshot has digest version of 2, with zxid as 0xf75, and digest value as 6926013469
+2025-03-21 07:29:46,033 [myid:] - INFO  [main:o.a.z.a.ZKAuditProvider@42] - ZooKeeper audit is disabled.
+2025-03-21 07:29:46,033 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@372] - 122 txns loaded in 5 ms
+2025-03-21 07:29:46,033 [myid:] - INFO  [main:o.a.z.s.ZKDatabase@291] - Snapshot loaded in 20 ms, highest zxid is 0xfef, digest is 9216019856
+2025-03-21 07:29:46,034 [myid:] - INFO  [main:o.a.z.s.p.FileTxnSnapLog@480] - Snapshotting: 0xfef to /var/lib/zookeeper/version-2/snapshot.fef
+2025-03-21 07:29:46,034 [myid:] - INFO  [main:o.a.z.s.ZooKeeperServer@589] - Snapshot taken in 0 ms
+2025-03-21 07:29:46,037 [myid:] - INFO  [ProcessThread(sid:0 cport:2181)::o.a.z.s.PrepRequestProcessor@138] - PrepRequestProcessor (sid:0) started, reconfigEnabled=false
+2025-03-21 07:29:46,037 [myid:] - INFO  [main:o.a.z.s.RequestThrottler@75] - zookeeper.request_throttler.shutdownTimeout = 10000 ms
+2025-03-21 07:29:46,041 [myid:] - INFO  [main:o.a.z.s.ContainerManager@83] - Using checkIntervalMs=60000 maxPerMinute=10000 maxNeverUsedIntervalMs=0
+2025-03-21 07:29:57,732 [myid:] - INFO  [SyncThread:0:o.a.z.s.p.FileTxnLog@291] - Creating new log file: log.ff0
+2025-03-21 07:43:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 08:11:46,044 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 08:16:19,234 [myid:] - INFO  [NIOWorkerThread-14:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:49176, session = 0x1000000b6130001
+2025-03-21 08:16:23,990 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130001, timeout of 4000ms exceeded
+2025-03-21 08:20:45,967 [myid:] - INFO  [NIOWorkerThread-3:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:49779, session = 0x1000000b6130009
+2025-03-21 08:20:46,044 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/api-gateway
+2025-03-21 08:20:46,051 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 08:20:49,994 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130009, timeout of 4000ms exceeded
+2025-03-21 08:23:46,047 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 09:28:05,815 [myid:] - INFO  [NIOWorkerThread-2:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /[0:0:0:0:0:0:0:1]:50041, session = 0x1000000b6130012
+2025-03-21 09:28:10,747 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130012, timeout of 4000ms exceeded
+2025-03-21 09:40:46,047 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 10:03:46,042 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 10:32:46,045 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 11:00:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 11:46:46,041 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 11:46:50,907 [myid:] - INFO  [NIOWorkerThread-2:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:51134, session = 0x1000000b6130018
+2025-03-21 11:46:55,209 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130018, timeout of 4000ms exceeded
+2025-03-21 11:47:46,041 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 11:47:52,914 [myid:] - INFO  [NIOWorkerThread-6:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:53259, session = 0x1000000b6130029
+2025-03-21 11:47:57,206 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130029, timeout of 4000ms exceeded
+2025-03-21 11:50:46,042 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:15:04,176 [myid:] - INFO  [NIOWorkerThread-12:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:53342, session = 0x1000000b613002d
+2025-03-21 12:15:09,201 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b613002d, timeout of 4000ms exceeded
+2025-03-21 12:19:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:21:46,041 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:23:46,042 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:28:46,041 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:36:46,044 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:40:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 12:42:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 13:11:46,042 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 13:15:46,043 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 15:22:06,618 [myid:] - INFO  [NIOWorkerThread-8:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:54053, session = 0x1000000b6130037
+2025-03-21 15:22:06,618 [myid:] - INFO  [NIOWorkerThread-13:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /[0:0:0:0:0:0:0:1]:54052, session = 0x1000000b6130036
+2025-03-21 15:22:10,631 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130037, timeout of 4000ms exceeded
+2025-03-21 15:22:46,042 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/api-gateway
+2025-03-21 15:22:46,047 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 15:22:46,632 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130036, timeout of 40000ms exceeded
+2025-03-21 15:23:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services
+2025-03-21 15:49:46,041 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 15:50:16,584 [myid:] - INFO  [NIOWorkerThread-6:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:57942, session = 0x1000000b6130048
+2025-03-21 15:50:20,634 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b6130048, timeout of 4000ms exceeded
+2025-03-21 16:40:22,301 [myid:] - INFO  [NIOWorkerThread-1:o.a.z.s.NIOServerCnxn@342] - Unable to read additional data from client, it probably closed the socket: address = /127.0.0.1:58485, session = 0x1000000b613004d
+2025-03-21 16:40:26,625 [myid:] - INFO  [SessionTracker:o.a.z.s.ZooKeeperServer@730] - Expiring session 0x1000000b613004d, timeout of 4000ms exceeded
+2025-03-21 16:40:46,046 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/api-gateway
+2025-03-21 16:40:46,051 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services/user-service
+2025-03-21 16:41:46,073 [myid:] - INFO  [ContainerManagerTask:o.a.z.s.ContainerManager@134] - Attempting to delete candidate container: /services
