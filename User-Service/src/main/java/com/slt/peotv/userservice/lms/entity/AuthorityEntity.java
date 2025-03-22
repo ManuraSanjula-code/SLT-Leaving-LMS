@@ -7,10 +7,12 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 
 
 @Entity
 @Table(name="authorities")
+@EqualsAndHashCode(callSuper = false)
 public class AuthorityEntity implements Serializable {
 
 	private static final long serialVersionUID = -5828101164006114538L;

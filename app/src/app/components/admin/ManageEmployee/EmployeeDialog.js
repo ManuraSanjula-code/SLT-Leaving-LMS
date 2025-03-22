@@ -1,43 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {
-    Radio,
-    Container,
-    CssBaseline,
-    Box,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
     Button,
-    TextField,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    MenuItem,
-    IconButton,
-    FormControl,
-    InputLabel,
-    Select,
     Checkbox,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
     FormControlLabel,
+    FormHelperText,
     Grid,
-    CircularProgress,
-    Alert,
+    InputLabel,
+    MenuItem,
+    Radio,
+    Select,
+    TextField,
+    Typography,
 } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, VisibilityOff, Visibility } from '@mui/icons-material';
 import dynamic from 'next/dynamic'
 
 const EmployeeSelectionDialog = dynamic(() => import('./EmployeeSelectionDialog'), {
     ssr: false,
 });
-const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sections, profiles }) => {
+const EmployeeDialog = React.memo(({open, onClose, onSave, employee, roles, sections, profiles}) => {
     const [firstName, setFirstName] = useState(employee?.firstName || '');
     const [lastName, setLastName] = useState(employee?.lastName || '');
     const [email, setEmail] = useState(employee?.email || '');
@@ -49,7 +36,6 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
     const [isRoaster, setIsRoaster] = useState(employee?.isRoaster || 0);
 
     const [active, setActive] = useState(employee?.active || 1);
-
     const [employeeId, setEmployeeId] = useState(employee?.employeeId || '');
     const [sltId, setSltId] = useState(employee?.sltId || '');
     const [userId, setUserId] = useState(employee?.userId || '');
@@ -73,6 +59,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
     const [selectedHod, setSelectedHod] = useState(employee?.hod || {});
     const [selectedSupervisor, setSelectedSupervisor] = useState(employee?.supervisor || {});
     const [selectedOtherEmployee, setSelectedOtherEmployee] = useState(employee?.other || {});
+
+    const [errors, setErrors] = useState({});
 
     const handleSelectHod = (hod) => {
         setSelectedHod(hod);
@@ -149,6 +137,70 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
     }, [employee]); // Only `employee` is included in the dependency array
 
     const handleSave = () => {
+        const newErrors = {};
+
+        if (!firstName) {
+            newErrors.firstName = "First Name is required.";
+        }
+        if (!lastName) {
+            newErrors.lastName = "Last Name is required.";
+        }
+        if (!email) {
+            newErrors.email = "Email is required.";
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newErrors.email = "Email is invalid.";
+        }
+        if (!sltId) {
+            newErrors.sltId = "SLT ID is required.";
+        }
+        if (!employeeId) {
+            newErrors.employeeId = "PEO TV ID is required.";
+        }
+        if (!password) {
+            newErrors.password = "Password is required.";
+        }
+        if (!phone) {
+            newErrors.phone = "Phone Number is required.";
+        }
+        if (selectedRoles.length === 0) {
+            newErrors.roles = "At least one role is required.";
+        }
+        if (selectedSections.length === 0) {
+            newErrors.sections = "At least one section is required.";
+        }
+        if (selectedProfiles.length === 0) {
+            newErrors.profiles = "At least one profile is required.";
+        }
+        if (!gender) {
+            newErrors.gender = "Gender is required.";
+        }
+        if (addresses.length === 0) {
+            newErrors.addresses = "At least one address is required.";
+        } else {
+            addresses.forEach((address, index) => {
+                if (!address.streetName) {
+                    newErrors[`streetName-${index}`] = "Street Name is required.";
+                }
+                if (!address.city) {
+                    newErrors[`city-${index}`] = "City is required.";
+                }
+                if (!address.postalCode) {
+                    newErrors[`postalCode-${index}`] = "Postal Code is required.";
+                }
+                if (!address.country) {
+                    newErrors[`country-${index}`] = "Country is required.";
+                }
+            });
+        }
+
+        // If there are errors, stop submission and set errors
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        // Clear errors if validation passes
+        setErrors({});
         const addressData = addresses.map(addr => ({
             city: addr.city,
             country: 'LK', // Hardcoded for simplicity
@@ -179,6 +231,7 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
             supervisor: selectedSupervisor.employeeId,
             other: selectedOtherEmployee.employeeId
         };
+
         onSave(newEmployee);
     };
 
@@ -201,7 +254,7 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
     const handleAddressChange = (id, field, value) => {
         setAddresses(
             addresses.map((addr) =>
-                addr.id === id ? { ...addr, [field]: value } : addr
+                addr.id === id ? {...addr, [field]: value} : addr
             )
         );
     };
@@ -246,6 +299,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     label="First Name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
+                    error={!!errors.firstName}
+                    helperText={errors.firstName}
                 />
                 <TextField
                     margin="normal"
@@ -254,6 +309,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     label="Last Name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value.trim())}
+                    error={!!errors.lastName}
+                    helperText={errors.lastName}
                 />
                 <TextField
                     margin="normal"
@@ -263,6 +320,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    error={!!errors.email}
+                    helperText={errors.email}
                 />
                 <TextField
                     margin="normal"
@@ -271,6 +330,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     label="SLT ID"
                     value={sltId}
                     onChange={(e) => setSltId(e.target.value.trim())}
+                    error={!!errors.sltId}
+                    helperText={errors.sltId}
                 />
                 <TextField
                     margin="normal"
@@ -279,6 +340,8 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     label="PEO TV ID"
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value.trim())}
+                    error={!!errors.employeeId}
+                    helperText={errors.employeeId}
                 />
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={9}>
@@ -290,13 +353,15 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            error={!!errors.password}
+                            helperText={errors.password}
                         />
                     </Grid>
                     <Grid item xs={3}>
                         <Button
                             variant="outlined"
                             onClick={handleGenerateTemporaryPassword}
-                            sx={{ mt: 2 }}
+                            sx={{mt: 2}}
                         >
                             Generate Temp Password
                         </Button>
@@ -309,15 +374,16 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                     label="Phone Number"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    error={!!errors.phone}
+                    helperText={errors.phone}
                 />
-
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" error={!!errors.roles}>
                     <InputLabel>Roles</InputLabel>
                     <Select
                         multiple
                         value={selectedRoles}
                         onChange={(e) => setSelectedRoles(e.target.value)}
-                        renderValue={(selected) => selected.join(', ')}
+                        renderValue={(selected) => selected.join(", ")}
                     >
                         {roles.map((role) => (
                             <MenuItem key={role} value={role}>
@@ -325,15 +391,15 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                             </MenuItem>
                         ))}
                     </Select>
+                    {errors.roles && <FormHelperText>{errors.roles}</FormHelperText>}
                 </FormControl>
-
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" error={!!errors.sections}>
                     <InputLabel>Sections</InputLabel>
                     <Select
                         multiple
                         value={selectedSections}
                         onChange={(e) => setSelectedSections(e.target.value)}
-                        renderValue={(selected) => selected.join(', ')}
+                        renderValue={(selected) => selected.join(", ")}
                     >
                         {sections.map((section) => (
                             <MenuItem key={section} value={section}>
@@ -341,15 +407,16 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                             </MenuItem>
                         ))}
                     </Select>
+                    {errors.sections && <FormHelperText>{errors.sections}</FormHelperText>}
                 </FormControl>
 
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" error={!!errors.profiles}>
                     <InputLabel>Profiles</InputLabel>
                     <Select
                         multiple
                         value={selectedProfiles}
                         onChange={(e) => setSelectedProfiles(e.target.value)}
-                        renderValue={(selected) => selected.join(', ')}
+                        renderValue={(selected) => selected.join(", ")}
                     >
                         {profiles.map((profile) => (
                             <MenuItem key={profile} value={profile}>
@@ -357,9 +424,10 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                             </MenuItem>
                         ))}
                     </Select>
+                    {errors.profiles && <FormHelperText>{errors.profiles}</FormHelperText>}
                 </FormControl>
 
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" error={!!errors.gender}>
                     <InputLabel>Gender</InputLabel>
                     <Select
                         value={gender}
@@ -368,43 +436,46 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                         <MenuItem value="M">Male</MenuItem>
                         <MenuItem value="F">Female</MenuItem>
                     </Select>
+                    {errors.gender && <FormHelperText>{errors.gender}</FormHelperText>}
                 </FormControl>
 
                 <FormControlLabel
                     control={<Checkbox checked={isSltEmp === 1}
-                        onChange={(e) => setIsSltEmp(e.target.checked ? 1 : 0)} />}
+                                       onChange={(e) => setIsSltEmp(e.target.checked ? 1 : 0)}/>}
                     label="Is SLT Employee"
                 />
 
                 <FormControlLabel
                     control={<Checkbox checked={isSltIntern === 1}
-                        onChange={(e) => setIsSltIntern(e.target.checked ? 1 : 0)} />}
+                                       onChange={(e) => setIsSltIntern(e.target.checked ? 1 : 0)}/>}
                     label="Is SLT Intern"
                 />
                 <FormControlLabel
                     control={<Checkbox checked={isRoaster === 1}
-                        onChange={(e) => setIsRoaster(e.target.checked ? 1 : 0)} />}
+                                       onChange={(e) => setIsRoaster(e.target.checked ? 1 : 0)}/>}
                     label="Is Roaster"
                 />
                 <FormControlLabel
-                    control={<Checkbox checked={active === 1} onChange={(e) => setActive(e.target.checked ? 1 : 0)} />}
+                    control={<Checkbox checked={active === 1} onChange={(e) => setActive(e.target.checked ? 1 : 0)}/>}
                     label="Active"
                 />
 
-                <Typography variant="h6" sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{mt: 3}}>
                     Addresses
                 </Typography>
 
-                {addresses.map((address) => (
-                    <Grid container spacing={2} key={address.id} sx={{ mt: 2 }}>
+                {addresses.map((address, index) => (
+                    <Grid container spacing={2} key={address.id} sx={{mt: 2}}>
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Street"
                                 value={address.streetName}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'streetName', e.target.value)
+                                    handleAddressChange(address.id, "streetName", e.target.value)
                                 }
+                                error={!!errors[`streetName-${index}`]}
+                                helperText={errors[`streetName-${index}`]}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -413,8 +484,10 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                                 label="City"
                                 value={address.city}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'city', e.target.value)
+                                    handleAddressChange(address.id, "city", e.target.value)
                                 }
+                                error={!!errors[`city-${index}`]}
+                                helperText={errors[`city-${index}`]}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -423,8 +496,10 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                                 label="Postal Code"
                                 value={address.postalCode}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'postalCode', e.target.value)
+                                    handleAddressChange(address.id, "postalCode", e.target.value)
                                 }
+                                error={!!errors[`postalCode-${index}`]}
+                                helperText={errors[`postalCode-${index}`]}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -433,8 +508,10 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                                 label="Country"
                                 value={address.country}
                                 onChange={(e) =>
-                                    handleAddressChange(address.id, 'country', e.target.value)
+                                    handleAddressChange(address.id, "country", e.target.value)
                                 }
+                                error={!!errors[`country-${index}`]}
+                                helperText={errors[`country-${index}`]}
                             />
                         </Grid>
                         <Grid item xs={12}>
@@ -451,25 +528,30 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                                 variant="outlined"
                                 color="error"
                                 onClick={() => handleRemoveAddress(address.id)}
-                                sx={{ ml: 2 }}
+                                sx={{ml: 2}}
                             >
                                 Remove Address
                             </Button>
                         </Grid>
                     </Grid>
                 ))}
+                {errors.addresses && (
+                    <Typography color="error" sx={{mt: 2}}>
+                        {errors.addresses}
+                    </Typography>
+                )}
                 <Button
                     variant="outlined"
                     onClick={handleAddAddress}
-                    sx={{ mt: 2 }}
+                    sx={{mt: 2}}
                 >
                     Add Address
                 </Button>
-                <Typography variant="h6" sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{mt: 3}}>
                     Assign HOD, Supervisor, or Other Employee
                 </Typography>
 
-                <Grid container spacing={2} sx={{ mt: 2 }}>
+                <Grid container spacing={2} sx={{mt: 2}}>
                     <Grid item xs={4}>
                         <TextField
                             fullWidth
@@ -482,7 +564,7 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                         <Button
                             variant="outlined"
                             onClick={() => setHodDialogOpen(true)}
-                            sx={{ mt: 1 }}
+                            sx={{mt: 1}}
                         >
                             Select HOD
                         </Button>
@@ -499,7 +581,7 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                         <Button
                             variant="outlined"
                             onClick={() => setSupervisorDialogOpen(true)}
-                            sx={{ mt: 1 }}
+                            sx={{mt: 1}}
                         >
                             Select Supervisor
                         </Button>
@@ -516,13 +598,13 @@ const EmployeeDialog = React.memo(({ open, onClose, onSave, employee, roles, sec
                         <Button
                             variant="outlined"
                             onClick={() => setOtherEmployeeDialogOpen(true)}
-                            sx={{ mt: 1 }}
+                            sx={{mt: 1}}
                         >
                             Select Other Employee
                         </Button>
                     </Grid>
                 </Grid>
-                
+
                 <EmployeeSelectionDialog
                     open={hodDialogOpen}
                     onClose={() => setHodDialogOpen(false)}

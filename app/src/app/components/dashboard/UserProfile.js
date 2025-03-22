@@ -58,7 +58,7 @@ const UserProfile = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
-
+  const [errors, setErrors] = useState({});
   const handleSuccessOpen = () => {
     setSuccessOpen(true);
   };
@@ -73,6 +73,7 @@ const UserProfile = () => {
 
   const handleErrorClose = () => {
     setErrorOpen(false);
+    setErrors({}); // Clear errors
   };
 
   // Sync local state with Redux state
@@ -162,6 +163,35 @@ const UserProfile = () => {
     e.preventDefault();
     dispatch(setLoading(true));
 
+    const newErrors = {};
+
+    // Validate required fields
+    if (!profile.firstName) {
+      newErrors.firstName = "First Name is required.";
+    }
+    if (!profile.lastName) {
+      newErrors.lastName = "Last Name is required.";
+    }
+    if (!profile.email) {
+      newErrors.email = "Email is required.";
+    } else if (!/\S+@\S+\.\S+/.test(profile.email)) {
+      newErrors.email = "Email is invalid.";
+    }
+    if (!profile.phone) {
+      newErrors.phone = "Phone Number is required.";
+    }
+    if (!profile.gender) {
+      newErrors.gender = "Gender is required.";
+    }
+
+    // If there are errors, stop submission and set errors
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Clear errors if validation passes
+    setErrors({});
     try {
       // Prepare payload for PUT request
       const payload = {
@@ -185,9 +215,7 @@ const UserProfile = () => {
         alert('Failed to update profile. Please try again. 2');
         return;
       }
-      console.log(" ****************************** ", payload)
       const data = await putUserData(`/users/${userDetails.userId}`, jwtFromCookie, JSON.stringify(payload));
-      console.log(data, "============================== ")
       // Update Redux state
       dispatch(setUserDetails({ ...userDetails, ...payload }));
 
@@ -209,7 +237,10 @@ const UserProfile = () => {
   }, [previewImage]);
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () =>{
+    setErrors({}); // Clear errors
+    setOpen(false)
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -350,57 +381,69 @@ const UserProfile = () => {
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="firstName"
-                label="First Name"
-                name="firstName"
-                value={profile.firstName}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="firstName"
+                  label="First Name"
+                  name="firstName"
+                  value={profile.firstName}
+                  onChange={handleChange}
+                  error={!!errors.firstName}
+                  helperText={errors.firstName}
+                  sx={{ mb: 2 }}
               />
               <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="lastName"
-                label="Last Name"
-                name="lastName"
-                value={profile.lastName}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="lastName"
+                  label="Last Name"
+                  name="lastName"
+                  value={profile.lastName}
+                  onChange={handleChange}
+                  error={!!errors.lastName}
+                  helperText={errors.lastName}
+                  sx={{ mb: 2 }}
               />
               <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email"
-                name="email"
-                type="email"
-                value={profile.email}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={profile.email}
+                  onChange={handleChange}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  sx={{ mb: 2 }}
               />
               <TextField
-                margin="normal"
-                fullWidth
-                id="phone"
-                label="Phone"
-                name="phone"
-                value={profile.phone}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="phone"
+                  label="Phone"
+                  name="phone"
+                  value={profile.phone}
+                  onChange={handleChange}
+                  error={!!errors.phone}
+                  helperText={errors.phone}
+                  sx={{ mb: 2 }}
               />
               <TextField
-                margin="normal"
-                fullWidth
-                id="gender"
-                label="Gender"
-                name="gender"
-                value={profile.gender}
-                onChange={handleChange}
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="gender"
+                  label="Gender"
+                  name="gender"
+                  value={profile.gender}
+                  onChange={handleChange}
+                  error={!!errors.gender}
+                  helperText={errors.gender}
               />
             </CardContent>
           </Card>

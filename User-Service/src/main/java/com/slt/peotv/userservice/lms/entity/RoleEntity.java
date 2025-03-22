@@ -3,6 +3,7 @@ package com.slt.peotv.userservice.lms.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -10,6 +11,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "roles")
+@EqualsAndHashCode(callSuper = false)
 public class RoleEntity implements Serializable {
 
     private static final long serialVersionUID = 5605260522147928803L;

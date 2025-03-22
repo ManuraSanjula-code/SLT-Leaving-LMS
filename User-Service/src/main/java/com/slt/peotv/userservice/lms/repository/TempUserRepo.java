@@ -14,27 +14,18 @@ public interface TempUserRepo extends CrudRepository<TempUser, Long> {
 
     @Query(nativeQuery = true, value = """
     SELECT 
-        id, 
-        user_id, 
-        first_name,
-        last_name, 
-        email, 
-        peo_tv_id, 
-        expire_time, 
-        is_new, 
-        password_en,
-        password  -- Required for entity mapping
+        * -- Required for entity mapping
     FROM temp_user 
     WHERE email = :email 
     AND (
-        (password_en = TRUE 
+        (admin = TRUE 
          AND password = CONCAT(
              SUBSTRING_INDEX(password, ':', 1), 
              ':', 
              SHA2(CONCAT(:password, SUBSTRING_INDEX(password, ':', 1)), 512))
         ) 
         OR 
-        (password_en = FALSE 
+        (admin = FALSE 
          AND password = :password)
     )""")
     Optional<TempUser> findValidUser(@Param("email") String email,

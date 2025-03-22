@@ -56,6 +56,7 @@ const ProfilesForm = () => {
   const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
   const resolveRef = useRef(null); // Declare the ref
+  const [errors, setErrors] = useState({});
 
   // Fetch profiles from the server on component mount
   useEffect(() => {
@@ -151,6 +152,7 @@ const ProfilesForm = () => {
     setNewUserId("");
     setUserPage(1); // Reset pagination
     setSearchQuery(""); // Reset search query
+    setErrors({});
   };
 
   // Handle form input changes
@@ -242,6 +244,64 @@ const ProfilesForm = () => {
 
   // Handle form submission (add or update profile)
   const handleSubmit = async () => {
+    const newErrors = {};
+
+    if (!formData.name) {
+      newErrors.name = "Name is required.";
+    }
+    if (!formData.workStart) {
+      newErrors.workStart = "Work Start time is required.";
+    }
+    if (!formData.workEnds) {
+      newErrors.workEnds = "Work End time is required.";
+    }
+    if (!formData.ignoreSl) {
+      newErrors.ignoreSl = "Ignore SL is required.";
+    }
+    if (!formData.gracePeriodeStart) {
+      newErrors.gracePeriodeStart = "Grace Period Start is required.";
+    }
+    if (!formData.hdStart) {
+      newErrors.hdStart = "HD Start is required.";
+    }
+    if (!formData.slStartMorning) {
+      newErrors.slStartMorning = "SL Start Morning is required.";
+    }
+    if (!formData.slStartEvening) {
+      newErrors.slStartEvening = "SL Start Evening is required.";
+    }
+    if (!formData.possibleFpLocations) {
+      newErrors.possibleFpLocations = "Possible FP Locations is required.";
+    }
+    if (!formData.defaultHrs) {
+      newErrors.defaultHrs = "Default Hours is required.";
+    }
+    if (!formData.hdHrs) {
+      newErrors.hdHrs = "HD Hours is required.";
+    }
+    if (!formData.minHrsForSl) {
+      newErrors.minHrsForSl = "Minimum Hours for SL is required.";
+    }
+    if (!formData.shortLeaveCount) {
+      newErrors.shortLeaveCount = "Short Leave Count is required.";
+    }
+    if (!formData.hdEndsMorning) {
+      newErrors.hdEndsMorning = "HD Ends Morning is required.";
+    }
+    if (!formData.flexiDays) {
+      newErrors.flexiDays = "Flexi Days is required.";
+    }
+    if (!formData.flexiHrsStart) {
+      newErrors.flexiHrsStart = "Flexi Hours Start is required.";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Clear errors if validation passes
+    setErrors({});
+
     const updatedProfile = {
       ...formData,
       users: selectedUsers.map((id) => users.find((user) => user.id === id)),
@@ -367,140 +427,172 @@ const ProfilesForm = () => {
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
               <TextField
-                label="Name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.name}
+                  helperText={errors.name}
               />
               <TextField
-                label="Public ID"
-                name="public_id"
-                value={formData.publicId}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Public ID"
+                  name="publicId"
+                  value={formData.publicId}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
               />
               <TextField
-                label="Work Start"
-                name="workStart"
-                value={formData.workStart}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Work Start"
+                  name="workStart"
+                  value={formData.workStart}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.workStart}
+                  helperText={errors.workStart}
               />
               <TextField
-                label="Work Ends"
-                name="workEnds"
-                value={formData.workEnds}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Work Ends"
+                  name="workEnds"
+                  value={formData.workEnds}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.workEnds}
+                  helperText={errors.workEnds}
               />
               <TextField
-                label="Ignore SL"
-                name="ignoreSl"
-                value={formData.ignoreSl}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Ignore SL"
+                  name="ignoreSl"
+                  value={formData.ignoreSl}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.ignoreSl}
+                  helperText={errors.ignoreSl}
               />
               <TextField
-                label="Grace Period Start"
-                name="gracePeriodeStart"
-                value={formData.gracePeriodeStart}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Grace Period Start"
+                  name="gracePeriodeStart"
+                  value={formData.gracePeriodeStart}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.gracePeriodeStart}
+                  helperText={errors.gracePeriodeStart}
               />
               <TextField
-                label="HD Start"
-                name="hdStart"
-                value={formData.hdStart}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="HD Start"
+                  name="hdStart"
+                  value={formData.hdStart}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.hdStart}
+                  helperText={errors.hdStart}
               />
               <TextField
-                label="SL Start Morning"
-                name="slStartMorning"
-                value={formData.slStartMorning}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="SL Start Morning"
+                  name="slStartMorning"
+                  value={formData.slStartMorning}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.slStartMorning}
+                  helperText={errors.slStartMorning}
               />
               <TextField
-                label="SL Start Evening"
-                name="slStartEvening"
-                value={formData.slStartEvening}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="SL Start Evening"
+                  name="slStartEvening"
+                  value={formData.slStartEvening}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.slStartEvening}
+                  helperText={errors.slStartEvening}
               />
               <TextField
-                label="Possible FP Locations"
-                name="possibleFpLocations"
-                value={formData.possibleFpLocations}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Possible FP Locations"
+                  name="possibleFpLocations"
+                  value={formData.possibleFpLocations}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.possibleFpLocations}
+                  helperText={errors.possibleFpLocations}
               />
               <TextField
-                label="Default Hours"
-                name="defaultHrs"
-                value={formData.defaultHrs}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Default Hours"
+                  name="defaultHrs"
+                  value={formData.defaultHrs}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.defaultHrs}
+                  helperText={errors.defaultHrs}
               />
               <TextField
-                label="HD Hours"
-                name="hdHrs"
-                value={formData.hdHrs}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="HD Hours"
+                  name="hdHrs"
+                  value={formData.hdHrs}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.hdHrs}
+                  helperText={errors.hdHrs}
               />
               <TextField
-                label="Min Hours for SL"
-                name="minHrsForSl"
-                value={formData.minHrsForSl}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Minimum Hours for SL"
+                  name="minHrsForSl"
+                  value={formData.minHrsForSl}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.minHrsForSl}
+                  helperText={errors.minHrsForSl}
               />
               <TextField
-                label="Short Leave Count"
-                name="shortLeaveCount"
-                value={formData.shortLeaveCount}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Short Leave Count"
+                  name="shortLeaveCount"
+                  value={formData.shortLeaveCount}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.shortLeaveCount}
+                  helperText={errors.shortLeaveCount}
               />
               <TextField
-                label="HD Ends Morning"
-                name="hdEndsMorning"
-                value={formData.hdEndsMorning}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="HD Ends Morning"
+                  name="hdEndsMorning"
+                  value={formData.hdEndsMorning}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.hdEndsMorning}
+                  helperText={errors.hdEndsMorning}
               />
               <TextField
-                label="Flexi Days"
-                name="flexiDays"
-                value={formData.flexiDays}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Flexi Days"
+                  name="flexiDays"
+                  value={formData.flexiDays}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.flexiDays}
+                  helperText={errors.flexiDays}
               />
               <TextField
-                label="Flexi Hours Start"
-                name="flexiHrsStart"
-                value={formData.flexiHrsStart}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                  label="Flexi Hours Start"
+                  name="flexiHrsStart"
+                  value={formData.flexiHrsStart}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.flexiHrsStart}
+                  helperText={errors.flexiHrsStart}
               />
             </Box>
 

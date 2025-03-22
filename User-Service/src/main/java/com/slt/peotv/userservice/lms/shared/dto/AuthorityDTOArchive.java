@@ -1,11 +1,8 @@
 package com.slt.peotv.userservice.lms.shared.dto;
 
-import java.util.List;
-
-public class AuthorityDTO {
+public class AuthorityDTOArchive {
 	private long id;
 	private String name;
-	private List<RoleDTO> roles;
 	public long getId() {
 		return id;
 	}
@@ -17,11 +14,5 @@ public class AuthorityDTO {
 	}
 	public void setName(String name) {
 		this.name = name;
-	}
-	public List<RoleDTO> getRoles() {
-		return roles;
-	}
-	public void setRoles(List<RoleDTO> roles) {
-		this.roles = roles;
 	}
 }

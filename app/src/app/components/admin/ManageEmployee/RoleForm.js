@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     TextField,
     Button,
@@ -17,30 +17,16 @@ import {
     Box,
     InputAdornment,
 } from "@mui/material";
-import {Delete, Edit, Search} from "@mui/icons-material";
+import { Delete, Edit, Search } from "@mui/icons-material";
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
-
-// Function to generate a large number of dummy users
-const generateDummyUsers = (count) => {
-    const users = [];
-    for (let i = 1; i <= count; i++) {
-        users.push({
-            userId: `user${i}`, // Use userId instead of id
-            firstName: `User${i}`,
-            lastName: `Last${i}`,
-            email: `user${i}@example.com`,
-        });
-    }
-    return users;
-};
 
 const RoleForm = () => {
     const [roles, setRoles] = useState([]);
     const [users, setUsers] = useState([]); // All users from the server
     const [openDialog, setOpenDialog] = useState(false);
     const [currentRole, setCurrentRole] = useState(null);
-    const [formData, setFormData] = useState({name: "", users: [], authorities: []});
+    const [formData, setFormData] = useState({ name: "", users: [], authorities: [] });
     const [selectedUsers, setSelectedUsers] = useState([]); // Users selected for the role
     const [selectedAuthorities, setSelectedAuthorities] = useState([]); // Authorities selected for the role
     const [deletedUsers, setDeletedUsers] = useState([]); // Users to be removed from the role
@@ -48,9 +34,11 @@ const RoleForm = () => {
     const [newUserId, setNewUserId] = useState(""); // Input for adding a new user by userId
     const [newAuthorityName, setNewAuthorityName] = useState(""); // Input for adding a new authority by name
     const [userPage, setUserPage] = useState(1); // Pagination for assigned users
+    const [authPage, setAuthPage] = useState(1); // Pagination for assigned authorities
     const [searchQuery, setSearchQuery] = useState(""); // Search query for filtering users
     const usersPerPage = 10; // Number of users to display per page
-
+    const [formErrors, setFormErrors] = useState({});
+    const [authorities, setAuthorities] = useState([]);
     const [successOpen, setSuccessOpen] = useState(false);
     const [errorOpen, setErrorOpen] = useState(false);
 
@@ -60,7 +48,7 @@ const RoleForm = () => {
         setSuccessOpen(true);
     };
 
-    // Fetch roles and users from the server on component mount
+    // Fetch roles, users, and authorities from the server on component mount
     useEffect(() => {
         // Fetch roles
         fetch("http://localhost:8080/users/roles")
@@ -75,19 +63,45 @@ const RoleForm = () => {
             .then((response) => response.json())
             .then((data) => setUsers(data || []))
             .catch((err) => console.error("Error fetching users:", err));
+
+        // Fetch authorities
+        fetch('http://localhost:8080/users/authorities')
+            .then((response) => response.json())
+            .then((data) => {
+                const transformedData = data.map((authority) => ({
+                    id: authority.ID,
+                    name: authority.name,
+                }));
+                setAuthorities(transformedData || []);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     }, []);
 
     // Open dialog for adding or editing a role
     const handleOpenDialog = (role = null) => {
         setCurrentRole(role);
-        setFormData(role || {name: "", users: [], authorities: []});
+        setFormData(role || { name: "", users: [], authorities: [] });
 
         // Initialize selectedUsers and selectedAuthorities based on the current role's data
         if (role) {
             const roleUserIds = role.users.map((user) => user.userId); // Use userId
             const roleAuthorityIds = role.authorities.map((authority) => authority.id);
+
             setSelectedUsers(roleUserIds);
             setSelectedAuthorities(roleAuthorityIds);
+
+            // Ensure formData.authorities contains the correct authority objects
+            const roleAuthorities = role.authorities.map((authority) => ({
+                id: authority.id,
+                name: authority.name,
+            }));
+            setFormData((prev) => ({
+                ...prev,
+                authorities: roleAuthorities,
+            }));
+
             setDeletedUsers([]); // Reset deletedUsers when opening the dialog
             setDeletedAuthorities([]); // Reset deletedAuthorities when opening the dialog
         } else {
@@ -100,11 +114,24 @@ const RoleForm = () => {
         setOpenDialog(true);
     };
 
+    // Use useEffect to synchronize selectedUsers and selectedAuthorities
+    useEffect(() => {
+        if (currentRole) {
+            const roleUserIds = currentRole.users.map((user) => user.userId); // Use userId
+            const roleAuthorityIds = currentRole.authorities.map((authority) => authority.id);
+
+            setSelectedUsers(roleUserIds);
+            setSelectedAuthorities(roleAuthorityIds);
+        }
+    }, [currentRole]);
+
+    useEffect(()=>{}, [selectedAuthorities])
+
     // Close dialog
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setCurrentRole(null);
-        setFormData({name: "", users: [], authorities: []});
+        setFormData({ name: "", users: [], authorities: [] });
         setSelectedUsers([]);
         setSelectedAuthorities([]);
         setDeletedUsers([]);
@@ -117,8 +144,8 @@ const RoleForm = () => {
 
     // Handle form input changes
     const handleChange = (e) => {
-        const {name, value} = e.target;
-        setFormData({...formData, [name]: value});
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
     };
 
     // Handle user selection for the role
@@ -147,127 +174,50 @@ const RoleForm = () => {
         }
     };
 
-    // Handle adding a new user by userId
-    const handleAddNewUser = () => {
-        const userToAdd = users.find((user) => user.userId === newUserId);
-        if (userToAdd) {
-            if (!selectedUsers.includes(userToAdd.userId)) {
-                setSelectedUsers((prev) => [...prev, userToAdd.userId]);
-                setNewUserId(""); // Clear input after adding
-            } else {
-                alert("User is already added to this role.");
-            }
+    const handleAuthoritySelection_ = (authorityId) => {
+        console.log("Authority ID Selected:", authorityId); // Debugging log
+        if (selectedAuthorities.includes(Number(authorityId))) {
+            // Authority is being unchecked, remove from selectedAuthorities
+            setSelectedAuthorities((prev) => prev.filter((id) => id !== Number(authorityId)));
+            setDeletedAuthorities((prev) => [...prev, authorityId]);
         } else {
-            alert("User not found.");
+            // Authority is being checked, add to selectedAuthorities
+            setSelectedAuthorities((prev) => [...prev, Number(authorityId)]);
+            setDeletedAuthorities((prev) => prev.filter((id) => id !== authorityId));
         }
     };
 
-    // Handle adding a new authority by name
-    const handleAddNewAuthority = () => {
-        if (newAuthorityName.trim()) {
+    // Validate form data
+    const validateForm = () => {
+        let isValid = true;
+        const errors = { name: '', users: '', authorities: '' };
 
-            fetch(`http://localhost:8080/users/check/auth/${newAuthorityName}`)
-                .then((response) => response.json())
-                .then(async (result) => {
-                    console.log(result)
-                    if (result) {
-                        // await showErrorDialog();
-                        await showSuccessDialog()
-                        const newAuthority = {
-                            id: Date.now(),
-                            name: newAuthorityName.trim(),
-                        };
-                        setSelectedAuthorities((prev) => [...prev, newAuthority.id]);
-                        setFormData((prev) => ({
-                            ...prev,
-                            authorities: [...prev.authorities, newAuthority],
-                        }));
-
-                    } else {
-                        await showErrorDialog();
-                        setNewAuthorityName("");
-                    }
-
-                })
-                .catch(async (error) => {
-                    await showErrorDialog();
-                });
-
-        } else {
-            alert("Authority name cannot be empty.");
+        if (!formData.name.trim()) {
+            errors.name = 'Name is required';
+            isValid = false;
+        } else if (formData.name.length < 3) {
+            errors.name = 'Name must be at least 3 characters long';
+            isValid = false;
         }
-    };
 
-    // Handle form submission (add or update role)
-    const handleSubmit_ = () => {
-        const updatedRole = {
-            ...formData,
-            users: selectedUsers.map((userId) => users.find((user) => user.userId === userId)), // Use userId
-            authorities: selectedAuthorities.map((id) =>
-                formData.authorities.find((authority) => authority.id === id)
-            ),
-            deletedUsers,
-            deletedAuthorities,
-        };
-
-        if (currentRole) {
-            // Update existing role
-            const addedUsers = selectedUsers
-                .filter((userId) => !currentRole.users.some((user) => user.userId === userId)) // Use userId
-                .map((userId) => users.find((user) => user.userId === userId));
-
-            const addedAuthorities = selectedAuthorities
-                .filter((id) => !currentRole.authorities.some((authority) => authority.id === id))
-                .map((id) => formData.authorities.find((authority) => authority.id === id));
-
-            const userId = localStorage.getItem('userId');
-            if (!userId) return;
-
-            // Send PUT request to update the role
-            fetch(`http://localhost:8080/users/roles/${userId}`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                credentials: 'include',
-                body: JSON.stringify({
-                    name: updatedRole.name,
-                    deletedUsers,
-                    addedUsers: addedUsers.map((user) => user.userId), // Use userId
-                    deletedAuthorities,
-                    addedAuthorities: addedAuthorities.map((authority) => authority.name),
-                }),
-            })
-                .then((response) => response.json())
-                .then(async (data) => {
-                    setRoles(
-                        roles.map((role) =>
-                            role.id === currentRole.id ? {...role, ...updatedRole} : role
-                        )
-                    );
-                    await showSuccessDialog()
-                })
-                .catch(async (err) => {
-                    await showErrorDialog();
-                    console.error("Error updating role:", err)
-                });
-        } else {
-            // Add new role
-            const newRole = {
-                id: Date.now(), // Use a unique ID
-                ...updatedRole,
-            };
-            setRoles([...roles, newRole]);
-
+        if (selectedAuthorities.length === 0) {
+            errors.authorities = 'Please select at least one authority';
+            isValid = false;
         }
-        handleCloseDialog();
+
+        setFormErrors(errors);
+        return isValid;
     };
 
     const handleSubmit = () => {
+        if (!validateForm()) {
+            return; // Prevent submission if validation fails
+        }
+
         const updatedRole = {
             ...formData,
             users: selectedUsers.map((userId) => users.find((user) => user.userId === userId)), // Use userId
-            authorities: selectedAuthorities.map((id) =>
-                formData.authorities.find((authority) => authority.id === id)
-            ),
+            authorities: selectedAuthorities,
             deletedUsers,
             deletedAuthorities,
         };
@@ -276,6 +226,7 @@ const RoleForm = () => {
         if (!userId) return;
 
         const sendRequest = async (url, method, body) => {
+            console.log(body)
             try {
                 const response = await fetch(url, {
                     method,
@@ -298,16 +249,14 @@ const RoleForm = () => {
                 .filter((userId) => !currentRole.users.some((user) => user.userId === userId)) // Use userId
                 .map((userId) => users.find((user) => user.userId === userId));
 
-            const addedAuthorities = selectedAuthorities
-                .filter((id) => !currentRole.authorities.some((authority) => authority.id === id))
-                .map((id) => formData.authorities.find((authority) => authority.id === id));
+            const addedAuthorities = selectedAuthorities;
 
             sendRequest(`http://localhost:8080/users/roles/${userId}`, "POST", {
                 name: updatedRole.name,
                 deletedUsers,
                 addedUsers: addedUsers.map((user) => user.userId), // Use userId
                 deletedAuthorities,
-                addedAuthorities: addedAuthorities.map((authority) => authority.name),
+                addedAuthorities,
             })
                 .then(async () => {
                     setRoles(
@@ -323,17 +272,15 @@ const RoleForm = () => {
                 id: Date.now(), // Use a unique ID
                 ...updatedRole,
                 addedUsers: selectedUsers.map((userId) => users.find((user) => user.userId === userId)), // Include new users
-                addedAuthorities: selectedAuthorities.map((id) =>
-                    formData.authorities.find((authority) => authority.id === id)
-                ),
+                addedAuthorities: selectedAuthorities
             };
 
             sendRequest(`http://localhost:8080/users/roles/${userId}`, "POST", {
                 name: newRole.name,
                 addedUsers: newRole.addedUsers.map((user) => user.userId), // Use userId
-                addedAuthorities: newRole.addedAuthorities.map((authority) => authority.name),
+                addedAuthorities: newRole.addedAuthorities,
             })
-                .then(async() => {
+                .then(async (response) => {
                     setRoles([...roles, newRole]);
                     await showSuccessDialog();
                 });
@@ -341,6 +288,7 @@ const RoleForm = () => {
 
         handleCloseDialog();
     };
+
     // Handle deleting a role
     const handleDelete = (id) => {
         const userId = localStorage.getItem('userId');
@@ -348,7 +296,7 @@ const RoleForm = () => {
 
         fetch(`http://localhost:8080/users/delete/role/${id}/${userId}`, {
             method: "DELETE",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             credentials: 'include',
         })
             .then((response) => response.json())
@@ -356,7 +304,7 @@ const RoleForm = () => {
                 setRoles(roles.filter((role) => role.id !== id));
             })
             .catch(async (err) => {
-                console.error("Error updating role:", err)
+                console.error("Error updating role:", err);
             });
     };
 
@@ -385,6 +333,10 @@ const RoleForm = () => {
         setUserPage(value);
     };
 
+    const handleAuthPageChange = (event, value) => {
+        setAuthPage(value);
+    };
+
     // Reset pagination to page 1 when search query changes
     useEffect(() => {
         setUserPage(1);
@@ -393,6 +345,11 @@ const RoleForm = () => {
     const paginatedUsers = filteredUsers.slice(
         (userPage - 1) * usersPerPage,
         userPage * usersPerPage
+    );
+
+    const paginatedAuthorities = authorities.slice(
+        (authPage - 1) * usersPerPage,
+        authPage * usersPerPage
     );
 
     const handleSuccessClose = () => {
@@ -438,7 +395,6 @@ const RoleForm = () => {
                 message="Your action was completed successfully."
             />
 
-            {/* Error Dialog */}
             <ErrorDialog
                 open={errorOpen}
                 onClose={handleErrorClose}
@@ -461,10 +417,10 @@ const RoleForm = () => {
                                     .join(", ")}`}
                             />
                             <IconButton onClick={() => handleOpenDialog(role)}>
-                                <Edit/>
+                                <Edit />
                             </IconButton>
                             <IconButton onClick={() => handleDelete(role.id)}>
-                                <Delete/>
+                                <Delete />
                             </IconButton>
                         </ListItem>
                     ))}
@@ -477,7 +433,7 @@ const RoleForm = () => {
                         <Typography variant="h6" gutterBottom>
                             Role Details
                         </Typography>
-                        <Box sx={{display: "flex", flexWrap: "wrap", gap: 2}}>
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
                             <TextField
                                 label="Name"
                                 name="name"
@@ -485,41 +441,41 @@ const RoleForm = () => {
                                 onChange={handleChange}
                                 fullWidth
                                 margin="normal"
+                                error={!!formErrors.name}
+                                helperText={formErrors.name}
                             />
                         </Box>
 
                         {/* Assigned Authorities Section */}
-                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
+                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                             Assigned Authorities
                         </Typography>
-                        <List>
-                            {getAssignedAuthorities().map((authority) => (
-                                <ListItem key={authority.id}>
-                                    <ListItemIcon>
-                                        <Checkbox
-                                            checked={selectedAuthorities.includes(authority.id)}
-                                            onChange={() => handleAuthoritySelection(authority.id)}
-                                        />
-                                    </ListItemIcon>
-                                    <ListItemText primary={authority.name}/>
-                                </ListItem>
-                            ))}
-                        </List>
-                        <Box sx={{mt: 2}}>
-                            <TextField
-                                label="Add New Authority"
-                                value={newAuthorityName}
-                                onChange={(e) => setNewAuthorityName(e.target.value)}
-                                fullWidth
-                                margin="normal"
+                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+                            <List>
+                                {paginatedAuthorities.map((authority) => {
+                                    return (
+                                        <ListItem key={authority.id}>
+                                            <ListItemIcon>
+                                                <Checkbox
+                                                    checked={selectedAuthorities.includes(Number(authority.id))}
+                                                    onChange={() => handleAuthoritySelection_(authority.id)}
+                                                />
+                                            </ListItemIcon>
+                                            <ListItemText primary={authority.name} />
+                                        </ListItem>
+                                    );
+                                })}
+                            </List>
+                            <Pagination
+                                count={Math.ceil(authorities.length / usersPerPage)}
+                                page={authPage}
+                                onChange={handleAuthPageChange}
+                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
                             />
-                            <Button onClick={handleAddNewAuthority} color="primary">
-                                Add Authority
-                            </Button>
                         </Box>
 
                         {/* Assigned Users Section */}
-                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
+                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                             Assigned Users
                         </Typography>
                         <TextField
@@ -531,12 +487,12 @@ const RoleForm = () => {
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <Search/>
+                                        <Search />
                                     </InputAdornment>
                                 ),
                             }}
                         />
-                        <Box sx={{maxHeight: "300px", overflowY: "auto"}}>
+                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
                             <List>
                                 {paginatedUsers.map((user) => (
                                     <ListItem key={user.userId}>
@@ -556,7 +512,7 @@ const RoleForm = () => {
                                 count={Math.ceil(filteredUsers.length / usersPerPage)}
                                 page={userPage}
                                 onChange={handleUserPageChange}
-                                sx={{mt: 2, display: "flex", justifyContent: "center"}}
+                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
                             />
                         </Box>
                     </DialogContent>

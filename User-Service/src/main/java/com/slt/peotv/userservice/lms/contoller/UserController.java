@@ -290,8 +290,8 @@ public class UserController {
 	}
 	
 	@GetMapping("/roles")
-	public List<RoleDTO> getAllRole(){
-		return userService.getRole();
+	public List<RoleDTOArchive> getAllRole(){
+		return userService.getRoleArchive();
 	}
 	
 	@GetMapping("/profile")

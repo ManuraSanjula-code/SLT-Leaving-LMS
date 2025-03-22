@@ -90,11 +90,9 @@ public class UserEntity implements Serializable {
     private Date join_date;
 
     @OneToOne
-    @JoinColumn(nullable = false)
     private UserEntity hod;
 
     @OneToOne
-    @JoinColumn(nullable = false)
     private UserEntity supervisor;
 
     @OneToOne

@@ -36,6 +36,8 @@ const SectionForm = () => {
   const resolveRef = useRef(null); // Declare the ref
   const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
+  const [errors, setErrors] = useState({});
+
   // Fetch sections from the server
   useEffect(() => {
     const fetchSections = async () => {
@@ -146,11 +148,21 @@ const SectionForm = () => {
 
   // Handle form submission
   const handleSubmit = async () => {
+    const newErrors = {};
+    if (!formData.section) {
+      newErrors.section = "Section Name is required.";
+    }
+
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     if (!formData.section) {
       console.error("Section name is required");
       return;
     }
-
+    setErrors({});
     const updatedSection = {
       section: formData.section, // Use `section` instead of `name`
       publicId: formData.publicId,
@@ -317,6 +329,8 @@ const SectionForm = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
+                error={!!errors.section} // Highlight the field if there's an error
+                helperText={errors.section}
               />
               <TextField
                 label="Public ID"

@@ -23,9 +23,6 @@ public class TempUser implements Serializable {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "isNew", nullable = false)
-    private boolean isNew;
-
     @Column(nullable = false)
     private String firstName;
 
@@ -40,7 +37,7 @@ public class TempUser implements Serializable {
 
     private Date expireTime;
 
-    private boolean passwordEn;
+    private boolean admin;
 
     public Long getId() {
         return id;
@@ -64,14 +61,6 @@ public class TempUser implements Serializable {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public boolean isNew() {
-        return isNew;
-    }
-
-    public void setNew(boolean aNew) {
-        isNew = aNew;
     }
 
     public String getFirstName() {
@@ -114,28 +103,12 @@ public class TempUser implements Serializable {
         this.expireTime = expireTime;
     }
 
-    public boolean isPasswordEn() {
-        return passwordEn;
+    public boolean isAdmin() {
+        return admin;
     }
 
-    public void setPasswordEn(boolean passwordEn) {
-        this.passwordEn = passwordEn;
-    }
-
-    @Override
-    public String toString() {
-        return "TempUser{" +
-                "id=" + id +
-                ", userId='" + userId + '\'' +
-                ", password='" + password + '\'' +
-                ", isNew=" + isNew +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", peoTvId='" + peoTvId + '\'' +
-                ", expireTime=" + expireTime +
-                ", passwordEn=" + passwordEn +
-                '}';
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
     }
 
     public class AuthService {
@@ -153,7 +126,7 @@ public class TempUser implements Serializable {
                 throw new UsernameNotFoundException("User not found: " + email);
             }
 
-            if (user.isPasswordEn()) {
+            if (user.isAdmin()) {
                 verifyHashedPassword(user.getPassword(), password);
             } else {
                 verifyPlainTextPassword(user.getPassword(), password);

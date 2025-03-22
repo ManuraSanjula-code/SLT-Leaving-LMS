@@ -34,13 +34,9 @@ public interface UserService extends UserDetailsService{
 	void resetPassWord(UserPasswordReset userPasswordReset);
 	boolean userAddress(String userId);
 
-	ProfilesEntity createProfiles(String name, ProfileReq req);
-	SectionEntity createSection(String name);
-
-	SectionEntity getSection(String name);
-	ProfilesEntity getProfiles(String name);
 	List<UserDtoArchive> findByRoleName(String roleName);
 	List<RoleDTO> getRole();
+	List<RoleDTOArchive> getRoleArchive();
 	List<SectionDTO> getSection();
 	List<ProfilesDTO> getProfile();
 	List<Map<String, String>> getAuthority();
@@ -49,9 +45,6 @@ public interface UserService extends UserDetailsService{
 	AuthorityDTO saveAuthority(AuthReq authority);
 	SectionDTO saveSection(SectionReq req);
 	ProfilesDTO saveProfile(ProfileReq req);
-
-	ProfilesDTO saveProfile(ProfilesDTO profilesDTO);
-	AuthorityDTO saveAuthority(AuthorityDTO authorityDTO);
 
 	List<String> getAllRoleNames();
 	List<String> getAllSectionNames();

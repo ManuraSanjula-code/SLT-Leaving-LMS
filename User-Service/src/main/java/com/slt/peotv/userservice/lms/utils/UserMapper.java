@@ -143,6 +143,15 @@ public class UserMapper {
         addressEntity.setIsDefault(addressDTO.getIsDefault());
         return addressEntity;
     }
+    public static AddressEntity mapToAddressEntity_(AddressDTO addressDTO) {
+        AddressEntity addressEntity = new AddressEntity();
+        addressEntity.setCity(addressDTO.getCity());
+        addressEntity.setCountry(addressDTO.getCountry());
+        addressEntity.setStreetName(addressDTO.getStreetName());
+        addressEntity.setPostalCode(addressDTO.getPostalCode());
+        addressEntity.setIsDefault(addressDTO.getIsDefault());
+        return addressEntity;
+    }
     public static UserDto mapToUserDto(UserEntity userEntity) {
         UserDto userDto = new UserDto();
 
@@ -354,6 +363,39 @@ public class UserMapper {
         }
 
         return roleDTO;
+    }
+
+    public static RoleDTOArchive mapToRoleDTO_(RoleEntity roleEntity) {
+        RoleDTOArchive roleDTO = new RoleDTOArchive();
+
+        // Map simple fields
+        roleDTO.setId(roleEntity.getId());
+        roleDTO.setName(roleEntity.getName());
+
+        // Map users (convert UserEntity to UserDto_)
+        if (roleEntity.getUsers() != null) {
+            List<UserDtoArchive> userDtos = roleEntity.getUsers().stream()
+                    .map(UserMapper::mapToUserDto_) // Assuming UserMapper.mapToUserDto_ exists
+                    .collect(Collectors.toList());
+            roleDTO.setUsers(userDtos);
+        }
+
+        // Map authorities (convert AuthorityEntity to AuthorityDTO)
+        if (roleEntity.getAuthorities() != null) {
+            List<AuthorityDTOArchive> authorityDTOs = roleEntity.getAuthorities().stream()
+                    .map(UserMapper::mapToAuthorityDTO_) // Assuming AuthorityMapper.mapToAuthorityDTO exists
+                    .collect(Collectors.toList());
+            roleDTO.setAuthorities(authorityDTOs);
+        }
+
+        return roleDTO;
+    }
+
+    public static AuthorityDTOArchive mapToAuthorityDTO_(AuthorityEntity authorityEntity) {
+        AuthorityDTOArchive authority = new AuthorityDTOArchive();
+        authority.setId(authorityEntity.getId());
+        authority.setName(authorityEntity.getName());
+        return authority;
     }
 
     public static AuthorityDTO mapToAuthorityDTO(AuthorityEntity authorityEntity) {

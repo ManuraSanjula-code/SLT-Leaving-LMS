@@ -70,7 +70,7 @@ public class TokenConverter {
             }
 
         }else {
-            UserEntity user = userRepo.findByEmail(email_);
+            UserEntity user = userRepo.findByUserId(email_);
             if (user != null || !(Objects.equals(user.getUserId(), id))) {
                 return user.getUserId();
             }
