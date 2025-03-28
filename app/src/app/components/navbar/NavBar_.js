@@ -1,195 +1,214 @@
-// "use client";
+"use client";
 
-// import React, { useState } from "react";
-// import {
-//   AppBar,
-//   Toolbar,
-//   Typography,
-//   Tabs,
-//   Tab,
-//   IconButton,
-//   Drawer,
-//   List,
-//   ListItem,
-//   ListItemText,
-//   useMediaQuery,
-//   useTheme,
-//   Box,
-//   Collapse,
-//   ListItemIcon,
-// } from "@mui/material";
-// import { useRouter, usePathname } from "next/navigation"; // Use Next.js's useRouter and usePathname
-// import MenuIcon from "@mui/icons-material/Menu";
-// import ExpandMoreIcon from "@mui/icons-material/ExpandMore"; // Icon for expand/collapse
-// import ExpandLessIcon from "@mui/icons-material/ExpandLess"; // Icon for expand/collapse
-// import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings"; // Icon for admin items
+import React, { useState, useMemo } from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Tabs,
+  Tab,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  useMediaQuery,
+  useTheme,
+  Box,
+  Collapse,
+  ListItemIcon,
+} from "@mui/material";
+import { useRouter, usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
+import MenuIcon from "@mui/icons-material/Menu";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 
-// const NavBar = () => {
-//   const theme = useTheme();
-//   const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // Check if the screen is small
-//   const router = useRouter(); // Use Next.js's useRouter
-//   const pathname = usePathname(); // Use Next.js's usePathname to get the current route
-//   const [sidebarOpen, setSidebarOpen] = useState(false); // State for the sidebar
-//   const [employeeCollapseOpen, setEmployeeCollapseOpen] = useState(false); // State for the employee collapsible section
-//   const [adminCollapseOpen, setAdminCollapseOpen] = useState(false); // State for the admin collapsible section
+const roleAccessRules = (() => {
+  const ROLE_EMPLOYEE = [
+    "/dashboard",
+    "/apply-leave",
+    "/request-movement",
+    "/profile",
+    "/all-leaves",
+    "/all-movements",
+    "/single-employee-activities",
+    "/"
+  ];
+  const ROLE_USER = [
+    "/dashboard",
+    "/apply-leave",
+    "/request-movement",
+    "/profile",
+    "/all-leaves",
+    "/all-movements",
+    "/single-employee-activities",
+    "/"
+  ];
 
-//   // Navigation items
-//   const navItems = [
-//     { label: "Dashboard", path: "/dashboard" },
-//     { label: "Apply Leave", path: "/apply-leave" },
-//     { label: "Request Movement", path: "/request-movement" },
-//     { label: "Profile", path: "/profile" },
-//   ];
+  return {
+    ROLE_EMPLOYEE,
+    ROLE_USER,
+    ROLE_HOD: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_SUPERVISOR: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_ADMIN: [...ROLE_EMPLOYEE, ...ROLE_USER, "/manage-employees"],
+    ROLE_CEO: [...ROLE_EMPLOYEE, ...ROLE_USER, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    ROLE_CHAIRMAN: [...ROLE_EMPLOYEE, ...ROLE_USER, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+    CHAIRMAN: [...ROLE_EMPLOYEE, "/employee-activities", "/absent-employees", "/no-pay-leaves", "/manage-leave-requests", "/manage-movement-requests", "/unsuccessful-leaves", "/unauthorized-leaves"],
+  };
+})();
 
-//   // Employee-related items
-//   const employeeItems = [
-//     { label: "All Leaves", path: "/all-leaves" },
-//     { label: "All Movements Requests", path: "/all-movements" },
-//     { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
-//     { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
-//     { label: "Absent Employees", path: "/absent-all-employees" },
-//     { label: "No-Pay Leaves", path: "/no-pay-leaves" },
-//     { label: "Single Employee Activities", path: "/single-employee-activities" },
-//   ];
+const NavBar = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const router = useRouter();
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [employeeCollapseOpen, setEmployeeCollapseOpen] = useState(false);
+  const [adminCollapseOpen, setAdminCollapseOpen] = useState(false);
 
-//   // Admin items
-//   const adminItems = [
-//     { label: "Manage Employees", path: "/manage-employees" },
-//     { label: "Manage Leave Requests", path: "/manage-leave-requests" },
-//     { label: "Manage Movement Requests", path: "/manage-movement-requests" },
-//     { label: 'All Employee Activities', path: '/employee-activities' },
+  // Get user from Redux
+  const reduxUser = useSelector((state) => state.auth);
+  const roles = reduxUser.userDetails?.roles || [];
 
-//     { label: "All Leaves", path: "/all-leaves" },
-//     { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
-//     { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
-//     { label: "Absent Employees", path: "/absent-employees" },
-//     { label: "No-Pay Leaves", path: "/no-pay-leaves" },
-//   ];
+  // Calculate allowed routes based on user roles
+  const allowedRoutes = useMemo(() => {
+    const routes = new Set();
+    roles.forEach(role => {
+      const roleRoutes = roleAccessRules[role];
+      if (roleRoutes) roleRoutes.forEach(path => routes.add(path));
+    });
+    return routes;
+  }, [roles]);
 
-//   // Handle opening the sidebar
-//   const handleSidebarOpen = () => {
-//     setSidebarOpen(true);
-//   };
+  // Navigation items with access check
+  const navItems = useMemo(() => [
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Apply Leave", path: "/apply-leave" },
+    { label: "Request Movement", path: "/request-movement" },
+    { label: "Profile", path: "/profile" },
+  ].filter(item => allowedRoutes.has(item.path)), [allowedRoutes]);
 
-//   // Handle closing the sidebar
-//   const handleSidebarClose = () => {
-//     setSidebarOpen(false);
-//   };
+  // Employee-related items with access check
+  const employeeItems = useMemo(() => [
+    { label: "All Leaves", path: "/all-leaves" },
+    { label: "All Movements Requests", path: "/all-movements" },
+    { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
+    { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
+    { label: "Absent Employees", path: "/absent-all-employees" },
+    { label: "No-Pay Leaves", path: "/no-pay-leaves" },
+    { label: "Single Employee Activities", path: "/single-employee-activities" },
+  ].filter(item => allowedRoutes.has(item.path)), [allowedRoutes]);
 
-//   // Handle toggling the employee collapsible section
-//   const handleEmployeeCollapseToggle = () => {
-//     setEmployeeCollapseOpen(!employeeCollapseOpen);
-//   };
+  // Admin items with access check
+  const adminItems = useMemo(() => [
+    { label: "Manage Employees", path: "/manage-employees" },
+    { label: "Manage Leave Requests", path: "/manage-leave-requests" },
+    { label: "Manage Movement Requests", path: "/manage-movement-requests" },
+    { label: 'All Employee Activities', path: '/employee-activities' },
+    { label: "All Leaves", path: "/all-leaves" },
+    { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
+    { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
+    { label: "Absent Employees", path: "/absent-employees" },
+    { label: "No-Pay Leaves", path: "/no-pay-leaves" },
+  ].filter(item => allowedRoutes.has(item.path)), [allowedRoutes]);
 
-//   // Handle toggling the admin collapsible section
-//   const handleAdminCollapseToggle = () => {
-//     setAdminCollapseOpen(!adminCollapseOpen);
-//   };
+  // Handlers remain the same
+  const handleSidebarOpen = () => setSidebarOpen(true);
+  const handleSidebarClose = () => setSidebarOpen(false);
+  const handleEmployeeCollapseToggle = () => setEmployeeCollapseOpen(!employeeCollapseOpen);
+  const handleAdminCollapseToggle = () => setAdminCollapseOpen(!adminCollapseOpen);
+  const handleTabChange = (path) => router.push(path);
 
-//   // Handle tab navigation
-//   const handleTabChange = (path) => {
-//     router.push(path); // Use Next.js's router.push for client-side navigation
-//   };
+  return (
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }} />
+          <Tabs
+            value={pathname}
+            textColor="inherit"
+            variant={isMobile ? "scrollable" : "standard"}
+            scrollButtons="auto"
+          >
+            {navItems.map((item) => (
+              <Tab
+                key={item.path}
+                label={item.label}
+                value={item.path}
+                onClick={() => handleTabChange(item.path)}
+              />
+            ))}
+          </Tabs>
+          <IconButton color="inherit" onClick={handleSidebarOpen} sx={{ ml: 2 }}>
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
-//   return (
-//       <>
-//         {/* App Bar */}
-//         <AppBar position="static">
-//           <Toolbar>
-//             {/* App Title */}
-//             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-//               {/* Leave Management System */}
-//             </Typography>
+      <Drawer anchor="right" open={sidebarOpen} onClose={handleSidebarClose}>
+        <Box sx={{ width: 350 }}>
+          <List>
+            {employeeItems.length > 0 && (
+              <>
+                <ListItem button onClick={handleEmployeeCollapseToggle}>
+                  <ListItemText primary="Employee" />
+                  {employeeCollapseOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </ListItem>
+                <Collapse in={employeeCollapseOpen}>
+                  <List>
+                    {employeeItems.map((item) => (
+                      <ListItem
+                        button
+                        key={item.path}
+                        onClick={() => {
+                          handleTabChange(item.path);
+                          handleSidebarClose();
+                        }}
+                        sx={{ pl: 4 }}
+                      >
+                        <ListItemText primary={item.label} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            )}
 
-//             {/* Navigation Tabs */}
-//             <Tabs
-//                 value={pathname} // Highlight the current tab based on the route
-//                 textColor="inherit"
-//                 variant={isMobile ? "scrollable" : "standard"} // Make tabs scrollable on small screens
-//                 scrollButtons="auto" // Show scroll buttons if tabs overflow
-//             >
-//               {navItems.map((item) => (
-//                   <Tab
-//                       key={item.path}
-//                       label={item.label}
-//                       value={item.path}
-//                       onClick={() => handleTabChange(item.path)} // Use handleTabChange for navigation
-//                   />
-//               ))}
-//             </Tabs>
+            {adminItems.length > 0 && (
+              <>
+                <ListItem button onClick={handleAdminCollapseToggle}>
+                  <ListItemText primary="Admin" />
+                  {adminCollapseOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </ListItem>
+                <Collapse in={adminCollapseOpen}>
+                  <List>
+                    {adminItems.map((item) => (
+                      <ListItem
+                        button
+                        key={item.path}
+                        onClick={() => {
+                          handleTabChange(item.path);
+                          handleSidebarClose();
+                        }}
+                        sx={{ pl: 4 }}
+                      >
+                        <ListItemIcon>
+                          <AdminPanelSettingsIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={item.label} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            )}
+          </List>
+        </Box>
+      </Drawer>
+    </>
+  );
+};
 
-//             {/* Sidebar Toggle Button */}
-//             <IconButton
-//                 color="inherit"
-//                 onClick={handleSidebarOpen}
-//                 sx={{ ml: 2 }} // Add margin to separate from other tabs
-//             >
-//               <MenuIcon /> {/* Icon for the sidebar */}
-//             </IconButton>
-//           </Toolbar>
-//         </AppBar>
-
-//         {/* Sidebar */}
-//         <Drawer
-//             anchor="right" // Open the sidebar from the right
-//             open={sidebarOpen}
-//             onClose={handleSidebarClose}
-//         >
-//           <Box sx={{ width: 350 }} role="presentation">
-//             <List>
-//               {/* Employee Items in Sidebar */}
-//               <ListItem button onClick={handleEmployeeCollapseToggle}>
-//                 <ListItemText primary="Employee" />
-//                 {employeeCollapseOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-//               </ListItem>
-//               <Collapse in={employeeCollapseOpen}>
-//                 <List>
-//                   {employeeItems.map((item) => (
-//                       <ListItem
-//                           button
-//                           key={item.path}
-//                           onClick={() => {
-//                             handleTabChange(item.path); // Use handleTabChange for navigation
-//                             handleSidebarClose();
-//                           }}
-//                           sx={{ pl: 4 }} // Add padding for indentation
-//                       >
-//                         <ListItemText primary={item.label} />
-//                       </ListItem>
-//                   ))}
-//                 </List>
-//               </Collapse>
-
-//               {/* Admin Items in Sidebar */}
-//               <ListItem button onClick={handleAdminCollapseToggle}>
-//                 <ListItemText primary="Admin" />
-//                 {adminCollapseOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-//               </ListItem>
-//               <Collapse in={adminCollapseOpen}>
-//                 <List>
-//                   {adminItems.map((item) => (
-//                       <ListItem
-//                           button
-//                           key={item.path}
-//                           onClick={() => {
-//                             handleTabChange(item.path); // Use handleTabChange for navigation
-//                             handleSidebarClose();
-//                           }}
-//                           sx={{ pl: 4 }} // Add padding for indentation
-//                       >
-//                         <ListItemIcon>
-//                           <AdminPanelSettingsIcon />
-//                         </ListItemIcon>
-//                         <ListItemText primary={item.label} />
-//                       </ListItem>
-//                   ))}
-//                 </List>
-//               </Collapse>
-//             </List>
-//           </Box>
-//         </Drawer>
-//       </>
-//   );
-// };
-
-// export default NavBar;
+export default NavBar;

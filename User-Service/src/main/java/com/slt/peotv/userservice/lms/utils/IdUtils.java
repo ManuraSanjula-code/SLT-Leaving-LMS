@@ -1,4 +1,4 @@
-package com.slt.peotv.userservice.lms.shared;
+package com.slt.peotv.userservice.lms.utils;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -18,7 +18,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
 @Service
-public class Utils {
+public class IdUtils {
 
     private final Random RANDOM = new SecureRandom();
     private final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

@@ -3,9 +3,10 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { hasAccess } from "./roleAccess";
 import { Box, CircularProgress } from "@mui/material";
 import { clearAuth } from "./redux/authSlice";
+
+const PUBLIC_ROUTES = ["/login", "/error", "/unauthorized", "/forgot-password"];
 
 export default function ClientProtectedRoute({ children }) {
   const pathname = usePathname();
@@ -14,79 +15,58 @@ export default function ClientProtectedRoute({ children }) {
   const reduxUser = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('userId');
-      localStorage.removeItem('jwt');
-      dispatch(clearAuth());
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
-
   useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const userId = localStorage.getItem('userId');
-        const jwt = localStorage.getItem('jwt');
+    const resetInvalidAuth = () => {
+      const userId = localStorage.getItem('userId');
+      const jwt = localStorage.getItem('jwt');
 
-        // Skip protection checks for these routes
-        if (["/login", "/error", "/unauthorized"].includes(pathname)) {
-          if (pathname === "/login" && (userId || reduxUser?.userId)) {
-            router.replace("/dashboard");
-          }
-          setIsLoading(false);
-          return;
-        }
-
-        if (!userId || !jwt) {
-          await handleLogout();
-          return;
-        }
-
-        if (reduxUser.loading) return;
-
-        if (!reduxUser.userId || reduxUser.userId !== userId) {
-          await handleLogout();
-          return;
-        }
-
-        const roles = reduxUser.userDetails?.roles || [];
-        
-        if (roles.length === 0) {
-          console.error("No roles found - server error");
-          await handleLogout();
-          return;
-        }
-
-        const hasRouteAccess = hasAccess(roles, pathname);
-        
-        if (!hasRouteAccess) {
-          router.push("/unauthorized");
-          return;
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Auth verification error:", error);
-        await handleLogout();
+      // If tokens exist but don't match Redux, or Redux has error state
+      if ((userId && !reduxUser.userId) ||
+          (userId && reduxUser.userId && userId !== reduxUser.userId) ||
+          reduxUser.errorMessage) {
+        localStorage.removeItem('userId');
+        localStorage.removeItem('jwt');
+        dispatch(clearAuth());
       }
     };
 
-    verifyAuth();
+    resetInvalidAuth();
+  }, [dispatch]);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const userId = localStorage.getItem('userId');
+      const jwt = localStorage.getItem('jwt');
+
+      // Public routes - no auth needed
+      if (PUBLIC_ROUTES.includes(pathname)) {
+        if (pathname === "/login" && (userId || reduxUser?.userId)) {
+          router.replace("/dashboard");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!userId || !jwt || !reduxUser.userId || userId !== reduxUser.userId) {
+        localStorage.removeItem('userId');
+        localStorage.removeItem('jwt');
+        dispatch(clearAuth());
+        router.push("/login");
+        return;
+      }
+
+      setIsLoading(false);
+    };
+
+    const timer = setTimeout(checkAuth, 100);
+    return () => clearTimeout(timer);
   }, [pathname, reduxUser, router, dispatch]);
 
   if (isLoading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        height="100vh"
-      >
-        <CircularProgress size={60} thickness={4} />
-      </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress size={60} thickness={4} />
+        </Box>
     );
   }
 

@@ -23,6 +23,8 @@ public class RoleEntity implements Serializable {
     @Column(nullable = false, length = 20)
     private String name;
 
+    private String publicId;
+
     @ManyToMany(mappedBy = "roles")
     @JsonBackReference
     @JsonIgnore
@@ -33,8 +35,24 @@ public class RoleEntity implements Serializable {
             joinColumns = @JoinColumn(name = "roles_id"),
             inverseJoinColumns = @JoinColumn(name = "authorities_id", nullable = false))
     private Collection<AuthorityEntity> authorities;
-
+    private int priority;
     public RoleEntity() {
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     public RoleEntity(String name) {

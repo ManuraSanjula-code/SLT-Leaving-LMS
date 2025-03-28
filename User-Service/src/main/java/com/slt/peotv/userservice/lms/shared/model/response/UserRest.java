@@ -18,6 +18,15 @@ public class UserRest {
 	private Integer active = 1;
 	private String phone;
 	private String gender;
+	private Integer highestRolePriority;
+
+	public Integer getHighestRolePriority() {
+		return highestRolePriority;
+	}
+
+	public void setHighestRolePriority(Integer highestRolePriority) {
+		this.highestRolePriority = highestRolePriority;
+	}
 
 	public Integer getIsSltEmp() {
 		return isSltEmp;

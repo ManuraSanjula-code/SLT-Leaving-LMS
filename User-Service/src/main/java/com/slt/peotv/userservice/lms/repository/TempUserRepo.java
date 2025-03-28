@@ -1,10 +1,15 @@
 package com.slt.peotv.userservice.lms.repository;
 
 import com.slt.peotv.userservice.lms.entity.TempUser;
+import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
+
+import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -30,4 +35,15 @@ public interface TempUserRepo extends CrudRepository<TempUser, Long> {
     )""")
     Optional<TempUser> findValidUser(@Param("email") String email,
                                      @Param("password") String password);
+
+    List<TempUser> findByExpireTimeBefore(Date currentTime);
+
+    // New method to delete expired users
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM TempUser t WHERE t.expireTime < ?1")
+    int deleteExpiredUsers(Date currentTime);
+
+    // Find users with future expiration time
+    List<TempUser> findByExpireTimeAfter(Date currentTime);
 }

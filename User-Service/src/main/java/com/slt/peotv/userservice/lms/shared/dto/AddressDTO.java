@@ -2,6 +2,8 @@ package com.slt.peotv.userservice.lms.shared.dto;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import java.util.Objects;
+
 public class AddressDTO {
 	private long id;
 	private String addressId;
@@ -18,6 +20,14 @@ public class AddressDTO {
 	}
 
 	public void setIsDefault(Boolean isDefault) {
+		this.isDefault = isDefault;
+	}
+
+	public Boolean isDefault() {
+		return isDefault;
+	}
+
+	public void setDefault(Boolean isDefault) {
 		this.isDefault = isDefault;
 	}
 
@@ -74,5 +84,34 @@ public class AddressDTO {
 
 	public void setAddressId(String addressId) {
 		this.addressId = addressId;
+	}
+
+
+	@Override
+	public String toString() {
+		return "AddressDTO{" +
+				"id=" + id +
+				", addressId='" + addressId + '\'' +
+				", city='" + city + '\'' +
+				", country='" + country + '\'' +
+				", streetName='" + streetName + '\'' +
+				", postalCode='" + postalCode + '\'' +
+				", userDetails=" + userDetails +
+				", isDefault=" + isDefault +
+				'}';
+	}
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		AddressDTO that = (AddressDTO) o;
+		return Objects.equals(city, that.city) &&
+				Objects.equals(streetName, that.streetName) &&
+				Objects.equals(postalCode, that.postalCode);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(city, streetName, postalCode);
 	}
 }

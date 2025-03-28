@@ -61,20 +61,18 @@ public class AttendanceProcessingService {
                         leave.setIsCanceled(true);
                         leaveRepository.save(leave);
                         leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME AND WORK FULL DAY");
-                        checkService.reportAttendance(attendanceRecord, true, false, false, false, false, false);
+                        checkService.reportAttendance(attendanceRecord, true, false, false, false, false, false, false, false, false,true, false, new Date());
 
                     } else if (isHalfDay) {
                         leave.setNotUsed(true);
                         leave.setIsCanceled(true);
                         leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME TO WORK IN FORM OF A HALF DAY");
                         leaveRepository.save(leave);
-                        checkService.reportAttendance(attendanceRecord, false, true, false, false, false, true);
-
+                        checkService.reportAttendance(attendanceRecord, false, true, false, false, false, true, false, false, false,true, false, new Date());
                     } else if (isShortLeave) {
-                        checkService.reportAttendance(attendanceRecord, false, false, true, false, false, false);
-
+                        System.out.println();
                     } else if (isLate) {
-                        checkService.reportAttendance(attendanceRecord, false, false, false, true, false, false);
+                        checkService.reportAttendance(attendanceRecord, false, false, false, true, false, true, false, false, false,true, false, new Date());
                         /// IF LATE IS COVER SET LATE_COVER TURE
                     }
 
@@ -89,42 +87,42 @@ public class AttendanceProcessingService {
                         switch (leaveType.getName()) {
                             case "CASUAL" -> {
                                 UserLeaveTypeRemaining casual = getUserLeaveTypeRemaining("CASUAL", user);
-                                if (casual.getRemainingLeaves() < 1) {
+                                if (casual.getRemainingLeaves() > 1) {
                                     casual.setRemainingLeaves(casual.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(casual);
                                 }
                             }
                             case "ANNUAL" -> {
                                 UserLeaveTypeRemaining annual = getUserLeaveTypeRemaining("ANNUAL", user);
-                                if (annual.getRemainingLeaves() < 1) {
+                                if (annual.getRemainingLeaves() > 1) {
                                     annual.setRemainingLeaves(annual.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(annual);
                                 }
                             }
                             case "SICK" -> {
                                 UserLeaveTypeRemaining sick = getUserLeaveTypeRemaining("SICK", user);
-                                if (sick.getRemainingLeaves() < 1) {
+                                if (sick.getRemainingLeaves() > 1) {
                                     sick.setRemainingLeaves(sick.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(sick);
                                 }
                             }
                             case "SPECIAL" -> {
                                 UserLeaveTypeRemaining special = getUserLeaveTypeRemaining("SPECIAL", user);
-                                if (special.getRemainingLeaves() < 1) {
+                                if (special.getRemainingLeaves() > 1) {
                                     special.setRemainingLeaves(special.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(special);
                                 }
                             }
                             case "DUTY" -> {
                                 UserLeaveTypeRemaining duty = getUserLeaveTypeRemaining("DUTY", user);
-                                if (duty.getRemainingLeaves() < 1) {
+                                if (duty.getRemainingLeaves() > 1) {
                                     duty.setRemainingLeaves(duty.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(duty);
                                 }
                             }
                             case "MATERNITY_LEAVE" -> {
                                 UserLeaveTypeRemaining maternityLeave = getUserLeaveTypeRemaining("MATERNITY_LEAVE", user);
-                                if (maternityLeave.getRemainingLeaves() < 1) {
+                                if (maternityLeave.getRemainingLeaves() > 1) {
                                     maternityLeave.setRemainingLeaves(maternityLeave.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(maternityLeave);
                                 }

@@ -85,6 +85,8 @@ public class MovementsEntity {
     @Builder.Default
     private Boolean isHalfDay = false;
     @Builder.Default
+    private Boolean isFullDay = false;
+    @Builder.Default
     private Boolean isLate = false;
     @Builder.Default
     private Boolean isAbsent = false;

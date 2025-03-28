@@ -8,14 +8,43 @@ import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 import com.slt.peotv.userservice.lms.repository.*;
 import com.slt.peotv.userservice.lms.shared.dto.*;
+import com.slt.peotv.userservice.lms.shared.model.request.UserReq;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class UserMapper {
 
+    public static RoleEntity mapRoleToRoleEntity(UserEntity userEntity) {
+        RoleEntity role = new RoleEntity();
+        role.setPriority(200);
+        role.setName("ROLE_TEMP");
+        role.setUsers(Set.of(userEntity));
+
+        // Create authorities
+        Set<AuthorityEntity> authorities = new HashSet<>();
+
+        AuthorityEntity authority_read = new AuthorityEntity();
+        authority_read.setName("READ_AUTHORITY");
+        authority_read.setWeight(1);
+        authority_read.setRoles(Set.of(role));
+        authorities.add(authority_read);
+
+        AuthorityEntity authority_write = new AuthorityEntity();
+        authority_write.setName("WRITE_AUTHORITY");
+        authority_write.setWeight(1);
+        authority_write.setRoles(Set.of(role));
+        authorities.add(authority_write);
+
+        AuthorityEntity authority_delete = new AuthorityEntity();
+        authority_delete.setName("DELETE_AUTHORITY");
+        authority_delete.setWeight(1);
+        authority_delete.setRoles(Set.of(role));
+        authorities.add(authority_delete);
+
+        role.setAuthorities(authorities);
+        return role;
+    }
     public static SectionEntity mapToSectionEntity(SectionDTO sectionDTO, UserRepository userRepository) {
         SectionEntity sectionEntity = new SectionEntity();
 
@@ -55,6 +84,82 @@ public class UserMapper {
         return sectionDTO;
     }
     public static UserEntity mapToUserEntity(UserDto userDto, RoleRepository roleRepository,
+                                             ProfilesRepo profilesRepository,
+                                             SectionRepo sectionRepository,
+                                             UserRepository userRepository) {
+        UserEntity userEntity = new UserEntity();
+
+        // Map simple fields
+        userEntity.setId(userDto.getId());
+        userEntity.setUserId(userDto.getUserId());
+        userEntity.setFirstName(userDto.getFirstName());
+        userEntity.setLastName(userDto.getLastName());
+        userEntity.setEmail(userDto.getEmail());
+        userEntity.setEmployeeId(userDto.getEmployeeId());
+        userEntity.setSltId(userDto.getSltId());
+        userEntity.setEncryptedPassword(userDto.getEncryptedPassword());
+        userEntity.setEmailVerificationToken(userDto.getEmailVerificationToken());
+        userEntity.setEmailVerificationStatus(userDto.getEmailVerificationStatus());
+        userEntity.setProfilePic(userDto.getProfilePic());
+        userEntity.setGender(userDto.getGender());
+        userEntity.setPhone(userDto.getPhone());
+        userEntity.setIsSltEmp(userDto.getIsSltEmp());
+        userEntity.setIsSltIntern(userDto.getIsSltIntern());
+        userEntity.setActive(userDto.getActive());
+        userEntity.setRoaster(userDto.getRoaster());
+
+        // Map addresses
+        if (userDto.getAddresses() != null) {
+            List<AddressEntity> addressEntities = userDto.getAddresses().stream()
+                    .map(UserMapper::mapToAddressEntity)
+                    .collect(Collectors.toList());
+            userEntity.setAddresses(addressEntities);
+        }
+
+        // Map roles
+        if (userDto.getRoles() != null) {
+            Collection<RoleEntity> roleEntities = userDto.getRoles().stream()
+                    .map(roleName -> roleRepository.findByName(roleName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setRoles(roleEntities);
+        }
+
+        // Map sections
+        if (userDto.getSections() != null) {
+            Collection<SectionEntity> sectionEntities = userDto.getSections().stream()
+                    .map(sectionName -> sectionRepository.findBySection(sectionName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setSections(sectionEntities);
+        }
+
+        // Map profiles
+        if (userDto.getProfiles() != null) {
+            Collection<ProfilesEntity> profilesEntities = userDto.getProfiles().stream()
+                    .map(profileName -> profilesRepository.findByName(profileName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setProfiles(profilesEntities);
+        }
+
+        // Map HOD, Supervisor, and Other
+        if (userDto.getHod() != null) {
+            UserEntity hodEntity = userRepository.findByUserId(userDto.getHod());
+            userEntity.setHod(hodEntity);
+        }
+        if (userDto.getSupervisor() != null) {
+            UserEntity supervisorEntity = userRepository.findByUserId(userDto.getSupervisor());
+            userEntity.setSupervisor(supervisorEntity);
+        }
+        if (userDto.getOther() != null) {
+            UserEntity otherEntity = userRepository.findByUserId(userDto.getOther());
+            userEntity.setOther(otherEntity);
+        }
+
+        return userEntity;
+    }
+    public static UserEntity mapToUserEntity(UserReq userDto, RoleRepository roleRepository,
                                              ProfilesRepo profilesRepository,
                                              SectionRepo sectionRepository,
                                              UserRepository userRepository) {
@@ -361,7 +466,9 @@ public class UserMapper {
                     .collect(Collectors.toList());
             roleDTO.setAuthorities(authorityDTOs);
         }
-
+        if(roleEntity.getPriority() != 0){
+            roleDTO.setPriority(roleEntity.getPriority());
+        }
         return roleDTO;
     }
 
@@ -387,7 +494,12 @@ public class UserMapper {
                     .collect(Collectors.toList());
             roleDTO.setAuthorities(authorityDTOs);
         }
-
+        if(roleEntity.getPriority() != 0){
+            roleDTO.setPriority(roleEntity.getPriority());
+        }
+        if(roleEntity.getPublicId() != null){
+            roleDTO.setPublicId(roleEntity.getPublicId());
+        }
         return roleDTO;
     }
 

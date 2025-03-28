@@ -23,8 +23,8 @@ public interface Check_Service {
     public void main();
     public void prerequisite();
 
-    public void reportAttendance(InOutEntity inOut,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day);
-    public <T> void reportAttendance(Object obj,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day);
+    public void reportAttendance(InOutEntity inOut,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day,Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active,  Boolean nopay, Date date);
+    public <T> void reportAttendance(Object obj,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Date date);
 
     public void reportAbsent(List<String > absentEmployeesToday);
     public void reportAbsent(AbsenteeReq req);

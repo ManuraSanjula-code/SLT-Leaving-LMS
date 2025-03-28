@@ -4,25 +4,28 @@ import java.util.List;
 
 public class RoleReq {
     private String name;
+    private String roleId;
     private List<String> addedUsers;
     private List<String> deletedUsers;
     private List<String> addedAuthorities;
     private List<String> deletedAuthorities;
+    private Integer priority;
+    private String publicId;
 
-    public List<String> getAddedAuthorities() {
-        return addedAuthorities;
+    public String getPublicId() {
+        return publicId;
     }
 
-    public void setAddedAuthorities(List<String> addedAuthorities) {
-        this.addedAuthorities = addedAuthorities;
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
-    public List<String> getDeletedAuthorities() {
-        return deletedAuthorities;
+    public String getRoleId() {
+        return roleId;
     }
 
-    public void setDeletedAuthorities(List<String> deletedAuthorities) {
-        this.deletedAuthorities = deletedAuthorities;
+    public void setRoleId(String roleId) {
+        this.roleId = roleId;
     }
 
     public String getName() {
@@ -47,5 +50,29 @@ public class RoleReq {
 
     public void setDeletedUsers(List<String> deletedUsers) {
         this.deletedUsers = deletedUsers;
+    }
+
+    public List<String> getAddedAuthorities() {
+        return addedAuthorities;
+    }
+
+    public void setAddedAuthorities(List<String> addedAuthorities) {
+        this.addedAuthorities = addedAuthorities;
+    }
+
+    public List<String> getDeletedAuthorities() {
+        return deletedAuthorities;
+    }
+
+    public void setDeletedAuthorities(List<String> deletedAuthorities) {
+        this.deletedAuthorities = deletedAuthorities;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
     }
 }

@@ -33,14 +33,6 @@ public class LeaveEntity {
     @Column(name = "to_date", nullable = false)
     private Date toDate;
 
-    /*@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "leave_category_id", referencedColumnName = "id", nullable = false)
-    private LeaveCategoryEntity leaveCategory;
-
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "leave_type_id", referencedColumnName = "id", nullable = false)
-    private LeaveTypeEntity leaveType;*/
-
     @ManyToOne
     @JoinColumn(name = "leave_category_id", foreignKey = @ForeignKey(name = "FK_leave_category"))
     private LeaveCategoryEntity leaveCategory;
@@ -69,6 +61,8 @@ public class LeaveEntity {
 
     @Column(name = "is_halfday")
     private Boolean isHalfDay;
+    @Builder.Default
+    private Boolean isFullDay = false;
 
     @Builder.Default
     private Boolean unSuccessful = false;

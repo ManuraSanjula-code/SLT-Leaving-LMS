@@ -7,6 +7,21 @@ public class RoleDTOArchive {
 	private String name;
 	private List<UserDtoArchive> users;
 	private List<AuthorityDTOArchive> authorities;
+	private int priority;
+	private String publicId;
+
+	public String getPublicId() {
+		return publicId;
+	}
+	public void setPublicId(String publicId) {
+		this.publicId = publicId;
+	}
+	public int getPriority() {
+		return priority;
+	}
+	public void setPriority(int priority) {
+		this.priority = priority;
+	}
 	public long getId() {
 		return id;
 	}

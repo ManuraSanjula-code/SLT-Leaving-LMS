@@ -54,36 +54,11 @@ public class Helper {
     }
 
 
-    public void handleAbsenteeReqFull(String employee, LeaveEntity leaveEntity) {
+    public void handleAbsenteeReq(String employee, LeaveEntity leaveEntity) {
         List<UserLeaveTypeRemaining> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(leaveEntity.getEmployeeID());
         boolean allMatch = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
 
-
         if (employee == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        AttendanceEntity attendance = new AttendanceEntity();
-        attendance.setPublicId(utils.generateId(10));
-        attendance.setEmployeeID(employee);
-        attendance.setDate(new Date());
-
-        attendance.setIsLate(false);
-        attendance.setLateCover(false);
-        attendance.setIsUnSuccessful(false);
-
-        attendance.setIsUnAuthorized(true);
-        attendance.setIsAbsent(true);
-
-        attendance.setIsFullDay(false);
-        attendance.setIsHalfDay(false);
-        attendance.setDueDateForUA(getDueDate());
-        attendance.setIssues(true);
-
-        attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO THE  " + "ABSENT WITH OUT MAKING A LEAVE " +
-                " AND BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
-
-        attendanceRepo.save(attendance);
-
-        /// **************************************************************
 
         AbsenteeEntity absenteeEntity = new AbsenteeEntity();
         absenteeEntity.setPublicId(utils.generateId(10));
@@ -118,39 +93,9 @@ public class Helper {
             check_Service.saveNoPayEntity(leaveEntity.getEmployeeID(), null, false, false, false, false, true, leaveEntity.getHappenDate());
 
         }
-
-        check_Service.reportAttendance(employee, false, true, false, false, false, false);
     }
 
-    public void handleAbsenteeReqFull(String employee) {
-        List<UserLeaveTypeRemaining> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(employee);
-        boolean allMatch = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
-
-        if (employee == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        AttendanceEntity attendance = new AttendanceEntity();
-        attendance.setPublicId(utils.generateId(10));
-        attendance.setEmployeeID(employee);
-        attendance.setDate(new Date());
-
-        attendance.setIsLate(false);
-        attendance.setLateCover(false);
-        attendance.setIsUnSuccessful(false);
-
-        attendance.setIsUnAuthorized(true);
-        attendance.setIsAbsent(true);
-
-        attendance.setIsFullDay(false);
-        attendance.setIsHalfDay(false);
-        attendance.setDueDateForUA(getDueDate());
-        attendance.setIssues(true);
-
-        attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO THE  " + "ABSENT WITH OUT MAKING A LEAVE " +
-                " AND BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
-
-        attendanceRepo.save(attendance);
-
-        /// **************************************************************
+    public void handleAbsenteeReq(String employee, Boolean isHalfDay, Boolean isFullDay) {
 
         AbsenteeEntity absenteeEntity = new AbsenteeEntity();
         absenteeEntity.setPublicId(utils.generateId(10));
@@ -165,7 +110,8 @@ public class Helper {
         absenteeEntity.setIsLate(false);
         absenteeEntity.setIsLateCover(false);
         absenteeEntity.setIsUnSuccessfulAttdate(false);
-        absenteeEntity.setIsHalfDay(false);
+        absenteeEntity.setIsHalfDay(isHalfDay);
+        absenteeEntity.setIsFullDay(isFullDay);
         absenteeEntity.setComment("EMPLOYEE ABSENT IN TODAY");
         absenteeEntity.setHappenDate(getYesterdayDate());
 
@@ -173,20 +119,6 @@ public class Helper {
         absenteeEntity.setIsAccepted(false);
 
         absenteeRepo.save(absenteeEntity);
-
-        check_Service.reportAttendance(employee, false, true, false, false, false, false);
-    }
-
-    public void handleAbsenteeReqHalf(String employee) {
-        AbsenteeReq req = new AbsenteeReq();
-        req.setEmployeeId(employee);
-        req.setIsHalfDay(true);
-        req.setHappenDate(getYesterdayDate());
-        req.setComment("GOING HALF DAY WITH-OUT NOTIFYING");
-
-        check_Service.reportAbsent(req);
-
-        check_Service.reportAttendance(employee, false, true, false, false, false, true);
     }
 
     public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity) {
@@ -213,6 +145,9 @@ public class Helper {
                 check_Service.saveNoPayEntity(user, attendanceEntity, attendanceEntity.getIsHalfDay(),
                         attendanceEntity.getIsUnSuccessful(), attendanceEntity.getIsLate(),
                         attendanceEntity.getLateCover(), attendanceEntity.getIsAbsent(), attendanceEntity.getDate());
+
+                check_Service.reportAttendance(attendanceEntity, false, true, false, false, false, true, true, false, false, true, true, attendanceEntity.getDate());
+
             } else {
 
                 attendanceEntity.setIssueDescription("GOING HALF DAY BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
@@ -228,7 +163,7 @@ public class Helper {
                 req.setComment("GOING HALF DAY WITH-OUT NOTIFYING");
 
                 check_Service.reportAbsent(req);
-                check_Service.reportAttendance(attendanceEntity, false, true, false, false, false, true);
+                check_Service.reportAttendance(attendanceEntity, false, true, false, false, false, true, true, false, false, true, false, attendanceEntity.getDate());
             }
 
         } else {

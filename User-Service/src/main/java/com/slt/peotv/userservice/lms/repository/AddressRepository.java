@@ -12,4 +12,6 @@ import com.slt.peotv.userservice.lms.entity.UserEntity;
 public interface AddressRepository extends CrudRepository<AddressEntity, Long> {
 	List<AddressEntity> findAllByUserDetails(UserEntity userEntity);
 	AddressEntity findByAddressId(String addressId);
+	List<AddressEntity> findByCountryAndStreetNameAndPostalCodeAndCity(
+			String country, String streetName, String postalCode, String city);
 }

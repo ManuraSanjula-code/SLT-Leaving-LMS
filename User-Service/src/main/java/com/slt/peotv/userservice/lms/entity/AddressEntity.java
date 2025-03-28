@@ -1,16 +1,9 @@
 package com.slt.peotv.userservice.lms.entity;
 
 import java.io.Serializable;
-
+import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 
 @Entity(name="addresses")
 public class AddressEntity implements Serializable {
@@ -37,7 +30,7 @@ public class AddressEntity implements Serializable {
 	private String postalCode;
 
 	@Column(nullable=false)
-	private Boolean isDefault;
+	private Boolean isDefault = Boolean.FALSE;
 
 	public AddressEntity() {
 		this.isDefault = false;
@@ -52,6 +45,14 @@ public class AddressEntity implements Serializable {
 	}
 
 	public void setIsDefault(Boolean isDefault) {
+		this.isDefault = isDefault;
+	}
+
+	public Boolean isDefault() {
+		return isDefault;
+	}
+
+	public void setDefault(Boolean isDefault) {
 		this.isDefault = isDefault;
 	}
 
@@ -123,5 +124,17 @@ public class AddressEntity implements Serializable {
 				", postalCode='" + postalCode + '\'' +
 				", userDetails=" + userDetails +
 				'}';
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		AddressEntity that = (AddressEntity) o;
+		return id == that.id && Objects.equals(addressId, that.addressId) && Objects.equals(city, that.city) && Objects.equals(country, that.country) && Objects.equals(streetName, that.streetName) && Objects.equals(postalCode, that.postalCode) && Objects.equals(isDefault, that.isDefault) && Objects.equals(userDetails, that.userDetails);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, addressId, city, country, streetName, postalCode, isDefault, userDetails);
 	}
 }

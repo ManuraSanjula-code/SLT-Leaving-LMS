@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+// components/management/ProfilesForm.js
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   TextField,
   Button,
@@ -18,12 +21,15 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Delete, Edit, Search } from "@mui/icons-material";
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchManagementData, saveProfile, deleteProfile } from '../../../store/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 
-const ProfilesForm = () => {
-  const [profiles, setProfiles] = useState([]);
-  const [users, setUsers] = useState([]); // All users from the server
+const ProfilesForm = ({ onSubmit }) => {
+  const dispatch = useDispatch();
+  const { data, loading, error, saveLoading, saveError, saveSuccess } = useSelector(state => state.management);
+
   const [openDialog, setOpenDialog] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [formData, setFormData] = useState({
@@ -44,86 +50,69 @@ const ProfilesForm = () => {
     hdEndsMorning: "",
     flexiDays: "",
     flexiHrsStart: "",
-    addedUsers: [],
-    deletedUsers: [],
+    users: []
   });
-  const [selectedUsers, setSelectedUsers] = useState([]); // Users selected for the profile
-  const [deletedUsers, setDeletedUsers] = useState([]); // Users to be removed from the profile
-  const [newUserId, setNewUserId] = useState(""); // Input for adding a new user by ID
-  const [userPage, setUserPage] = useState(1); // Pagination for assigned users
-  const [searchQuery, setSearchQuery] = useState(""); // Search query for filtering users
-  const usersPerPage = 20; // Number of users to display per page
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [deletedUsers, setDeletedUsers] = useState([]);
+  const [userPage, setUserPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [formErrors, setFormErrors] = useState({});
   const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
-  const resolveRef = useRef(null); // Declare the ref
-  const [errors, setErrors] = useState({});
 
-  // Fetch profiles from the server on component mount
+  const usersPerPage = 10;
+
   useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/users/profile", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
+    dispatch(fetchManagementData());
+  }, [dispatch]);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+  useEffect(() => {
+    if (saveSuccess) {
+      setSuccessOpen(true);
+      handleCloseDialog();
+      dispatch(fetchManagementData());
+    }
+    if (saveError) {
+      setErrorOpen(true);
+    }
+  }, [saveSuccess, saveError, dispatch]);
 
-        const data = await response.json();
-        setProfiles(data); // Set profiles fetched from the server
-      } catch (err) {
-        console.error("Error fetching profiles:", err);
-      }
-    };
-
-    fetchProfiles();
-  }, []);
-
-  // Open dialog for adding or editing a profile
-  const handleOpenDialog = (profile = null) => {
+  const handleOpenDialog = useCallback((profile = null) => {
     setCurrentProfile(profile);
-    setFormData(
-      profile || {
-        name: "",
-        publicId: "",
-        workStart: "",
-        workEnds: "",
-        ignoreSl: "",
-        gracePeriodeStart: "",
-        hdStart: "",
-        slStartMorning: "",
-        slStartEvening: "",
-        possibleFpLocations: "",
-        defaultHrs: "",
-        hdHrs: "",
-        minHrsForSl: "",
-        shortLeaveCount: "",
-        hdEndsMorning: "",
-        flexiDays: "",
-        flexiHrsStart: "",
-        addedUsers: [],
-        deletedUsers: [],
-      }
-    );
+    setFormData(profile || {
+      name: "",
+      publicId: "",
+      workStart: "",
+      workEnds: "",
+      ignoreSl: "",
+      gracePeriodeStart: "",
+      hdStart: "",
+      slStartMorning: "",
+      slStartEvening: "",
+      possibleFpLocations: "",
+      defaultHrs: "",
+      hdHrs: "",
+      minHrsForSl: "",
+      shortLeaveCount: "",
+      hdEndsMorning: "",
+      flexiDays: "",
+      flexiHrsStart: "",
+      users: []
+    });
 
-    // Initialize selectedUsers and deletedUsers based on the current profile's users
     if (profile) {
-      const profileUserIds = profile.users.map((user) => user.id);
+      const profileUserIds = profile.users.map(user => user.userId);
       setSelectedUsers(profileUserIds);
-      setDeletedUsers([]); // Reset deletedUsers when opening the dialog
+      setDeletedUsers([]);
     } else {
       setSelectedUsers([]);
       setDeletedUsers([]);
     }
 
     setOpenDialog(true);
-  };
+  }, []);
 
-  // Close dialog
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setCurrentProfile(null);
     setFormData({
@@ -144,510 +133,368 @@ const ProfilesForm = () => {
       hdEndsMorning: "",
       flexiDays: "",
       flexiHrsStart: "",
-      addedUsers: [],
-      deletedUsers: [],
+      users: []
     });
     setSelectedUsers([]);
     setDeletedUsers([]);
-    setNewUserId("");
-    setUserPage(1); // Reset pagination
-    setSearchQuery(""); // Reset search query
-    setErrors({});
-  };
+    setUserPage(1);
+    setSearchQuery("");
+  }, []);
 
-  // Handle form input changes
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }, []);
 
-  // Handle user selection for the profile
-  const handleUserSelection = (userId) => {
-    if (selectedUsers.includes(userId)) {
-      // User is being unchecked, add to deletedUsers
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-      setDeletedUsers((prev) => [...prev, userId]);
-    } else {
-      // User is being checked, remove from deletedUsers if present
-      setSelectedUsers((prev) => [...prev, userId]);
-      setDeletedUsers((prev) => prev.filter((id) => id !== userId));
-    }
-  };
+  const handleUserSelection = useCallback((userId) => {
+    setSelectedUsers(prev =>
+        prev.includes(userId)
+            ? prev.filter(id => id !== userId)
+            : [...prev, userId]
+    );
+  }, []);
 
-  const handleSuccessClose = () => {
-    setSuccessOpen(false);
-    if (resolveRef.current) {
-      resolveRef.current(); // Resolve the Promise
-      resolveRef.current = null; // Clear the ref
-    }
-  };
+  const validateForm = useCallback(() => {
+    const errors = {};
+    let isValid = true;
 
-  const handleErrorOpen = () => {
-    setErrorOpen(true);
-  };
+    const requiredFields = [
+      'name', 'workStart', 'workEnds', 'ignoreSl', 'gracePeriodeStart',
+      'hdStart', 'slStartMorning', 'slStartEvening', 'possibleFpLocations',
+      'defaultHrs', 'hdHrs', 'minHrsForSl', 'shortLeaveCount', 'hdEndsMorning',
+      'flexiDays', 'flexiHrsStart'
+    ];
 
-  const handleErrorClose = () => {
-    setErrorOpen(false);
-    if (resolveRef.current) {
-      resolveRef.current(); // Resolve the Promise
-      resolveRef.current = null; // Clear the ref
-    }
-  };
-
-  const showSuccessDialog = () => {
-    return new Promise((resolve) => {
-      resolveRef.current = resolve; // Store the resolve function
-      handleSuccessOpen(); // Open the dialog
-    });
-  };
-
-  const showErrorDialog = () => {
-    return new Promise((resolve) => {
-      resolveRef.current = resolve; // Store the resolve function
-      handleErrorOpen(); // Open the dialog
-    });
-  };
-
-  const handleSuccessOpen = () => {
-    setSuccessOpen(true);
-  };
-
-  // Save or update profile
-  const saveProfile = async (profileData) => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-      console.error("User ID not found in localStorage");
-      return;
-    }
-
-    const url = `http://localhost:8080/users/profile/${userId}`;
-    const method = profileData.id ? "PUT" : "POST"; // Use PUT for update, POST for create
-
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    requiredFields.forEach(field => {
+      if (!formData[field]) {
+        errors[field] = `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required`;
+        isValid = false;
       }
+    });
 
-      const data = await response.json();
-      return data; // Return the saved/updated profile
-    } catch (err) {
-      console.error("Error saving profile:", err);
-    }
-  };
+    setFormErrors(errors);
+    return isValid;
+  }, [formData]);
 
-  // Handle form submission (add or update profile)
-  const handleSubmit = async () => {
-    const newErrors = {};
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) return;
 
-    if (!formData.name) {
-      newErrors.name = "Name is required.";
-    }
-    if (!formData.workStart) {
-      newErrors.workStart = "Work Start time is required.";
-    }
-    if (!formData.workEnds) {
-      newErrors.workEnds = "Work End time is required.";
-    }
-    if (!formData.ignoreSl) {
-      newErrors.ignoreSl = "Ignore SL is required.";
-    }
-    if (!formData.gracePeriodeStart) {
-      newErrors.gracePeriodeStart = "Grace Period Start is required.";
-    }
-    if (!formData.hdStart) {
-      newErrors.hdStart = "HD Start is required.";
-    }
-    if (!formData.slStartMorning) {
-      newErrors.slStartMorning = "SL Start Morning is required.";
-    }
-    if (!formData.slStartEvening) {
-      newErrors.slStartEvening = "SL Start Evening is required.";
-    }
-    if (!formData.possibleFpLocations) {
-      newErrors.possibleFpLocations = "Possible FP Locations is required.";
-    }
-    if (!formData.defaultHrs) {
-      newErrors.defaultHrs = "Default Hours is required.";
-    }
-    if (!formData.hdHrs) {
-      newErrors.hdHrs = "HD Hours is required.";
-    }
-    if (!formData.minHrsForSl) {
-      newErrors.minHrsForSl = "Minimum Hours for SL is required.";
-    }
-    if (!formData.shortLeaveCount) {
-      newErrors.shortLeaveCount = "Short Leave Count is required.";
-    }
-    if (!formData.hdEndsMorning) {
-      newErrors.hdEndsMorning = "HD Ends Morning is required.";
-    }
-    if (!formData.flexiDays) {
-      newErrors.flexiDays = "Flexi Days is required.";
-    }
-    if (!formData.flexiHrsStart) {
-      newErrors.flexiHrsStart = "Flexi Hours Start is required.";
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // Clear errors if validation passes
-    setErrors({});
-
-    const updatedProfile = {
+    const profileData = {
       ...formData,
-      users: selectedUsers.map((id) => users.find((user) => user.id === id)),
-      addedUsers: selectedUsers
-        .filter((id) => !currentProfile?.users.some((user) => user.id === id))
-        .map((id) => users.find((user) => user.id === id).userId),
-      deletedUsers: deletedUsers.map((id) => users.find((user) => user.id === id).userId),
+      users: selectedUsers,
+      deletedUsers,
     };
 
-    try {
-      const savedProfile = await saveProfile(updatedProfile);
+    dispatch(saveProfile({
+      profileData: profileData,
+      isUpdate:!!currentProfile
+    }));
+  }, [formData, selectedUsers, deletedUsers, currentProfile, validateForm, dispatch]);
 
-      if (currentProfile) {
-        await showSuccessDialog();
-        // Update existing profile in the state
-        setProfiles((prevProfiles) =>
-          prevProfiles.map((profile) =>
-            profile.id === currentProfile.id ? { ...profile, ...savedProfile } : profile
-          )
-        );
-      } else {
-        // Add new profile to the state
-        setProfiles((prevProfiles) => [...prevProfiles, savedProfile]);
-      }
+  const handleDelete = useCallback((id) => {
+    dispatch(deleteProfile(id));
+  }, [dispatch]);
 
-      handleCloseDialog();
-    } catch (err) {
-      await showErrorDialog()
-      console.error("Error handling profile submission:", err);
-    }
-  };
+  const filteredUsers = useMemo(() => {
+    if (!data?.users) return [];
+    return data.users.filter(user =>
+        user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [data?.users, searchQuery]);
 
-  // Handle deleting a profile
-  const handleDelete = async (id) => {
-    try {
-      const userId = localStorage.getItem("userId");
-      if (!userId) {
-        console.error("User ID not found in localStorage");
-        return;
-      }
+  const paginatedUsers = useMemo(() =>
+          filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage),
+      [filteredUsers, userPage]);
 
-      const response = await fetch(`http://localhost:8080/users/profile/${id}/${userId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
+  const isFormDirty = useMemo(() => {
+    if (!currentProfile) return true;
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    const formFields = Object.keys(formData);
+    const isAnyFieldChanged = formFields.some(field => {
+      if (field === 'users') return false; // Handle users separately
+      return formData[field] !== currentProfile[field];
+    });
 
-      // If the delete request is successful, update the state
-      setProfiles((prevProfiles) => prevProfiles.filter((profile) => profile.id !== id));
-    } catch (err) {
-      console.error("Error deleting profile:", err);
-    }
-  };
+    const areUsersChanged =
+        selectedUsers.length !== currentProfile.users.length ||
+        !selectedUsers.every(userId => currentProfile.users.some(user => user.userId === userId));
 
-  // Filter users based on search query
-  const filteredUsers = users.filter(
-    (user) =>
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Pagination logic for assigned users
-  const handleUserPageChange = (event, value) => {
-    setUserPage(value);
-  };
-
-  // Reset pagination to page 1 when search query changes
-  useEffect(() => {
-    setUserPage(1);
-  }, [searchQuery]);
-
-  const paginatedUsers = filteredUsers.slice(
-    (userPage - 1) * usersPerPage,
-    userPage * usersPerPage
-  );
+    return isAnyFieldChanged || areUsersChanged;
+  }, [currentProfile, formData, selectedUsers]);
 
   return (
-    <>
-      <SuccessDialog
-        open={successOpen}
-        onClose={handleSuccessClose}
-        title="Success!"
-        message="Your action was completed successfully."
-      />
+      <>
+        <SuccessDialog
+            open={successOpen}
+            onClose={() => setSuccessOpen(false)}
+            title="Success!"
+            message="Profile saved successfully."
+        />
 
-      {/* Error Dialog */}
-      <ErrorDialog
-        open={errorOpen}
-        onClose={handleErrorClose}
-        title="Oops! Something Went Wrong"
-        message="There was an error processing your request. Please try again."
-      />
-      <div>
-        <Button variant="contained" onClick={() => handleOpenDialog()}>
-          Add Profile
-        </Button>
+        <ErrorDialog
+            open={errorOpen}
+            onClose={() => setErrorOpen(false)}
+            title="Error"
+            message={saveError || "Failed to save profile"}
+        />
 
-        <List>
-          {profiles.map((profile) => (
-            <ListItem key={profile.id}>
-              <ListItemText primary={profile.name} secondary={`Public ID: ${profile.publicId}`} />
-              <IconButton onClick={() => handleOpenDialog(profile)}>
-                <Edit />
-              </IconButton>
-              <IconButton onClick={() => handleDelete(profile.id)}>
-                <Delete />
-              </IconButton>
-            </ListItem>
-          ))}
-        </List>
+        <div>
+          <Button variant="contained" onClick={() => handleOpenDialog()}>
+            Add Profile
+          </Button>
 
-        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-          <DialogTitle>{currentProfile ? "Edit Profile" : "Add Profile"}</DialogTitle>
-          <DialogContent>
-            {/* Profile Details Section */}
-            <Typography variant="h6" gutterBottom>
-              Profile Details
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              <TextField
-                  label="Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.name}
-                  helperText={errors.name}
-              />
-              <TextField
-                  label="Public ID"
-                  name="publicId"
-                  value={formData.publicId}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-              />
-              <TextField
-                  label="Work Start"
-                  name="workStart"
-                  value={formData.workStart}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.workStart}
-                  helperText={errors.workStart}
-              />
-              <TextField
-                  label="Work Ends"
-                  name="workEnds"
-                  value={formData.workEnds}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.workEnds}
-                  helperText={errors.workEnds}
-              />
-              <TextField
-                  label="Ignore SL"
-                  name="ignoreSl"
-                  value={formData.ignoreSl}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.ignoreSl}
-                  helperText={errors.ignoreSl}
-              />
-              <TextField
-                  label="Grace Period Start"
-                  name="gracePeriodeStart"
-                  value={formData.gracePeriodeStart}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.gracePeriodeStart}
-                  helperText={errors.gracePeriodeStart}
-              />
-              <TextField
-                  label="HD Start"
-                  name="hdStart"
-                  value={formData.hdStart}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.hdStart}
-                  helperText={errors.hdStart}
-              />
-              <TextField
-                  label="SL Start Morning"
-                  name="slStartMorning"
-                  value={formData.slStartMorning}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.slStartMorning}
-                  helperText={errors.slStartMorning}
-              />
-              <TextField
-                  label="SL Start Evening"
-                  name="slStartEvening"
-                  value={formData.slStartEvening}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.slStartEvening}
-                  helperText={errors.slStartEvening}
-              />
-              <TextField
-                  label="Possible FP Locations"
-                  name="possibleFpLocations"
-                  value={formData.possibleFpLocations}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.possibleFpLocations}
-                  helperText={errors.possibleFpLocations}
-              />
-              <TextField
-                  label="Default Hours"
-                  name="defaultHrs"
-                  value={formData.defaultHrs}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.defaultHrs}
-                  helperText={errors.defaultHrs}
-              />
-              <TextField
-                  label="HD Hours"
-                  name="hdHrs"
-                  value={formData.hdHrs}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.hdHrs}
-                  helperText={errors.hdHrs}
-              />
-              <TextField
-                  label="Minimum Hours for SL"
-                  name="minHrsForSl"
-                  value={formData.minHrsForSl}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.minHrsForSl}
-                  helperText={errors.minHrsForSl}
-              />
-              <TextField
-                  label="Short Leave Count"
-                  name="shortLeaveCount"
-                  value={formData.shortLeaveCount}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.shortLeaveCount}
-                  helperText={errors.shortLeaveCount}
-              />
-              <TextField
-                  label="HD Ends Morning"
-                  name="hdEndsMorning"
-                  value={formData.hdEndsMorning}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.hdEndsMorning}
-                  helperText={errors.hdEndsMorning}
-              />
-              <TextField
-                  label="Flexi Days"
-                  name="flexiDays"
-                  value={formData.flexiDays}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.flexiDays}
-                  helperText={errors.flexiDays}
-              />
-              <TextField
-                  label="Flexi Hours Start"
-                  name="flexiHrsStart"
-                  value={formData.flexiHrsStart}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.flexiHrsStart}
-                  helperText={errors.flexiHrsStart}
-              />
-            </Box>
+          <List>
+            {data?.profiles?.map(profile => (
+                <ListItem key={profile.id}>
+                  <ListItemText
+                      primary={profile.name}
+                      secondary={`Public ID: ${profile.publicId}`}
+                  />
+                  <IconButton onClick={() => handleOpenDialog(profile)}>
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(profile.id)}>
+                    <Delete />
+                  </IconButton>
+                </ListItem>
+            ))}
+          </List>
 
-            {/* Assigned Users Section */}
-            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-              Assigned Users
-            </Typography>
-            <TextField
-              label="Search Users"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              fullWidth
-              margin="normal"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-              <List>
-                {paginatedUsers.map((user) => (
-                  <ListItem key={user.id}>
-                    <ListItemIcon>
-                      <Checkbox
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => handleUserSelection(user.id)}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${user.firstName} ${user.lastName} (${user.email})`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              <Pagination
-                count={Math.ceil(filteredUsers.length / usersPerPage)}
-                page={userPage}
-                onChange={handleUserPageChange}
-                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+          <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+            <DialogTitle>{currentProfile ? "Edit Profile" : "Add Profile"}</DialogTitle>
+            <DialogContent>
+              <Typography variant="h6" gutterBottom>
+                Profile Details
+              </Typography>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 2 }}>
+                <TextField
+                    label="Name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.name}
+                    helperText={formErrors.name}
+                />
+                <TextField
+                    disabled
+                    label="Public ID"
+                    name="publicId"
+                    value={formData.publicId}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                />
+                <TextField
+                    label="Work Start"
+                    name="workStart"
+                    value={formData.workStart}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.workStart}
+                    helperText={formErrors.workStart}
+                />
+                <TextField
+                    label="Work Ends"
+                    name="workEnds"
+                    value={formData.workEnds}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.workEnds}
+                    helperText={formErrors.workEnds}
+                />
+                <TextField
+                    label="Ignore SL"
+                    name="ignoreSl"
+                    value={formData.ignoreSl}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.ignoreSl}
+                    helperText={formErrors.ignoreSl}
+                />
+                <TextField
+                    label="Grace Period Start"
+                    name="gracePeriodeStart"
+                    value={formData.gracePeriodeStart}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.gracePeriodeStart}
+                    helperText={formErrors.gracePeriodeStart}
+                />
+                <TextField
+                    label="HD Start"
+                    name="hdStart"
+                    value={formData.hdStart}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.hdStart}
+                    helperText={formErrors.hdStart}
+                />
+                <TextField
+                    label="SL Start Morning"
+                    name="slStartMorning"
+                    value={formData.slStartMorning}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.slStartMorning}
+                    helperText={formErrors.slStartMorning}
+                />
+                <TextField
+                    label="SL Start Evening"
+                    name="slStartEvening"
+                    value={formData.slStartEvening}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.slStartEvening}
+                    helperText={formErrors.slStartEvening}
+                />
+                <TextField
+                    label="Possible FP Locations"
+                    name="possibleFpLocations"
+                    value={formData.possibleFpLocations}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.possibleFpLocations}
+                    helperText={formErrors.possibleFpLocations}
+                />
+                <TextField
+                    label="Default Hours"
+                    name="defaultHrs"
+                    value={formData.defaultHrs}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.defaultHrs}
+                    helperText={formErrors.defaultHrs}
+                />
+                <TextField
+                    label="HD Hours"
+                    name="hdHrs"
+                    value={formData.hdHrs}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.hdHrs}
+                    helperText={formErrors.hdHrs}
+                />
+                <TextField
+                    label="Minimum Hours for SL"
+                    name="minHrsForSl"
+                    value={formData.minHrsForSl}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.minHrsForSl}
+                    helperText={formErrors.minHrsForSl}
+                />
+                <TextField
+                    label="Short Leave Count"
+                    name="shortLeaveCount"
+                    value={formData.shortLeaveCount}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.shortLeaveCount}
+                    helperText={formErrors.shortLeaveCount}
+                />
+                <TextField
+                    label="HD Ends Morning"
+                    name="hdEndsMorning"
+                    value={formData.hdEndsMorning}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.hdEndsMorning}
+                    helperText={formErrors.hdEndsMorning}
+                />
+                <TextField
+                    label="Flexi Days"
+                    name="flexiDays"
+                    value={formData.flexiDays}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.flexiDays}
+                    helperText={formErrors.flexiDays}
+                />
+                <TextField
+                    label="Flexi Hours Start"
+                    name="flexiHrsStart"
+                    value={formData.flexiHrsStart}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.flexiHrsStart}
+                    helperText={formErrors.flexiHrsStart}
+                />
+              </Box>
+
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Assigned Users
+              </Typography>
+              <TextField
+                  label="Search Users"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                          <Search />
+                        </InputAdornment>
+                    ),
+                  }}
               />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleSubmit} color="primary">
-              {currentProfile ? "Update" : "Add"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </div>
-    </>
+              <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+                <List>
+                  {paginatedUsers.map(user => (
+                      <ListItem key={user.userId}>
+                        <ListItemIcon>
+                          <Checkbox
+                              checked={selectedUsers.includes(user.userId)}
+                              onChange={() => handleUserSelection(user.userId)}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={`${user.firstName} ${user.lastName} (${user.email})`}
+                        />
+                      </ListItem>
+                  ))}
+                </List>
+                <Pagination
+                    count={Math.ceil(filteredUsers.length / usersPerPage)}
+                    page={userPage}
+                    onChange={(e, value) => setUserPage(value)}
+                    sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Cancel</Button>
+              <Button
+                  onClick={handleSubmit}
+                  color="primary"
+                  disabled={!isFormDirty || saveLoading}
+              >
+                {saveLoading ? 'Saving...' : currentProfile ? "Update" : "Add"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </div>
+      </>
   );
 };
 
-export default ProfilesForm;
+export default React.memo(ProfilesForm);

@@ -4,7 +4,11 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface SectionRepo extends CrudRepository<SectionEntity, Long> {
     SectionEntity findBySection(String section);
+    Optional<SectionEntity> findByPublicId(String publicId);
 }

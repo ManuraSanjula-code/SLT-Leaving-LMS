@@ -24,10 +24,30 @@ public class AuthorityEntity implements Serializable {
 	@Column(nullable=false, length=20)
 	private String name;
 
+	private String publicId;
+
 	@ManyToMany(mappedBy="authorities")
 	@JsonIgnore
 	@Column(nullable = false)
 	private Collection<RoleEntity> roles;
+
+	private Integer weight;
+
+	public String getPublicId() {
+		return publicId;
+	}
+
+	public void setPublicId(String publicId) {
+		this.publicId = publicId;
+	}
+
+	public Integer getWeight() {
+		return weight;
+	}
+
+	public void setWeight(Integer weight) {
+		this.weight = weight;
+	}
 
 	public AuthorityEntity() {}
 

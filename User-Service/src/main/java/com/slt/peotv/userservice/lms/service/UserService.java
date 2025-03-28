@@ -9,6 +9,7 @@ import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,12 +18,12 @@ import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 
 public interface UserService extends UserDetailsService{
-	UserDto createUser(UserDto user) throws Exception;
+	UserDto createUser(UserReq user) throws Exception;
 	UserDto updateUserProfile(MultipartFile file, String userid) throws Exception;
 	UserDto getUser(String email);
 	UserDto getUserByUserId(String userId);
 	UserRest getUserByUserId_(String userId);
-	UserDto updateUser(String userId, UserDto user) throws Exception;
+	UserDto updateUser(String userId, UserReq user) throws Exception;
 	void deleteUser(String userId);
 	List<UserDto> getUsers(int page, int limit);
 	boolean verifyEmailToken(String token);
@@ -42,6 +43,7 @@ public interface UserService extends UserDetailsService{
 	List<Map<String, String>> getAuthority();
 
 	RoleDTO saveRole(RoleReq req);
+	RoleDTOArchive saveRole_(RoleReq req);
 	AuthorityDTO saveAuthority(AuthReq authority);
 	SectionDTO saveSection(SectionReq req);
 	ProfilesDTO saveProfile(ProfileReq req);
@@ -55,5 +57,6 @@ public interface UserService extends UserDetailsService{
 	void deleteSection(Long sectionId);
 	void deleteRole(Long roleId);
 	void deleteProfile(Long roleId);
-
+	UserDetails getUserDetailsByUserId(String userId);
+	public void rebalancePriorities();
 }

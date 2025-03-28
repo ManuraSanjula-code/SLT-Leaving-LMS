@@ -3,6 +3,15 @@ package com.slt.peotv.userservice.lms.shared.model.request;
 public class AuthReq {
     private String newName;
     private String oldName;
+    private Integer weight;
+
+    public Integer getWeight() {
+        return weight;
+    }
+
+    public void setWeight(Integer weight) {
+        this.weight = weight;
+    }
 
     public String getNewName() {
         return newName;

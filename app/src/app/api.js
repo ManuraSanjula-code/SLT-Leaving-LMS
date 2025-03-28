@@ -2,37 +2,37 @@ import axios from 'axios';
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080', // Replace with your API URL
+  withCredentials: true, // Set withCredentials globally for all requests
 });
 
 apiClient.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          console.error("Unauthorized - redirecting to login");
-          localStorage.clear();
-          window.location.href = '/login';
-          break;
-        case 403:
-          console.error("Forbidden - redirecting to unauthorized");
-          window.location.href = '/unauthorized';
-          break;
-        default:
-          console.error("API Error:", error.response.data);
+    (response) => response,
+    (error) => {
+      if (error.response) {
+        switch (error.response.status) {
+          case 401:
+            console.error('Unauthorized - redirecting to login');
+            localStorage.clear();
+            window.location.href = '/login';
+            break;
+          case 403:
+            console.error('Forbidden - redirecting to unauthorized');
+            window.location.href = '/unauthorized';
+            break;
+          default:
+            console.error('API Error:', error.response.data);
+        }
+      } else {
+        console.error('Network Error:', error.message);
       }
-    } else {
-      console.error("Network Error:", error.message);
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
 );
 
 export const fetchData = async (endpoint, jwt) => {
   try {
     const response = await apiClient.get(endpoint, {
       headers: { Authorization: `Bearer ${jwt}` },
-      withCredentials: true
     });
     return response.data;
   } catch (error) {
@@ -41,30 +41,29 @@ export const fetchData = async (endpoint, jwt) => {
   }
 };
 
-
 export const fetchData_ = async (userId, jwt) => {
   try {
-    const response = await apiClient.get(`/users/${userId}`);
-    
+    const response = await apiClient.get(`/users/${userId}`, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+
     // Validate response structure
     if (!response.data || !response.data.roles) {
-      throw new Error("Invalid user data response");
+      throw new Error('Invalid user data response');
     }
-    
+
     return response.data;
   } catch (error) {
-    console.error("User details fetch failed:", error);
+    console.error('User details fetch failed:', error);
     throw error;
   }
 };
 
-
-export const putUserData = async (endpoint, jwt, payload) => {
+export const putUserData = async (endpoint, payload) => {
   try {
     const response = await apiClient.put(endpoint, payload, {
       headers: {
-        'Authorization': `Bearer ${jwt}`,
-        'Content-Type': 'application/json', // Ensure JSON data format
+        'Content-Type': 'application/json',
       },
     });
     return response.data;
@@ -74,22 +73,19 @@ export const putUserData = async (endpoint, jwt, payload) => {
   }
 };
 
-export const putUserProfile = async (endpoint, jwt, file) => {
+export const putUserProfile = async (endpoint, file) => {
   try {
-    // Create FormData object
     const formData = new FormData();
-    formData.append('image', file); // 'image' is the key expected by server
+    formData.append('image', file); // Append the file to FormData
 
     const response = await apiClient.put(endpoint, formData, {
       headers: {
-        'Authorization': `Bearer ${jwt}`,
-        // Let the browser set the correct Content-Type with boundary
-        // Don't set Content-Type manually when using FormData
+        'Content-Type': 'multipart/form-data', // Set the correct Content-Type for file uploads
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Upload Failed:', error.response?.data || error.message);
-    throw new Error('Failed to upload image');
+    console.error('API Request Failed:', error.response?.data || error.message);
+    throw new Error('Failed to upload profile picture');
   }
 };

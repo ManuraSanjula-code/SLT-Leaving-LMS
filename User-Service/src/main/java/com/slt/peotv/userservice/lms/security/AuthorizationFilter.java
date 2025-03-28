@@ -1,105 +1,128 @@
 package com.slt.peotv.userservice.lms.security;
 
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
-
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-
 import com.nimbusds.jose.JOSEException;
 import com.slt.peotv.userservice.lms.SpringApplicationContext;
-import com.slt.peotv.userservice.lms.repository.UserRepository;
 import com.slt.peotv.userservice.lms.security.jwt.token.converter.TokenConverter;
-
+import com.slt.peotv.userservice.lms.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+
+import java.io.IOException;
+import java.text.ParseException;
 
 public class AuthorizationFilter extends BasicAuthenticationFilter {
 
-	public AuthorizationFilter(AuthenticationManager authManager, UserRepository userRepository) {
-		super(authManager);
-	}
+    private static final Logger logger = LoggerFactory.getLogger(AuthorizationFilter.class);
+    private final UserService userService;
+    private final Object tokenConverterLock = new Object(); // Lock for tokenConverter access
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-			throws IOException, ServletException {
+    public AuthorizationFilter(AuthenticationManager authManager, UserService userService) {
+        super(authManager);
+        this.userService = userService;
+    }
 
-		UsernamePasswordAuthenticationToken authentication = null;
-		try {
-			authentication = getAuthentication(req);
-		} catch (ParseException e) {
-			throw new RuntimeException(e);
-		} catch (JOSEException e) {
-			throw new RuntimeException(e);
-		}
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		chain.doFilter(req, res);
-	}
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws IOException, ServletException {
 
-	private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request)
-			throws ParseException, JOSEException {
-		String authorizationHeader = request.getHeader(SecurityConstants.HEADER_STRING);
-		String jwtToken = extractJwtTokenFromCookie(request);
+        try {
+            UsernamePasswordAuthenticationToken authentication = getAuthentication(req);
 
-		if (authorizationHeader == null && jwtToken == null) {
-			return null;
-		}
+            if (authentication != null) {
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (ParseException | JOSEException e) {
+            logger.error("Authentication failed due to token processing error", e);
+            SecurityContextHolder.clearContext();
+        } catch (Exception e) {
+            logger.error("Unexpected authentication error", e);
+            SecurityContextHolder.clearContext();
+        }
 
-		String tokenToProcess = null;
-		if (authorizationHeader != null && authorizationHeader.startsWith(SecurityConstants.TOKEN_PREFIX)) {
-			tokenToProcess = authorizationHeader.replace(SecurityConstants.TOKEN_PREFIX, "");
-		} else if (jwtToken != null) {
-			tokenToProcess = jwtToken;
-		}
+        chain.doFilter(req, res);
+    }
 
-		if (tokenToProcess == null) {
-			return null;
-		}
+    private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request)
+            throws ParseException, JOSEException {
+        String tokenToProcess = extractTokenFromRequest(request);
+        if (tokenToProcess == null) {
+            return null;
+        }
+        TokenConverter tokenConverter = getTokenConverter();
+        String decryptedToken = decryptToken(tokenConverter, tokenToProcess);
+        if (decryptedToken == null) {
+            return null;
+        }
 
-		TokenConverter tokenConverter = (TokenConverter) SpringApplicationContext.getBean("tokenConverter");
-		String decryptedToken = null;
-		try {
-			decryptedToken = tokenConverter.decryptToken(tokenToProcess);
-		} catch (Exception e) {
-			System.err.println("Error decrypting token: " + e.getMessage());
-			return null;
-		}
+        return createAuthenticationToken(tokenConverter, decryptedToken, request);
+    }
 
-		if (decryptedToken == null) {
-			return null;
-		}
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader(SecurityConstants.HEADER_STRING);
+        String jwtToken = extractJwtTokenFromCookie(request);
 
-		String userId = null;
-		try {
-			userId = tokenConverter.validateTokenSignature_(decryptedToken, request);
-		} catch (Exception e) {
-			System.err.println("Error validating token signature: " + e.getMessage());
-			return null;
-		}
+        if (jwtToken != null) {
+            return jwtToken;
+        }else if (authorizationHeader != null && authorizationHeader.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+            return authorizationHeader.replace(SecurityConstants.TOKEN_PREFIX, "");
+        }
+        return null;
+    }
 
-		if (userId != null) {
-			return new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
-		} else {
-			return null;
-		}
-	}
+    private TokenConverter getTokenConverter() {
+        synchronized (tokenConverterLock) {
+            return (TokenConverter) SpringApplicationContext.getBean("tokenConverter");
+        }
+    }
 
-	private String extractJwtTokenFromCookie(HttpServletRequest req) {
-		Cookie[] cookies = req.getCookies();
-		if (cookies != null) {
-			for (Cookie cookie : cookies) {
-				if ("jwt".equals(cookie.getName())) {
-					return cookie.getValue();
-				}
-			}
-		}
-		return null;
-	}
+    private String decryptToken(TokenConverter tokenConverter, String token) {
+        try {
+            return tokenConverter.decryptToken(token);
+        } catch (Exception e) {
+            logger.error("Token decryption failed", e);
+            return null;
+        }
+    }
 
+    private UsernamePasswordAuthenticationToken createAuthenticationToken(
+            TokenConverter tokenConverter, String decryptedToken, HttpServletRequest request)
+            throws JOSEException, ParseException {
+
+        UserPrincipal userPrincipal = (UserPrincipal) tokenConverter.validateTokenSignature(userService, decryptedToken, request);
+        if (userPrincipal == null) {
+            logger.warn("Token validation failed - no user principal returned");
+            return null;
+        }
+        logger.debug("Authenticating user: {}", userPrincipal.getUserEntity().getUserId());
+
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userPrincipal,
+                userPrincipal.getUserEntity().getEncryptedPassword(),
+                userPrincipal.getAuthorities());
+
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        return authentication;
+    }
+
+    private String extractJwtTokenFromCookie(HttpServletRequest req) {
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("jwt".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
 }

@@ -1,109 +1,77 @@
-import React, { useState, useEffect, useRef } from "react";
+// components/management/RoleForm.js
+'use client';
+
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {
-    TextField,
+    Box,
     Button,
+    Checkbox,
     Dialog,
-    DialogTitle,
-    DialogContent,
     DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    InputAdornment,
     List,
     ListItem,
-    ListItemText,
-    IconButton,
-    Checkbox,
     ListItemIcon,
-    Typography,
+    ListItemText,
     Pagination,
-    Box,
-    InputAdornment,
+    TextField,
+    Typography,
 } from "@mui/material";
-import { Delete, Edit, Search } from "@mui/icons-material";
+import {Delete, Edit, Search} from "@mui/icons-material";
+import {useDispatch, useSelector} from 'react-redux';
+import {deleteRole, fetchManagementData, saveRole} from '../../../store/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 
-const RoleForm = () => {
-    const [roles, setRoles] = useState([]);
-    const [users, setUsers] = useState([]); // All users from the server
+const RoleForm = ({onSubmit}) => {
+    const dispatch = useDispatch();
+    const {data, loading, error, saveLoading, saveError, saveSuccess} = useSelector(state => state.management);
+
     const [openDialog, setOpenDialog] = useState(false);
     const [currentRole, setCurrentRole] = useState(null);
-    const [formData, setFormData] = useState({ name: "", users: [], authorities: [] });
-    const [selectedUsers, setSelectedUsers] = useState([]); // Users selected for the role
-    const [selectedAuthorities, setSelectedAuthorities] = useState([]); // Authorities selected for the role
-    const [deletedUsers, setDeletedUsers] = useState([]); // Users to be removed from the role
-    const [deletedAuthorities, setDeletedAuthorities] = useState([]); // Authorities to be removed from the role
-    const [newUserId, setNewUserId] = useState(""); // Input for adding a new user by userId
-    const [newAuthorityName, setNewAuthorityName] = useState(""); // Input for adding a new authority by name
-    const [userPage, setUserPage] = useState(1); // Pagination for assigned users
-    const [authPage, setAuthPage] = useState(1); // Pagination for assigned authorities
-    const [searchQuery, setSearchQuery] = useState(""); // Search query for filtering users
-    const usersPerPage = 10; // Number of users to display per page
+    const [formData, setFormData] = useState({name: "", priority: "", publicId: "", users: [], authorities: []});
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [selectedAuthorities, setSelectedAuthorities] = useState([]);
+    const [deletedUsers, setDeletedUsers] = useState([]);
+    const [deletedAuthorities, setDeletedAuthorities] = useState([]);
+    const [userPage, setUserPage] = useState(1);
+    const [authPage, setAuthPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState("");
     const [formErrors, setFormErrors] = useState({});
-    const [authorities, setAuthorities] = useState([]);
     const [successOpen, setSuccessOpen] = useState(false);
     const [errorOpen, setErrorOpen] = useState(false);
 
-    const resolveRef = useRef(null); // To store the resolve function
+    const usersPerPage = 10;
 
-    const handleSuccessOpen = () => {
-        setSuccessOpen(true);
-    };
-
-    // Fetch roles, users, and authorities from the server on component mount
     useEffect(() => {
-        // Fetch roles
-        fetch("http://localhost:8080/users/roles")
-            .then((response) => response.json())
-            .then((data) => {
-                setRoles(data || []);
-            })
-            .catch((err) => console.error("Error fetching roles:", err));
+        dispatch(fetchManagementData());
+    }, [dispatch]);
 
-        // Fetch users
-        fetch("http://localhost:8080/users")
-            .then((response) => response.json())
-            .then((data) => setUsers(data || []))
-            .catch((err) => console.error("Error fetching users:", err));
+    useEffect(() => {
+        if (saveSuccess) {
+            setSuccessOpen(true);
+            handleCloseDialog();
+            dispatch(fetchManagementData());
+        }
+        if (saveError) {
+            setErrorOpen(true);
+        }
+    }, [saveSuccess, saveError, dispatch]);
 
-        // Fetch authorities
-        fetch('http://localhost:8080/users/authorities')
-            .then((response) => response.json())
-            .then((data) => {
-                const transformedData = data.map((authority) => ({
-                    id: authority.ID,
-                    name: authority.name,
-                }));
-                setAuthorities(transformedData || []);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    }, []);
-
-    // Open dialog for adding or editing a role
-    const handleOpenDialog = (role = null) => {
+    const handleOpenDialog = useCallback((role = null) => {
         setCurrentRole(role);
-        setFormData(role || { name: "", users: [], authorities: [] });
+        setFormData(role || {name: "", priority: 0, publicId: "", users: [], authorities: []});
 
-        // Initialize selectedUsers and selectedAuthorities based on the current role's data
         if (role) {
-            const roleUserIds = role.users.map((user) => user.userId); // Use userId
-            const roleAuthorityIds = role.authorities.map((authority) => authority.id);
-
+            const roleUserIds = role.users.map(user => user.userId);
+            const roleAuthorityIds = role.authorities.map(auth => auth.id);
             setSelectedUsers(roleUserIds);
             setSelectedAuthorities(roleAuthorityIds);
-
-            // Ensure formData.authorities contains the correct authority objects
-            const roleAuthorities = role.authorities.map((authority) => ({
-                id: authority.id,
-                name: authority.name,
-            }));
-            setFormData((prev) => ({
-                ...prev,
-                authorities: roleAuthorities,
-            }));
-
-            setDeletedUsers([]); // Reset deletedUsers when opening the dialog
-            setDeletedAuthorities([]); // Reset deletedAuthorities when opening the dialog
+            setDeletedUsers([]);
+            setDeletedAuthorities([]);
         } else {
             setSelectedUsers([]);
             setSelectedAuthorities([]);
@@ -112,85 +80,44 @@ const RoleForm = () => {
         }
 
         setOpenDialog(true);
-    };
+    }, []);
 
-    // Use useEffect to synchronize selectedUsers and selectedAuthorities
-    useEffect(() => {
-        if (currentRole) {
-            const roleUserIds = currentRole.users.map((user) => user.userId); // Use userId
-            const roleAuthorityIds = currentRole.authorities.map((authority) => authority.id);
-
-            setSelectedUsers(roleUserIds);
-            setSelectedAuthorities(roleAuthorityIds);
-        }
-    }, [currentRole]);
-
-    useEffect(()=>{}, [selectedAuthorities])
-
-    // Close dialog
-    const handleCloseDialog = () => {
+    const handleCloseDialog = useCallback(() => {
         setOpenDialog(false);
         setCurrentRole(null);
-        setFormData({ name: "", users: [], authorities: [] });
+        setFormData({name: "", priority: 0, publicId: "", users: [], authorities: []});
         setSelectedUsers([]);
         setSelectedAuthorities([]);
         setDeletedUsers([]);
         setDeletedAuthorities([]);
-        setNewUserId("");
-        setNewAuthorityName("");
-        setUserPage(1); // Reset pagination
-        setSearchQuery(""); // Reset search query
-    };
+        setUserPage(1);
+        setSearchQuery("");
+    }, []);
 
-    // Handle form input changes
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
+    const handleChange = useCallback((e) => {
+        const {name, value} = e.target;
+        setFormData(prev => ({...prev, [name]: value}));
+    }, []);
 
-    // Handle user selection for the role
-    const handleUserSelection = (userId) => {
-        if (selectedUsers.includes(userId)) {
-            // User is being unchecked, add to deletedUsers
-            setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-            setDeletedUsers((prev) => [...prev, userId]);
-        } else {
-            // User is being checked, remove from deletedUsers if present
-            setSelectedUsers((prev) => [...prev, userId]);
-            setDeletedUsers((prev) => prev.filter((id) => id !== userId));
-        }
-    };
+    const handleUserSelection = useCallback((userId) => {
+        setSelectedUsers(prev =>
+            prev.includes(userId)
+                ? prev.filter(id => id !== userId)
+                : [...prev, userId]
+        );
+    }, []);
 
-    // Handle authority selection for the role
-    const handleAuthoritySelection = (authorityId) => {
-        if (selectedAuthorities.includes(authorityId)) {
-            // Authority is being unchecked, add to deletedAuthorities
-            setSelectedAuthorities((prev) => prev.filter((id) => id !== authorityId));
-            setDeletedAuthorities((prev) => [...prev, authorityId]);
-        } else {
-            // Authority is being checked, remove from deletedAuthorities if present
-            setSelectedAuthorities((prev) => [...prev, authorityId]);
-            setDeletedAuthorities((prev) => prev.filter((id) => id !== authorityId));
-        }
-    };
+    const handleAuthoritySelection = useCallback((authorityId) => {
+        setSelectedAuthorities(prev =>
+            prev.includes(authorityId)
+                ? prev.filter(id => id !== authorityId)
+                : [...prev, authorityId]
+        );
+    }, []);
 
-    const handleAuthoritySelection_ = (authorityId) => {
-        console.log("Authority ID Selected:", authorityId); // Debugging log
-        if (selectedAuthorities.includes(Number(authorityId))) {
-            // Authority is being unchecked, remove from selectedAuthorities
-            setSelectedAuthorities((prev) => prev.filter((id) => id !== Number(authorityId)));
-            setDeletedAuthorities((prev) => [...prev, authorityId]);
-        } else {
-            // Authority is being checked, add to selectedAuthorities
-            setSelectedAuthorities((prev) => [...prev, Number(authorityId)]);
-            setDeletedAuthorities((prev) => prev.filter((id) => id !== authorityId));
-        }
-    };
-
-    // Validate form data
-    const validateForm = () => {
+    const validateForm = useCallback(() => {
+        const errors = {name: '', authorities: '', priority: ''};
         let isValid = true;
-        const errors = { name: '', users: '', authorities: '' };
 
         if (!formData.name.trim()) {
             errors.name = 'Name is required';
@@ -199,7 +126,10 @@ const RoleForm = () => {
             errors.name = 'Name must be at least 3 characters long';
             isValid = false;
         }
-
+        if (formData.priority === 0) {
+            errors.priority = 'Role must have priority';
+            isValid = false;
+        }
         if (selectedAuthorities.length === 0) {
             errors.authorities = 'Please select at least one authority';
             isValid = false;
@@ -207,199 +137,100 @@ const RoleForm = () => {
 
         setFormErrors(errors);
         return isValid;
-    };
+    }, [formData.name, formData.priority, selectedAuthorities]);
 
-    const handleSubmit = () => {
-        if (!validateForm()) {
-            return; // Prevent submission if validation fails
-        }
+    const handleSubmit = useCallback(async () => {
+        if (!validateForm()) return;
 
-        const updatedRole = {
+        const roleData = {
+            name: formData.name,
+            deletedUsers,
+            addedUsers: selectedUsers,
+            deletedAuthorities,
+            addedAuthorities: selectedAuthorities,
+            priority: parseInt(formData.priority),
+        };
+
+        console.log("Submitting:", roleData);
+        dispatch(saveRole({
+            roleData,
+            isUpdate: !!currentRole,
+            roleId: formData.publicId,
+        }));
+
+        /*
+         const roleData = {
             ...formData,
-            users: selectedUsers.map((userId) => users.find((user) => user.userId === userId)), // Use userId
+            users: selectedUsers,
             authorities: selectedAuthorities,
+            priority: parseInt(formData.priority),
             deletedUsers,
             deletedAuthorities,
+            isUpdate: !!currentRole
         };
-
-        const userId = localStorage.getItem('userId');
-        if (!userId) return;
-
-        const sendRequest = async (url, method, body) => {
-            console.log(body)
-            try {
-                const response = await fetch(url, {
-                    method,
-                    headers: { "Content-Type": "application/json" },
-                    credentials: 'include',
-                    body: JSON.stringify(body),
-                });
-                const data = await response.json();
-                return data;
-            } catch (err) {
-                await showErrorDialog();
-                console.error("Error updating role:", err);
-                throw err;
-            }
-        };
-
-        if (currentRole) {
-            // Update existing role
-            const addedUsers = selectedUsers
-                .filter((userId) => !currentRole.users.some((user) => user.userId === userId)) // Use userId
-                .map((userId) => users.find((user) => user.userId === userId));
-
-            const addedAuthorities = selectedAuthorities;
-
-            sendRequest(`http://localhost:8080/users/roles/${userId}`, "POST", {
+        {
                 name: updatedRole.name,
                 deletedUsers,
-                addedUsers: addedUsers.map((user) => user.userId), // Use userId
+                addedUsers: addedUsers.map(user => user.userId),
                 deletedAuthorities,
                 addedAuthorities,
-            })
-                .then(async () => {
-                    setRoles(
-                        roles.map((role) =>
-                            role.id === currentRole.id ? { ...role, ...updatedRole } : role
-                        )
-                    );
-                    await showSuccessDialog();
-                });
-        } else {
-            // Add new role
-            const newRole = {
-                id: Date.now(), // Use a unique ID
-                ...updatedRole,
-                addedUsers: selectedUsers.map((userId) => users.find((user) => user.userId === userId)), // Include new users
-                addedAuthorities: selectedAuthorities
-            };
+            }
+            dispatch(saveRole(roleData));
+        * */
+    }, [formData, selectedUsers, selectedAuthorities, deletedUsers, deletedAuthorities, currentRole, validateForm, dispatch]);
 
-            sendRequest(`http://localhost:8080/users/roles/${userId}`, "POST", {
-                name: newRole.name,
-                addedUsers: newRole.addedUsers.map((user) => user.userId), // Use userId
-                addedAuthorities: newRole.addedAuthorities,
-            })
-                .then(async (response) => {
-                    setRoles([...roles, newRole]);
-                    await showSuccessDialog();
-                });
-        }
+    const handleDelete = useCallback((id) => {
+        dispatch(deleteRole(id));
+    }, [dispatch]);
 
-        handleCloseDialog();
-    };
+    const filteredUsers = useMemo(() => {
+        if (!data?.users) return [];
+        return data.users.filter(user =>
+            user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [data?.users, searchQuery]);
 
-    // Handle deleting a role
-    const handleDelete = (id) => {
-        const userId = localStorage.getItem('userId');
-        if (!userId) return;
+    const paginatedUsers = useMemo(() =>
+            filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage),
+        [filteredUsers, userPage]);
 
-        fetch(`http://localhost:8080/users/delete/role/${id}/${userId}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            credentials: 'include',
-        })
-            .then((response) => response.json())
-            .then(async (data) => {
-                setRoles(roles.filter((role) => role.id !== id));
-            })
-            .catch(async (err) => {
-                console.error("Error updating role:", err);
-            });
-    };
+    const paginatedAuthorities = useMemo(() => {
+        if (!data?.authorities) return [];
+        return data.authorities.slice((authPage - 1) * usersPerPage, authPage * usersPerPage);
+    }, [data?.authorities, authPage]);
 
-    // Get users assigned to the current role
-    const getAssignedUsers = () => {
-        if (!currentRole) return [];
-        return currentRole.users || [];
-    };
+    const isFormDirty = useMemo(() => {
+        if (!currentRole) return true;
 
-    // Get authorities assigned to the current role
-    const getAssignedAuthorities = () => {
-        if (!currentRole) return [];
-        return currentRole.authorities || [];
-    };
+        const isNameChanged = formData.name !== currentRole.name;
+        const iPriorityChanged = formData.priority !== currentRole.priority;
 
-    // Filter users based on search query
-    const filteredUsers = users.filter(
-        (user) =>
-            user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+        const areUsersChanged =
+            selectedUsers.length !== currentRole.users.length ||
+            !selectedUsers.every(userId => currentRole.users.some(user => user.userId === userId));
+        const areAuthoritiesChanged =
+            selectedAuthorities.length !== currentRole.authorities.length ||
+            !selectedAuthorities.every(authId => currentRole.authorities.some(auth => auth.id === authId));
 
-    // Pagination logic for assigned users
-    const handleUserPageChange = (event, value) => {
-        setUserPage(value);
-    };
-
-    const handleAuthPageChange = (event, value) => {
-        setAuthPage(value);
-    };
-
-    // Reset pagination to page 1 when search query changes
-    useEffect(() => {
-        setUserPage(1);
-    }, [searchQuery]);
-
-    const paginatedUsers = filteredUsers.slice(
-        (userPage - 1) * usersPerPage,
-        userPage * usersPerPage
-    );
-
-    const paginatedAuthorities = authorities.slice(
-        (authPage - 1) * usersPerPage,
-        authPage * usersPerPage
-    );
-
-    const handleSuccessClose = () => {
-        setSuccessOpen(false);
-        if (resolveRef.current) {
-            resolveRef.current(); // Resolve the Promise
-            resolveRef.current = null; // Clear the ref
-        }
-    };
-
-    const handleErrorOpen = () => {
-        setErrorOpen(true);
-    };
-
-    const handleErrorClose = () => {
-        setErrorOpen(false);
-        if (resolveRef.current) {
-            resolveRef.current(); // Resolve the Promise
-            resolveRef.current = null; // Clear the ref
-        }
-    };
-
-    const showSuccessDialog = () => {
-        return new Promise((resolve) => {
-            resolveRef.current = resolve; // Store the resolve function
-            handleSuccessOpen(); // Open the dialog
-        });
-    };
-
-    const showErrorDialog = () => {
-        return new Promise((resolve) => {
-            resolveRef.current = resolve; // Store the resolve function
-            handleErrorOpen(); // Open the dialog
-        });
-    };
+        return isNameChanged || areUsersChanged || areAuthoritiesChanged || iPriorityChanged;
+    }, [currentRole, formData.name, formData.priority, selectedUsers, selectedAuthorities]);
 
     return (
         <>
             <SuccessDialog
                 open={successOpen}
-                onClose={handleSuccessClose}
+                onClose={() => setSuccessOpen(false)}
                 title="Success!"
-                message="Your action was completed successfully."
+                message="Role saved successfully."
             />
 
             <ErrorDialog
                 open={errorOpen}
-                onClose={handleErrorClose}
-                title="Oops! Something Went Wrong"
-                message="There was an error processing your request. Please try again."
+                onClose={() => setErrorOpen(false)}
+                title="Error"
+                message={saveError || "Failed to save role"}
             />
 
             <div>
@@ -408,19 +239,17 @@ const RoleForm = () => {
                 </Button>
 
                 <List>
-                    {roles.map((role) => (
+                    {data?.roles?.map(role => (
                         <ListItem key={role.id}>
                             <ListItemText
                                 primary={role.name}
-                                secondary={`Authorities: ${role.authorities
-                                    .map((authority) => authority.name)
-                                    .join(", ")}`}
+                                secondary={`Authorities: ${role.authorities?.map(auth => auth.name).join(", ")}`}
                             />
                             <IconButton onClick={() => handleOpenDialog(role)}>
-                                <Edit />
+                                <Edit/>
                             </IconButton>
                             <IconButton onClick={() => handleDelete(role.id)}>
-                                <Delete />
+                                <Delete/>
                             </IconButton>
                         </ListItem>
                     ))}
@@ -429,11 +258,10 @@ const RoleForm = () => {
                 <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
                     <DialogTitle>{currentRole ? "Edit Role" : "Add Role"}</DialogTitle>
                     <DialogContent>
-                        {/* Role Details Section */}
                         <Typography variant="h6" gutterBottom>
                             Role Details
                         </Typography>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                        <Box sx={{display: "flex", flexWrap: "wrap", gap: 2}}>
                             <TextField
                                 label="Name"
                                 name="name"
@@ -444,38 +272,54 @@ const RoleForm = () => {
                                 error={!!formErrors.name}
                                 helperText={formErrors.name}
                             />
-                        </Box>
-
-                        {/* Assigned Authorities Section */}
-                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                            Assigned Authorities
-                        </Typography>
-                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-                            <List>
-                                {paginatedAuthorities.map((authority) => {
-                                    return (
-                                        <ListItem key={authority.id}>
-                                            <ListItemIcon>
-                                                <Checkbox
-                                                    checked={selectedAuthorities.includes(Number(authority.id))}
-                                                    onChange={() => handleAuthoritySelection_(authority.id)}
-                                                />
-                                            </ListItemIcon>
-                                            <ListItemText primary={authority.name} />
-                                        </ListItem>
-                                    );
-                                })}
-                            </List>
-                            <Pagination
-                                count={Math.ceil(authorities.length / usersPerPage)}
-                                page={authPage}
-                                onChange={handleAuthPageChange}
-                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+                            <TextField
+                                readOnly
+                                disabled
+                                label="Public Id"
+                                name="publicId"
+                                value={formData.publicId || ''}
+                                onChange={handleChange}
+                                fullWidth
+                                margin="normal"
+                            />
+                            <TextField
+                                label="Priority"
+                                name="priority"
+                                value={formData.priority}
+                                onChange={handleChange}
+                                fullWidth
+                                margin="normal"
+                                error={!!formErrors.priority}
+                                helperText={formErrors.priority}
                             />
                         </Box>
 
-                        {/* Assigned Users Section */}
-                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
+                            Assigned Authorities
+                        </Typography>
+                        <Box sx={{maxHeight: "300px", overflowY: "auto"}}>
+                            <List>
+                                {paginatedAuthorities.map(authority => (
+                                    <ListItem key={authority.id}>
+                                        <ListItemIcon>
+                                            <Checkbox
+                                                checked={selectedAuthorities.includes(parseInt(authority.id))}
+                                                onChange={() => handleAuthoritySelection(parseInt(authority.id))}
+                                            />
+                                        </ListItemIcon>
+                                        <ListItemText primary={authority.name}/>
+                                    </ListItem>
+                                ))}
+                            </List>
+                            <Pagination
+                                count={Math.ceil(data?.authorities?.length / usersPerPage) || 1}
+                                page={authPage}
+                                onChange={(e, value) => setAuthPage(value)}
+                                sx={{mt: 2, display: "flex", justifyContent: "center"}}
+                            />
+                        </Box>
+
+                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
                             Assigned Users
                         </Typography>
                         <TextField
@@ -487,14 +331,14 @@ const RoleForm = () => {
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <Search />
+                                        <Search/>
                                     </InputAdornment>
                                 ),
                             }}
                         />
-                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+                        <Box sx={{maxHeight: "300px", overflowY: "auto"}}>
                             <List>
-                                {paginatedUsers.map((user) => (
+                                {paginatedUsers.map(user => (
                                     <ListItem key={user.userId}>
                                         <ListItemIcon>
                                             <Checkbox
@@ -511,15 +355,19 @@ const RoleForm = () => {
                             <Pagination
                                 count={Math.ceil(filteredUsers.length / usersPerPage)}
                                 page={userPage}
-                                onChange={handleUserPageChange}
-                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+                                onChange={(e, value) => setUserPage(value)}
+                                sx={{mt: 2, display: "flex", justifyContent: "center"}}
                             />
                         </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseDialog}>Cancel</Button>
-                        <Button onClick={handleSubmit} color="primary">
-                            {currentRole ? "Update" : "Add"}
+                        <Button
+                            onClick={handleSubmit}
+                            color="primary"
+                            disabled={!isFormDirty || saveLoading}
+                        >
+                            {saveLoading ? 'Saving...' : currentRole ? "Update" : "Add"}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -528,4 +376,4 @@ const RoleForm = () => {
     );
 };
 
-export default RoleForm;
+export default React.memo(RoleForm);

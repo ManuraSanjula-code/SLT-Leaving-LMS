@@ -9,6 +9,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.slt.peotv.userservice.lms.entity.TempUser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +46,7 @@ public class TokenCreator {
     public SignedJWT createSignedJWT(Authentication auth) throws NoSuchAlgorithmException, JOSEException {
 
         UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
-        JWTClaimsSet jwtClaimSet = createJWTClaimSet(auth, applicationUser);
+        JWTClaimsSet jwtClaimSet = createJWTClaimSet_(auth, applicationUser);
         KeyPair rsaKeys = generateKeyPair();
         JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
         SignedJWT signedJWT = new SignedJWT(
@@ -59,7 +60,7 @@ public class TokenCreator {
     public SignedJWT createSignedJWT(Authentication auth, TempUser tempUser) throws NoSuchAlgorithmException, JOSEException {
 
         UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
-        JWTClaimsSet jwtClaimSet = createJWTClaimSet(auth, applicationUser, tempUser);
+        JWTClaimsSet jwtClaimSet = createJWTClaimSet_(auth, applicationUser, tempUser);
         KeyPair rsaKeys = generateKeyPair();
         JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
         SignedJWT signedJWT = new SignedJWT(
@@ -96,13 +97,44 @@ public class TokenCreator {
                 .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME)).build();
     }
-    private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
+    private JWTClaimsSet createJWTClaimSet_(Authentication auth, UserPrincipal applicationUser) {
 
+        JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                .subject(applicationUser.getUserId())
+                .claim("authorities", auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList()))
+                .claim("highestPriority", applicationUser.getHighestRolePriority())
+                .claim("authorityWeights", applicationUser.getAuthorityWeights())
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME));
+
+        return builder.build();
+    }
+
+    private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
         return new JWTClaimsSet.Builder().subject(applicationUser.getUserId() + " " + "TEMP")
                 .claim("authorities",
                         auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
                 .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(tempUser.getExpireTime()).build();
+    }
+
+    private JWTClaimsSet createJWTClaimSet_(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
+        JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                .subject(applicationUser.getUserId() + " " + "TEMP")
+                .claim("authorities",
+                        auth.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .collect(Collectors.toList()))
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME));
+
+        applicationUser.getClaims().forEach(builder::claim);
+
+        return builder.build();
     }
     private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, List<String> roles) {
 

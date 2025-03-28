@@ -44,6 +44,9 @@ public class AttendanceEntity {
     private Boolean isHalfDay = false;
 
     @Builder.Default
+    private Boolean isFullLeave = false;
+
+    @Builder.Default
     private Boolean isShortLeave = false;
 
     @Builder.Default
@@ -64,9 +67,20 @@ public class AttendanceEntity {
     @Builder.Default
     private Boolean resolve = false;
 
+    @Builder.Default
+    private Boolean leaveSuccess = false;
+
+    @Builder.Default
+    private Boolean leaveReq = false;
+
     @Column(length = 1000)
     private String issueDescription;
 
     private Date dueDateForUA;
+
+    @Builder.Default
+    private Boolean active = true;
+    @Builder.Default
+    private Boolean nopay = false;
 
 }

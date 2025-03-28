@@ -29,6 +29,9 @@ public class AbsenteeEntity {
     @Builder.Default
     private Boolean isHalfDay = false;
 
+    @Builder.Default
+    private Boolean isFullDay = false;
+
     @Column(name = "is_supervised_approved", columnDefinition = "int(10) unsigned default '0'")
     @Builder.Default
     private Boolean isSupervisedApproved = false;

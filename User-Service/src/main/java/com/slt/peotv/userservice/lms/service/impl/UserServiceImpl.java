@@ -10,14 +10,13 @@ import com.slt.peotv.userservice.lms.redis.RedisService;
 import com.slt.peotv.userservice.lms.repository.*;
 import com.slt.peotv.userservice.lms.security.UserPrincipal;
 import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.shared.Utils;
+import com.slt.peotv.userservice.lms.utils.IdUtils;
 import com.slt.peotv.userservice.lms.shared.dto.*;
 import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
 import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
+import com.slt.peotv.userservice.lms.utils.ImplUtils;
 import com.slt.peotv.userservice.lms.utils.UserMapper;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -31,8 +30,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +39,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -49,44 +49,39 @@ public class UserServiceImpl implements UserService {
     private static final String UPLOAD_DIR = System.getProperty("user.home") + "/uploads/";
 
     @Autowired
-    private UserRepository userRepository;
-
+    private ImplUtils implUtils;
     @Autowired
-    private Utils utils;
-
+    private UserRepository userRepository;
+    @Autowired
+    private IdUtils idUtils;
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
-
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
-
     @Autowired
     private RoleRepository roleRepository;
-
     @Autowired
     private ProfilesRepo profilesRepo;
-
     @Autowired
     private SectionRepo sectionRepo;
-
     @Autowired
     private AuthorityRepository authorityRepo;
-
-    private final ImplUtils implUtils = new ImplUtils();
-
-    private final ModelMapper modelMapper = new ModelMapper();
-
     @Autowired
     private MessageProducerService messageProducerService;
-
     @Autowired
     private TempUserRepo tempUserRepo;
-
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private AddressRepository addressRepository;
 
+    private <T> void updateFieldIfNotNull(T value, java.util.function.Consumer<T> setter) {
+        if (value != null) {
+            setter.accept(value);
+        }
+    }
     @Override
-    public UserDto createUser(UserDto user) throws Exception {
+    public UserDto createUser(UserReq user) throws Exception {
         if (userRepository.findByEmail(user.getEmail()) != null) {
             throw new UserServiceException("Record already exists");
         }
@@ -95,7 +90,7 @@ public class UserServiceImpl implements UserService {
         if (userEntity == null) {
             throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
         }
-        String publicUserId = utils.generateUserId(30);
+        String publicUserId = idUtils.generateUserId(30);
         userEntity.setUserId(publicUserId);
         userEntity.setJoin_date(new Date());
         userEntity.setRoaster(user.getRoaster());
@@ -114,6 +109,7 @@ public class UserServiceImpl implements UserService {
                 userEntity.setSupervisor(userSup);
             }
         }
+        updateFieldIfNotNull(user.getJoiningDate(), userEntity::setJoin_date);
 
         if (user.getOther() != null) {
             String other = user.getOther();
@@ -128,8 +124,9 @@ public class UserServiceImpl implements UserService {
             for (AddressDTO addressDto : user.getAddresses()) {
                 AddressEntity addressEntity = UserMapper.mapToAddressEntity_(addressDto);
                 addressEntity.setUserDetails(userEntity);
-                String publicAddressId = utils.generateUserId(30);
+                String publicAddressId = idUtils.generateUserId(30);
                 addressEntity.setAddressId(publicAddressId);
+                addressEntity.setIsDefault(addressDto.getIsDefault());
                 addressEntities.add(addressEntity);
             }
             userEntity.setAddresses(addressEntities); // Set the addresses list
@@ -222,7 +219,7 @@ public class UserServiceImpl implements UserService {
         Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
         Files.createDirectories(uploadPath);
 
-        String fileName = utils.generateUserId(10) + file.getOriginalFilename();
+        String fileName = idUtils.generateUserId(10) + file.getOriginalFilename();
         user.setProfilePic(fileName);
 
         Path filePath = uploadPath.resolve(Objects.requireNonNull(fileName));
@@ -243,6 +240,8 @@ public class UserServiceImpl implements UserService {
         return UserMapper.mapToUserDto(userEntity);
     }
 
+
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         String[] parts = email.split(" ");
@@ -258,6 +257,10 @@ public class UserServiceImpl implements UserService {
             userEntity.setEmail(tempUser.getEmail());
             userEntity.setEncryptedPassword(tempUser.getPassword());
             userEntity.setEmailVerificationStatus(false);
+
+            RoleEntity role = UserMapper.mapRoleToRoleEntity(userEntity);
+            userEntity.setRoles(Set.of(role));
+
             return new UserPrincipal(userEntity);
         } else {
 
@@ -268,7 +271,6 @@ public class UserServiceImpl implements UserService {
             }
             return new UserPrincipal(userEntity);
         }
-
     }
 
     @Override
@@ -289,21 +291,12 @@ public class UserServiceImpl implements UserService {
         userRest.setFirstName(tempUser.getFirstName());
         userRest.setLastName(tempUser.getLastName());
         userRest.setEmail(tempUser.getEmail());
-        userRest.setRoles(Arrays.asList("ROLE_ADMIN", "ROLE_USER", "ROLE_EMPLOYEE"));
-
-        LMSUser lmsUser = new LMSUser();
-        lmsUser.setEmail(tempUser.getEmail());
-        lmsUser.setFirstName(tempUser.getFirstName());
-        lmsUser.setLastName(tempUser.getLastName());
-        lmsUser.setEmployeeId("VC1000");
-        lmsUser.setSltId("AC100");
-
-        messageProducerService.sendMessage("user.queue", lmsUser);
+        userRest.setRoles(List.of("ROLE_TEMP"));
         return userRest;
     }
 
     @Override
-    public UserDto updateUser(String userId, UserDto userDto) throws Exception {
+    public UserDto updateUser(String userId, UserReq userDto) throws Exception {
         if (userDto == null) {
             throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
         }
@@ -369,76 +362,59 @@ public class UserServiceImpl implements UserService {
                 userEntity.setOther(userOther);
             }
         }
-        // Handle addresses
-        List<AddressDTO> address_dto = userDto.getAddresses();
-        List<AddressEntity> addresses = userEntity.getAddresses();
 
-        if (addresses.isEmpty()) {
-
-            if (address_dto.isEmpty()) {
-
-                addresses.forEach(address -> {
-                    if (address != null) {
-                        address_dto.forEach(dto -> {
-                            if (dto != null) {
-                                if (!AddressComparator.areEqual(dto, address)) {
-                                    AddressEntity addressEntity = UserMapper.mapToAddressEntity(dto);
-                                    addressEntity.setUserDetails(userEntity); // Associate with UserEntity
-                                    String publicAddressId = utils.generateUserId(30);
-                                    addressEntity.setAddressId(publicAddressId);
-                                    addresses.add(address);
-                                }
-                            }
-                        });
-                    }
-                });
-
-            }
-
-        }
-        userEntity.setAddresses(addresses);
+        List<AddressEntity> addressEntities = handleAddresses(userEntity, userDto.getAddresses());
+        userEntity.setAddresses(addressEntities);
 
         Collection<RoleEntity> role_user = userEntity.getRoles();
         Collection<ProfilesEntity> profile_user = userEntity.getProfiles();
         Collection<SectionEntity> section_user = userEntity.getSections();
 
-        if (!role_user.isEmpty() || !userDto.getRoles().isEmpty()) {
-            for (String role : userDto.getRoles()) {
-                RoleEntity roleEntity = roleRepository.findByName(role);
-                if (roleEntity != null) {
+        if (role_user != null && userDto.getRoles() != null) {
+            if (!role_user.isEmpty() && !userDto.getRoles().isEmpty()) {
+                for (String role : userDto.getRoles()) {
+                    RoleEntity roleEntity = roleRepository.findByName(role);
+                    if (roleEntity != null) {
 
-                    role_user.forEach(role_ -> {
-                        if (role_ != null && (!role_.getName().equals(roleEntity.getName()))) {
-                            role_user.add(roleEntity);
-                        }
-                    });
+                        role_user.forEach(role_ -> {
+                            if (role_ != null && (!role_.getName().equals(roleEntity.getName()))) {
+                                role_user.add(roleEntity);
+                            }
+                        });
 
+                    }
                 }
             }
         }
-        if (!userDto.getSections().isEmpty() || !section_user.isEmpty()) {
-            userDto.getSections().forEach(sect -> {
-                SectionEntity sec = sectionRepo.findBySection(sect);
-                if (sec != null) {
-                    section_user.forEach(section -> {
-                        if (section != null && (!section.getSection().equals(sec.getSection()))) {
-                            section_user.add(sec);
-                        }
-                    });
-                }
-            });
+
+        if (section_user != null && userDto.getSections() != null) {
+            if (!userDto.getSections().isEmpty() && !section_user.isEmpty()) {
+                userDto.getSections().forEach(sect -> {
+                    SectionEntity sec = sectionRepo.findBySection(sect);
+                    if (sec != null) {
+                        section_user.forEach(section -> {
+                            if (section != null && (!section.getSection().equals(sec.getSection()))) {
+                                section_user.add(sec);
+                            }
+                        });
+                    }
+                });
+            }
         }
-        if (!userDto.getProfiles().isEmpty() || !profile_user.isEmpty()) {
-            userDto.getProfiles().forEach(profile -> {
-                ProfilesEntity pr = profilesRepo.findByName(profile);
-                if (pr != null) {
-                    profile_user.forEach(prof -> {
-                        if (prof != null && (!prof.getName().equals(prof.getName()))) {
-                            profile_user.add(prof);
-                        }
-                    });
-                }
-            });
+
+        if (userDto.getProfiles() != null && profile_user != null) {
+            if (!userDto.getProfiles().isEmpty() && !profile_user.isEmpty()) {
+                userDto.getProfiles().forEach(profile -> {
+                    ProfilesEntity pr = profilesRepo.findByName(profile);
+                    if (pr != null) {
+                        profile_user.forEach(prof -> {
+                            if (prof != null && (!prof.getName().equals(prof.getName()))) {
+                                profile_user.add(prof);
+                            }
+                        });
+                    }
+                });
+            }
         }
 
         userEntity.setRoles(role_user);
@@ -476,86 +452,49 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<AddressEntity> handleAddresses(UserEntity userEntity, List<AddressDTO> addressDtos) {
-        List<AddressEntity> updatedAddresses = new ArrayList<>();
+        List<AddressEntity> existingAddresses = userEntity.getAddresses();
+        Map<String, AddressEntity> existingAddressMap = existingAddresses.stream()
+                .collect(Collectors.toMap(AddressEntity::getAddressId, Function.identity()));
 
         for (AddressDTO addressDto : addressDtos) {
             AddressEntity addressEntity;
 
-            if (addressDto.getAddressId() == null || addressDto.getAddressId().isEmpty()) {
-                // Create a new address
-                addressEntity = new AddressEntity();
-                addressEntity.setAddressId(UUID.randomUUID().toString()); // Generate a unique ID
-                addressEntity.setUserDetails(userEntity);
+            if (addressDto.getAddressId() != null && existingAddressMap.containsKey(addressDto.getAddressId())) {
+                addressEntity = existingAddressMap.get(addressDto.getAddressId());
             } else {
-                // Try to find an existing address
-                addressEntity = userEntity.getAddresses().stream()
-                        .filter(addr -> addr.getAddressId().equals(addressDto.getAddressId())).findFirst().orElse(null);
+                addressEntity = new AddressEntity();
+                addressEntity.setUserDetails(userEntity);
+                addressEntity.setAddressId(idUtils.generateAddressId(10));
+            }
 
-                if (addressEntity == null) {
-                    // If the address is not found, treat it as a new address
-                    addressEntity = new AddressEntity();
-                    addressEntity.setAddressId(utils.generateAddressId(10)); // Generate a new unique ID
-                    addressEntity.setUserDetails(userEntity);
+            addressEntity.setCity(addressDto.getCity());
+            addressEntity.setCountry(addressDto.getCountry());
+            addressEntity.setStreetName(addressDto.getStreetName());
+            addressEntity.setPostalCode(addressDto.getPostalCode());
+
+            if (Boolean.TRUE.equals(addressDto.getIsDefault())) {
+                for (AddressEntity addr : existingAddresses) {
+                    if (addr.getIsDefault() && !addr.getAddressId().equals(addressEntity.getAddressId())) {
+                        addr.setIsDefault(false);
+                        addressRepository.save(addr);
+                    }
                 }
-            }
-
-            // Update address details
-            addressEntity.setCity(addressDto.getCity());
-            addressEntity.setCountry(addressDto.getCountry());
-            addressEntity.setStreetName(addressDto.getStreetName());
-            addressEntity.setPostalCode(addressDto.getPostalCode());
-
-            // Handle default address logic
-            if (Boolean.TRUE.equals(addressDto.getIsDefault())) {
-                // Set all other addresses to non-default
-                userEntity.getAddresses().forEach(addr -> addr.setIsDefault(false));
                 addressEntity.setIsDefault(true);
-            } else {
-                addressEntity.setIsDefault(false);
+                addressEntity = addressRepository.save(addressEntity);
+            } else addressEntity.setIsDefault(existingAddresses.isEmpty());
+
+            if (!existingAddresses.contains(addressEntity)) {
+                existingAddresses.add(addressEntity);
             }
 
-            updatedAddresses.add(addressEntity);
         }
 
-        return updatedAddresses;
-    }
-
-    private List<AddressEntity> handleAddresses_(UserEntity userEntity, List<AddressDTO> addressDtos) {
-        List<AddressEntity> updatedAddresses = new ArrayList<>();
-
-        for (AddressDTO addressDto : addressDtos) {
-            AddressEntity addressEntity;
-
-            if (addressDto.getAddressId() == null || addressDto.getAddressId().isEmpty()) {
-                // Create a new address
-                addressEntity = new AddressEntity();
-                addressEntity.setUserDetails(userEntity);
-            } else {
-                // Find and update an existing address
-                addressEntity = userEntity.getAddresses().stream()
-                        .filter(addr -> addr.getAddressId().equals(addressDto.getAddressId())).findFirst()
-                        .orElseThrow(() -> new UserServiceException("Address not found"));
-            }
-
-            // Update address details
-            addressEntity.setCity(addressDto.getCity());
-            addressEntity.setCountry(addressDto.getCountry());
-            addressEntity.setStreetName(addressDto.getStreetName());
-            addressEntity.setPostalCode(addressDto.getPostalCode());
-
-            // Handle default address logic
-            if (Boolean.TRUE.equals(addressDto.getIsDefault())) {
-                // Set all other addresses to non-default
-                userEntity.getAddresses().forEach(addr -> addr.setIsDefault(false));
-                addressEntity.setIsDefault(true);
-            } else {
-                addressEntity.setIsDefault(false);
-            }
-
-            updatedAddresses.add(addressEntity);
+        if (!existingAddresses.isEmpty() && existingAddresses.stream().noneMatch(AddressEntity::getIsDefault)) {
+            AddressEntity defaultAddress = existingAddresses.get(0);
+            defaultAddress.setIsDefault(true);
+            addressRepository.save(defaultAddress);
         }
-
-        return updatedAddresses;
+        return existingAddresses;
     }
 
     @Transactional
@@ -634,7 +573,7 @@ public class UserServiceImpl implements UserService {
         UserEntity userEntity = userRepository.findUserByEmailVerificationToken(token);
 
         if (userEntity != null) {
-            boolean hastokenExpired = Utils.hasTokenExpired(token);
+            boolean hastokenExpired = IdUtils.hasTokenExpired(token);
             if (!hastokenExpired) {
                 userEntity.setEmailVerificationToken(null);
                 userEntity.setEmailVerificationStatus(Boolean.TRUE);
@@ -657,7 +596,7 @@ public class UserServiceImpl implements UserService {
             return returnValue;
         }
 
-        String token = new Utils().generatePasswordResetToken(userEntity.getUserId());
+        String token = new IdUtils().generatePasswordResetToken(userEntity.getUserId());
 
         PasswordResetTokenEntity passwordResetTokenEntity = new PasswordResetTokenEntity();
         passwordResetTokenEntity.setToken(token);
@@ -671,7 +610,7 @@ public class UserServiceImpl implements UserService {
     public boolean resetPassword(String token, String password) {
         boolean returnValue = false;
 
-        if (Utils.hasTokenExpired(token)) {
+        if (IdUtils.hasTokenExpired(token)) {
             return returnValue;
         }
 
@@ -830,6 +769,7 @@ public class UserServiceImpl implements UserService {
             Map<String, String> profileMap = new ConcurrentHashMap<>();
             profileMap.put("ID", String.valueOf(auth.getId()));
             profileMap.put("name", auth.getName());
+            profileMap.put("weight" , String.valueOf(auth.getWeight()));
             profiles.add(profileMap);
         });
         return profiles;
@@ -845,6 +785,27 @@ public class UserServiceImpl implements UserService {
         }
         roleEntity = roleRepository.save(roleEntity);
         return UserMapper.mapToRoleDTO(roleEntity);
+    }
+
+    @Override
+    public RoleDTOArchive saveRole_(RoleReq req) {
+        if (req == null) {
+            throw new IllegalArgumentException("Role request cannot be null");
+        }
+
+        Optional<RoleEntity> roleEntity = Optional.empty();
+        if (req.getRoleId() != null && !req.getRoleId().isEmpty()) {
+            roleEntity = roleRepository.findByPublicId(req.getRoleId());
+        }else if (req.getName() != null && !req.getName().isEmpty()) {
+            roleEntity = Optional.ofNullable(roleRepository.findByName(req.getName()));
+        }
+
+        RoleEntity entityToSave = roleEntity
+                .map(existingEntity -> implUtils.updateRole(req, existingEntity))
+                .orElseGet(() -> implUtils.saveRole_(req));
+
+        RoleEntity savedEntity = roleRepository.save(entityToSave);
+        return UserMapper.mapToRoleDTO_(savedEntity);
     }
 
     @Override
@@ -872,6 +833,10 @@ public class UserServiceImpl implements UserService {
             authorityEntity.setName(req.getNewName());
         }
 
+        if(req.getWeight() != null) {
+            authorityEntity.setWeight(req.getWeight());
+        }
+
         try {
             AuthorityEntity savedEntity = authorityRepo.save(authorityEntity);
             return UserMapper.mapToAuthorityDTO(savedEntity);
@@ -887,22 +852,36 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public SectionDTO saveSection(SectionReq req) {
-        SectionEntity sectionEntity = sectionRepo.findBySection(req.getSection());
-
-        if (sectionEntity != null) {
-            synchronized (sectionEntity) {
-                removeDeletedUsers(req, sectionEntity);
-            }
-        } else {
-            sectionEntity = createNewSectionEntity(req);
+        if (req == null) {
+            throw new IllegalArgumentException("Section request cannot be null");
         }
 
-        if (req.getSection() != null && !req.getSection().isEmpty()) {
-            sectionEntity.setSection(req.getSection());
+        Optional<SectionEntity> sectionEntity = Optional.empty();
+
+        if (StringUtils.hasText(req.getPublicId())) {
+            sectionEntity = sectionRepo.findByPublicId(req.getPublicId());
         }
 
+        if (sectionEntity.isEmpty() && StringUtils.hasText(req.getSection())) {
+            sectionEntity = Optional.ofNullable(sectionRepo.findBySection(req.getSection()));
+        }
+
+        // Process the entity (update existing or create new)
+        SectionEntity entityToSave = sectionEntity
+                .map(existingEntity -> {
+                    synchronized (existingEntity) {
+                        removeDeletedUsers(req, existingEntity);
+                        if (StringUtils.hasText(req.getSection())) {
+                            existingEntity.setSection(req.getSection());
+                        }
+                        return existingEntity;
+                    }
+                })
+                .orElseGet(() -> createNewSectionEntity(req));
+
+        // Save and return
         synchronized (sectionRepo) {
-            return UserMapper.mapToSectionDTO(sectionRepo.save(sectionEntity));
+            return UserMapper.mapToSectionDTO(sectionRepo.save(entityToSave));
         }
     }
 
@@ -924,9 +903,9 @@ public class UserServiceImpl implements UserService {
 
     private SectionEntity createNewSectionEntity(SectionReq req) {
         SectionEntity sectionEntity = new SectionEntity();
-        sectionEntity.setPublicId(utils.generateUserId(10));
+        sectionEntity.setPublicId(idUtils.generateUserId(10));
         List<UserEntity> userEntities = new CopyOnWriteArrayList<>();
-
+        sectionEntity.setSection(req.getSection());
         if (req.getAddedUsers() != null && !req.getAddedUsers().isEmpty()) {
             req.getAddedUsers().forEach(userId -> {
                 synchronized (userRepository) {
@@ -985,7 +964,7 @@ public class UserServiceImpl implements UserService {
         } else {
             // Create a new profile entity (create scenario)
             profilesEntity = mapProfileReqToProfilesEntity(req);
-            profilesEntity.setPublicId(utils.generateUserId(10));
+            profilesEntity.setPublicId(idUtils.generateUserId(10));
         }
 
         List<UserEntity> userEntities = new CopyOnWriteArrayList<>();
@@ -1073,6 +1052,83 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDetails getUserDetailsByUserId(String userId) {
+        // Validate input
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+
+        // Parse userId and loginType
+        String[] parts = userId.split(" ");
+        String user_id = parts[0].trim();  // Added trim() to remove any whitespace
+        String loginType = parts.length > 1 ? parts[1].trim() : "DEFAULT";
+
+        // Debug logging
+        System.out.println("Parsed userId: '" + user_id + "'");
+        System.out.println("Parsed loginType: '" + loginType + "'");
+
+        try {
+            if ("TEMP".equalsIgnoreCase(loginType)) {
+                // Handle temporary user case
+                TempUser tempUser = tempUserRepo.findTempUserByUserId(user_id);
+
+                if (tempUser == null) {
+                    System.out.println("No temporary user found with ID: " + user_id);
+                    throw new UsernameNotFoundException("Temporary user not found with ID: " + user_id);
+                }
+
+                System.out.println("Found temporary user: " + tempUser.getUserId());
+
+                // Create UserEntity from TempUser
+                UserEntity userEntity = new UserEntity();
+                userEntity.setUserId(tempUser.getUserId() + " " + "TEMP");
+                userEntity.setFirstName(tempUser.getFirstName());
+                userEntity.setLastName(tempUser.getLastName());
+                userEntity.setEmail(tempUser.getEmail());
+                userEntity.setEncryptedPassword(tempUser.getPassword());
+                userEntity.setEmailVerificationStatus(false);
+
+                // Set roles
+                RoleEntity role = UserMapper.mapRoleToRoleEntity(userEntity);
+                userEntity.setRoles(List.of(role));
+
+                return new UserPrincipal(userEntity);
+            } else {
+                // Handle regular user case
+                UserEntity userEntity = userRepository.findByUserId(user_id);
+
+                if (userEntity == null) {
+                    System.out.println("No user found with ID: " + user_id);
+                    throw new UsernameNotFoundException("User not found with ID: " + user_id);
+                }
+
+                System.out.println("Found user: " + userEntity.getUserId());
+                return new UserPrincipal(userEntity);
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching user details for ID: " + user_id);
+            e.printStackTrace();
+            throw e;  // Re-throw the exception after logging
+        }
+    }
+
+    @Transactional
+    public void rebalancePriorities() {
+        List<RoleEntity> roles = roleRepository.findAllByOrderByPriorityAsc();
+
+        int newPriority = 10; // Start from first available in admin band
+        for (RoleEntity role : roles) {
+            // Skip system roles (1-9)
+            if (role.getPriority() <= 9) continue;
+
+            role.setPriority(newPriority);
+            roleRepository.save(role);
+            newPriority += 10; // Leave 9 gaps between roles
+        }
+    }
+
+
+    @Override
     public List<String> getAllRoleNames() {
         return StreamSupport.stream(roleRepository.findAll().spliterator(), false)
                 .map(RoleEntity::getName) // Use roleEntity.getName() directly
@@ -1126,139 +1182,5 @@ public class UserServiceImpl implements UserService {
         } else {
             throw new RuntimeException("Role not found with id: " + sectionId);
         }
-    }
-
-    public class AddressComparator {
-        public static boolean areEqual(AddressDTO dto, AddressEntity entity) {
-            if (dto == null && entity == null) {
-                return true;
-            }
-            if (dto == null || entity == null) {
-                return false;
-            }
-
-            return new EqualsBuilder().append(dto.getId(), entity.getId())
-                    .append(dto.getAddressId(), entity.getAddressId()).append(dto.getCity(), entity.getCity())
-                    .append(dto.getCountry(), entity.getCountry()).append(dto.getStreetName(), entity.getStreetName())
-                    .append(dto.getPostalCode(), entity.getPostalCode())
-                    .append(dto.getIsDefault(), entity.getIsDefault())
-                    .append(dto.getUserDetails() != null ? dto.getUserDetails().getId() : null,
-                            entity.getUserDetails() != null ? entity.getUserDetails().getId() : null)
-                    .isEquals();
-        }
-    }
-
-    public class ImplUtils {
-        @Transactional
-        public RoleEntity updateRole(RoleReq req, RoleEntity roleEntity) {
-            // Remove deleted authorities
-            if (!req.getDeletedAuthorities().isEmpty()) {
-                req.getDeletedAuthorities().forEach(authority -> {
-                    Optional<AuthorityEntity> auth = authorityRepo.findById(Long.parseLong(authority));
-
-                    if (auth.isPresent()) {
-                        AuthorityEntity authorityEntity = auth.get();
-                        boolean removed = roleEntity.getAuthorities().removeIf(authorityE -> authorityE.equals(authorityEntity));
-                        System.out.println("Authority removed: " + removed);
-                    }
-                });
-            }
-
-            // Remove deleted users
-            if (!req.getDeletedUsers().isEmpty()) {
-                req.getDeletedUsers().forEach(userId -> {
-                    boolean removed = roleEntity.getUsers().removeIf(user -> user.getUserId().equals(userId));
-                    if (removed) {
-                        UserEntity userEntity = userRepository.findByUserId(userId);
-                        if (userEntity != null) {
-                            userEntity.getRoles().removeIf(role -> role.equals(roleEntity));
-                            userRepository.save(userEntity); // Update the user entity
-                            roleRepository.save(roleEntity);
-                        }
-                    }
-                });
-            }
-
-            // Add new users
-            if (!req.getAddedUsers().isEmpty()) {
-                req.getAddedUsers().forEach(userId -> {
-                    UserEntity userEntity = userRepository.findByUserId(userId);
-                    if (userEntity != null && !roleEntity.getUsers().contains(userEntity)) {
-                        roleEntity.getUsers().add(userEntity);
-                        userEntity.getRoles().add(roleEntity);
-                        userRepository.save(userEntity); // Update the user entity
-                    }
-                });
-            }
-
-            // Add new authorities
-            if (!roleEntity.getAuthorities().isEmpty()) {
-                req.getAddedAuthorities().forEach(authority -> {
-                    Optional<AuthorityEntity> authorityEntity = authorityRepo.findById(Long.parseLong(authority));
-
-                    if (authorityEntity.isPresent()) {
-                        AuthorityEntity auth = authorityEntity.get();
-
-                        if (!roleEntity.getAuthorities().contains(auth)) {
-                            roleEntity.getAuthorities().add(auth);
-                        }
-                    }
-                });
-            }
-
-            // Update role name if provided
-            if (req.getName() != null && !req.getName().isEmpty()) {
-                roleEntity.setName(req.getName());
-            }
-
-            return roleRepository.save(roleEntity); // Save the updated role entity
-        }
-
-        public RoleEntity saveRole_(RoleReq req) {
-            // Create a new RoleEntity (local variable, no shared state)
-            RoleEntity roleEntity = new RoleEntity();
-
-            // Use thread-safe collections for users and authorities
-            List<UserEntity> userEntities = Collections.synchronizedList(new ArrayList<>());
-            List<AuthorityEntity> authorityEntities = Collections.synchronizedList(new ArrayList<>());
-
-            // Safely process added users
-            if (req.getAddedUsers() != null && !req.getAddedUsers().isEmpty()) {
-                req.getAddedUsers().forEach(userId -> {
-                    // Synchronize access to userRepository if it's not thread-safe
-                    synchronized (userRepository) {
-                        UserEntity user = userRepository.findByUserId(userId);
-                        if (user != null) {
-                            userEntities.add(user);
-                        }
-                    }
-                });
-            }
-
-            // Safely process added authorities
-            if (req.getAddedAuthorities() != null && !req.getAddedAuthorities().isEmpty()) {
-                req.getAddedAuthorities().forEach(authority -> {
-
-                    // Synchronize access to authorityRepo if it's not thread-safe
-                    synchronized (authorityRepo) {
-                        Optional<AuthorityEntity> authorityEntity = authorityRepo.findById(Long.parseLong(authority));
-                        authorityEntity.ifPresent(authorityEntities::add);
-                    }
-                });
-            }
-
-            // Set the role name (ensure null safety)
-            if (req.getName() != null && !req.getName().isEmpty()) {
-                roleEntity.setName(req.getName());
-            }
-
-            // Set users and authorities (use immutable collections to prevent further modifications)
-            roleEntity.setUsers(Collections.unmodifiableList(userEntities));
-            roleEntity.setAuthorities(Collections.unmodifiableList(authorityEntities));
-
-            return roleEntity;
-        }
-
-
     }
 }

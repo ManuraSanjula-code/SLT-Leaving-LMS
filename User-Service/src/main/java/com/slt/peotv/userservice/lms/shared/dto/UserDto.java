@@ -1,7 +1,10 @@
 package com.slt.peotv.userservice.lms.shared.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -22,6 +25,7 @@ public class UserDto implements Serializable{
     private Boolean emailVerificationStatus = false;
     private List<AddressDTO> addresses;
     private Collection<String> roles;
+	@JsonProperty("Authorities")
 	private Collection<String> Authorities;
 	private Collection<String> sections;
 	private Collection<String> profiles;
@@ -34,7 +38,25 @@ public class UserDto implements Serializable{
 	private String supervisor;
 	private String other;
 	private Boolean roaster;
-	
+	private List<String> deleteAddresses;
+	private Date joiningDate;
+
+	public Date getJoiningDate() {
+		return joiningDate;
+	}
+
+	public void setJoiningDate(Date joiningDate) {
+		this.joiningDate = joiningDate;
+	}
+
+	public List<String> getDeleteAddresses() {
+		return deleteAddresses;
+	}
+
+	public void setDeleteAddresses(List<String> deleteAddresses) {
+		this.deleteAddresses = deleteAddresses;
+	}
+
 	public String getOther() {
 		return other;
 	}
@@ -250,5 +272,38 @@ public class UserDto implements Serializable{
 				&& Objects.equals(phone, other.phone) && Objects.equals(profilePic, other.profilePic)
 				&& Objects.equals(profiles, other.profiles) && Objects.equals(roles, other.roles)
 				&& Objects.equals(sections, other.sections) && Objects.equals(userId, other.userId);
+	}
+
+	@Override
+	public String toString() {
+		return "UserDto{" +
+				"id=" + id +
+				", userId='" + userId + '\'' +
+				", firstName='" + firstName + '\'' +
+				", lastName='" + lastName + '\'' +
+				", email='" + email + '\'' +
+				", employeeId='" + employeeId + '\'' +
+				", sltId='" + sltId + '\'' +
+				", password='" + password + '\'' +
+				", encryptedPassword='" + encryptedPassword + '\'' +
+				", profilePic='" + profilePic + '\'' +
+				", emailVerificationToken='" + emailVerificationToken + '\'' +
+				", emailVerificationStatus=" + emailVerificationStatus +
+				", addresses=" + addresses +
+				", roles=" + roles +
+				", Authorities=" + Authorities +
+				", sections=" + sections +
+				", profiles=" + profiles +
+				", isSltEmp=" + isSltEmp +
+				", isSltIntern=" + isSltIntern +
+				", active=" + active +
+				", phone='" + phone + '\'' +
+				", gender='" + gender + '\'' +
+				", hod='" + hod + '\'' +
+				", supervisor='" + supervisor + '\'' +
+				", other='" + other + '\'' +
+				", roaster=" + roaster +
+				", deleteAddresses=" + deleteAddresses +
+				'}';
 	}
 }
