@@ -1,11 +1,9 @@
 package com.slt.peotv.userservice.lms.shared.model.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
-
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 public class UserReq {
     private long id;
@@ -37,6 +35,27 @@ public class UserReq {
     private Boolean roaster;
     private List<String> deleteAddresses;
     private Date joiningDate;
+
+    @JsonIgnore
+    @JsonProperty("additional")
+    private Additional additional;
+
+    @JsonProperty("admins")
+    private List<String> admins = new ArrayList<>();
+
+    @JsonProperty("addedAdmins")
+    private List<String> addedAdmins = new ArrayList<>();
+
+    @JsonProperty("deletedAdmins")
+    private List<String> deletedAdmins = new ArrayList<>();
+
+    public Additional getAdditional() {
+        return additional;
+    }
+
+    public void setAdditional(Additional additional) {
+        this.additional = additional;
+    }
 
     public Date getJoiningDate() {
         return joiningDate;
@@ -262,6 +281,30 @@ public class UserReq {
         this.deleteAddresses = deleteAddresses;
     }
 
+    public List<String> getAdmins() {
+        return admins;
+    }
+
+    public void setAdmins(List<String> admins) {
+        this.admins = admins;
+    }
+
+    public List<String> getAddedAdmins() {
+        return addedAdmins;
+    }
+
+    public void setAddedAdmins(List<String> addedAdmins) {
+        this.addedAdmins = addedAdmins;
+    }
+
+    public List<String> getDeletedAdmins() {
+        return deletedAdmins;
+    }
+
+    public void setDeletedAdmins(List<String> deletedAdmins) {
+        this.deletedAdmins = deletedAdmins;
+    }
+
     @Override
     public String toString() {
         return "UserReq{" +
@@ -293,6 +336,103 @@ public class UserReq {
                 ", roaster=" + roaster +
                 ", deleteAddresses=" + deleteAddresses +
                 ", joiningDate=" + joiningDate +
+                ", additional=" + additional +
+                ", admins=" + admins +
+                ", addedAdmins=" + addedAdmins +
+                ", deletedAdmins=" + deletedAdmins +
                 '}';
     }
+
+    public static class Additional{
+        @JsonIgnore
+        private List<String> addedRoles;
+
+        @JsonIgnore
+        private List<String> addedSelections;
+
+        @JsonIgnore
+        private List<String> addedProfiles;
+
+        @JsonIgnore
+        private List<String> deleteRoles;
+
+        @JsonIgnore
+        private List<String> deleteSelections;
+
+        @JsonIgnore
+        private List<String> deleteProfiles;
+
+        @Override
+        public boolean equals(Object object) {
+            if (object == null || getClass() != object.getClass()) return false;
+            Additional that = (Additional) object;
+            return Objects.equals(addedRoles, that.addedRoles) && Objects.equals(addedSelections, that.addedSelections) && Objects.equals(addedProfiles, that.addedProfiles) && Objects.equals(deleteRoles, that.deleteRoles) && Objects.equals(deleteSelections, that.deleteSelections) && Objects.equals(deleteProfiles, that.deleteProfiles);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(addedRoles, addedSelections, addedProfiles, deleteRoles, deleteSelections, deleteProfiles);
+        }
+
+        @Override
+        public String toString() {
+            return "Additional{" +
+                    "addedRoles=" + addedRoles +
+                    ", addedAuthorities=" + addedSelections +
+                    ", addedProfiles=" + addedProfiles +
+                    ", deleteRoles=" + deleteRoles +
+                    ", deleteAuthorities=" + deleteSelections +
+                    ", deleteProfiles=" + deleteProfiles +
+                    '}';
+        }
+
+        public List<String> getAddedRoles() {
+            return addedRoles;
+        }
+
+        public void setAddedRoles(List<String> addedRoles) {
+            this.addedRoles = addedRoles;
+        }
+
+        public List<String> getAddedSelections() {
+            return addedSelections;
+        }
+
+        public void setAddedSelections(List<String> addedSelections) {
+            this.addedSelections = addedSelections;
+        }
+
+        public List<String> getAddedProfiles() {
+            return addedProfiles;
+        }
+
+        public void setAddedProfiles(List<String> addedProfiles) {
+            this.addedProfiles = addedProfiles;
+        }
+
+        public List<String> getDeleteRoles() {
+            return deleteRoles;
+        }
+
+        public void setDeleteRoles(List<String> deleteRoles) {
+            this.deleteRoles = deleteRoles;
+        }
+
+        public List<String> getDeleteSelections() {
+            return deleteSelections;
+        }
+
+        public void setDeleteSelections(List<String> deleteSelections) {
+            this.deleteSelections = deleteSelections;
+        }
+
+        public List<String> getDeleteProfiles() {
+            return deleteProfiles;
+        }
+
+        public void setDeleteProfiles(List<String> deleteProfiles) {
+            this.deleteProfiles = deleteProfiles;
+        }
+    }
+
 }

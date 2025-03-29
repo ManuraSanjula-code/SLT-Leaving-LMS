@@ -23,11 +23,7 @@ public class IdUtils {
     private final Random RANDOM = new SecureRandom();
     private final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-    public String generateUserId(int length) {
-        return generateRandomString(length);
-    }
-
-    public String generateAddressId(int length) {
+    public String generateId(int length) {
         return generateRandomString(length);
     }
 

@@ -11,9 +11,8 @@ export const saveEmployee = createAsyncThunk(
             if (!userId) {
                 throw new Error('User ID not found');
             }
-            console.log(employee);
             const url = isUpdate
-                ? `${baseUrl}/update/${employee.userId}/${userId}`
+                ? `${baseUrl}/update/v2/${employee.userId}/${userId}`
                 : `${baseUrl}/add/employees/${userId}`;
 
             const method = isUpdate ? 'PUT' : 'POST';
@@ -104,6 +103,28 @@ export const fetchPaginatedUsers = createAsyncThunk(
     }
 );
 
+export const fetchPaginatedAdmins = createAsyncThunk(
+    'management/fetchPaginatedAdmins',
+    async ({minPriority, maxPriority, page, limit}, {rejectWithValue}) => {
+        try {
+            const response = await fetch(
+                `${baseUrl}/admin?page=${page}&limit=${limit}`
+                , {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+            if (!response.ok) {
+                throw new Error('Failed to fetch paginated users');
+            }
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Role CRUD operations
 export const saveRole = createAsyncThunk(
     'management/saveRole',
@@ -113,7 +134,7 @@ export const saveRole = createAsyncThunk(
             if (!userId) {
                 throw new Error('User ID not found');
             }
-            const url = isUpdate ? `${baseUrl}/roles/${roleId}/${userId}` :`${baseUrl}/roles/${userId}`;
+            const url = isUpdate ? `${baseUrl}/roles/${roleId}/${userId}` : `${baseUrl}/roles/${userId}`;
 
             const method = isUpdate ? 'PUT' : 'POST';
             const response = await fetch(url, {
@@ -177,7 +198,7 @@ export const saveSection = createAsyncThunk(
                 : `${baseUrl}/section/${userId}`;
 
             const method = isUpdate ? 'PUT' : 'POST';
-
+            console.log(sectionData)
             const response = await fetch(url, {
                 method,
                 credentials: 'include',
@@ -185,7 +206,7 @@ export const saveSection = createAsyncThunk(
                 body: JSON.stringify({
                     section: sectionData.section,
                     publicId: sectionData.publicId,
-                    addedUsers: sectionData.users,
+                    addedUsers: sectionData.addedUsers,
                     deletedUsers: sectionData.deletedUsers
                 }),
             });
@@ -251,7 +272,7 @@ export const saveProfile = createAsyncThunk(
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     ...profileData,
-                    addedUsers: profileData.users,
+                    addedUsers: profileData.addedUsers,
                     deletedUsers: profileData.deletedUsers
                 }),
             });
@@ -333,7 +354,14 @@ const managementSlice = createSlice({
         pageSize: 10,
         saveLoading: false,
         saveError: null,
-        saveSuccess: false
+        saveSuccess: false,
+        minPriority: 10,
+        maxPriority: 90,
+        currentAdminPage: 0,
+        adminPageSize: 10,
+        currentManagementPage: 0,
+        currentManagementSize: 10,
+        paginatedAdmins: null
     },
     reducers: {
         setCurrentPage: (state, action) => {
@@ -346,7 +374,25 @@ const managementSlice = createSlice({
             state.saveLoading = false;
             state.saveError = null;
             state.saveSuccess = false;
-        }
+        },
+        setMinPriority: (state, action) => {
+            state.minPriority = action.payload;
+        },
+        setMaxPriority: (state, action) => {
+            state.maxPriority = action.payload;
+        },
+        setCurrentAdminPage: (state, action) => {
+            state.currentAdminPage = action.payload;
+        },
+        setAdminPageSize: (state, action) => {
+            state.adminPageSize = action.payload;
+        },
+        setCurrentManagementPage: (state, action) => {
+            state.currentManagementPage = action.payload;
+        },
+        setCurrentManagementSize: (state, action) => {
+            state.currentManagementSize = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -412,7 +458,20 @@ const managementSlice = createSlice({
                 state.error = action.payload;
             })
 
-            // Save role
+            // Fetch paginated admins
+            .addCase(fetchPaginatedAdmins.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchPaginatedAdmins.fulfilled, (state, action) => {
+                state.loading = false;
+                state.paginatedAdmins = action.payload;
+            })
+            .addCase(fetchPaginatedAdmins.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
             .addCase(saveRole.pending, (state) => {
                 state.saveLoading = true;
                 state.saveError = null;
@@ -518,5 +577,16 @@ const managementSlice = createSlice({
     }
 });
 
-export const {setCurrentPage, setPageSize, resetSaveStatus} = managementSlice.actions;
+export const {
+    setCurrentPage,
+    setPageSize,
+    resetSaveStatus,
+    setMinPriority,
+    setMaxPriority,
+    setCurrentAdminPage,
+    setAdminPageSize,
+    setCurrentManagementPage,
+    setCurrentManagementSize
+
+} = managementSlice.actions;
 export default managementSlice.reducer;

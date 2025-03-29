@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -34,7 +35,9 @@ public class RoleEntity implements Serializable {
     @JoinTable(name = "roles_authorities",
             joinColumns = @JoinColumn(name = "roles_id"),
             inverseJoinColumns = @JoinColumn(name = "authorities_id", nullable = false))
-    private Collection<AuthorityEntity> authorities;
+    private Collection<AuthorityEntity> authorities =  new ArrayList<>();;
+
+    @Column(name = "priority")
     private int priority;
     public RoleEntity() {
     }

@@ -16,6 +16,7 @@ import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
 import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
 import com.slt.peotv.userservice.lms.utils.ImplUtils;
+import com.slt.peotv.userservice.lms.utils.RoleService;
 import com.slt.peotv.userservice.lms.utils.UserMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -74,6 +76,8 @@ public class UserServiceImpl implements UserService {
     private RedisService redisService;
     @Autowired
     private AddressRepository addressRepository;
+    @Autowired
+    private RoleService roleService;
 
     private <T> void updateFieldIfNotNull(T value, java.util.function.Consumer<T> setter) {
         if (value != null) {
@@ -90,7 +94,7 @@ public class UserServiceImpl implements UserService {
         if (userEntity == null) {
             throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
         }
-        String publicUserId = idUtils.generateUserId(30);
+        String publicUserId = idUtils.generateId(30);
         userEntity.setUserId(publicUserId);
         userEntity.setJoin_date(new Date());
         userEntity.setRoaster(user.getRoaster());
@@ -124,7 +128,7 @@ public class UserServiceImpl implements UserService {
             for (AddressDTO addressDto : user.getAddresses()) {
                 AddressEntity addressEntity = UserMapper.mapToAddressEntity_(addressDto);
                 addressEntity.setUserDetails(userEntity);
-                String publicAddressId = idUtils.generateUserId(30);
+                String publicAddressId = idUtils.generateId(30);
                 addressEntity.setAddressId(publicAddressId);
                 addressEntity.setIsDefault(addressDto.getIsDefault());
                 addressEntities.add(addressEntity);
@@ -210,6 +214,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Deprecated
     public UserDto updateUserProfile(MultipartFile file, String userid) throws Exception {
         UserEntity user = userRepository.findByUserId(userid);
         if (user == null) {
@@ -219,7 +224,7 @@ public class UserServiceImpl implements UserService {
         Path uploadPath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
         Files.createDirectories(uploadPath);
 
-        String fileName = idUtils.generateUserId(10) + file.getOriginalFilename();
+        String fileName = idUtils.generateId(10) + file.getOriginalFilename();
         user.setProfilePic(fileName);
 
         Path filePath = uploadPath.resolve(Objects.requireNonNull(fileName));
@@ -464,7 +469,7 @@ public class UserServiceImpl implements UserService {
             } else {
                 addressEntity = new AddressEntity();
                 addressEntity.setUserDetails(userEntity);
-                addressEntity.setAddressId(idUtils.generateAddressId(10));
+                addressEntity.setAddressId(idUtils.generateId(10));
             }
 
             addressEntity.setCity(addressDto.getCity());
@@ -776,6 +781,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Deprecated
     public RoleDTO saveRole(RoleReq req) {
         RoleEntity roleEntity = roleRepository.findByName(req.getName());
         if (roleEntity == null) {
@@ -788,7 +794,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public RoleDTOArchive saveRole_(RoleReq req) {
+    public RoleDTOArchive saveRoleV1(RoleReq req) {
         if (req == null) {
             throw new IllegalArgumentException("Role request cannot be null");
         }
@@ -806,6 +812,11 @@ public class UserServiceImpl implements UserService {
 
         RoleEntity savedEntity = roleRepository.save(entityToSave);
         return UserMapper.mapToRoleDTO_(savedEntity);
+    }
+
+    @Override
+    public RoleDTOArchive saveRoleV2(RoleReq req) {
+        return roleService.saveRole_(req);
     }
 
     @Override
@@ -856,67 +867,128 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Section request cannot be null");
         }
 
-        Optional<SectionEntity> sectionEntity = Optional.empty();
+        // Use section name as synchronization key
+        final String lockKey = StringUtils.hasText(req.getPublicId())
+                ? req.getPublicId()
+                : req.getSection();
 
-        if (StringUtils.hasText(req.getPublicId())) {
-            sectionEntity = sectionRepo.findByPublicId(req.getPublicId());
-        }
+        synchronized (lockKey.intern()) { // String.intern() for global lock
+            Optional<SectionEntity> sectionEntity = findExistingSection(req);
 
-        if (sectionEntity.isEmpty() && StringUtils.hasText(req.getSection())) {
-            sectionEntity = Optional.ofNullable(sectionRepo.findBySection(req.getSection()));
-        }
+            SectionEntity entityToSave = sectionEntity
+                    .map(existingEntity -> updateExistingSection(req, existingEntity))
+                    .orElseGet(() -> createNewSectionEntity(req));
 
-        // Process the entity (update existing or create new)
-        SectionEntity entityToSave = sectionEntity
-                .map(existingEntity -> {
-                    synchronized (existingEntity) {
-                        removeDeletedUsers(req, existingEntity);
-                        if (StringUtils.hasText(req.getSection())) {
-                            existingEntity.setSection(req.getSection());
-                        }
-                        return existingEntity;
-                    }
-                })
-                .orElseGet(() -> createNewSectionEntity(req));
-
-        // Save and return
-        synchronized (sectionRepo) {
             return UserMapper.mapToSectionDTO(sectionRepo.save(entityToSave));
+        }
+    }
+
+    private Optional<SectionEntity> findExistingSection(SectionReq req) {
+        if (StringUtils.hasText(req.getPublicId())) {
+            return sectionRepo.findByPublicId(req.getPublicId());
+        }
+        if (StringUtils.hasText(req.getSection())) {
+            return Optional.ofNullable(sectionRepo.findBySection(req.getSection()));
+        }
+        return Optional.empty();
+    }
+
+    private SectionEntity updateExistingSection(SectionReq req, SectionEntity existingEntity) {
+        // Process in atomic operation
+        synchronized (existingEntity) {
+            if (req.getDeletedUsers() != null) {
+                removeDeletedUsers(req, existingEntity);
+            }
+            if (req.getAddedUsers() != null) {
+                addNewUsers(req, existingEntity);
+            }
+            if (StringUtils.hasText(req.getSection())) {
+                existingEntity.setSection(req.getSection());
+            }
+            return existingEntity;
         }
     }
 
     private void removeDeletedUsers(SectionReq req, SectionEntity sectionEntity) {
         req.getDeletedUsers().forEach(userId -> {
-            boolean removed = sectionEntity.getUsers().removeIf(user -> user.getUserId().equals(userId));
-            if (removed) {
-                synchronized (userRepository) {
-                    UserEntity userEntity = userRepository.findByUserId(userId);
-                    if (userEntity != null) {
-                        userEntity.getSections().removeIf(role -> role.getSection().equals(sectionEntity.getSection()));
-                        userRepository.save(userEntity); // Update the user entity
+            UserEntity user = null;
+            synchronized (userRepository) {
+                user = userRepository.findByUserId(userId);
+            }
+
+            if (user != null) {
+                synchronized (user) {
+                    // Remove from section
+                    boolean removed = sectionEntity.getUsers().removeIf(u -> u.getUserId().equals(userId));
+
+                    // Remove from user
+                    if (removed) {
+                        user.getSections().removeIf(s -> s.getPublicId().equals(sectionEntity.getPublicId()));
+                        synchronized (userRepository) {
+                            userRepository.save(user);
+                        }
                     }
                 }
             }
-            System.out.println("User removed: " + removed);
+        });
+    }
+
+    private void addNewUsers(SectionReq req, SectionEntity sectionEntity) {
+        Set<String> existingUserIds = sectionEntity.getUsers().stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+
+        req.getAddedUsers().forEach(userId -> {
+            if (!existingUserIds.contains(userId)) {
+                UserEntity user = null;
+                synchronized (userRepository) {
+                    user = userRepository.findByUserId(userId);
+                }
+
+                if (user != null) {
+                    synchronized (user) {
+                        // Add to section
+                        sectionEntity.getUsers().add(user);
+
+                        // Add to user
+                        user.getSections().add(sectionEntity);
+                        synchronized (userRepository) {
+                            userRepository.save(user);
+                        }
+                    }
+                }
+            }
         });
     }
 
     private SectionEntity createNewSectionEntity(SectionReq req) {
         SectionEntity sectionEntity = new SectionEntity();
-        sectionEntity.setPublicId(idUtils.generateUserId(10));
-        List<UserEntity> userEntities = new CopyOnWriteArrayList<>();
+        sectionEntity.setPublicId(idUtils.generateId(10));
         sectionEntity.setSection(req.getSection());
-        if (req.getAddedUsers() != null && !req.getAddedUsers().isEmpty()) {
+
+        if (req.getAddedUsers() != null) {
+            List<UserEntity> users = new CopyOnWriteArrayList<>();
             req.getAddedUsers().forEach(userId -> {
+                UserEntity user = null;
                 synchronized (userRepository) {
-                    UserEntity user = userRepository.findByUserId(userId);
-                    if (user != null) {
-                        userEntities.add(user);
+                    user = userRepository.findByUserId(userId);
+                }
+
+                if (user != null) {
+                    synchronized (user) {
+                        users.add(user);
+                        user.getSections().add(sectionEntity);
+                        synchronized (userRepository) {
+                            userRepository.save(user);
+                        }
                     }
                 }
             });
+            sectionEntity.setUsers(users);
+        } else {
+            sectionEntity.setUsers(Collections.emptyList());
         }
-        sectionEntity.setUsers(Collections.unmodifiableList(userEntities));
+
         return sectionEntity;
     }
 
@@ -946,72 +1018,115 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ProfilesDTO saveProfile(ProfileReq req) {
-        ProfilesEntity profilesEntity;
+        if (req == null) {
+            throw new IllegalArgumentException("Profile request cannot be null");
+        }
 
-        if (req.getPublicId() != null && !req.getPublicId().isEmpty()) {
-            // Fetch the existing profile by publicId
-            profilesEntity = profilesRepo.findByPublicId(req.getPublicId());
+        // Use profile publicId or name as synchronization key
+        final String lockKey = StringUtils.hasText(req.getPublicId())
+                ? req.getPublicId()
+                : "NEW_PROFILE_" + System.currentTimeMillis();
 
-            if (profilesEntity == null) {
-                throw new NoSuchElementException("Profile not found with publicId: " + req.getPublicId());
+        synchronized (lockKey.intern()) {
+            ProfilesEntity profilesEntity = findOrCreateProfileEntity(req);
+
+            // Handle user modifications
+            if (req.getDeletedUsers() != null) {
+                removeUsersFromProfile(req.getDeletedUsers(), profilesEntity);
             }
 
-            // Update the existing profile entity with new data
-            if (req.getName() != null && !req.getName().isEmpty()) {
-                profilesEntity.setName(req.getName());
+            if (req.getAddedUsers() != null) {
+                addUsersToProfile(req.getAddedUsers(), profilesEntity);
             }
-        } else {
-            // Create a new profile entity (create scenario)
-            profilesEntity = mapProfileReqToProfilesEntity(req);
-            profilesEntity.setPublicId(idUtils.generateUserId(10));
-        }
 
-        List<UserEntity> userEntities = new CopyOnWriteArrayList<>();
-
-        // Handle added users
-        if (req.getAddedUsers() != null && !req.getAddedUsers().isEmpty()) {
-            addUsersToProfile(req.getAddedUsers(), userEntities);
-        }
-
-        // Handle deleted users
-        if (req.getDeletedUsers() != null && !req.getDeletedUsers().isEmpty()) {
-            removeUsersFromProfile(req.getDeletedUsers(), profilesEntity);
-        }
-
-        // Save or update the profile entity
-        synchronized (profilesRepo) {
+            // Save and return
             return UserMapper.mapToProfilesDTO(profilesRepo.save(profilesEntity));
         }
     }
 
-    private void addUsersToProfile(List<String> addedUsers, List<UserEntity> userEntities) {
+    private ProfilesEntity findOrCreateProfileEntity(ProfileReq req) {
+        if (StringUtils.hasText(req.getPublicId())) {
+            ProfilesEntity entity = profilesRepo.findByPublicId(req.getPublicId());
+            if (entity == null) {
+                throw new NoSuchElementException("Profile not found with publicId: " + req.getPublicId());
+            }
+
+            // Update profile fields
+            if (StringUtils.hasText(req.getName())) {
+                entity.setName(req.getName());
+            }
+            // Add other field updates here...
+            updateProfileFields(entity, req);
+
+            return entity;
+        } else {
+            ProfilesEntity newEntity = mapProfileReqToProfilesEntity(req);
+            newEntity.setPublicId(idUtils.generateId(10));
+            return newEntity;
+        }
+    }
+
+    private void updateProfileFields(ProfilesEntity entity, ProfileReq req) {
+        // Update all profile fields in one place
+        if (req.getWorkStart() != null) entity.setWorkStart(req.getWorkStart());
+        if (req.getWorkEnds() != null) entity.setWorkEnds(req.getWorkEnds());
+        // Add all other field updates...
+    }
+
+    private void addUsersToProfile(List<String> addedUsers, ProfilesEntity profileEntity) {
+        // Get existing user IDs for quick lookup
+        Set<String> existingUserIds = profileEntity.getUsers().stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+
         addedUsers.forEach(userId -> {
-            synchronized (userRepository) {
-                UserEntity user = userRepository.findByUserId(userId);
+            if (!existingUserIds.contains(userId)) {
+                UserEntity user = null;
+                synchronized (userRepository) {
+                    user = userRepository.findByUserId(userId);
+                }
+
                 if (user != null) {
-                    userEntities.add(user);
+                    synchronized (user) {
+                        // Add to profile
+                        profileEntity.getUsers().add(user);
+
+                        // Add to user's profiles
+                        user.getProfiles().add(profileEntity);
+                        synchronized (userRepository) {
+                            userRepository.save(user);
+                        }
+                    }
                 }
             }
         });
     }
 
-    private void removeUsersFromProfile(List<String> deletedUsers, ProfilesEntity profilesEntity) {
+    private void removeUsersFromProfile(List<String> deletedUsers, ProfilesEntity profileEntity) {
         deletedUsers.forEach(userId -> {
+            UserEntity user = null;
             synchronized (userRepository) {
-                UserEntity user = userRepository.findByUserId(userId);
-                if (user != null) {
-                    // Remove the user from the profile
-                    profilesEntity.getUsers().removeIf(u -> u.getUserId().equals(userId));
-                    // Remove the profile from the user's profile list
-                    user.getProfiles().removeIf(profile -> profile.getPublicId().equals(profilesEntity.getPublicId()));
-                    userRepository.save(user); // Update the user entity
-                    profilesRepo.save(profilesEntity);
+                user = userRepository.findByUserId(userId);
+            }
+
+            if (user != null) {
+                synchronized (user) {
+                    // Remove from profile
+                    boolean removed = profileEntity.getUsers().removeIf(u -> u.getUserId().equals(userId));
+
+                    // Remove from user's profiles
+                    if (removed) {
+                        user.getProfiles().removeIf(p -> p.getPublicId().equals(profileEntity.getPublicId()));
+                        synchronized (userRepository) {
+                            userRepository.save(user);
+                        }
+                    }
                 }
             }
         });
     }
-
     @Override
     @Transactional
     public void deleteRole(Long roleId) {
@@ -1077,7 +1192,6 @@ public class UserServiceImpl implements UserService {
                     throw new UsernameNotFoundException("Temporary user not found with ID: " + user_id);
                 }
 
-                System.out.println("Found temporary user: " + tempUser.getUserId());
 
                 // Create UserEntity from TempUser
                 UserEntity userEntity = new UserEntity();
@@ -1127,6 +1241,26 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public Page<UserEntity> findByRolePriorityBetween(int max, int min, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return userRepository.findByRolePriorityBetween(max, min, pageable);
+    }
+
+    @Override
+    public Page<UserEntity> findByRolePriorityBetweenV1(int max, int min, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<RoleEntity> rolesPage = roleRepository.findRolesByPriorityBetween(min, max, pageable);
+
+        List<UserEntity> users = rolesPage.getContent().stream()
+                .map(RoleEntity::getUsers)
+                .flatMap(Collection::stream)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Create a new Page with the combined users
+        return new PageImpl<>(users, pageable, rolesPage.getTotalElements());
+    }
 
     @Override
     public List<String> getAllRoleNames() {

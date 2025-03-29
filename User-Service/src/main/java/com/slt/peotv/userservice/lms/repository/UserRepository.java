@@ -71,6 +71,22 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	)
 	Optional<Long> findUserIdByEmailAndPassword(
 			@Param("email") String email,
-			@Param("password") String rawPassword // Plaintext password (INSECURE)
+			@Param("password") String rawPassword
 	);
+
+	@Query("SELECT DISTINCT u FROM UserEntity u JOIN u.roles r WHERE r.priority >= :priority")
+	Page<UserEntity> findByRolePriorityGreaterThanEqual(
+			@Param("priority") int priority,
+			Pageable pageable);
+
+	@Query("SELECT DISTINCT u FROM UserEntity u JOIN u.roles r WHERE r.priority = :priority")
+	Page<UserEntity> findByRolePriority(
+			@Param("priority") int priority,
+			Pageable pageable);
+
+	@Query("SELECT DISTINCT u FROM UserEntity u JOIN u.roles r WHERE r.priority BETWEEN :minPriority AND :maxPriority")
+	Page<UserEntity> findByRolePriorityBetween(
+			@Param("minPriority") int minPriority,
+			@Param("maxPriority") int maxPriority,
+			Pageable pageable);
 }

@@ -10,7 +10,6 @@ import com.slt.peotv.userservice.lms.shared.model.request.RoleReq;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +31,7 @@ public class ImplUtils {
     @Transactional
     public RoleEntity updateRole(RoleReq req, RoleEntity roleEntity) {
         if (roleEntity.getPublicId() == null) {
-            roleEntity.setPublicId(idUtils.generateAddressId(10));
+            roleEntity.setPublicId(idUtils.generateId(10));
         }
         // Remove deleted authorities
         if (!req.getDeletedAuthorities().isEmpty()) {
@@ -102,7 +101,7 @@ public class ImplUtils {
     public RoleEntity saveRole_(RoleReq req) {
         // Create a new RoleEntity (local variable, no shared state)
         RoleEntity roleEntity = new RoleEntity();
-        roleEntity.setPublicId(idUtils.generateAddressId(10));
+        roleEntity.setPublicId(idUtils.generateId(10));
 
         // Use thread-safe collections for users and authorities
         List<UserEntity> userEntities = Collections.synchronizedList(new ArrayList<>());

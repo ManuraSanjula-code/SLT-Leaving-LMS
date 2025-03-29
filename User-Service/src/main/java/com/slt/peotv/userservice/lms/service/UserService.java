@@ -23,6 +23,7 @@ public interface UserService extends UserDetailsService{
 	UserDto getUser(String email);
 	UserDto getUserByUserId(String userId);
 	UserRest getUserByUserId_(String userId);
+	@Deprecated
 	UserDto updateUser(String userId, UserReq user) throws Exception;
 	void deleteUser(String userId);
 	List<UserDto> getUsers(int page, int limit);
@@ -42,8 +43,11 @@ public interface UserService extends UserDetailsService{
 	List<ProfilesDTO> getProfile();
 	List<Map<String, String>> getAuthority();
 
+	@Deprecated
 	RoleDTO saveRole(RoleReq req);
-	RoleDTOArchive saveRole_(RoleReq req);
+	RoleDTOArchive saveRoleV1(RoleReq req);
+	RoleDTOArchive saveRoleV2(RoleReq req);
+
 	AuthorityDTO saveAuthority(AuthReq authority);
 	SectionDTO saveSection(SectionReq req);
 	ProfilesDTO saveProfile(ProfileReq req);
@@ -59,4 +63,8 @@ public interface UserService extends UserDetailsService{
 	void deleteProfile(Long roleId);
 	UserDetails getUserDetailsByUserId(String userId);
 	public void rebalancePriorities();
+
+	Page<UserEntity> findByRolePriorityBetween(int max, int min,int page, int size);
+	Page<UserEntity> findByRolePriorityBetweenV1(int max, int min,int page, int size);
+
 }

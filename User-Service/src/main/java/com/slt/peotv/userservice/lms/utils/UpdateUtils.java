@@ -1,7 +1,10 @@
 package com.slt.peotv.userservice.lms.utils;
 
 import com.slt.peotv.userservice.lms.entity.AddressEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
 import com.slt.peotv.userservice.lms.repository.ProfilesRepo;
 import com.slt.peotv.userservice.lms.repository.RoleRepository;
@@ -11,12 +14,16 @@ import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
 import com.slt.peotv.userservice.lms.shared.dto.UserDto;
 import com.slt.peotv.userservice.lms.shared.model.request.UserReq;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 @Service
@@ -38,6 +45,7 @@ public class UpdateUtils {
     @Autowired
     private IdUtils idUtils;
 
+    @Deprecated
     public UserDto updateUser(String userId, UserDto userDto) {
         // Find the user entity by userId
         UserEntity userEntity = userRepository.findByUserId(userId);
@@ -86,6 +94,7 @@ public class UpdateUtils {
         return UserMapper.mapToUserDto(updatedUserEntity);
     }
 
+    @Transactional
     public UserDto updateUser(String userId, UserReq userReq) {
         // Find the user entity by userId
         UserEntity userEntity = userRepository.findByUserId(userId);
@@ -129,7 +138,8 @@ public class UpdateUtils {
 
         // Update relationships in roles, sections, and profiles
         updateRelationships(updatedUserEntity);
-
+        updateAdditionalRelationships(updatedUserEntity, userReq);
+        handleAdminUpdates(updatedUserEntity, userReq);
         // Return the updated user as a DTO
         return UserMapper.mapToUserDto(updatedUserEntity);
     }
@@ -149,6 +159,60 @@ public class UpdateUtils {
                 logger.warn("Reference not found for value: {}", value);
             }
         }
+    }
+
+    @Transactional
+    public synchronized void handleAdminUpdates(UserEntity currentUser, UserReq userReq) throws UserServiceException {
+        // Check if both lists are null/empty
+        if ((userReq.getAddedAdmins() == null || userReq.getAddedAdmins().isEmpty()) &&
+                (userReq.getDeletedAdmins() == null || userReq.getDeletedAdmins().isEmpty())) {
+            return;
+        }
+
+        // Handle added admins
+        if (userReq.getAddedAdmins() != null && !userReq.getAddedAdmins().isEmpty()) {
+            for (String adminUserId : userReq.getAddedAdmins()) {
+                // Find the admin user in DB
+                UserEntity adminUser = userRepository.findByUserId(adminUserId);
+                if (adminUser == null) {
+                    throw new UserServiceException("Admin user with ID " + adminUserId + " not found");
+                }
+
+                // Check if user is already in administratives (thread-safe check)
+                synchronized (currentUser) {
+                    List<UserEntity> administratives = currentUser.getAdministratives();
+                    if (administratives != null && !administratives.contains(adminUser)) {
+                        administratives.add(adminUser);
+                        adminUser.setAdminUser(currentUser); // Set the reverse relationship
+                        userRepository.save(adminUser); // Save the admin user with new relationship
+                    }
+                }
+            }
+        }
+
+        // Handle deleted admins
+        if (userReq.getDeletedAdmins() != null && !userReq.getDeletedAdmins().isEmpty()) {
+            for (String adminUserId : userReq.getDeletedAdmins()) {
+                // Find the admin user in DB
+                UserEntity adminUser = userRepository.findByUserId(adminUserId);
+                if (adminUser == null) {
+                    throw new UserServiceException("Admin user with ID " + adminUserId + " not found");
+                }
+
+                // Remove from administratives if present (thread-safe operation)
+                synchronized (currentUser) {
+                    List<UserEntity> administratives = currentUser.getAdministratives();
+                    if (administratives != null && administratives.contains(adminUser)) {
+                        administratives.remove(adminUser);
+                        adminUser.setAdminUser(null); // Remove the reverse relationship
+                        userRepository.save(adminUser); // Save the admin user with removed relationship
+                    }
+                }
+            }
+        }
+
+        // Save the current user with updated administratives
+        userRepository.save(currentUser);
     }
 
     private void updateAddresses(List<AddressDTO> newAddressDtos, UserEntity userEntity, UserReq userReq) {
@@ -183,7 +247,7 @@ public class UpdateUtils {
                 // Create new address
                 AddressEntity newAddress = UserMapper.mapToAddressEntity(dto);
                 newAddress.setUserDetails(userEntity);
-                newAddress.setAddressId(idUtils.generateUserId(30));
+                newAddress.setAddressId(idUtils.generateId(30));
                 newAddress.setDefault(dto.isDefault());
                 existingAddresses.add(newAddress);
             }
@@ -195,46 +259,6 @@ public class UpdateUtils {
             if (!existingAddresses.isEmpty()) {
                 existingAddresses.get(0).setDefault(true);
             }
-        }
-    }
-
-    private void processAddress(AddressDTO dto, List<AddressEntity> existingAddresses, UserEntity userEntity) {
-        // Try to find existing address by ID
-        AddressEntity existingAddress = dto.getAddressId() != null ?
-                existingAddresses.stream()
-                        .filter(addr -> addr.getAddressId().equals(dto.getAddressId()))
-                        .findFirst()
-                        .orElse(null) :
-                null;
-
-        // If no ID match, try to find by content
-        if (existingAddress == null) {
-            existingAddress = findAddressByContent(dto, existingAddresses);
-        }
-
-        if (existingAddress != null) {
-            // Update existing address
-            updateExistingAddress(existingAddress, dto);
-        } else {
-            // Create new address
-            addNewAddress(dto, existingAddresses, userEntity, false);
-        }
-    }
-
-    private void processDefaultAddress(AddressDTO dto, List<AddressEntity> existingAddresses, UserEntity userEntity) {
-        // First unset all existing defaults
-        existingAddresses.forEach(addr -> addr.setDefault(false));
-
-        // Try to find if this default address matches an existing one
-        AddressEntity existingDefault = findExistingDefault(dto, existingAddresses);
-
-        if (existingDefault != null) {
-            // Update the existing address to be default
-            updateExistingAddress(existingDefault, dto);
-            existingDefault.setDefault(true);
-        } else {
-            // Add new default address
-            addNewAddress(dto, existingAddresses, userEntity, true);
         }
     }
 
@@ -266,28 +290,6 @@ public class UpdateUtils {
         existing.setCountry(dto.getCountry());
         existing.setStreetName(dto.getStreetName());
         existing.setPostalCode(dto.getPostalCode());
-    }
-
-    private void addNewAddress(AddressDTO dto, List<AddressEntity> existingAddresses,
-                               UserEntity userEntity, boolean isDefault) {
-        AddressEntity newAddress = UserMapper.mapToAddressEntity(dto);
-        newAddress.setUserDetails(userEntity);
-        newAddress.setAddressId(idUtils.generateUserId(30));
-        newAddress.setDefault(isDefault);
-        existingAddresses.add(newAddress);
-    }
-
-    private void updateAddresses_(List<AddressDTO> addressDtos, UserEntity userEntity) {
-        if (addressDtos != null && !addressDtos.isEmpty()) {
-            List<AddressEntity> addresses = userEntity.getAddresses();
-            addressDtos.forEach(dto -> {
-                AddressEntity addressEntity = UserMapper.mapToAddressEntity(dto);
-                addressEntity.setUserDetails(userEntity);
-                addressEntity.setAddressId(idUtils.generateUserId(30));
-                addresses.add(addressEntity);
-            });
-            userEntity.setAddresses(addresses);
-        }
     }
 
     private <T, R> void updateCollectionField(Collection<T> values, Function<T, R> finder, Collection<R> existingCollection, java.util.function.Consumer<Collection<R>> setter) {
@@ -325,5 +327,168 @@ public class UpdateUtils {
             role.getUsers().add(userEntity);
             roleRepository.save(role);
         });
+    }
+    private synchronized void updateAdditionalRelationships(UserEntity userEntity, UserReq userReq) {
+        if (userReq.getAdditional() != null) {
+            logger.info("Processing additional relationships for user: {}", userEntity.getUserId());
+
+            // Refresh the user entity to ensure we have the latest version
+            UserEntity refreshedUser = userRepository.findById(userEntity.getId())
+                    .orElseThrow(() -> new UserServiceException("User not found during update"));
+
+            // Process additions first
+            processAdditions(refreshedUser, userReq.getAdditional());
+
+            // Then process deletions
+            processDeletions(refreshedUser, userReq.getAdditional());
+
+            // Save the changes
+            userRepository.save(refreshedUser);
+            logger.info("Successfully updated additional relationships for user: {}", refreshedUser.getUserId());
+        }
+    }
+
+    private synchronized void processAdditions(UserEntity userEntity, UserReq.Additional additional) {
+        if (additional.getAddedRoles() != null && !additional.getAddedRoles().isEmpty()) {
+            logger.info("Adding roles: {}", additional.getAddedRoles());
+            addRolesByName(userEntity, additional.getAddedRoles());
+        }
+        if (additional.getAddedSelections() != null && !additional.getAddedSelections().isEmpty()) {
+            logger.info("Adding sections: {}", additional.getAddedSelections());
+            addSectionsByName(userEntity, additional.getAddedSelections());
+        }
+        if (additional.getAddedProfiles() != null && !additional.getAddedProfiles().isEmpty()) {
+            logger.info("Adding profiles: {}", additional.getAddedProfiles());
+            addProfilesByName(userEntity, additional.getAddedProfiles());
+        }
+    }
+
+    private synchronized void processDeletions(UserEntity userEntity, UserReq.Additional additional) {
+        if (additional.getDeleteRoles() != null && !additional.getDeleteRoles().isEmpty()) {
+            logger.info("Removing roles: {}", additional.getDeleteRoles());
+            removeRolesByName(userEntity, additional.getDeleteRoles());
+        }
+        if (additional.getDeleteSelections() != null && !additional.getDeleteSelections().isEmpty()) {
+            logger.info("Removing sections: {}", additional.getDeleteSelections());
+            removeSectionsByName(userEntity, additional.getDeleteSelections());
+        }
+        if (additional.getDeleteProfiles() != null && !additional.getDeleteProfiles().isEmpty()) {
+            logger.info("Removing profiles: {}", additional.getDeleteProfiles());
+            removeProfilesByName(userEntity, additional.getDeleteProfiles());
+        }
+    }
+
+    // Role operations
+    private synchronized void addRolesByName(UserEntity userEntity, List<String> roleNames) {
+        List<RoleEntity> currentRoles = new ArrayList<>(userEntity.getRoles());
+
+        roleNames.forEach(roleName -> {
+            if (currentRoles.stream().noneMatch(r -> r.getName().equals(roleName))) {
+                RoleEntity role = roleRepository.findByName(roleName);
+                if (role != null) {
+                    currentRoles.add(role);
+                    if (!role.getUsers().contains(userEntity)) {
+                        role.getUsers().add(userEntity);
+                        roleRepository.save(role);
+                    }
+                } else {
+                    logger.warn("Role not found: {}", roleName);
+                }
+            }
+        });
+
+        userEntity.setRoles(currentRoles);
+    }
+
+    private synchronized void removeRolesByName(UserEntity userEntity, List<String> roleNames) {
+        List<RoleEntity> currentRoles = new ArrayList<>(userEntity.getRoles());
+        List<RoleEntity> rolesToRemove = new ArrayList<>();
+
+        currentRoles.forEach(role -> {
+            if (roleNames.contains(role.getName())) {
+                rolesToRemove.add(role);
+                role.getUsers().removeIf(u -> u.getUserId().equals(userEntity.getUserId()));
+                roleRepository.save(role);
+            }
+        });
+
+        currentRoles.removeAll(rolesToRemove);
+        userEntity.setRoles(currentRoles);
+    }
+
+    // Section operations
+    private synchronized void addSectionsByName(UserEntity userEntity, List<String> sectionNames) {
+        List<SectionEntity> currentSections = new ArrayList<>(userEntity.getSections());
+
+        sectionNames.forEach(sectionName -> {
+            if (currentSections.stream().noneMatch(s -> s.getSection().equals(sectionName))) {
+                SectionEntity section = sectionRepo.findBySection(sectionName);
+                if (section != null) {
+                    currentSections.add(section);
+                    if (!section.getUsers().contains(userEntity)) {
+                        section.getUsers().add(userEntity);
+                        sectionRepo.save(section);
+                    }
+                } else {
+                    logger.warn("Section not found: {}", sectionName);
+                }
+            }
+        });
+
+        userEntity.setSections(currentSections);
+    }
+
+    private synchronized void removeSectionsByName(UserEntity userEntity, List<String> sectionNames) {
+        List<SectionEntity> currentSections = new ArrayList<>(userEntity.getSections());
+        List<SectionEntity> sectionsToRemove = new ArrayList<>();
+
+        currentSections.forEach(section -> {
+            if (sectionNames.contains(section.getSection())) {
+                sectionsToRemove.add(section);
+                section.getUsers().removeIf(u -> u.getUserId().equals(userEntity.getUserId()));
+                sectionRepo.save(section);
+            }
+        });
+
+        currentSections.removeAll(sectionsToRemove);
+        userEntity.setSections(currentSections);
+    }
+
+    // Profile operations
+    private synchronized void addProfilesByName(UserEntity userEntity, List<String> profileNames) {
+        List<ProfilesEntity> currentProfiles = new ArrayList<>(userEntity.getProfiles());
+
+        profileNames.forEach(profileName -> {
+            if (currentProfiles.stream().noneMatch(p -> p.getName().equals(profileName))) {
+                ProfilesEntity profile = profilesRepo.findByName(profileName);
+                if (profile != null) {
+                    currentProfiles.add(profile);
+                    if (!profile.getUsers().contains(userEntity)) {
+                        profile.getUsers().add(userEntity);
+                        profilesRepo.save(profile);
+                    }
+                } else {
+                    logger.warn("Profile not found: {}", profileName);
+                }
+            }
+        });
+
+        userEntity.setProfiles(currentProfiles);
+    }
+
+    private synchronized void removeProfilesByName(UserEntity userEntity, List<String> profileNames) {
+        List<ProfilesEntity> currentProfiles = new ArrayList<>(userEntity.getProfiles());
+        List<ProfilesEntity> profilesToRemove = new ArrayList<>();
+
+        currentProfiles.forEach(profile -> {
+            if (profileNames.contains(profile.getName())) {
+                profilesToRemove.add(profile);
+                profile.getUsers().removeIf(u -> u.getUserId().equals(userEntity.getUserId()));
+                profilesRepo.save(profile);
+            }
+        });
+
+        currentProfiles.removeAll(profilesToRemove);
+        userEntity.setProfiles(currentProfiles);
     }
 }

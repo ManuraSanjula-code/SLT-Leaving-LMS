@@ -1,7 +1,7 @@
 // components/management/RoleForm.js
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Box,
     Button,
@@ -20,19 +20,20 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import {Delete, Edit, Search} from "@mui/icons-material";
-import {useDispatch, useSelector} from 'react-redux';
-import {deleteRole, fetchManagementData, saveRole} from '../../../store/managementSlice';
+import { Delete, Edit, Search } from "@mui/icons-material";
+import { useDispatch, useSelector } from 'react-redux';
+import { deleteRole, fetchManagementData, saveRole } from '../../../store/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
+import ReactDOM from 'react-dom';
 
-const RoleForm = ({onSubmit}) => {
+const RoleForm = ({ onSubmit }) => {
     const dispatch = useDispatch();
-    const {data, loading, error, saveLoading, saveError, saveSuccess} = useSelector(state => state.management);
+    const { data, loading, error, saveLoading, saveError, saveSuccess } = useSelector(state => state.management);
 
     const [openDialog, setOpenDialog] = useState(false);
     const [currentRole, setCurrentRole] = useState(null);
-    const [formData, setFormData] = useState({name: "", priority: "", publicId: "", users: [], authorities: []});
+    const [formData, setFormData] = useState({ name: "", priority: "", publicId: "", users: [], authorities: [] });
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [selectedAuthorities, setSelectedAuthorities] = useState([]);
     const [deletedUsers, setDeletedUsers] = useState([]);
@@ -63,7 +64,7 @@ const RoleForm = ({onSubmit}) => {
 
     const handleOpenDialog = useCallback((role = null) => {
         setCurrentRole(role);
-        setFormData(role || {name: "", priority: 0, publicId: "", users: [], authorities: []});
+        setFormData(role || { name: "", priority: 0, publicId: "", users: [], authorities: [] });
 
         if (role) {
             const roleUserIds = role.users.map(user => user.userId);
@@ -85,7 +86,7 @@ const RoleForm = ({onSubmit}) => {
     const handleCloseDialog = useCallback(() => {
         setOpenDialog(false);
         setCurrentRole(null);
-        setFormData({name: "", priority: 0, publicId: "", users: [], authorities: []});
+        setFormData({ name: "", priority: 0, publicId: "", users: [], authorities: [] });
         setSelectedUsers([]);
         setSelectedAuthorities([]);
         setDeletedUsers([]);
@@ -95,28 +96,37 @@ const RoleForm = ({onSubmit}) => {
     }, []);
 
     const handleChange = useCallback((e) => {
-        const {name, value} = e.target;
-        setFormData(prev => ({...prev, [name]: value}));
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     }, []);
 
-    const handleUserSelection = useCallback((userId) => {
-        setSelectedUsers(prev =>
-            prev.includes(userId)
-                ? prev.filter(id => id !== userId)
-                : [...prev, userId]
-        );
-    }, []);
 
-    const handleAuthoritySelection = useCallback((authorityId) => {
-        setSelectedAuthorities(prev =>
-            prev.includes(authorityId)
-                ? prev.filter(id => id !== authorityId)
-                : [...prev, authorityId]
-        );
-    }, []);
+
+    const handleAuthoritySelection = (authorityId) => {
+        if (selectedAuthorities.includes(authorityId)) {
+            // Authority is being unchecked, add to deletedAuthorities
+            setSelectedAuthorities((prev) => prev.filter((id) => id !== authorityId));
+            setDeletedAuthorities((prev) => [...prev, authorityId]);
+        } else {
+            // Authority is being checked, remove from deletedAuthorities if present
+            setSelectedAuthorities((prev) => [...prev, authorityId]);
+            setDeletedAuthorities((prev) => prev.filter((id) => id !== authorityId));
+        }
+    };
+
+    const handleUserSelection = (userId) => {
+        if (selectedUsers.includes(userId)) {
+            setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+            setDeletedUsers((prev) => [...prev, userId]);
+        } else {
+            // User is being checked, remove from deletedUsers if present deletedAuthorities
+            setSelectedUsers((prev) => [...prev, userId]);
+            setDeletedUsers((prev) => prev.filter((id) => id !== userId));
+        }
+    };
 
     const validateForm = useCallback(() => {
-        const errors = {name: '', authorities: '', priority: ''};
+        const errors = { name: '', authorities: '', priority: '' };
         let isValid = true;
 
         if (!formData.name.trim()) {
@@ -142,12 +152,19 @@ const RoleForm = ({onSubmit}) => {
     const handleSubmit = useCallback(async () => {
         if (!validateForm()) return;
 
+        const addedUsers = selectedUsers
+            .filter(userId => !currentRole?.users.some(user => user.userId === userId))
+            .map(userId => data.users.find(user => user.userId === userId));
+
+        const addedAuthorities = selectedAuthorities
+            .filter((authorityId) => !currentRole?.authorities.some((authority) => authority.id === authorityId));
+
         const roleData = {
             name: formData.name,
             deletedUsers,
-            addedUsers: selectedUsers,
+            addedUsers: addedUsers.map((user) => user.userId),
             deletedAuthorities,
-            addedAuthorities: selectedAuthorities,
+            addedAuthorities: addedAuthorities,
             priority: parseInt(formData.priority),
         };
 
@@ -193,7 +210,7 @@ const RoleForm = ({onSubmit}) => {
     }, [data?.users, searchQuery]);
 
     const paginatedUsers = useMemo(() =>
-            filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage),
+        filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage),
         [filteredUsers, userPage]);
 
     const paginatedAuthorities = useMemo(() => {
@@ -246,10 +263,10 @@ const RoleForm = ({onSubmit}) => {
                                 secondary={`Authorities: ${role.authorities?.map(auth => auth.name).join(", ")}`}
                             />
                             <IconButton onClick={() => handleOpenDialog(role)}>
-                                <Edit/>
+                                <Edit />
                             </IconButton>
                             <IconButton onClick={() => handleDelete(role.id)}>
-                                <Delete/>
+                                <Delete />
                             </IconButton>
                         </ListItem>
                     ))}
@@ -261,7 +278,7 @@ const RoleForm = ({onSubmit}) => {
                         <Typography variant="h6" gutterBottom>
                             Role Details
                         </Typography>
-                        <Box sx={{display: "flex", flexWrap: "wrap", gap: 2}}>
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
                             <TextField
                                 label="Name"
                                 name="name"
@@ -294,10 +311,10 @@ const RoleForm = ({onSubmit}) => {
                             />
                         </Box>
 
-                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
+                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                             Assigned Authorities
                         </Typography>
-                        <Box sx={{maxHeight: "300px", overflowY: "auto"}}>
+                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
                             <List>
                                 {paginatedAuthorities.map(authority => (
                                     <ListItem key={authority.id}>
@@ -307,7 +324,7 @@ const RoleForm = ({onSubmit}) => {
                                                 onChange={() => handleAuthoritySelection(parseInt(authority.id))}
                                             />
                                         </ListItemIcon>
-                                        <ListItemText primary={authority.name}/>
+                                        <ListItemText primary={authority.name} />
                                     </ListItem>
                                 ))}
                             </List>
@@ -315,11 +332,11 @@ const RoleForm = ({onSubmit}) => {
                                 count={Math.ceil(data?.authorities?.length / usersPerPage) || 1}
                                 page={authPage}
                                 onChange={(e, value) => setAuthPage(value)}
-                                sx={{mt: 2, display: "flex", justifyContent: "center"}}
+                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
                             />
                         </Box>
 
-                        <Typography variant="h6" gutterBottom sx={{mt: 3}}>
+                        <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
                             Assigned Users
                         </Typography>
                         <TextField
@@ -331,12 +348,12 @@ const RoleForm = ({onSubmit}) => {
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <Search/>
+                                        <Search />
                                     </InputAdornment>
                                 ),
                             }}
                         />
-                        <Box sx={{maxHeight: "300px", overflowY: "auto"}}>
+                        <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
                             <List>
                                 {paginatedUsers.map(user => (
                                     <ListItem key={user.userId}>
@@ -356,7 +373,7 @@ const RoleForm = ({onSubmit}) => {
                                 count={Math.ceil(filteredUsers.length / usersPerPage)}
                                 page={userPage}
                                 onChange={(e, value) => setUserPage(value)}
-                                sx={{mt: 2, display: "flex", justifyContent: "center"}}
+                                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
                             />
                         </Box>
                     </DialogContent>

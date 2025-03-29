@@ -1,7 +1,9 @@
 package com.slt.peotv.userservice.lms.contoller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.slt.peotv.userservice.lms.entity.TempUser;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
@@ -14,12 +16,14 @@ import com.slt.peotv.userservice.lms.shared.dto.*;
 import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.*;
 import com.slt.peotv.userservice.lms.utils.UpdateUtils;
+import com.slt.peotv.userservice.lms.utils.UserReqDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.repository.query.Param;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
@@ -121,13 +125,13 @@ public class UserController {
     /// -------------------------------- ROLE ------------------------------------ START *********
     @RequestMapping(value = "/roles/{userid}", method = {RequestMethod.POST})
     public RoleDTOArchive createARole(@RequestBody RoleReq req, @PathVariable String userid) {
-        return userService.saveRole_(req);
+        return userService.saveRoleV1(req);
     }
 
     @RequestMapping(value = "/roles/{roleId}/{userid}", method = {RequestMethod.PUT})
     public RoleDTOArchive updateARole(@RequestBody RoleReq req, @PathVariable String roleId, @PathVariable String userid) {
         req.setRoleId(roleId);
-        return userService.saveRole_(req);
+        return userService.saveRoleV1(req);
     }
 
     @DeleteMapping("/delete/role/{id}/{userid}")
@@ -221,13 +225,39 @@ public class UserController {
     }
 
     @PutMapping(path = "/update/{employeeId}/{userid}")
+    @Deprecated
     public UserRest updateEmployee(
             @PathVariable String userid,
             @PathVariable String employeeId,
-            @RequestBody String rawJson  // Temporarily accept raw JSON
+            @RequestBody String rawJson
     ) throws JsonProcessingException {
         logger.info("Received JSON payload: {}", rawJson);
         UserReq userReq = new ObjectMapper().readValue(rawJson, UserReq.class);
+        UserDto updateUser = updateUtils.updateUser(employeeId, userReq);
+        return UserMapper.mapUserDtoToUserRest(updateUser);
+    }
+
+    @PutMapping(path = "/update/v2/{employeeId}/{userid}")
+    public UserRest updateEmployeeV2(
+            @PathVariable String userid,
+            @PathVariable String employeeId,
+            @RequestBody String rawJson
+    ) throws JsonProcessingException {
+        logger.info("Received JSON payload: {}", rawJson);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        // Register custom deserializer if needed
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(UserReq.class, new UserReqDeserializer());
+        mapper.registerModule(module);
+
+        // Parse with debugging
+        UserReq userReq = mapper.readValue(rawJson, UserReq.class);
+        logger.info("Parsed UserReq with additional: {}", userReq.getAdditional());
+        logger.info("Parsed UserReq : {}", userReq);
+
+
         UserDto updateUser = updateUtils.updateUser(employeeId, userReq);
         return UserMapper.mapUserDtoToUserRest(updateUser);
     }
@@ -266,12 +296,29 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("@prioritySecurity.hasAnyPriority(10, 200)")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,\n" +
+            "30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,\n" +
+            "50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,\n" +
+            "70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,\n" +
+            "90, 91, 92, 93, 94, 95, 96, 97, 98, 99,200)")
     public Page<UserEntity> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        System.out.println(" ========================== *****************");
         return userService.getAllUsers(page, size);
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,\n" +
+            "30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,\n" +
+            "50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,\n" +
+            "70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,\n" +
+            "90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 200)")
+    public Page<UserEntity> getAllAdmins(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "10", required = false) int minPriority,
+            @RequestParam(defaultValue = "99", required = false) int maxPriority) {
+        return userService.findByRolePriorityBetweenV1(maxPriority,minPriority, page, size);
     }
 
     @GetMapping(path = "/{addressId}/addresses", produces = {MediaType.APPLICATION_XML_VALUE,

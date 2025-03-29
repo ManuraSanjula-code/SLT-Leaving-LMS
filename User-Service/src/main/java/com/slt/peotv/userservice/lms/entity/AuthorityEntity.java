@@ -1,6 +1,7 @@
 package com.slt.peotv.userservice.lms.entity;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -29,7 +30,7 @@ public class AuthorityEntity implements Serializable {
 	@ManyToMany(mappedBy="authorities")
 	@JsonIgnore
 	@Column(nullable = false)
-	private Collection<RoleEntity> roles;
+	private Collection<RoleEntity> roles =  new ArrayList<>();;
 
 	private Integer weight;
 

@@ -7,10 +7,7 @@ import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Entity
 @Table(name = "users")
@@ -72,19 +69,19 @@ public class UserEntity implements Serializable {
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Column(nullable = false)
     @JoinTable(name = "user_sections", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "section_id"))
-    private Collection<SectionEntity> sections;
+    private Collection<SectionEntity> sections =  new ArrayList<>();;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "user_profiles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
     @Column(nullable = false)
-    private Collection<ProfilesEntity> profiles;
+    private Collection<ProfilesEntity> profiles =  new ArrayList<>();;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @Column(nullable = false)
-    private Collection<RoleEntity> roles;
+    private Collection<RoleEntity> roles =  new ArrayList<>();;
 
     @Column(nullable = false)
     private Date join_date;
@@ -100,6 +97,30 @@ public class UserEntity implements Serializable {
 
     @Column(nullable = false)
     private Boolean roaster;
+
+    @OneToMany(mappedBy = "adminUser", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    private List<UserEntity> administratives = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_user_id")
+    @JsonIgnore
+    private UserEntity adminUser;
+
+    public List<UserEntity> getAdministratives() {
+        return administratives;
+    }
+
+    public void setAdministratives(List<UserEntity> administratives) {
+        this.administratives = administratives;
+    }
+
+    public UserEntity getAdminUser() {
+        return adminUser;
+    }
+
+    public void setAdminUser(UserEntity adminUser) {
+        this.adminUser = adminUser;
+    }
 
     public UserEntity getOther() {
         return other;

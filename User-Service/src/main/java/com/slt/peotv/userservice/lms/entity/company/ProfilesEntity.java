@@ -1,6 +1,7 @@
 package com.slt.peotv.userservice.lms.entity.company;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -76,7 +77,7 @@ public class ProfilesEntity implements Serializable {
 
     @ManyToMany(mappedBy = "profiles")
 	@JsonIgnore
-    private Collection<UserEntity> users;
+    private Collection<UserEntity> users =  new ArrayList<>();;
 
     public Integer getId() {
         return id;

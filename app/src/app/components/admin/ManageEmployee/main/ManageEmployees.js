@@ -40,6 +40,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
     fetchManagementData,
     fetchPaginatedUsers,
+    fetchPaginatedAdmins,
     setCurrentPage,
     saveEmployee,
     resetSaveStatus,
@@ -61,10 +62,13 @@ const ManageEmployees = React.memo(() => {
     const {
         data: managementData,
         paginatedUsers,
+        paginatedAdmins,
         loading: isLoading,
         error,
         currentPage,
         pageSize,
+        currentAdminPage,
+        adminPageSize,
         saveLoading,
         saveError,
         saveSuccess,
@@ -99,6 +103,9 @@ const ManageEmployees = React.memo(() => {
         dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
     }, [currentPage, pageSize, dispatch]);
 
+    useEffect(() => {
+        dispatch(fetchPaginatedAdmins({ minPriority: 10, maxPriority: 99, page: currentAdminPage, limit: adminPageSize }));
+    }, [currentAdminPage, adminPageSize, dispatch]);
     // Handle save/delete status
     useEffect(() => {
         if (saveSuccess || deleteSuccess) {
@@ -113,6 +120,10 @@ const ManageEmployees = React.memo(() => {
             setErrorOpen(true);
         }
     }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize]);
+
+    useEffect(() => {
+        console.log(paginatedAdmins)
+    }, []);
 
     // Memoized filtered employees
     const filteredEmployees = useMemo(() => {
@@ -248,7 +259,6 @@ const ManageEmployees = React.memo(() => {
         { label: 'Section', onClick: () => handleOpenDialog_('section') },
         { label: 'Profiles Section', onClick: () => handleOpenDialog_('profile') },
         { label: 'Roles Section', onClick: () => handleOpenDialog_('role') },
-        { label: 'Routes Section', onClick: () => handleOpenDialog_('role') },
     ], [handleOpenDialog, handleOpenDialog_]);
 
     return (
@@ -478,6 +488,12 @@ const ManageEmployees = React.memo(() => {
                             profiles={managementData?.profileNames || []}
                             saveLoading={saveLoading}
                             initialData={initialFormData}
+
+                            paginatedAdmins={paginatedAdmins}
+                            currentAdminPage={currentAdminPage}
+                            adminPageSize={adminPageSize}
+                            isLoading={isLoading}
+
                         />
                     </Dialog>
                 </Box>

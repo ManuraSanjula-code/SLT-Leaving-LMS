@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {
     Button,
     Checkbox,
@@ -20,6 +20,8 @@ import {
     Typography,
 } from "@mui/material";
 import dynamic from 'next/dynamic';
+import { useDispatch } from 'react-redux';
+import { setCurrentAdminPage } from '../../../store/managementSlice';
 
 const EmployeeSelectionDialog = dynamic(() => import('./EmployeeSelectionDialog'), {
     ssr: false,
@@ -67,19 +69,29 @@ const INITIAL_FORM_DATA = {
     selectedSupervisor: {},
     selectedOtherEmployee: {},
     joiningDate: null,
-    deleteAddresses: []
+    deleteAddresses: [],
+    additional: {},
+    admins: [],
+    addedAdmins: [],
+    deletedAdmins: []
 };
 
 const EmployeeDialog = React.memo(({
-    open,
-    onClose,
-    onSave,
-    employee,
-    roles,
-    sections,
-    profiles,
-    saveLoading
-}) => {
+                                       open,
+                                       onClose,
+                                       onSave,
+                                       employee,
+                                       roles,
+                                       sections,
+                                       profiles,
+                                       saveLoading,
+
+                                       paginatedAdmins,
+                                       currentAdminPage,
+                                       adminPageSize,
+                                       isLoading
+
+                                   }) => {
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState({});
     const [isFormDirty, setIsFormDirty] = useState(false);
@@ -90,6 +102,12 @@ const EmployeeDialog = React.memo(({
 
     // Memoized employee data for comparison
     const memoizedEmployee = useMemo(() => employee, [JSON.stringify(employee)]);
+
+    const dispatch = useDispatch();
+
+    const handlePageChange = useCallback((newPage) => {
+        dispatch(setCurrentAdminPage(newPage));
+    }, [dispatch]);
 
     // Initialize form with employee data only once when dialog opens or employee changes
     useEffect(() => {
@@ -134,7 +152,11 @@ const EmployeeDialog = React.memo(({
                 selectedSupervisor: memoizedEmployee.supervisor || {},
                 selectedOtherEmployee: memoizedEmployee.other || {},
                 joiningDate: memoizedEmployee?.join_date ? new Date(memoizedEmployee.join_date) : new Date(),
-                deleteAddresses: []
+                deleteAddresses: [],
+                additional: {},
+                admins: [],
+                addedAdmins: [],
+                deletedAdmins: []
             } : INITIAL_FORM_DATA);
 
             setIsFormDirty(false);
@@ -143,19 +165,62 @@ const EmployeeDialog = React.memo(({
         }
     }, [open, memoizedEmployee, isInitialized]);
 
+    useEffect(() => {
+        console.log(paginatedAdmins)
+    }, []);
+
     // Optimized form handlers with debouncing for rapid changes
     const handleChange = useCallback((field, value) => {
         setFormData(prev => {
             if (prev[field] === value) return prev;
-            return { ...prev, [field]: value };
+            return {...prev, [field]: value};
         });
         setIsFormDirty(true);
     }, []);
 
+    const handleChangeForNonBoolean = useCallback((field, newValue) => {
+        setFormData(prev => {
+            const previousSelection = prev[field] || [];
+
+            // Calculate net changes (what was truly added/removed)
+            const netAdded = newValue.filter(item => !previousSelection.includes(item));
+            const netRemoved = previousSelection.filter(item => !newValue.includes(item));
+
+            // If no real change, reset additional data
+            if (prev[field] === newValue) {
+                return {
+                    ...prev,
+                    additional: {
+                        ...prev.additional,
+                        [`added${capitalizeFirstLetter(field.replace('selected', ''))}`]: [],
+                        [`delete${capitalizeFirstLetter(field.replace('selected', ''))}`]: [],
+                    }
+                };
+            }
+
+            // Update the field and track changes in additional data
+            return {
+                ...prev,
+                [field]: newValue,
+                additional: {
+                    ...prev.additional,
+                    [`added${capitalizeFirstLetter(field.replace('selected', ''))}`]: netAdded,
+                    [`delete${capitalizeFirstLetter(field.replace('selected', ''))}`]: netRemoved,
+                }
+            };
+        });
+        setIsFormDirty(true);
+    }, []);
+
+    // Helper function to capitalize first letter (e.g., "roles" → "Roles")
+    const capitalizeFirstLetter = (str) => {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
     const handleSelectHod = useCallback((hod) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedHod, hod)) return prev;
-            return { ...prev, selectedHod: hod };
+            return {...prev, selectedHod: hod};
         });
         setHodDialogOpen(false);
         setIsFormDirty(true);
@@ -164,7 +229,7 @@ const EmployeeDialog = React.memo(({
     const handleSelectSupervisor = useCallback((supervisor) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedSupervisor, supervisor)) return prev;
-            return { ...prev, selectedSupervisor: supervisor };
+            return {...prev, selectedSupervisor: supervisor};
         });
         setSupervisorDialogOpen(false);
         setIsFormDirty(true);
@@ -173,7 +238,7 @@ const EmployeeDialog = React.memo(({
     const handleSelectOtherEmployee = useCallback((employee) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedOtherEmployee, employee)) return prev;
-            return { ...prev, selectedOtherEmployee: employee };
+            return {...prev, selectedOtherEmployee: employee};
         });
         setOtherEmployeeDialogOpen(false);
         setIsFormDirty(true);
@@ -191,7 +256,7 @@ const EmployeeDialog = React.memo(({
                 country: 'LK',
                 isDefault: false, // Set as default only if it's the first address
             };
-            return { ...prev, addresses: [...prev.addresses, newAddress] };
+            return {...prev, addresses: [...prev.addresses, newAddress]};
         });
         setIsFormDirty(true);
     }, []);
@@ -199,19 +264,19 @@ const EmployeeDialog = React.memo(({
 
     const handleRemoveAddress = useCallback((id) => {
         setFormData(prev => {
-          const addressToRemove = prev.addresses.find(addr => addr.id === id);
-          const isExistingAddress = addressToRemove && !addressToRemove.id.startsWith('temp-');
-          
-          return {
-            ...prev,
-            addresses: prev.addresses.filter(addr => addr.id !== id),
-            deleteAddresses: isExistingAddress 
-              ? [...prev.deleteAddresses, id] 
-              : prev.deleteAddresses
-          };
+            const addressToRemove = prev.addresses.find(addr => addr.id === id);
+            const isExistingAddress = addressToRemove && !addressToRemove.id.startsWith('temp-');
+
+            return {
+                ...prev,
+                addresses: prev.addresses.filter(addr => addr.id !== id),
+                deleteAddresses: isExistingAddress
+                    ? [...prev.deleteAddresses, id]
+                    : prev.deleteAddresses
+            };
         });
         setIsFormDirty(true);
-      }, []);
+    }, []);
 
     const handleAddressChange = useCallback((id, field, value) => {
         setFormData(prev => {
@@ -221,9 +286,9 @@ const EmployeeDialog = React.memo(({
             }
 
             const newAddresses = [...prev.addresses];
-            newAddresses[addressIndex] = { ...newAddresses[addressIndex], [field]: value };
+            newAddresses[addressIndex] = {...newAddresses[addressIndex], [field]: value};
 
-            return { ...prev, addresses: newAddresses };
+            return {...prev, addresses: newAddresses};
         });
         setIsFormDirty(true);
     }, []);
@@ -245,7 +310,7 @@ const EmployeeDialog = React.memo(({
                 };
             }
 
-            return { ...prev, addresses: resetAddresses };
+            return {...prev, addresses: resetAddresses};
         });
         setIsFormDirty(true);
     }, []);
@@ -264,7 +329,7 @@ const EmployeeDialog = React.memo(({
 
     const handleGenerateTemporaryPassword = useCallback(() => {
         const tempPassword = generateTemporaryPassword();
-        setFormData(prev => ({ ...prev, password: tempPassword }));
+        setFormData(prev => ({...prev, password: tempPassword}));
         setIsFormDirty(true);
     }, [generateTemporaryPassword]);
 
@@ -311,9 +376,13 @@ const EmployeeDialog = React.memo(({
             !compareArrays(formData.selectedRoles, memoizedEmployee.roles?.map(r => r.name) || []) ||
             !compareArrays(formData.selectedSections, memoizedEmployee.sections?.map(s => s.section) || []) ||
             !compareArrays(formData.selectedProfiles, memoizedEmployee.profiles || []) ||
-            !compareObjects(formData.selectedHod, memoizedEmployee.hod || {}) ||
-            !compareObjects(formData.selectedSupervisor, memoizedEmployee.supervisor || {}) ||
-            !compareObjects(formData.selectedOtherEmployee, memoizedEmployee.other || {}) ||
+            !compareArrays(formData.admins, memoizedEmployee.admins || []) ||
+            !compareArrays(formData.addedAdmins, memoizedEmployee.addedAdmins || []) ||
+            !compareArrays(formData.deletedAdmins, memoizedEmployee.deletedAdmins || []) ||
+
+            // !compareObjects(formData.selectedHod, memoizedEmployee.hod || {}) ||
+            // !compareObjects(formData.selectedSupervisor, memoizedEmployee.supervisor || {}) ||
+            // !compareObjects(formData.selectedOtherEmployee, memoizedEmployee.other || {}) ||
             !compareAddresses(formData.addresses, memoizedEmployee.addresses?.map(a => ({
                 ...a,
                 id: a.id || 0,
@@ -333,14 +402,14 @@ const EmployeeDialog = React.memo(({
         const newErrors = {};
 
         if (hasDuplicateAddresses) {
-            setErrors({ ...errors, addresses: "Duplicate addresses found" });
+            setErrors({...errors, addresses: "Duplicate addresses found"});
             return;
         }
 
         // Check exactly one default address
         const defaultCount = formData.addresses.filter(addr => addr.isDefault).length;
         if (defaultCount !== 1) {
-            setErrors({ ...errors, addresses: "Exactly one address must be set as default" });
+            setErrors({...errors, addresses: "Exactly one address must be set as default"});
             return;
         }
 
@@ -414,8 +483,13 @@ const EmployeeDialog = React.memo(({
                 Authorities: formData.authorities || [],
                 deleteAddresses: formData.deleteAddresses || [],
                 joiningDate: formData.joiningDate.toISOString(),
+                additional: formData.additional,
+                admins: formData.admins,
+                addedAdmins: formData.addedAdmins,
+                deletedAdmins: formData.deletedAdmins
             };
             await onSave(employeeData);
+
         } catch (error) {
             console.error("Error saving employee:", error);
         }
@@ -557,7 +631,7 @@ const EmployeeDialog = React.memo(({
                     <Button
                         variant="outlined"
                         onClick={handleGenerateTemporaryPassword}
-                        sx={{ mt: 2 }}
+                        sx={{mt: 2}}
                         disabled={saveLoading}
                     >
                         Generate
@@ -591,7 +665,7 @@ const EmployeeDialog = React.memo(({
                 <Select
                     multiple
                     value={formData.selectedRoles}
-                    onChange={(e) => handleChange('selectedRoles', e.target.value)}
+                    onChange={(e) => handleChangeForNonBoolean('selectedRoles', e.target.value)}
                     renderValue={(selected) => selected.join(", ")}
                     label="Roles"
                 >
@@ -613,7 +687,7 @@ const EmployeeDialog = React.memo(({
                 <Select
                     multiple
                     value={formData.selectedSections}
-                    onChange={(e) => handleChange('selectedSections', e.target.value)}
+                    onChange={(e) => handleChangeForNonBoolean('selectedSections', e.target.value)}
                     renderValue={(selected) => selected.join(", ")}
                     label="Sections"
                 >
@@ -635,7 +709,7 @@ const EmployeeDialog = React.memo(({
                 <Select
                     multiple
                     value={formData.selectedProfiles}
-                    onChange={(e) => handleChange('selectedProfiles', e.target.value)}
+                    onChange={(e) => handleChangeForNonBoolean('selectedProfiles', e.target.value)}
                     renderValue={(selected) => selected.join(", ")}
                     label="Profiles"
                 >
@@ -697,11 +771,11 @@ const EmployeeDialog = React.memo(({
 
     const renderAddressesSection = useMemo(() => (
         <Grid item xs={12}>
-            <Typography variant="h6" sx={{ mt: 3 }}>
+            <Typography variant="h6" sx={{mt: 3}}>
                 Addresses
             </Typography>
             {formData.addresses.map((address, index) => (
-                <Grid container spacing={2} key={address.id} sx={{ mt: 2 }}>
+                <Grid container spacing={2} key={address.id} sx={{mt: 2}}>
                     <Grid item xs={12} sm={6}>
                         <TextField
                             fullWidth
@@ -769,7 +843,7 @@ const EmployeeDialog = React.memo(({
                             variant="outlined"
                             color="error"
                             onClick={() => handleRemoveAddress(address.id)}
-                            sx={{ ml: 2 }}
+                            sx={{ml: 2}}
                             disabled={saveLoading}
                         >
                             Remove Address
@@ -778,14 +852,14 @@ const EmployeeDialog = React.memo(({
                 </Grid>
             ))}
             {errors.addresses && (
-                <Typography color="error" sx={{ mt: 2 }}>
+                <Typography color="error" sx={{mt: 2}}>
                     {errors.addresses}
                 </Typography>
             )}
             <Button
                 variant="outlined"
                 onClick={handleAddAddress}
-                sx={{ mt: 2 }}
+                sx={{mt: 2}}
                 disabled={saveLoading}
             >
                 Add Address
@@ -795,67 +869,18 @@ const EmployeeDialog = React.memo(({
 
     const renderEmployeeAssignmentSection = useMemo(() => (
         <Grid item xs={12}>
-            <Typography variant="h6" sx={{ mt: 3 }}>
-                Assign HOD, Supervisor, or Other Employee
+            <Typography variant="h6" sx={{mt: 3}}>
+                Assign Administratives
             </Typography>
-            <Grid container spacing={2} sx={{ mt: 2 }}>
-                <Grid item xs={12} sm={4}>
-                    <TextField
-                        fullWidth
-                        label="HOD"
-                        value={formData.selectedHod ? formData.selectedHod.name || formData.selectedHod.employeeId : ''}
-                        InputProps={{
-                            readOnly: true,
-                        }}
-                        disabled={saveLoading}
-                    />
-                    <Button
-                        variant="outlined"
-                        onClick={() => setHodDialogOpen(true)}
-                        sx={{ mt: 1 }}
-                        disabled={saveLoading}
-                    >
-                        Select HOD
-                    </Button>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    <TextField
-                        fullWidth
-                        label="Supervisor"
-                        value={formData.selectedSupervisor ? formData.selectedSupervisor.name || formData.selectedSupervisor.employeeId : ''}
-                        InputProps={{
-                            readOnly: true,
-                        }}
-                        disabled={saveLoading}
-                    />
-                    <Button
-                        variant="outlined"
-                        onClick={() => setSupervisorDialogOpen(true)}
-                        sx={{ mt: 1 }}
-                        disabled={saveLoading}
-                    >
-                        Select Supervisor
-                    </Button>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    <TextField
-                        fullWidth
-                        label="Other Employee"
-                        value={formData.selectedOtherEmployee ? formData.selectedOtherEmployee.name || formData.selectedOtherEmployee.employeeId : ''}
-                        InputProps={{
-                            readOnly: true,
-                        }}
-                        disabled={saveLoading}
-                    />
-                    <Button
-                        variant="outlined"
-                        onClick={() => setOtherEmployeeDialogOpen(true)}
-                        sx={{ mt: 1 }}
-                        disabled={saveLoading}
-                    >
-                        Select Other Employee
-                    </Button>
-                </Grid>
+            <Grid item xs={19} sm={4}>
+                <Button
+                    variant="outlined"
+                    onClick={() => setHodDialogOpen(true)}
+                    sx={{mt: 1}}
+                    disabled={saveLoading}
+                >
+                    Select Administratives
+                </Button>
             </Grid>
         </Grid>
     ), [formData.selectedHod, formData.selectedSupervisor, formData.selectedOtherEmployee, saveLoading]);
@@ -873,7 +898,7 @@ const EmployeeDialog = React.memo(({
                         const date = new Date(e.target.value);
                         date.setHours(8, 30, 0, 0); // Set to 8:30 AM
                         handleChange('joiningDate', date);
-                        setErrors(prev => ({ ...prev, joiningDate: undefined }));
+                        setErrors(prev => ({...prev, joiningDate: undefined}));
                     } else {
                         handleChange('joiningDate', null);
                     }
@@ -890,11 +915,34 @@ const EmployeeDialog = React.memo(({
         </Grid>
     ), [formData.joiningDate, errors.joiningDate, saveLoading]);
 
+    const getEffectiveAdmins = () => {
+        const backendAdmins = employee?.administratives || [];
+        const addedAdmins = formData?.addedAdmins || [];
+        const deletedAdmins = formData?.deletedAdmins || [];
+
+        // 1. Filter out deleted admins from backend data
+        const filteredBackendAdmins = backendAdmins.filter(
+            admin => !deletedAdmins.includes(admin.userId)
+        );
+
+        // 2. Add newly added admins (if they aren't already in backend data)
+        const newAdmins = addedAdmins
+            .filter(userId =>
+                !backendAdmins.some(admin => admin.userId === userId)
+            )
+            .map(userId => {
+                // Try to find full user data (from paginatedAdmins or a lookup)
+                const user = paginatedAdmins?.content?.find(u => u.userId === userId);
+                return user || { userId, firstName: "New", lastName: "User" };
+            });
+
+        return [...filteredBackendAdmins, ...newAdmins];
+    };
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle>{memoizedEmployee ? 'Edit Employee' : 'Add Employee'}</DialogTitle>
             <DialogContent>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid container spacing={2} sx={{mt: 1}}>
                     {renderBasicInfoSection}
                     {renderJoiningDateSection}
                     {renderContactInfoSection}
@@ -908,27 +956,33 @@ const EmployeeDialog = React.memo(({
                     {renderAddressesSection}
                     {renderEmployeeAssignmentSection}
                 </Grid>
-
                 <EmployeeSelectionDialog
                     open={hodDialogOpen}
-                    onClose={() => setHodDialogOpen(false)}
-                    onSelect={handleSelectHod}
-                    employees={[]}
-                    title="Select HOD"
-                />
-                <EmployeeSelectionDialog
-                    open={supervisorDialogOpen}
-                    onClose={() => setSupervisorDialogOpen(false)}
-                    onSelect={handleSelectSupervisor}
-                    employees={[]}
-                    title="Select Supervisor"
-                />
-                <EmployeeSelectionDialog
-                    open={otherEmployeeDialogOpen}
-                    onClose={() => setOtherEmployeeDialogOpen(false)}
-                    onSelect={handleSelectOtherEmployee}
-                    employees={[]}
-                    title="Select Other Employee"
+                    onClose={(result) => {
+                        if (result?.selected) {  // Check if selection exists
+                            setFormData(prev => ({
+                                ...prev,
+                                admins: result.selected.map(select=>select.userId),
+                                addedAdmins: result.newlyAdded.map(add=>add.userId),
+                                deletedAdmins: result.deleted.map(del=>del.userId)
+                            }));
+                        }
+                        setIsFormDirty(true);
+                        setHodDialogOpen(false);
+                    }}
+                    employees={paginatedAdmins?.content?.map(user => ({
+                        name: `${user.firstName} ${user.lastName}`,
+                        ...user
+                    })) || []}
+                    initialSelected={getEffectiveAdmins() || []}
+                    title="Select Administrative"
+                    pagination={{
+                        currentPage: currentAdminPage,
+                        pageSize: adminPageSize,  // Now properly used
+                        totalPages: paginatedAdmins?.totalPages || 1
+                    }}
+                    onPageChange={handlePageChange}
+                    loading={isLoading}
                 />
             </DialogContent>
             <DialogActions>

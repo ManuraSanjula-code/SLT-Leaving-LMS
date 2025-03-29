@@ -1,6 +1,7 @@
 package com.slt.peotv.userservice.lms.entity.company;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -32,7 +33,7 @@ public class SectionEntity implements Serializable {
 
     @ManyToMany(mappedBy="sections")
 	@JsonIgnore
-    private Collection<UserEntity> users;
+    private Collection<UserEntity> users =  new ArrayList<>();;
     
     public void addUser(UserEntity user) {
         this.users.add(user);
@@ -88,5 +89,15 @@ public class SectionEntity implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(id, section, publicId, users);
+    }
+
+    @Override
+    public String toString() {
+        return "SectionEntity{" +
+                "id=" + id +
+                ", section='" + section + '\'' +
+                ", publicId='" + publicId + '\'' +
+                ", users=" + users +
+                '}';
     }
 }

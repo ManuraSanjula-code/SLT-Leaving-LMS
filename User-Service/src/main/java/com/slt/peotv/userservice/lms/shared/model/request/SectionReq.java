@@ -39,4 +39,14 @@ public class SectionReq {
     public void setDeletedUsers(List<String> deletedUsers) {
         this.deletedUsers = deletedUsers;
     }
+
+    @Override
+    public String toString() {
+        return "SectionReq{" +
+                "publicId='" + publicId + '\'' +
+                ", section='" + section + '\'' +
+                ", addedUsers=" + addedUsers +
+                ", deletedUsers=" + deletedUsers +
+                '}';
+    }
 }
