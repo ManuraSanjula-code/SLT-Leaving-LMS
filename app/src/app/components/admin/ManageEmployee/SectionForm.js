@@ -28,39 +28,60 @@ import ErrorDialog from '../../ErrorDialog';
 
 const SectionForm = ({ onSubmit }) => {
   const dispatch = useDispatch();
-  const { data, loading, error, saveLoading, saveError, saveSuccess } = useSelector(state => state.management);
+  const {
+    data,
+    loading,
+    error,
+    saveLoading,
+    saveError,
+    saveSuccess,
+    currentPage,
+    pageSize
+  } = useSelector(state => state.management);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [currentSection, setCurrentSection] = useState(null);
-  const [formData, setFormData] = useState({ section: "", publicId: "", users: [] });
+  const [formData, setFormData] = useState({
+    section: "",
+    publicId: "",
+    users: []
+  });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [deletedUsers, setDeletedUsers] = useState([]);
-  const [userPage, setUserPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [formErrors, setFormErrors] = useState({});
   const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
 
-  const usersPerPage = 10;
-
   useEffect(() => {
-    dispatch(fetchManagementData());
-  }, [dispatch]);
+    dispatch(fetchManagementData({ usersPage: currentPage, usersSize: pageSize }));
+  }, [dispatch, currentPage, pageSize]);
 
   useEffect(() => {
     if (saveSuccess) {
       setSuccessOpen(true);
       handleCloseDialog();
-      dispatch(fetchManagementData());
+      dispatch(fetchManagementData({ usersPage: currentPage, usersSize: pageSize }));
     }
     if (saveError) {
       setErrorOpen(true);
     }
-  }, [saveSuccess, saveError, dispatch]);
+  }, [saveSuccess, saveError, dispatch, currentPage, pageSize]);
+
+  const handlePageChange = (event, newPage) => {
+    dispatch(fetchManagementData({
+      usersPage: newPage - 1,
+      usersSize: pageSize
+    }));
+  };
 
   const handleOpenDialog = useCallback((section = null) => {
     setCurrentSection(section);
-    setFormData(section || { section: "", publicId: "", users: [] });
+    setFormData(section || {
+      section: "",
+      publicId: "",
+      users: []
+    });
 
     if (section) {
       const sectionUserIds = section.users.map(user => user.userId);
@@ -77,10 +98,13 @@ const SectionForm = ({ onSubmit }) => {
   const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setCurrentSection(null);
-    setFormData({ section: "", publicId: "", users: [] });
+    setFormData({
+      section: "",
+      publicId: "",
+      users: []
+    });
     setSelectedUsers([]);
     setDeletedUsers([]);
-    setUserPage(1);
     setSearchQuery("");
   }, []);
 
@@ -89,18 +113,30 @@ const SectionForm = ({ onSubmit }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
-  const handleUserSelection = (userId) => {
-    if (selectedUsers.includes(userId)) {
-      // User is being unchecked, add to deletedUsers
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-      setDeletedUsers((prev) => [...prev, userId]);
-    } else {
-      // User is being checked, remove from deletedUsers if present
-      setSelectedUsers((prev) => [...prev, userId]);
-      setDeletedUsers((prev) => prev.filter((id) => id !== userId));
-    }
-  };
+  const handleUserSelection = useCallback((userId) => {
+    setSelectedUsers(prev => {
+      const newSelected = prev.includes(userId)
+          ? prev.filter(id => id !== userId)
+          : [...prev, userId];
 
+      // If this is an edit of an existing section
+      if (currentSection) {
+        setDeletedUsers(prevDeleted => {
+          // If user was originally in the section and is now being removed
+          const wasInOriginal = currentSection.users.some(u => u.userId === userId);
+          if (wasInOriginal && !newSelected.includes(userId)) {
+            return [...prevDeleted, userId];
+          }
+          // If user was previously marked for deletion but is now being re-added
+          if (prevDeleted.includes(userId) && newSelected.includes(userId)) {
+            return prevDeleted.filter(id => id !== userId);
+          }
+          return prevDeleted;
+        });
+      }
+      return newSelected;
+    });
+  }, [currentSection]);
 
   const validateForm = useCallback(() => {
     const errors = { section: '' };
@@ -108,6 +144,9 @@ const SectionForm = ({ onSubmit }) => {
 
     if (!formData.section.trim()) {
       errors.section = 'Section name is required';
+      isValid = false;
+    } else if (formData.section.length < 2) {
+      errors.section = 'Section name must be at least 2 characters';
       isValid = false;
     }
 
@@ -119,172 +158,176 @@ const SectionForm = ({ onSubmit }) => {
     if (!validateForm()) return;
 
     const addedUsers = selectedUsers
-      .filter(userId => !currentSection?.users.some(user => user.userId === userId))
-      .map(userId => data.users.find(user => user.userId === userId));
+        .filter(userId => !currentSection?.users.some(user => user.userId === userId))
+        .map(userId => data.users.content.find(user => user.userId === userId));
 
     const sectionData = {
-      publicId: formData.publicId,
       section: formData.section,
+      publicId: formData.publicId,
       addedUsers: addedUsers.map(user => user.userId),
-      deletedUsers,
+      deletedUsers
     };
 
     dispatch(saveSection({
-      sectionData: sectionData,
+      sectionData,
       isUpdate: !!currentSection,
       publicId: formData.publicId
     }));
-  }, [formData, selectedUsers, deletedUsers, currentSection, validateForm, dispatch]);
+  }, [
+    formData,
+    selectedUsers,
+    deletedUsers,
+    currentSection,
+    validateForm,
+    dispatch,
+    data?.users?.content
+  ]);
 
   const handleDelete = useCallback((id) => {
     dispatch(deleteSection(id));
   }, [dispatch]);
 
   const filteredUsers = useMemo(() => {
-    if (!data?.users) return [];
-    return data.users.filter(user =>
-      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    if (!data?.users?.content) return [];
+    return data.users.content.filter(user =>
+        user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [data?.users, searchQuery]);
-
-  const paginatedUsers = useMemo(() =>
-    filteredUsers.slice((userPage - 1) * usersPerPage, userPage * usersPerPage),
-    [filteredUsers, userPage]);
+  }, [data?.users?.content, searchQuery]);
 
   const isFormDirty = useMemo(() => {
     if (!currentSection) return true;
 
     const isSectionChanged = formData.section !== currentSection.section;
-    const isPublicIdChanged = formData.publicId !== currentSection.publicId;
     const areUsersChanged =
-      selectedUsers.length !== currentSection.users.length ||
-      !selectedUsers.every(userId => currentSection.users.some(user => user.userId === userId));
+        selectedUsers.length !== currentSection.users.length ||
+        !selectedUsers.every(userId => currentSection.users.some(user => user.userId === userId));
 
-    return isSectionChanged || isPublicIdChanged || areUsersChanged;
-  }, [currentSection, formData.section, formData.publicId, selectedUsers]);
+    return isSectionChanged || areUsersChanged;
+  }, [currentSection, formData.section, selectedUsers]);
 
   return (
-    <>
-      <SuccessDialog
-        open={successOpen}
-        onClose={() => setSuccessOpen(false)}
-        title="Success!"
-        message="Section saved successfully."
-      />
+      <>
+        <SuccessDialog
+            open={successOpen}
+            onClose={() => setSuccessOpen(false)}
+            title="Success!"
+            message="Section saved successfully."
+        />
 
-      <ErrorDialog
-        open={errorOpen}
-        onClose={() => setErrorOpen(false)}
-        title="Error"
-        message={saveError || "Failed to save section"}
-      />
+        <ErrorDialog
+            open={errorOpen}
+            onClose={() => setErrorOpen(false)}
+            title="Error"
+            message={saveError || "Failed to save section"}
+        />
 
-      <div>
-        <Button variant="contained" onClick={() => handleOpenDialog()}>
-          Add Section
-        </Button>
+        <div>
+          <Button variant="contained" onClick={() => handleOpenDialog()}>
+            Add Section
+          </Button>
 
-        <List>
-          {data?.sections?.map(section => (
-            <ListItem key={section.id}>
-              <ListItemText
-                primary={section.section}
-                secondary={`Public ID: ${section.publicId}`}
-              />
-              <IconButton onClick={() => handleOpenDialog(section)}>
-                <Edit />
-              </IconButton>
-              <IconButton onClick={() => handleDelete(section.id)}>
-                <Delete />
-              </IconButton>
-            </ListItem>
-          ))}
-        </List>
+          <List>
+            {data?.sections?.map(section => (
+                <ListItem key={section.id}>
+                  <ListItemText
+                      primary={section.section}
+                      secondary={`Public ID: ${section.publicId}`}
+                  />
+                  <IconButton onClick={() => handleOpenDialog(section)}>
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(section.id)}>
+                    <Delete />
+                  </IconButton>
+                </ListItem>
+            ))}
+          </List>
 
-        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-          <DialogTitle>{currentSection ? "Edit Section" : "Add Section"}</DialogTitle>
-          <DialogContent>
-            <Typography variant="h6" gutterBottom>
-              Section Details
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+          <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+            <DialogTitle>{currentSection ? "Edit Section" : "Add Section"}</DialogTitle>
+            <DialogContent>
+              <Typography variant="h6" gutterBottom>
+                Section Details
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                <TextField
+                    label="Section Name"
+                    name="section"
+                    value={formData.section}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                    error={!!formErrors.section}
+                    helperText={formErrors.section}
+                />
+                <TextField
+                    disabled
+                    label="Public ID"
+                    name="publicId"
+                    value={formData.publicId}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="normal"
+                />
+              </Box>
+
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Assigned Users
+              </Typography>
               <TextField
-                label="Section Name"
-                name="section"
-                value={formData.section}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-                error={!!formErrors.section}
-                helperText={formErrors.section}
+                  label="Search Users"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                          <Search />
+                        </InputAdornment>
+                    ),
+                  }}
               />
-              <TextField
-                disabled
-                label="Public ID"
-                name="publicId"
-                value={formData.publicId}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-              />
-            </Box>
-
-            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-              Assigned Users
-            </Typography>
-            <TextField
-              label="Search Users"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              fullWidth
-              margin="normal"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-              <List>
-                {paginatedUsers.map(user => (
-                  <ListItem key={user.userId}>
-                    <ListItemIcon>
-                      <Checkbox
-                        checked={selectedUsers.includes(user.userId)}
-                        onChange={() => handleUserSelection(user.userId)}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${user.firstName} ${user.lastName} (${user.email})`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              <Pagination
-                count={Math.ceil(filteredUsers.length / usersPerPage)}
-                page={userPage}
-                onChange={(e, value) => setUserPage(value)}
-                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button
-              onClick={handleSubmit}
-              color="primary"
-              disabled={!isFormDirty || saveLoading}
-            >
-              {saveLoading ? 'Saving...' : currentSection ? "Update" : "Add"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </div>
-    </>
+              <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+                <List>
+                  {filteredUsers.map(user => (
+                      <ListItem key={user.userId}>
+                        <ListItemIcon>
+                          <Checkbox
+                              checked={selectedUsers.includes(user.userId)}
+                              onChange={() => handleUserSelection(user.userId)}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={`${user.firstName} ${user.lastName}`}
+                            secondary={user.email}
+                        />
+                      </ListItem>
+                  ))}
+                </List>
+                <Pagination
+                    count={data?.users?.totalPages || 1}
+                    page={(data?.users?.pageable?.pageNumber || 0) + 1}
+                    onChange={handlePageChange}
+                    sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Cancel</Button>
+              <Button
+                  onClick={handleSubmit}
+                  color="primary"
+                  disabled={!isFormDirty || saveLoading}
+              >
+                {saveLoading ? 'Saving...' : currentSection ? "Update" : "Add"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </div>
+      </>
   );
 };
 

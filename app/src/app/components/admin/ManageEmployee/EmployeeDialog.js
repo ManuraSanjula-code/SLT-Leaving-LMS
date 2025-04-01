@@ -970,18 +970,18 @@ const EmployeeDialog = React.memo(({
                         setIsFormDirty(true);
                         setHodDialogOpen(false);
                     }}
-                    employees={paginatedAdmins?.content?.map(user => ({
-                        name: `${user.firstName} ${user.lastName}`,
-                        ...user
-                    })) || []}
-                    initialSelected={getEffectiveAdmins() || []}
+                    // employees={paginatedAdmins?.content?.map(user => ({
+                    //     name: `${user.firstName} ${user.lastName}`,
+                    //     ...user
+                    // })) || []}
+                    initialSelected={[]}
                     title="Select Administrative"
-                    pagination={{
-                        currentPage: currentAdminPage,
-                        pageSize: adminPageSize,  // Now properly used
-                        totalPages: paginatedAdmins?.totalPages || 1
-                    }}
-                    onPageChange={handlePageChange}
+                    // pagination={{
+                    //     currentPage: currentAdminPage,
+                    //     pageSize: adminPageSize,  // Now properly used
+                    //     totalPages: paginatedAdmins?.totalPages || 1
+                    // }}
+                    // onPageChange={handlePageChange}
                     loading={isLoading}
                 />
             </DialogContent>

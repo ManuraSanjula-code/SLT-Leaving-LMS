@@ -280,19 +280,9 @@ public class UserController {
     }
 
     @GetMapping()
-    public List<UserRest> getUsers(@RequestParam(value = "page", defaultValue = "0") int page,
+    public Page<UserBasicDto> getUsers(@RequestParam(value = "page", defaultValue = "0") int page,
                                    @RequestParam(value = "limit", defaultValue = "2") int limit) {
-        List<UserRest> returnValue = new ArrayList<>();
-
-        List<UserDto> users = userService.getUsers(page, limit);
-
-        for (UserDto userDto : users) {
-            UserRest userModel = new UserRest();
-            BeanUtils.copyProperties(userDto, userModel);
-            returnValue.add(userModel);
-        }
-
-        return returnValue;
+       return userService.findAllBasicUserDtos(page, limit);
     }
 
     @GetMapping("/all")

@@ -14,23 +14,36 @@ import {
     Typography,
     Chip,
     Box,
-    CircularProgress
+    CircularProgress,
+    Pagination
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPaginatedAdmins } from '../../../store/managementSlice';
 
 const EmployeeSelectionDialog = ({
                                      open,
                                      onClose,
                                      title,
-                                     employees = [],
                                      initialSelected = [],
-                                     pagination,
-                                     onPageChange,
                                      loading
                                  }) => {
+    const dispatch = useDispatch();
+    const { paginatedAdmins, currentAdminPage, adminPageSize } = useSelector(state => state.management);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [selected, setSelected] = useState([]);
     const [newlyAdded, setNewlyAdded] = useState([]);
     const [deleted, setDeleted] = useState([]);
+
+    // Fetch admins when dialog opens or page changes
+    useEffect(() => {
+        if (open) {
+            dispatch(fetchPaginatedAdmins({
+                page: currentAdminPage,
+                limit: adminPageSize
+            }));
+        }
+    }, [open, currentAdminPage, adminPageSize, dispatch]);
 
     // Initialize selection when dialog opens
     useEffect(() => {
@@ -41,10 +54,10 @@ const EmployeeSelectionDialog = ({
         }
     }, [open, initialSelected]);
 
-    const filteredEmployees = employees.filter(employee =>
-        employee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEmployees = paginatedAdmins?.content?.filter(admin =>
+        admin.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        admin.employeeId?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
     const handleToggle = (employee) => {
         const currentIndex = selected.findIndex(item => item.userId === employee.userId);
@@ -78,6 +91,13 @@ const EmployeeSelectionDialog = ({
             newlyAdded,
             deleted
         });
+    };
+
+    const handlePageChange = (event, newPage) => {
+        dispatch(fetchPaginatedAdmins({
+            page: newPage - 1,
+            limit: adminPageSize
+        }));
     };
 
     const getHighestPriorityRole = (roles) => {
@@ -146,25 +166,15 @@ const EmployeeSelectionDialog = ({
                             })}
                         </List>
 
-                        {pagination && (
-                            <Box display="flex" justifyContent="space-between" mt={2}>
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => onPageChange(pagination.currentPage - 1)}
-                                    disabled={pagination.currentPage <= 0 || loading}
-                                >
-                                    Previous
-                                </Button>
-                                <Typography variant="body1">
-                                    Page {pagination.currentPage + 1} of {pagination.totalPages}
-                                </Typography>
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => onPageChange(pagination.currentPage + 1)}
-                                    disabled={pagination.currentPage >= pagination.totalPages - 1 || loading}
-                                >
-                                    Next
-                                </Button>
+                        {paginatedAdmins && (
+                            <Box display="flex" justifyContent="center" mt={2}>
+                                <Pagination
+                                    count={paginatedAdmins.totalPages}
+                                    page={paginatedAdmins.pageable?.pageNumber + 1 || 1}
+                                    onChange={handlePageChange}
+                                    color="primary"
+                                    disabled={loading}
+                                />
                             </Box>
                         )}
                     </>

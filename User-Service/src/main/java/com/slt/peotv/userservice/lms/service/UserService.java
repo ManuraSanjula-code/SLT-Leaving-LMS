@@ -9,6 +9,7 @@ import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,7 @@ public interface UserService extends UserDetailsService{
 	UserDto updateUser(String userId, UserReq user) throws Exception;
 	void deleteUser(String userId);
 	List<UserDto> getUsers(int page, int limit);
+	Page<UserBasicDto> findAllBasicUserDtos(int page, int limit);
 	boolean verifyEmailToken(String token);
 	boolean requestPasswordReset(String email);
 	boolean resetPassword(String token, String password);

@@ -2,6 +2,8 @@ package com.slt.peotv.userservice.lms.repository;
 
 import java.util.List;
 import java.util.Optional;
+
+import com.slt.peotv.userservice.lms.shared.dto.UserBasicDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -89,4 +91,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 			@Param("minPriority") int minPriority,
 			@Param("maxPriority") int maxPriority,
 			Pageable pageable);
+
+	@Query("SELECT NEW com.slt.peotv.userservice.lms.shared.dto.UserBasicDto(u.userId, u.firstName, u.lastName) FROM UserEntity u")
+	Page<UserBasicDto> findAllBasicUserDtos(Pageable pageable);
 }

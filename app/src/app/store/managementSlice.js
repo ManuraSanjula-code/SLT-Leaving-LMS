@@ -39,12 +39,12 @@ export const saveEmployee = createAsyncThunk(
 
 export const fetchManagementData = createAsyncThunk(
     'management/fetchData',
-    async (_, {rejectWithValue}) => {
+    async ({ usersPage = 0, usersSize = 10 }, { rejectWithValue }) => {
         try {
-            const [roles, users, authorities, profiles, roleNames, sectionNames, profileNames, sections] =
+            // Fetch all non-user data first
+            const [roles, authorities, profiles, roleNames, sectionNames, profileNames, sections] =
                 await Promise.all([
                     fetch(`${baseUrl}/roles`).then(res => res.json()),
-                    fetch(`${baseUrl}`).then(res => res.json()),
                     fetch(`${baseUrl}/authorities`).then(res => res.json()),
                     fetch(`${baseUrl}/profile`).then(res => res.json()),
                     fetch(`${baseUrl}/names/roles`).then(res => res.json()),
@@ -52,6 +52,10 @@ export const fetchManagementData = createAsyncThunk(
                     fetch(`${baseUrl}/names/profiles`).then(res => res.json()),
                     fetch(`${baseUrl}/sections`).then(res => res.json()),
                 ]);
+
+            // Fetch paginated users
+            const usersResponse = await fetch(`${baseUrl}?page=${usersPage}&limit=${usersSize}`);
+            const users = await usersResponse.json();
 
             // Fetch dynamic roles
             const dynamicRoles = roleNames || [];
@@ -62,8 +66,16 @@ export const fetchManagementData = createAsyncThunk(
 
             return {
                 roles,
-                users,
-                authorities: authorities.map(a => ({id: a.ID, name: a.name})),
+                users: {
+                    content: users.content || users,
+                    pageable: users.pageable || {
+                        pageNumber: usersPage,
+                        pageSize: usersSize
+                    },
+                    totalElements: users.totalElements || (Array.isArray(users) ? users.length : 0),
+                    totalPages: users.totalPages || 1
+                },
+                authorities: authorities.map(a => ({ id: a.ID, name: a.name })),
                 profiles,
                 sections,
                 roleNames,
@@ -438,6 +450,11 @@ const managementSlice = createSlice({
             .addCase(fetchManagementData.fulfilled, (state, action) => {
                 state.loading = false;
                 state.data = action.payload;
+                // Update current page from the response
+                if (action.payload.users?.pageable) {
+                    state.currentPage = action.payload.users.pageable.pageNumber;
+                    state.pageSize = action.payload.users.pageable.pageSize;
+                }
             })
             .addCase(fetchManagementData.rejected, (state, action) => {
                 state.loading = false;

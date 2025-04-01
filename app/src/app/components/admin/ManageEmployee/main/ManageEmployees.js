@@ -95,7 +95,7 @@ const ManageEmployees = React.memo(() => {
 
     // Initialize data
     useEffect(() => {
-        dispatch(fetchManagementData());
+        dispatch(fetchManagementData({ page: 0, limit: 0 }));
     }, [dispatch]);
 
     // Handle pagination
@@ -111,7 +111,7 @@ const ManageEmployees = React.memo(() => {
         if (saveSuccess || deleteSuccess) {
             setSuccessOpen(true);
             dispatch(resetSaveStatus());
-            dispatch(fetchManagementData());
+            dispatch(fetchManagementData({ page: 0, limit: 0 }));
             dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
             handleCloseDialog();
         }
@@ -246,7 +246,7 @@ const ManageEmployees = React.memo(() => {
     }, []);
 
     const handleRefresh = useCallback(() => {
-        dispatch(fetchManagementData());
+        dispatch(fetchManagementData({ page: 0, limit: 0 }));
         dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
     }, [dispatch, currentPage, pageSize]);
 

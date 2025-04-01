@@ -571,6 +571,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Page<UserBasicDto> findAllBasicUserDtos(int page, int limit) {
+        Pageable pageableRequest = PageRequest.of(page, limit);
+        return userRepository.findAllBasicUserDtos(pageableRequest);
+    }
+
+    @Override
     public boolean verifyEmailToken(String token) {
         boolean returnValue = false;
 
