@@ -974,7 +974,7 @@ const EmployeeDialog = React.memo(({
                     //     name: `${user.firstName} ${user.lastName}`,
                     //     ...user
                     // })) || []}
-                    initialSelected={[]}
+                    initialSelected={getEffectiveAdmins() || []}
                     title="Select Administrative"
                     // pagination={{
                     //     currentPage: currentAdminPage,

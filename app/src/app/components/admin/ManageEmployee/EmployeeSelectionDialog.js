@@ -148,7 +148,7 @@ const EmployeeSelectionDialog = ({
                                             disableRipple
                                         />
                                         <ListItemText
-                                            primary={`${employee.name} (${employee.employeeId})`}
+                                            primary={`${employee.firstName + " " + employee.lastName} (${employee.employeeId})`}
                                             secondary={
                                                 <>
                                                     <span>{employee.sltId}</span>
