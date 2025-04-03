@@ -123,6 +123,7 @@ const ManageEmployees = React.memo(() => {
 
     useEffect(() => {
         console.log(paginatedAdmins)
+        console.log(saveLoading)
     }, []);
 
     // Memoized filtered employees

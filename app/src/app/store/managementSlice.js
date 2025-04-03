@@ -422,26 +422,26 @@ const managementSlice = createSlice({
                 state.saveLoading = false;
                 state.saveSuccess = true;
                 // Update the users list in the state
-                if (state.data) {
-                    if (action.meta.arg.isUpdate) {
-                        state.data.users = state.data.users.map(user =>
-                            user.userId === action.payload.userId ? action.payload : user
-                        );
-                    } else {
-                        state.data.users = [...state.data.users, action.payload];
-                    }
-                }
-                // Also update paginated users if needed
-                if (state.paginatedUsers?.content) {
-                    if (action.meta.arg.isUpdate) {
-                        state.paginatedUsers.content = state.paginatedUsers.content.map(user =>
-                            user.userId === action.payload.userId ? action.payload : user
-                        );
-                    } else {
-                        state.paginatedUsers.content = [...state.paginatedUsers.content, action.payload];
-                        state.paginatedUsers.totalElements += 1;
-                    }
-                }
+                // if (state.data) {
+                //     if (action.meta.arg.isUpdate) {
+                //         state.data.users = state.data.users.map(user =>
+                //             user.userId === action.payload.userId ? action.payload : user
+                //         );
+                //     } else {
+                //         state.data.users = [...state.data.users, action.payload];
+                //     }
+                // }
+                // // Also update paginated users if needed
+                // if (state.paginatedUsers?.content) {
+                //     if (action.meta.arg.isUpdate) {
+                //         state.paginatedUsers.content = state.paginatedUsers.content.map(user =>
+                //             user.userId === action.payload.userId ? action.payload : user
+                //         );
+                //     } else {
+                //         state.paginatedUsers.content = [...state.paginatedUsers.content, action.payload];
+                //         state.paginatedUsers.totalElements += 1;
+                //     }
+                // }
             })
             .addCase(saveEmployee.rejected, (state, action) => {
                 state.saveLoading = false;
