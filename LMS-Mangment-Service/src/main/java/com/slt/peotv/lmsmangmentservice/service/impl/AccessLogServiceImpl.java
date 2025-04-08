@@ -1,110 +1,180 @@
 package com.slt.peotv.lmsmangmentservice.service.impl;
 
+import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogArchiveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
+import com.slt.peotv.lmsmangmentservice.repository.AccessLogArchiveRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AccessLogRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Comparator;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AccessLogServiceImpl implements AccessLogService {
 
-    @Autowired
-    private AccessLogRepo accessLogRepository;
-    @Autowired
-    private InOutRepo inOutRepository;
+    private static final Logger logger = LoggerFactory.getLogger(AccessLogServiceImpl.class);
+    private static final LocalTime NOON = LocalTime.NOON; // 12:00:00
+    private static final String IN = "IN";
+    private static final String OUT = "OUT";
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+    private final SimpleDateFormat inputDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+    private final SimpleDateFormat currentDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+
+    @Autowired
+    private AccessLogRepo accessLogRepository;
+
+    @Autowired
+    private AccessLogArchiveRepo accessLogRepositoryArchive;
+
+    @Autowired
+    private InOutRepo inOutRepository;
 
     @Override
     public void processLogEntry() throws ParseException {
-        List<AccessLogEntity> logs = accessLogRepository.findAll();
-        for (AccessLogEntity log : logs) {
-            processAccessLog(log);
+        logger.info("Processing log entries from archive");
+        List<AccessLogArchiveEntity> logs = accessLogRepositoryArchive.findAll();
+
+        for (AccessLogArchiveEntity log : logs) {
+            try {
+                processAccessLog(log);
+            } catch (ParseException e) {
+                logger.error("Failed to process log entry with ID: {}", log.getId(), e);
+                throw e;
+            }
         }
     }
 
-
     @Transactional
-    public void processAccessLog(AccessLogEntity log) throws ParseException {
-        // Convert String date and time from AccessLog to Date and Time objects
-        Date punchDate = new Date(dateFormat.parse(log.getLogDate()).getTime());
-        Time punchTime = new Time(timeFormat.parse(log.getLogTime()).getTime());
+    public void processAccessLog(AccessLogArchiveEntity log) throws ParseException {
+        String logDate = log.getLogDate() != null ? log.getLogDate() : currentDateFormat.format(new Date());
+        Date punchDate = parseDate(logDate);
+        Time punchTime = parseTime(log.getLogTime());
 
-        // Fetch all InOutEntity records for the same employee and date
-        List<InOutEntity> inOutList = inOutRepository.findByEmployeeIDAndDate(log.getEmployeeID(), punchDate);
-
-        // Get the earliest morning punch (if exists)
-        Optional<InOutEntity> inOutOptional = inOutList.stream()
-                .min(Comparator.comparing(InOutEntity::getPunchInMoa, Comparator.nullsLast(Comparator.naturalOrder())));
-
-        // Get the earliest evening punch (if exists)
-        Optional<InOutEntity> inOutEveningOptional = inOutList.stream()
-                .min(Comparator.comparing(InOutEntity::getPunchInEv, Comparator.nullsLast(Comparator.naturalOrder())));
-
-        // Use existing record or create a new one
-        InOutEntity inOut = inOutOptional.orElseGet(() -> {
-            InOutEntity newEntry = new InOutEntity();
-            newEntry.setEmployeeID(log.getEmployeeID());
-            newEntry.setDate(punchDate);
-            return newEntry;
-        });
-
-        // Determine if it's a morning or evening punch
-        boolean isMorning = punchTime.before(Time.valueOf("12:00:00"));
-        boolean isEvening = !isMorning;
-
-        if (isMorning) {
-            // If morning punch exists, update only if it's earlier than the current one
-            if (inOut.getPunchInMoa() == null || punchTime.before(inOut.getTimeMoa())) {
-                inOut.setPunchInMoa(punchTime);
-                inOut.setTimeMoa(punchTime);
-                inOut.setIsMoaning(true);
-            }
-        } else if (isEvening) {
-            // If evening punch exists, update only if it's earlier than the current one
-            if (inOutEveningOptional.isEmpty() || punchTime.before(inOutEveningOptional.get().getTimeEve())) {
-                inOut.setPunchInEv(punchTime);
-                inOut.setTimeEve(punchTime);
-                inOut.setIsEvening(true);
-            }
-        }
-
-        // Save the updated or new record
-        inOutRepository.save(inOut);
+        logger.debug("Processing log - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
+                punchDate, punchTime, log.getEmployeeID(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut());
     }
 
     @Override
     public void main() throws ParseException {
+        logger.info("Starting main access log processing");
         prerequisite();
-        /// WE PULLING FROM DATA FROM ACCESS-LOG SERVER ---- EVERY SINGLE 2 HOURS
         processLogEntry();
     }
 
     @Override
     public void prerequisite() {
-        /// WE PULLING FROM DATA FROM MAIN SERVER ---- EVERY SINGLE 15 MIN -- FROM SLT SERVER
-        /// IS THERE ANY NEW RECORDS SAVE IT
-
-        /// ALSO CHECK PAST RECORDS ---- DUE TO THE DATA - ERRORS
-        /// WHICH MEANS IN PAST IF THERE ARE ANY DATA ERROR SO DATA WOULD NOT SAVE -- SO FIRST SAVE
-        /// AND MAKE IT PAST IS TRUE SO LATER WE CAN MAKE FETCH ALL TEH RECORDS IS PAST IS TRUE
-
+        logger.info("Running prerequisite checks");
+        // Existing prerequisite logic
     }
 
     @Override
-    public void processLogEntry(AccessLogEntity log_) throws ParseException {
+    public void processLogEntry(AccessLogEntity log) throws ParseException {
+        String logDate = log.getLogDate() != null ? log.getLogDate() : currentDateFormat.format(new Date());
+        Date punchDate = parseDate(logDate);
+        Time punchTime = parseTime(log.getLogTime());
 
+        logger.debug("Processing log entry - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
+                punchDate, punchTime, log.getEmployeeID(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut());
+    }
+
+    private Date parseDate(String dateString) throws ParseException {
+        try {
+            return dateFormat.parse(dateString);
+        } catch (ParseException e) {
+            logger.error("Failed to parse date: {}", dateString, e);
+            throw e;
+        }
+    }
+
+    private Time parseTime(String timeString) throws ParseException {
+        try {
+            return new Time(timeFormat.parse(timeString).getTime());
+        } catch (ParseException e) {
+            logger.error("Failed to parse time: {}", timeString, e);
+            throw e;
+        }
+    }
+
+    private void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout) throws ParseException {
+        if (inout == null) {
+            logger.error("Inout value is null for employee: {}", employeeID);
+            throw new IllegalArgumentException("Inout value cannot be null");
+        }
+
+        InOutEntity inOut = new InOutEntity();
+        LocalTime punchLocalTime = LocalTime.parse(punchTime.toString());
+        boolean isMorning = punchLocalTime.isBefore(NOON);
+
+        try {
+            // Parse the input date (format: "dd/MM/yyyy")
+            Date date = inputDateFormat.parse(logDate);
+
+            // Combine date and time
+            long combinedDateTime = date.getTime() + punchTime.getTime();
+            Timestamp punchTimestamp = new Timestamp(combinedDateTime);
+
+            // Set employee ID
+            inOut.setEmployeeID(employeeID);
+
+            String normalizedInout = inout.trim().toUpperCase();
+            switch (normalizedInout) {
+                case "IN":
+                    inOut.setInOut(1);
+                    if (isMorning) {
+                        inOut.setPunchInMoa(punchTimestamp);
+                        inOut.setTimeMoa(punchTime);
+                        inOut.setIsMoaning(true);
+                    } else {
+                        inOut.setPunchInEv(punchTimestamp);
+                        inOut.setTimeEve(punchTime);
+                        inOut.setIsEvening(true);
+                    }
+
+                    logger.debug("Saved IN record for employee: {}, date: {}, time: {}",
+                            employeeID, logDate, punchTime);
+                    break;
+
+                case "OUT":
+                    inOut.setInOut(0);
+                    if (isMorning) {
+                        inOut.setPunchInMoa(punchTimestamp);
+                        inOut.setTimeMoa(punchTime);
+                        inOut.setIsMoaning(true);
+                    } else {
+                        inOut.setPunchInEv(punchTimestamp);
+                        inOut.setTimeEve(punchTime);
+                        inOut.setIsEvening(true);
+                    }
+                    logger.debug("Saved OUT record for employee: {}, date: {}, time: {}",
+                            employeeID, logDate, punchTime);
+                    break;
+
+                default:
+                    logger.error("Invalid inout value: {} for employee: {}", inout, employeeID);
+                    throw new IllegalArgumentException("Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
+            }
+
+            inOutRepository.save(inOut);
+        } catch (ParseException e) {
+            logger.error("Failed to parse date while saving InOut record for employee {}: {}",
+                    employeeID, logDate, e);
+            throw e;
+        }
     }
 }

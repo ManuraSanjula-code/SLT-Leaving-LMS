@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   CssBaseline,
@@ -14,31 +14,75 @@ import {
   TableRow,
   Paper,
   TextField,
+  CircularProgress,
+  Pagination
 } from "@mui/material";
 
-// Mock data for no-pay leaves
-const noPayLeaves = [
-  { id: 1, employeeName: "John Doe", startDate: "2023-10-01", endDate: "2023-10-03", reason: "No pay approved" },
-  { id: 2, employeeName: "Jane Smith", startDate: "2023-10-05", endDate: "2023-10-06", reason: "No pay approved" },
-];
-
 const NoPayLeaves = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [leaveData, setLeaveData] = useState({ content: [], totalPages: 0 });
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
-  // Filter leaves based on date range
-  const filteredLeaves = noPayLeaves.filter((leave) => {
-    const matchesStartDateFilter = !startDateFilter || leave.startDate >= startDateFilter;
-    const matchesEndDateFilter = !endDateFilter || leave.endDate <= endDateFilter;
-    return matchesStartDateFilter && matchesEndDateFilter;
-  });
+  useEffect(() => {
+    fetchLeaveData();
+  }, [page, startDateFilter, endDateFilter]);
+
+  const fetchLeaveData = async () => {
+    setLoading(true);
+    try {
+      // Build URL with query parameters
+      let url = `http://localhost:8080/lms/no-pay?page=${page}&size=${pageSize}`;
+
+      if (startDateFilter) {
+        url += `&startDate=${startDateFilter}`;
+      }
+
+      if (endDateFilter) {
+        url += `&endDate=${endDateFilter}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include', // This ensures cookies are sent with the request
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setLeaveData(data);
+    } catch (err) {
+      console.error("Error fetching no-pay leaves:", err);
+      setError("Failed to fetch no-pay leaves. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = (event, value) => {
+    setPage(value - 1); // API uses 0-based indexing
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
 
   return (
       <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            minHeight: "100vh", // Ensures full viewport height
+            minHeight: "100vh",
           }}
       >
         <CssBaseline />
@@ -68,34 +112,70 @@ const NoPayLeaves = () => {
               />
             </Box>
 
-            {/* Table */}
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Employee Name</TableCell>
-                    <TableCell>Start Date</TableCell>
-                    <TableCell>End Date</TableCell>
-                    <TableCell>Reason</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredLeaves.map((leave) => (
-                      <TableRow key={leave.id}>
-                        <TableCell>{leave.employeeName}</TableCell>
-                        <TableCell>{leave.startDate}</TableCell>
-                        <TableCell>{leave.endDate}</TableCell>
-                        <TableCell>{leave.reason}</TableCell>
-                      </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                  <CircularProgress />
+                </Box>
+            ) : error ? (
+                <Typography color="error" sx={{ my: 2 }}>
+                  {error}
+                </Typography>
+            ) : (
+                <>
+                  {/* Table */}
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Employee ID</TableCell>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Submission Date</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Comment</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {leaveData.content && leaveData.content.length > 0 ? (
+                            leaveData.content.map((leave) => (
+                                <TableRow key={leave.id}>
+                                  <TableCell>{leave.employeeID}</TableCell>
+                                  <TableCell>{formatDate(leave.happenDate)}</TableCell>
+                                  <TableCell>{formatDate(leave.submissionDate)}</TableCell>
+                                  <TableCell>
+                                    {leave.unSuccessful ? "Unsuccessful Attendance" : ""}
+                                    {leave.absent ? "Absent" : ""}
+                                    {leave.late ? "Late" : ""}
+                                    {leave.halfDay ? "Half Day" : ""}
+                                  </TableCell>
+                                  <TableCell>{leave.comment}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} align="center">
+                                No records found
+                              </TableCell>
+                            </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Pagination */}
+                  {leaveData.totalPages > 1 && (
+                      <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                        <Pagination
+                            count={leaveData.totalPages}
+                            page={page + 1}
+                            onChange={handlePageChange}
+                            color="primary"
+                        />
+                      </Box>
+                  )}
+                </>
+            )}
           </Box>
         </Container>
-
-        {/* Footer */}
-        {/*<Footer />*/}
       </Box>
   );
 };

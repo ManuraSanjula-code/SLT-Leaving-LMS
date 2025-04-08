@@ -5,12 +5,12 @@ import lombok.*;
 
 import java.sql.Time;
 import java.util.Date;
+import java.util.Objects;
 
 @Entity
 @Table(name = "InOut")
 @Setter
 @Getter
-@EqualsAndHashCode
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -27,7 +27,7 @@ public class InOutEntity {
     private Time timeEve;// earliest eve time -- time
 
     @Builder.Default
-    private Boolean InOut = false;
+    private Integer InOut = 0;
 
     @Builder.Default
     private Boolean isMoaning = false;
@@ -37,4 +37,15 @@ public class InOutEntity {
     @Builder.Default
     private Boolean isPast = false; /// CHECK IN PAST DATA (THERE ARE SOME TIMES DATA IN PAST DATA NOT SAVED IN OUR LOCAL-DB ) BUT SOME HOW
                                     /// IN TOMARROW DATA BECAME VALID THEN I PROCESS THE DATA MAKE IT IS PAST IS TRUE
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        InOutEntity that = (InOutEntity) o;
+        return Objects.equals(employeeID, that.employeeID);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(employeeID);
+    }
 }

@@ -8,6 +8,11 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
+import com.slt.peotv.lmsmangmentservice.model.dto.AttendanceDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.LeaveDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.MovementDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.NopayDTO;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -18,27 +23,28 @@ public interface LMS_Service {
     public void saveAbsentee(String employeeId, Boolean isHalfDay, Boolean swipeErr);
     public void deleteAbsentee(String publicId);
 
-    public List<AttendanceEntity> getAllAttendance();
+    public Page<AttendanceDTO> getAllAttendance(int page, int size);
+    public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size);
+    public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size);
     public List<AttendanceEntity> getAttendanceByUserId(String userId);
     public List<AttendanceEntity> getAttendanceByEmployeeId(String employeeId);
 
     public void createMovements(MovementsEntity entity);
-    public List<MovementsEntity> getAllMovementByUser(String employeeID);
-    public List<MovementsEntity> getAllMovements();
+    public Page<MovementDTO> getAllMovementByUser(String employeeID, int page, int size);
+    public Page<MovementDTO> getAllMovements(int page, int size);
     public MovementsEntity getMovement(String publicId);
     public void updateMovement(MovementsEntity entity, String publicId);
     public void deleteMovements(String publicId);
 
     public void createNoPay(NoPayEntity entity);
-    public List<NoPayEntity> getAllNoPayByUser(String employeeID);
-    public List<NoPayEntity> getAllNoPays();
+    public Page<NopayDTO> getAllNoPayByUser(String employeeID, int page, int size);
+    public Page<NopayDTO> getAllNoPays(int page, int size);
     public NoPayEntity getNoPay(String publicId);
     public void deleteNoPay(String publicId);
 
     public void saveLeave(LeaveEntity entity);
-    public List<LeaveEntity> getAllLeaveByUserByPubicId(String employeeID);
-    public List<LeaveEntity> getAllLeaveByUserByEmployeeId(String employeeID);
-    public List<LeaveEntity> getAllLeaves();
+    public Page<LeaveDTO> getAllLeaveByUserByEmployeeId(String employeeID, int page, int size);
+    public Page<LeaveDTO> getAllLeaves(int page, int size);
     public LeaveEntity getOneLeave(String publicId);
     public void deleteLeave(String publicId);
 

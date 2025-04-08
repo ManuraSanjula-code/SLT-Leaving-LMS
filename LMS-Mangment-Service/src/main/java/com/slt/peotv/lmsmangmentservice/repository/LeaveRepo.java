@@ -1,6 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,7 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
-    List<LeaveEntity> findByEmployeeID(String employeeID);
+    Page<LeaveEntity> findAll(Pageable pageable);
+    Page<LeaveEntity> findByEmployeeID(String employeeID, Pageable pageable);
     Optional<LeaveEntity> findByPublicId(String publicId);
     List<LeaveEntity> findByEmployeeIDAndFromDateLessThanEqualAndToDateGreaterThanEqual(String employeeID, Date currentDate1, Date currentDate2);
     List<LeaveEntity> findByEmployeeIDAndIsManualRequest(String employeeID, Boolean isManualRequest);

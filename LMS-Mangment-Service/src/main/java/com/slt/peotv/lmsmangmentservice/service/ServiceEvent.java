@@ -1,7 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveCategoryTotalEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemaining;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeTotalEntity;
 
 import java.util.List;
@@ -17,8 +17,8 @@ public interface ServiceEvent {
 
 
     public void saveUserLeaveTypeRemaining(String employee_id, Integer remainingLeaves, String type_name);
-    public List<UserLeaveTypeRemaining> getUserLeaveTypeRemaining(String employeeID); // @@@
-    public UserLeaveTypeRemaining getUserLeaveTypeRemaining(String type_name, String employee_id);
+    public List<UserLeaveTypeRemainingEntity> getUserLeaveTypeRemaining(String employeeID); // @@@
+    public UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String type_name, String employee_id);
     public void deleteUserLeaveTypeRemaining(String publicId);
 
     public void saveUserLeaveTypeTotal(String employee_id, Integer totalLeaves, String type_name);

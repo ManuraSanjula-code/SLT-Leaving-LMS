@@ -9,12 +9,19 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.LMSServiceException_AllReadyExits;
+import com.slt.peotv.lmsmangmentservice.model.dto.AttendanceDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.LeaveDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.MovementDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.NopayDTO;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -78,8 +85,117 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public List<AttendanceEntity> getAllAttendance() {
-        return (List<AttendanceEntity>) attendanceRepo.findAll();
+    public Page<AttendanceDTO> getAllAttendance(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findAll(pageable);
+
+        return attendanceEntityPage.map(attendanceEntity -> {
+            AttendanceDTO attendanceDTO = new AttendanceDTO();
+
+            attendanceDTO.setId(attendanceEntity.getId());
+            attendanceDTO.setPublicId(attendanceEntity.getPublicId());
+            attendanceDTO.setDate(attendanceEntity.getDate());
+            attendanceDTO.setEmployeeID(attendanceEntity.getEmployeeID());
+            attendanceDTO.setFullDay(attendanceEntity.getIsFullDay());
+            attendanceDTO.setArrivalDate(attendanceEntity.getArrivalDate());
+            attendanceDTO.setArrivalTime(attendanceEntity.getArrivalTime());
+            attendanceDTO.setLeftTime(attendanceEntity.getLeftTime());
+            attendanceDTO.setLate(attendanceEntity.getIsLate());
+            attendanceDTO.setLateCover(attendanceEntity.getLateCover());
+            attendanceDTO.setHalfDay(attendanceEntity.getIsHalfDay());
+            attendanceDTO.setFullLeave(attendanceEntity.getIsFullLeave());
+            attendanceDTO.setShortLeave(attendanceEntity.getIsShortLeave());
+            attendanceDTO.setAbsent(attendanceEntity.getIsAbsent());
+            attendanceDTO.setUnSuccessful(attendanceEntity.getIsUnSuccessful());
+            attendanceDTO.setNoPay(attendanceEntity.getIsNoPay());
+            attendanceDTO.setIssues(attendanceEntity.getIssues());
+            attendanceDTO.setUnAuthorized(attendanceEntity.getIsUnAuthorized());
+            attendanceDTO.setResolve(attendanceEntity.getResolve());
+            attendanceDTO.setLeaveSuccess(attendanceEntity.getLeaveSuccess());
+            attendanceDTO.setLeaveReq(attendanceEntity.getLeaveReq());
+            attendanceDTO.setIssueDescription(attendanceEntity.getIssueDescription());
+            attendanceDTO.setDueDateForUA(attendanceEntity.getDueDateForUA());
+            attendanceDTO.setActive(attendanceEntity.getActive());
+            attendanceDTO.setNopay(attendanceEntity.getNopay());
+
+            return attendanceDTO;
+        });
+    }
+
+    @Override
+    public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrue(pageable);
+
+        return attendanceEntityPage.map(attendanceEntity -> {
+            AttendanceDTO attendanceDTO = new AttendanceDTO();
+
+            attendanceDTO.setId(attendanceEntity.getId());
+            attendanceDTO.setPublicId(attendanceEntity.getPublicId());
+            attendanceDTO.setDate(attendanceEntity.getDate());
+            attendanceDTO.setEmployeeID(attendanceEntity.getEmployeeID());
+            attendanceDTO.setFullDay(attendanceEntity.getIsFullDay());
+            attendanceDTO.setArrivalDate(attendanceEntity.getArrivalDate());
+            attendanceDTO.setArrivalTime(attendanceEntity.getArrivalTime());
+            attendanceDTO.setLeftTime(attendanceEntity.getLeftTime());
+            attendanceDTO.setLate(attendanceEntity.getIsLate());
+            attendanceDTO.setLateCover(attendanceEntity.getLateCover());
+            attendanceDTO.setHalfDay(attendanceEntity.getIsHalfDay());
+            attendanceDTO.setFullLeave(attendanceEntity.getIsFullLeave());
+            attendanceDTO.setShortLeave(attendanceEntity.getIsShortLeave());
+            attendanceDTO.setAbsent(attendanceEntity.getIsAbsent());
+            attendanceDTO.setUnSuccessful(attendanceEntity.getIsUnSuccessful());
+            attendanceDTO.setNoPay(attendanceEntity.getIsNoPay());
+            attendanceDTO.setIssues(attendanceEntity.getIssues());
+            attendanceDTO.setUnAuthorized(attendanceEntity.getIsUnAuthorized());
+            attendanceDTO.setResolve(attendanceEntity.getResolve());
+            attendanceDTO.setLeaveSuccess(attendanceEntity.getLeaveSuccess());
+            attendanceDTO.setLeaveReq(attendanceEntity.getLeaveReq());
+            attendanceDTO.setIssueDescription(attendanceEntity.getIssueDescription());
+            attendanceDTO.setDueDateForUA(attendanceEntity.getDueDateForUA());
+            attendanceDTO.setActive(attendanceEntity.getActive());
+            attendanceDTO.setNopay(attendanceEntity.getNopay());
+
+            return attendanceDTO;
+        });
+    }
+
+    @Override
+    public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnAuthorizedTrue(pageable);
+
+        return attendanceEntityPage.map(attendanceEntity -> {
+            AttendanceDTO attendanceDTO = new AttendanceDTO();
+
+            attendanceDTO.setId(attendanceEntity.getId());
+            attendanceDTO.setPublicId(attendanceEntity.getPublicId());
+            attendanceDTO.setDate(attendanceEntity.getDate());
+            attendanceDTO.setEmployeeID(attendanceEntity.getEmployeeID());
+            attendanceDTO.setFullDay(attendanceEntity.getIsFullDay());
+            attendanceDTO.setArrivalDate(attendanceEntity.getArrivalDate());
+            attendanceDTO.setArrivalTime(attendanceEntity.getArrivalTime());
+            attendanceDTO.setLeftTime(attendanceEntity.getLeftTime());
+            attendanceDTO.setLate(attendanceEntity.getIsLate());
+            attendanceDTO.setLateCover(attendanceEntity.getLateCover());
+            attendanceDTO.setHalfDay(attendanceEntity.getIsHalfDay());
+            attendanceDTO.setFullLeave(attendanceEntity.getIsFullLeave());
+            attendanceDTO.setShortLeave(attendanceEntity.getIsShortLeave());
+            attendanceDTO.setAbsent(attendanceEntity.getIsAbsent());
+            attendanceDTO.setUnSuccessful(attendanceEntity.getIsUnSuccessful());
+            attendanceDTO.setNoPay(attendanceEntity.getIsNoPay());
+            attendanceDTO.setIssues(attendanceEntity.getIssues());
+            attendanceDTO.setUnAuthorized(attendanceEntity.getIsUnAuthorized());
+            attendanceDTO.setResolve(attendanceEntity.getResolve());
+            attendanceDTO.setLeaveSuccess(attendanceEntity.getLeaveSuccess());
+            attendanceDTO.setLeaveReq(attendanceEntity.getLeaveReq());
+            attendanceDTO.setIssueDescription(attendanceEntity.getIssueDescription());
+            attendanceDTO.setDueDateForUA(attendanceEntity.getDueDateForUA());
+            attendanceDTO.setActive(attendanceEntity.getActive());
+            attendanceDTO.setNopay(attendanceEntity.getNopay());
+
+            return attendanceDTO;
+        });
     }
 
     @Override
@@ -100,16 +216,105 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public List<MovementsEntity> getAllMovementByUser(String employeeId) {
-        List<MovementsEntity> allByUser = movementsRepo.findAllByEmployeeID(employeeId);
-        if (allByUser.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        return allByUser;
+    public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployeeId(employeeId, pageable);
+
+        if (allByUser.isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        return allByUser.map(movementEntity -> {
+            MovementDTO movementDTO = new MovementDTO();
+
+            movementDTO.setId(movementEntity.getId());
+            movementDTO.setPublicId(movementEntity.getPublicId());
+            movementDTO.setEmployeeID(movementEntity.getEmployeeId());
+            movementDTO.setInTime(movementEntity.getInTime());
+            movementDTO.setOutTime(movementEntity.getOutTime());
+            movementDTO.setComment(movementEntity.getComment());
+            movementDTO.setLogTime(movementEntity.getLogTime());
+            movementDTO.setSupAppTime(movementEntity.getSupAppTime());
+            movementDTO.setManAppTime(movementEntity.getManAppTime());
+            movementDTO.setHodAppTime(movementEntity.getHodAppTime());
+            movementDTO.setCategory(movementEntity.getCategory());
+            movementDTO.setDestination(movementEntity.getDestination());
+            movementDTO.setEmployeeId(movementEntity.getEmployeeId());
+            movementDTO.setReqDate(movementEntity.getReqDate());
+            movementDTO.setHod(movementEntity.getHod());
+            movementDTO.setSupervisor(movementEntity.getSupervisor());
+            movementDTO.setMovementType(movementEntity.getMovementType());
+            movementDTO.setAttSync(movementEntity.getAttSync());
+            movementDTO.setHappenDate(movementEntity.getHappenDate());
+            movementDTO.setPending(movementEntity.getIsPending());
+            movementDTO.setAccepted(movementEntity.getIsAccepted());
+            movementDTO.setExpired(movementEntity.getIsExpired());
+            movementDTO.setHalfDay(movementEntity.getIsHalfDay());
+            movementDTO.setFullDay(movementEntity.getIsFullDay());
+            movementDTO.setLate(movementEntity.getIsLate());
+            movementDTO.setAbsent(movementEntity.getIsAbsent());
+            movementDTO.setUnSuccessfulAttdate(movementEntity.getIsUnSuccessfulAttdate());
+            movementDTO.setLateCover(movementEntity.getIsLateCover());
+            movementDTO.setUnAuthorized(movementEntity.getUnAuthorized());
+
+            // Handle the attendance relationship - we need to convert it to a string
+            if (movementEntity.getAttendance() != null) {
+                movementDTO.setAttendance(movementEntity.getAttendance().getPublicId());
+            }
+
+            return movementDTO;
+        });
     }
 
     @Override
-    public List<MovementsEntity> getAllMovements() {
-        return (List<MovementsEntity>) movementsRepo.findAll();
+    public Page<MovementDTO> getAllMovements(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
+
+        if (allByUser.isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        return allByUser.map(movementEntity -> {
+            MovementDTO movementDTO = new MovementDTO();
+
+            movementDTO.setId(movementEntity.getId());
+            movementDTO.setPublicId(movementEntity.getPublicId());
+            movementDTO.setEmployeeID(movementEntity.getEmployeeId());
+            movementDTO.setInTime(movementEntity.getInTime());
+            movementDTO.setOutTime(movementEntity.getOutTime());
+            movementDTO.setComment(movementEntity.getComment());
+            movementDTO.setLogTime(movementEntity.getLogTime());
+            movementDTO.setSupAppTime(movementEntity.getSupAppTime());
+            movementDTO.setManAppTime(movementEntity.getManAppTime());
+            movementDTO.setHodAppTime(movementEntity.getHodAppTime());
+            movementDTO.setCategory(movementEntity.getCategory());
+            movementDTO.setDestination(movementEntity.getDestination());
+            movementDTO.setEmployeeId(movementEntity.getEmployeeId());
+            movementDTO.setReqDate(movementEntity.getReqDate());
+            movementDTO.setHod(movementEntity.getHod());
+            movementDTO.setSupervisor(movementEntity.getSupervisor());
+            movementDTO.setMovementType(movementEntity.getMovementType());
+            movementDTO.setAttSync(movementEntity.getAttSync());
+            movementDTO.setHappenDate(movementEntity.getHappenDate());
+            movementDTO.setPending(movementEntity.getIsPending());
+            movementDTO.setAccepted(movementEntity.getIsAccepted());
+            movementDTO.setExpired(movementEntity.getIsExpired());
+            movementDTO.setHalfDay(movementEntity.getIsHalfDay());
+            movementDTO.setFullDay(movementEntity.getIsFullDay());
+            movementDTO.setLate(movementEntity.getIsLate());
+            movementDTO.setAbsent(movementEntity.getIsAbsent());
+            movementDTO.setUnSuccessfulAttdate(movementEntity.getIsUnSuccessfulAttdate());
+            movementDTO.setLateCover(movementEntity.getIsLateCover());
+            movementDTO.setUnAuthorized(movementEntity.getUnAuthorized());
+
+            // Handle the attendance relationship - we need to convert it to a string
+            if (movementEntity.getAttendance() != null) {
+                movementDTO.setAttendance(movementEntity.getAttendance().getPublicId());
+            }
+
+            return movementDTO;
+        });
     }
+
 
     @Override
     public MovementsEntity getMovement(String publicId) {
@@ -134,7 +339,7 @@ public class LMS_Service_impl implements LMS_Service {
         if (entity.getHodAppTime() != null) movementsEntity.setHodAppTime(entity.getHodAppTime());
         if (entity.getCategory() != null) movementsEntity.setCategory(entity.getCategory());
         if (entity.getDestination() != null) movementsEntity.setDestination(entity.getDestination());
-        if (entity.getEmployeeID() != null) movementsEntity.setEmployeeID(entity.getEmployeeID());
+        if (entity.getEmployeeId() != null) movementsEntity.setEmployeeId(entity.getEmployeeId());
         if (entity.getReqDate() != null) movementsEntity.setReqDate(entity.getReqDate());
         if (entity.getHod() != null) movementsEntity.setHod(entity.getHod());
         if (entity.getSupervisor() != null) movementsEntity.setSupervisor(entity.getSupervisor());
@@ -158,15 +363,67 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public List<NoPayEntity> getAllNoPayByUser(String employeeId) {
-        List<NoPayEntity> byUser = noPayRepo.findByEmployeeID(employeeId);
-        if (byUser.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        return byUser;
+    public Page<NopayDTO> getAllNoPayByUser(String employeeId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<NoPayEntity> byUser = noPayRepo.findByEmployeeID(employeeId, pageable);
+
+        if (byUser.isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        return byUser.map(noPayEntity -> {
+            NopayDTO nopayDTO = new NopayDTO();
+            nopayDTO.setId(noPayEntity.getId());
+            nopayDTO.setPublicId(noPayEntity.publicId);
+            nopayDTO.setEmployeeID(noPayEntity.getEmployeeID());
+            nopayDTO.setSubmissionDate(noPayEntity.getSubmissionDate());
+            nopayDTO.setAcctualDate(noPayEntity.getAcctualDate());
+            nopayDTO.setHalfDay(noPayEntity.getIsHalfDay());
+            nopayDTO.setUnSuccessful(noPayEntity.getUnSuccessful());
+            nopayDTO.setLate(noPayEntity.getIsLate());
+            nopayDTO.setLateCover(noPayEntity.getIsLateCover());
+            nopayDTO.setAbsent(noPayEntity.getIsAbsent());
+            nopayDTO.setComment(noPayEntity.getComment());
+            nopayDTO.setHappenDate(noPayEntity.getHappenDate());
+
+            // Handle the attendance relationship - assuming you want the attendance ID or some identifier
+            if (noPayEntity.getAttendance() != null) {
+                nopayDTO.setAttendance(noPayEntity.getAttendance().getPublicId());
+            }
+
+            return nopayDTO;
+        });
     }
 
     @Override
-    public List<NoPayEntity> getAllNoPays() {
-        return (List<NoPayEntity>) noPayRepo.findAll();
+    public Page<NopayDTO> getAllNoPays(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<NoPayEntity> byUser = noPayRepo.findAll(pageable);
+
+        if (byUser.isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        return byUser.map(noPayEntity -> {
+            NopayDTO nopayDTO = new NopayDTO();
+            nopayDTO.setId(noPayEntity.getId());
+            nopayDTO.setPublicId(noPayEntity.publicId);
+            nopayDTO.setEmployeeID(noPayEntity.getEmployeeID());
+            nopayDTO.setSubmissionDate(noPayEntity.getSubmissionDate());
+            nopayDTO.setAcctualDate(noPayEntity.getAcctualDate());
+            nopayDTO.setHalfDay(noPayEntity.getIsHalfDay());
+            nopayDTO.setUnSuccessful(noPayEntity.getUnSuccessful());
+            nopayDTO.setLate(noPayEntity.getIsLate());
+            nopayDTO.setLateCover(noPayEntity.getIsLateCover());
+            nopayDTO.setAbsent(noPayEntity.getIsAbsent());
+            nopayDTO.setComment(noPayEntity.getComment());
+            nopayDTO.setHappenDate(noPayEntity.getHappenDate());
+
+            // Handle the attendance relationship - assuming you want the attendance ID or some identifier
+            if (noPayEntity.getAttendance() != null) {
+                nopayDTO.setAttendance(noPayEntity.getAttendance().getPublicId());
+            }
+
+            return nopayDTO;
+        });
     }
 
     @Override
@@ -195,20 +452,82 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public List<LeaveEntity> getAllLeaveByUserByPubicId(String employeeId) {
-        if (employeeId == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        return leaveRepo.findByEmployeeID(employeeId);
+    public Page<LeaveDTO> getAllLeaveByUserByEmployeeId(String employeeId, int page, int size) {
+        if (employeeId == null)
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployeeID(employeeId, pageable);
+
+        return leaveEntityPage.map(leaveEntity -> {
+            LeaveDTO leaveDTO = new LeaveDTO();
+
+            leaveDTO.setPublicId(leaveEntity.getPublicId());
+            leaveDTO.setId(leaveEntity.getId());
+            leaveDTO.setEmployeeID(leaveEntity.getEmployeeID());
+            leaveDTO.setSubmitDate(leaveEntity.getSubmitDate());
+            leaveDTO.setFromDate(leaveEntity.getFromDate());
+            leaveDTO.setToDate(leaveEntity.getToDate());
+            leaveDTO.setLeaveCategory(leaveEntity.getLeaveCategory());
+            leaveDTO.setLeaveType(leaveEntity.getLeaveType());
+            leaveDTO.setSupervisedApproved(leaveEntity.getIsSupervisedApproved());
+            leaveDTO.setHODApproved(leaveEntity.getIsHODApproved());
+            leaveDTO.setIsNoPay(leaveEntity.getIsNoPay());
+            leaveDTO.setNumOfDays(leaveEntity.getNumOfDays());
+            leaveDTO.setDescription(leaveEntity.getDescription());
+            leaveDTO.setHalfDay(leaveEntity.getIsHalfDay());
+            leaveDTO.setFullDay(leaveEntity.getIsFullDay());
+            leaveDTO.setUnSuccessful(leaveEntity.getUnSuccessful());
+            leaveDTO.setLate(leaveEntity.getIsLate());
+            leaveDTO.setLateCover(leaveEntity.getIsLateCover());
+            leaveDTO.setShort_Leave(leaveEntity.getIsShort_Leave());
+            leaveDTO.setPending(leaveEntity.getIsPending());
+            leaveDTO.setAccepted(leaveEntity.getIsAccepted());
+            leaveDTO.setNotUsed(leaveEntity.getNotUsed());
+            leaveDTO.setCanceled(leaveEntity.getIsCanceled());
+            leaveDTO.setManualRequest(leaveEntity.getIsManualRequest());
+            leaveDTO.setHappenDate(leaveEntity.getHappenDate());
+
+            return leaveDTO;
+        });
     }
 
     @Override
-    public List<LeaveEntity> getAllLeaveByUserByEmployeeId(String employeeId) {
-        if (employeeId == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        return leaveRepo.findByEmployeeID(employeeId);
-    }
+    public Page<LeaveDTO> getAllLeaves(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
 
-    @Override
-    public List<LeaveEntity> getAllLeaves() {
-        return leaveRepo.findAll();
+        return leaveEntityPage.map(leaveEntity -> {
+            LeaveDTO leaveDTO = new LeaveDTO();
+
+            leaveDTO.setPublicId(leaveEntity.getPublicId());
+            leaveDTO.setId(leaveEntity.getId());
+            leaveDTO.setEmployeeID(leaveEntity.getEmployeeID());
+            leaveDTO.setSubmitDate(leaveEntity.getSubmitDate());
+            leaveDTO.setFromDate(leaveEntity.getFromDate());
+            leaveDTO.setToDate(leaveEntity.getToDate());
+            leaveDTO.setLeaveCategory(leaveEntity.getLeaveCategory());
+            leaveDTO.setLeaveType(leaveEntity.getLeaveType());
+            leaveDTO.setSupervisedApproved(leaveEntity.getIsSupervisedApproved());
+            leaveDTO.setHODApproved(leaveEntity.getIsHODApproved());
+            leaveDTO.setIsNoPay(leaveEntity.getIsNoPay());
+            leaveDTO.setNumOfDays(leaveEntity.getNumOfDays());
+            leaveDTO.setDescription(leaveEntity.getDescription());
+            leaveDTO.setHalfDay(leaveEntity.getIsHalfDay());
+            leaveDTO.setFullDay(leaveEntity.getIsFullDay());
+            leaveDTO.setUnSuccessful(leaveEntity.getUnSuccessful());
+            leaveDTO.setLate(leaveEntity.getIsLate());
+            leaveDTO.setLateCover(leaveEntity.getIsLateCover());
+            leaveDTO.setShort_Leave(leaveEntity.getIsShort_Leave());
+            leaveDTO.setPending(leaveEntity.getIsPending());
+            leaveDTO.setAccepted(leaveEntity.getIsAccepted());
+            leaveDTO.setNotUsed(leaveEntity.getNotUsed());
+            leaveDTO.setCanceled(leaveEntity.getIsCanceled());
+            leaveDTO.setManualRequest(leaveEntity.getIsManualRequest());
+            leaveDTO.setHappenDate(leaveEntity.getHappenDate());
+
+            return leaveDTO;
+        });
     }
 
     @Override

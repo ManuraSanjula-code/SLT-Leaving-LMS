@@ -15,7 +15,7 @@ public interface UserClient {
     @GetMapping("/users/{userid}")
     @Retry(name="user-service")
     @CircuitBreaker(name="user-service", fallbackMethod="getCustomerByIdFallback")
-    UserRest getCustomerById(@PathVariable("userid") String userid, @RequestHeader("Authorization") String token);
+    UserRest getEmployeeById(@PathVariable("userid") String userid, @RequestHeader("Authorization") String token);
 
     default UserRest getCustomerByIdFallback(String userid, String token, Throwable exception){
         UserRest userRest = new UserRest();

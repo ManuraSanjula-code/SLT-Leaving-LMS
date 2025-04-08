@@ -1,7 +1,5 @@
-"use client"
-
 // src/RequestMovement.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   CssBaseline,
@@ -10,82 +8,359 @@ import {
   TextField,
   Button,
   MenuItem,
+  Snackbar,
+  Alert,
+  FormControlLabel,
+  Checkbox,
+  FormControl,
+  InputLabel,
+  Select,
+  Grid,
 } from '@mui/material';
 
 const RequestMovement = () => {
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    console.log({
-      movementType: data.get('movementType'),
-      startDate: data.get('startDate'),
-      endDate: data.get('endDate'),
-      reason: data.get('reason'),
+  const [userId, setUserId] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const [formData, setFormData] = useState({
+    employeeId: '',
+    movementType: '',
+    comment: '',
+    inTime: '',
+    outTime: '',
+    destination: '',
+    category: '',
+    happenDate: '',
+    isLate: false,
+    isAbsent: false,
+    isLateCover: false,
+    isUnSuccessfulAttdate: false,
+    isHalfDay: false,
+    unAuthorized: false
+  });
+
+  useEffect(() => {
+    // Get userId from localStorage
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+      setFormData(prev => ({ ...prev, userId: storedUserId }));
+    } else {
+      setErrorMessage('User ID not found in local storage. Please login again.');
+      setShowError(true);
+    }
+  }, []);
+
+  const handleChange = (event) => {
+    const { name, value, checked, type } = event.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
+  const validate = () => {
+    if (!formData.movementType) {
+      setErrorMessage('Movement Type is required');
+      return false;
+    }
+    if (!formData.happenDate) {
+      setErrorMessage('Date is required');
+      return false;
+    }
+    if (!formData.comment) {
+      setErrorMessage('Comment/Reason is required');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!userId) {
+      setErrorMessage('User ID not found. Please login again.');
+      setShowError(true);
+      return;
+    }
+
+    if (!validate()) {
+      setShowError(true);
+      return;
+    }
+
+    // Convert date string to Date object for API
+    const requestData = {
+      ...formData,
+      userId: userId,
+      happenDate: formData.happenDate ? new Date(formData.happenDate) : null
+    };
+
+    try {
+      const response = await fetch('http://localhost:8080/lms/management/movement/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (response.ok) {
+        setSuccessMessage('Movement request submitted successfully!');
+        setShowSuccess(true);
+        // Reset form after successful submission
+        setFormData({
+          employeeId: '',
+          movementType: '',
+          comment: '',
+          inTime: '',
+          outTime: '',
+          destination: '',
+          category: '',
+          happenDate: '',
+          isLate: false,
+          isAbsent: false,
+          isLateCover: false,
+          isUnSuccessfulAttdate: false,
+          isHalfDay: false,
+          unAuthorized: false
+        });
+      } else {
+        const errorData = await response.json();
+        setErrorMessage(errorData.message || 'Failed to submit movement request');
+        setShowError(true);
+      }
+    } catch (error) {
+      setErrorMessage('Error submitting request: ' + error.message);
+      setShowError(true);
+    }
+  };
+
   return (
-    <Container component="main" maxWidth="sm">
-      <CssBaseline />
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Request Movement
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="movementType"
-            label="Movement Type"
-            name="movementType"
-            select
-            defaultValue=""
-          >
-            <MenuItem value="remote">Remote Work</MenuItem>
-            <MenuItem value="relocation">Office Relocation</MenuItem>
-          </TextField>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="startDate"
-            label="Start Date"
-            name="startDate"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="endDate"
-            label="End Date"
-            name="endDate"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="reason"
-            label="Reason"
-            name="reason"
-            multiline
-            rows={4}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            Submit Movement Request
-          </Button>
+      <Container component="main" maxWidth="md">
+        <CssBaseline />
+        <Box sx={{ mt: 4, mb: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Request Movement
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="employeeId"
+                    label="Employee ID"
+                    name="employeeId"
+                    value={formData.employeeId}
+                    onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="movement-type-label">Movement Type*</InputLabel>
+                  <Select
+                      labelId="movement-type-label"
+                      id="movementType"
+                      name="movementType"
+                      value={formData.movementType}
+                      label="Movement Type*"
+                      onChange={handleChange}
+                      required
+                  >
+                    <MenuItem value="REMOTE">Remote Work</MenuItem>
+                    <MenuItem value="RELOCATION">Office Relocation</MenuItem>
+                    <MenuItem value="ABSENT">Absent</MenuItem>
+                    <MenuItem value="LATE">Late</MenuItem>
+                    <MenuItem value="HALF_DAY">Half Day</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="happenDate"
+                    label="Date"
+                    name="happenDate"
+                    type="date"
+                    value={formData.happenDate}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="category"
+                    label="Category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="inTime"
+                    label="In Time"
+                    name="inTime"
+                    type="time"
+                    value={formData.inTime}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="outTime"
+                    label="Out Time"
+                    name="outTime"
+                    type="time"
+                    value={formData.outTime}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="destination"
+                    label="Destination"
+                    name="destination"
+                    value={formData.destination}
+                    onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="comment"
+                    label="Reason/Comment"
+                    name="comment"
+                    multiline
+                    rows={4}
+                    value={formData.comment}
+                    onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isLate"
+                          checked={formData.isLate}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Late"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isAbsent"
+                          checked={formData.isAbsent}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Absent"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isLateCover"
+                          checked={formData.isLateCover}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Late Cover"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isUnSuccessfulAttdate"
+                          checked={formData.isUnSuccessfulAttdate}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Unsuccessful Attendance"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isHalfDay"
+                          checked={formData.isHalfDay}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Half Day"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="unAuthorized"
+                          checked={formData.unAuthorized}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Unauthorized"
+                />
+              </Grid>
+            </Grid>
+            <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+            >
+              Submit Movement Request
+            </Button>
+          </Box>
         </Box>
-      </Box>
-    </Container>
+
+        <Snackbar
+            open={showError}
+            autoHideDuration={6000}
+            onClose={() => setShowError(false)}
+        >
+          <Alert onClose={() => setShowError(false)} severity="error">
+            {errorMessage}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+            open={showSuccess}
+            autoHideDuration={6000}
+            onClose={() => setShowSuccess(false)}
+        >
+          <Alert onClose={() => setShowSuccess(false)} severity="success">
+            {successMessage}
+          </Alert>
+        </Snackbar>
+      </Container>
   );
 };
 

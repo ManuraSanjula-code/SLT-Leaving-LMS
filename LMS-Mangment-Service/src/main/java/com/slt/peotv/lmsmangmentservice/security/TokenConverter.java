@@ -1,6 +1,5 @@
 package com.slt.peotv.lmsmangmentservice.security;
 
-
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.crypto.DirectDecrypter;
@@ -29,7 +28,6 @@ public class TokenConverter {
     private final JwtConfiguration jwtConfiguration;
     private final UserClient userClient;
 
-
     public String decryptToken(String encryptedToken) throws ParseException, JOSEException {
         JWEObject jweObject = JWEObject.parse(encryptedToken);
         DirectDecrypter directDecrypter = new DirectDecrypter(jwtConfiguration.getPrivateKey().getBytes());
@@ -37,14 +35,13 @@ public class TokenConverter {
         return jweObject.getPayload().toSignedJWT().serialize();
     }
 
-
-    public UserRest validateTokenSignature(String signedToken, HttpServletRequest request) throws ParseException, JOSEException {
+    public UserRest validateTokenSignature(String signedToken, HttpServletRequest request, String originalAuthHeader) throws ParseException, JOSEException {
         SignedJWT signedJWT = SignedJWT.parse(signedToken);
 
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
         String subject = claimsSet.getSubject();
-        List<String> _authorities = claimsSet.getStringListClaim("authorities"); // Custom claim
+        List<String> roles = claimsSet.getStringListClaim("authorities"); // Custom claim
         List<GrantedAuthority> authorities = new ArrayList<>();
 
         String issuer = claimsSet.getIssuer();
@@ -60,18 +57,21 @@ public class TokenConverter {
             return null;
         }
 
-        String authorizationHeader = request.getHeader("Authorization");
-        UserRest user = userClient.getCustomerById(subject, authorizationHeader);
+        // Use the original authorization header or token - NOT the decrypted one
+        UserRest user = userClient.getEmployeeById(subject, originalAuthHeader);
 
         if (user == null) {
             return null;
         }
 
-        _authorities.forEach(auth->{
-            authorities.add(new SimpleGrantedAuthority(auth));
-        });
+        // Add the authorities from the token
+        if (roles != null) {
+            roles.forEach(auth -> {
+                authorities.add(new SimpleGrantedAuthority(auth));
+            });
+            user.setAuthorities(authorities);
+        }
+
         return user;
     }
-
-
 }

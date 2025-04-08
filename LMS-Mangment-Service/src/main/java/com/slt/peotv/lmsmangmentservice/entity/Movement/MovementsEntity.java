@@ -24,7 +24,6 @@ public class MovementsEntity {
     private Long id;
 
     private String publicId;
-    private String employeeID;
 
     @Column(name = "In_Time", length = 45)
     private String inTime;

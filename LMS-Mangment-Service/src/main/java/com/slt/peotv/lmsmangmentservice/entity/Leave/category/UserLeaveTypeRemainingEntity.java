@@ -3,7 +3,6 @@ package com.slt.peotv.lmsmangmentservice.entity.Leave.category;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.Objects;
 
 @Entity
 @Table(name = "user_leave_type_remaining")
@@ -12,7 +11,7 @@ import java.util.Objects;
 @EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserLeaveTypeRemaining {
+public class UserLeaveTypeRemainingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;

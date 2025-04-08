@@ -1,7 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.service.impl;
 
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveCategoryTotalEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemaining;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeTotalEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
@@ -96,13 +96,13 @@ public class ServiceEventImpl implements ServiceEvent {
         if(byName.isPresent() && employee_id != null) {
             LeaveTypeEntity leaveCategoryEntity = byName.get();
 
-            UserLeaveTypeRemaining userLeaveTypeRemaining = new UserLeaveTypeRemaining();
-            userLeaveTypeRemaining.setPublicId(utils.generateId(10));
-            userLeaveTypeRemaining.setLeaveType(leaveCategoryEntity);
-            userLeaveTypeRemaining.setRemainingLeaves(remainingLeaves);
-            userLeaveTypeRemaining.setEmployeeID(employee_id);
+            UserLeaveTypeRemainingEntity userLeaveTypeRemainingEntity = new UserLeaveTypeRemainingEntity();
+            userLeaveTypeRemainingEntity.setPublicId(utils.generateId(10));
+            userLeaveTypeRemainingEntity.setLeaveType(leaveCategoryEntity);
+            userLeaveTypeRemainingEntity.setRemainingLeaves(remainingLeaves);
+            userLeaveTypeRemainingEntity.setEmployeeID(employee_id);
 
-            userLeaveTypeRemainingRepo.save(userLeaveTypeRemaining);
+            userLeaveTypeRemainingRepo.save(userLeaveTypeRemainingEntity);
 
         }else{
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
@@ -111,15 +111,15 @@ public class ServiceEventImpl implements ServiceEvent {
 
 
     @Override
-    public List<UserLeaveTypeRemaining> getUserLeaveTypeRemaining(String employee_id) {
+    public List<UserLeaveTypeRemainingEntity> getUserLeaveTypeRemaining(String employee_id) {
         return userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeID(employee_id);
     }
 
     @Override
-    public UserLeaveTypeRemaining getUserLeaveTypeRemaining(String type_name,String employee_id) {
+    public UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String type_name, String employee_id) {
         Optional<LeaveTypeEntity> byName = leaveTypeRepo.findByName(type_name);
         if(employee_id != null && byName.isPresent()) {
-            List<UserLeaveTypeRemaining> byLeaveTypeAndUser = userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeIDAndLeaveType(employee_id,byName.get());
+            List<UserLeaveTypeRemainingEntity> byLeaveTypeAndUser = userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeIDAndLeaveType(employee_id,byName.get());
             if(byLeaveTypeAndUser.isEmpty())
                 throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
             else

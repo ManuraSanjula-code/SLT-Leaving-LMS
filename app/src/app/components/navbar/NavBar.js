@@ -1,5 +1,5 @@
 // components/NavBar.js
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   AppBar,
   Toolbar,
@@ -53,13 +53,15 @@ const NavBar = () => {
       { label: "All Leaves", path: "/all-leaves" },
       { label: "All Movements", path: "/all-movements" },
       { label: "Single Employee Activities", path: "/single-employee-activities" },
+      { label: "Absent Employees", path: "/absent-employees" },
+      { label: "No-Pay Leaves", path: "/no-pay-leaves" },
+      { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
+      { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
     ].filter(item => allowedRoutes.has(item.path));
 
     const admItems = [
       { label: "Manage Employees", path: "/manage-employees" },
       { label: "Employee Activities", path: "/employee-activities" },
-      { label: "Absent Employees", path: "/absent-employees" },
-      { label: "No-Pay Leaves", path: "/no-pay-leaves" },
       { label: "Manage Leave Requests", path: "/manage-leave-requests" },
       { label: "Manage Movement Requests", path: "/manage-movement-requests" },
       { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
@@ -130,14 +132,13 @@ const NavBar = () => {
             open={sidebarOpen}
             onClose={handleSidebarClose}
             ModalProps={{
-              // Better performance for drawer
               keepMounted: true,
             }}
         >
-          <Box sx={{ width: 280, paddingTop: 2 }}>
+          <Box sx={{ width: 400, paddingTop: 2 }}>
             <List>
-              {/* Main navigation items */}
-              {allNavItems.map((item) => (
+              {/* Only show main navigation items in drawer on mobile */}
+              {isMobile && allNavItems.map((item) => (
                   <ListItem
                       button
                       key={item.path}
@@ -153,7 +154,7 @@ const NavBar = () => {
                   </ListItem>
               ))}
 
-              {/* Employee section */}
+              {/* Employee section - always in drawer regardless of screen size */}
               {employeeItems.length > 0 && (
                   <>
                     <ListItem
@@ -186,7 +187,7 @@ const NavBar = () => {
                   </>
               )}
 
-              {/* Admin section */}
+              {/* Admin section - always in drawer regardless of screen size */}
               {adminItems.length > 0 && (
                   <>
                     <ListItem
@@ -198,7 +199,7 @@ const NavBar = () => {
                           },
                         }}
                     >
-                      <ListItemText primary="Admin" />
+                      <ListItemText primary="System" />
                       {adminCollapseOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </ListItem>
                     <Collapse in={adminCollapseOpen} timeout="auto" unmountOnExit>

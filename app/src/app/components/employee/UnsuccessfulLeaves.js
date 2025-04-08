@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Container,
     CssBaseline,
@@ -21,58 +21,64 @@ import {
     Checkbox,
     Button,
     IconButton,
+    Chip,
+    CircularProgress,
+    Pagination
 } from "@mui/material";
 import { Check as CheckIcon, Close as CloseIcon } from "@mui/icons-material";
+import axios from "axios";
 
-// Mock data for unsuccessful leave requests
-const unsuccessfulLeaves = [
-    {
-        id: 1,
-        employeeName: "John Doe",
-        type: "Sick Leave",
-        startDate: "2023-10-01",
-        endDate: "2023-10-03",
-        status: "Rejected",
-        isResolved: false,
-    },
-    {
-        id: 2,
-        employeeName: "Jane Smith",
-        type: "Casual Leave",
-        startDate: "2023-10-05",
-        endDate: "2023-10-06",
-        status: "Canceled",
-        isResolved: true,
-    },
-    {
-        id: 3,
-        employeeName: "Alice Johnson",
-        type: "Annual Leave",
-        startDate: "2023-10-10",
-        endDate: "2023-10-15",
-        status: "Rejected",
-        isResolved: false,
-    },
-    {
-        id: 4,
-        employeeName: "Bob Brown",
-        type: "Sick Leave",
-        startDate: "2023-10-20",
-        endDate: "2023-10-25",
-        status: "Canceled",
-        isResolved: false,
-    },
-];
+const UnsuccessfulLeaves = ({ isAdmin = false }) => {
+    // State for data and pagination
+    const [leaveData, setLeaveData] = useState({
+        content: [],
+        totalPages: 0,
+        totalElements: 0,
+        number: 0,
+        size: 10
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [currentPage, setCurrentPage] = useState(0);
 
-const UnsuccessfulLeaves = ({ isAdmin }) => {
-    isAdmin = true
-    const [searchQuery, setSearchQuery] = useState(""); // State for search query
-    const [statusFilter, setStatusFilter] = useState("All"); // State for status filter
-    const [typeFilter, setTypeFilter] = useState("All"); // State for type filter
-    const [selected, setSelected] = useState([]); // State for selected leave requests
-    const [startDateFilter, setStartDateFilter] = useState(""); // State for start date filter
-    const [endDateFilter, setEndDateFilter] = useState(""); // State for end date filter
-    const [resolutionFilter, setResolutionFilter] = useState("All"); // State for resolution filter
+    // State for filters
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+    const [resolveFilter, setResolveFilter] = useState("All");
+    const [startDateFilter, setStartDateFilter] = useState("");
+    const [endDateFilter, setEndDateFilter] = useState("");
+    const [selected, setSelected] = useState([]);
+
+    // Fetch data from the server
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get(`http://localhost:8080/lms/un-successful`, {
+                params: {
+                    page: currentPage,
+                    size: 10
+                },
+                withCredentials: true
+            });
+            setLeaveData(response.data);
+            setError(null);
+        } catch (err) {
+            console.error("Error fetching unsuccessful leaves:", err);
+            setError("Failed to load data. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch data on component mount and page change
+    useEffect(() => {
+        fetchData();
+    }, [currentPage]);
+
+    // Handle page change
+    const handlePageChange = (event, value) => {
+        setCurrentPage(value - 1); // API uses 0-based indexing
+    };
 
     // Handle search input change
     const handleSearchChange = (event) => {
@@ -84,90 +90,98 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
         setStatusFilter(event.target.value);
     };
 
-    // Handle type filter change
-    const handleTypeFilterChange = (event) => {
-        setTypeFilter(event.target.value);
+    // Handle resolve filter change
+    const handleResolveFilterChange = (event) => {
+        setResolveFilter(event.target.value);
     };
 
     // Handle resolving a leave
-    const handleResolveLeave = (id) => {
-        const updatedLeaves = unsuccessfulLeaves.map((leave) =>
-            leave.id === id ? { ...leave, isResolved: true } : leave
-        );
-        // Update state or send to backend
-        console.log(`Resolved leave for employee ID: ${id}`);
-        // For now, log the updated list
-        console.log(updatedLeaves);
+    const handleResolveLeave = async (id) => {
+        try {
+            await axios.post(`http://localhost:8080/lms/resolve-unsuccessful/${id}`, {}, {
+                withCredentials: true
+            });
+            // Refresh data after resolving
+            fetchData();
+        } catch (err) {
+            console.error(`Error resolving leave ID ${id}:`, err);
+            setError("Failed to resolve leave request. Please try again.");
+        }
     };
 
-    // Handle approving a leave
-    const handleApproveLeave = (id) => {
-        console.log(`Approved leave for employee ID: ${id}`);
-        // Add your approve logic here
-    };
-
-    // Handle rejecting a leave
-    const handleRejectLeave = (id) => {
-        console.log(`Rejected leave for employee ID: ${id}`);
-        // Add your reject logic here
-    };
-
-    // Filter unsuccessful leave requests based on search query and filters
-    const filteredLeaves = unsuccessfulLeaves.filter((leave) => {
+    // Filter leaves based on search query and filters
+    const filteredLeaves = leaveData.content?.filter((leave) => {
         const matchesSearchQuery =
-            leave.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            leave.type.toLowerCase().includes(searchQuery.toLowerCase());
+            leave.employeeID?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leave.publicId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leave.issueDescription?.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesStatusFilter =
-            statusFilter === "All" || leave.status === statusFilter;
+            statusFilter === "All" ||
+            (statusFilter === "Late" && leave.late) ||
+            (statusFilter === "Absent" && leave.absent);
 
-        const matchesTypeFilter =
-            typeFilter === "All" || leave.type === typeFilter;
+        const matchesResolveFilter =
+            resolveFilter === "All" ||
+            (resolveFilter === "Resolved" && leave.resolve) ||
+            (resolveFilter === "Unresolved" && !leave.resolve);
 
         const matchesStartDateFilter =
-            !startDateFilter || leave.startDate >= startDateFilter;
+            !startDateFilter || new Date(leave.date) >= new Date(startDateFilter);
 
         const matchesEndDateFilter =
-            !endDateFilter || leave.endDate <= endDateFilter;
-
-        const matchesResolutionFilter =
-            resolutionFilter === "All" ||
-            (resolutionFilter === "Resolved" && leave.isResolved) ||
-            (resolutionFilter === "Unresolved" && !leave.isResolved);
+            !endDateFilter || new Date(leave.date) <= new Date(endDateFilter);
 
         return (
             matchesSearchQuery &&
             matchesStatusFilter &&
-            matchesTypeFilter &&
+            matchesResolveFilter &&
             matchesStartDateFilter &&
-            matchesEndDateFilter &&
-            matchesResolutionFilter
+            matchesEndDateFilter
         );
-    });
+    }) || [];
 
     // Handle individual row selection
     const handleSelect = (id) => {
         if (selected.includes(id)) {
-            setSelected((prev) => prev.filter((item) => item !== id)); // Un-select
+            setSelected((prev) => prev.filter((item) => item !== id));
         } else {
-            setSelected((prev) => [...prev, id]); // Select
+            setSelected((prev) => [...prev, id]);
         }
     };
 
     // Handle "Select All" functionality
     const handleSelectAll = () => {
         if (selected.length === filteredLeaves.length) {
-            setSelected([]); // Un-select all
+            setSelected([]);
         } else {
-            setSelected(filteredLeaves.map((leave) => leave.id)); // Select all
+            setSelected(filteredLeaves.map((leave) => leave.id));
         }
     };
 
-    // Handle delete all selected leave requests
-    const handleDeleteAllSelected = () => {
-        console.log(`Delete selected leave requests: ${selected}`);
-        // Add your delete logic here
-        setSelected([]); // Clear selection after deletion
+    // Handle bulk resolution
+    const handleBulkResolve = async () => {
+        try {
+            await Promise.all(
+                selected.map((id) =>
+                    axios.post(`http://localhost:8080/lms/resolve-unsuccessful/${id}`, {}, {
+                        withCredentials: true
+                    })
+                )
+            );
+            setSelected([]);
+            fetchData();
+        } catch (err) {
+            console.error("Error resolving selected leaves:", err);
+            setError("Failed to resolve selected leaves. Please try again.");
+        }
+    };
+
+    // Format date for display
+    const formatDate = (dateString) => {
+        if (!dateString) return "-";
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
     };
 
     return (
@@ -175,7 +189,7 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
             sx={{
                 display: "flex",
                 flexDirection: "column",
-                minHeight: "100vh", // Ensures full viewport height
+                minHeight: "100vh",
             }}
         >
             <CssBaseline />
@@ -187,7 +201,7 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
 
                     {/* Search Bar */}
                     <TextField
-                        label="Search by Employee Name or Leave Type"
+                        label="Search by Employee ID or Issue Description"
                         variant="outlined"
                         fullWidth
                         value={searchQuery}
@@ -196,40 +210,26 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
                     />
 
                     {/* Filters */}
-                    <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                    <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
                         <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-                            <InputLabel>Filter by Status</InputLabel>
+                            <InputLabel>Status</InputLabel>
                             <Select
                                 value={statusFilter}
                                 onChange={handleStatusFilterChange}
-                                label="Filter by Status"
+                                label="Status"
                             >
                                 <MenuItem value="All">All</MenuItem>
-                                <MenuItem value="Rejected">Rejected</MenuItem>
-                                <MenuItem value="Canceled">Canceled</MenuItem>
+                                <MenuItem value="Late">Late</MenuItem>
+                                <MenuItem value="Absent">Absent</MenuItem>
                             </Select>
                         </FormControl>
 
                         <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-                            <InputLabel>Filter by Type</InputLabel>
+                            <InputLabel>Resolved Status</InputLabel>
                             <Select
-                                value={typeFilter}
-                                onChange={handleTypeFilterChange}
-                                label="Filter by Type"
-                            >
-                                <MenuItem value="All">All</MenuItem>
-                                <MenuItem value="Sick Leave">Sick Leave</MenuItem>
-                                <MenuItem value="Casual Leave">Casual Leave</MenuItem>
-                                <MenuItem value="Annual Leave">Annual Leave</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-                            <InputLabel>Filter by Resolution</InputLabel>
-                            <Select
-                                value={resolutionFilter}
-                                onChange={(e) => setResolutionFilter(e.target.value)}
-                                label="Filter by Resolution"
+                                value={resolveFilter}
+                                onChange={handleResolveFilterChange}
+                                label="Resolved Status"
                             >
                                 <MenuItem value="All">All</MenuItem>
                                 <MenuItem value="Resolved">Resolved</MenuItem>
@@ -238,15 +238,16 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
                         </FormControl>
 
                         <TextField
-                            label="Start Date"
+                            label="From Date"
                             type="date"
                             variant="outlined"
                             value={startDateFilter}
                             onChange={(e) => setStartDateFilter(e.target.value)}
                             InputLabelProps={{ shrink: true }}
                         />
+
                         <TextField
-                            label="End Date"
+                            label="To Date"
                             type="date"
                             variant="outlined"
                             value={endDateFilter}
@@ -255,96 +256,122 @@ const UnsuccessfulLeaves = ({ isAdmin }) => {
                         />
                     </Box>
 
-                    {/* Delete All Selected Button */}
-                    <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleDeleteAllSelected}
-                        disabled={selected.length === 0}
-                        sx={{ mb: 2 }}
-                    >
-                        Delete All Selected
-                    </Button>
+                    {/* Bulk Actions */}
+                    {selected.length > 0 && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleBulkResolve}
+                            sx={{ mb: 2 }}
+                        >
+                            Resolve All Selected ({selected.length})
+                        </Button>
+                    )}
 
-                    {/* Table */}
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            indeterminate={
-                                                selected.length > 0 && selected.length < filteredLeaves.length
-                                            }
-                                            checked={selected.length === filteredLeaves.length}
-                                            onChange={handleSelectAll}
-                                        />
-                                    </TableCell>
-                                    <TableCell>Employee Name</TableCell>
-                                    <TableCell>Leave Type</TableCell>
-                                    <TableCell>Start Date</TableCell>
-                                    <TableCell>End Date</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Action</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredLeaves.map((leave) => (
-                                    <TableRow key={leave.id}>
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                checked={selected.includes(leave.id)}
-                                                onChange={() => handleSelect(leave.id)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>{leave.employeeName}</TableCell>
-                                        <TableCell>{leave.type}</TableCell>
-                                        <TableCell>{leave.startDate}</TableCell>
-                                        <TableCell>{leave.endDate}</TableCell>
-                                        <TableCell
-                                            sx={{
-                                                color: leave.isResolved ? "green" : "red",
-                                                fontWeight: "bold",
-                                            }}
-                                        >
-                                            {leave.status}
-                                        </TableCell>
-                                        <TableCell>
-                                            {isAdmin && !leave.isResolved && (
-                                                <>
-                                                    <IconButton
-                                                        onClick={() => handleApproveLeave(leave.id)}
-                                                        color="success"
-                                                    >
-                                                        <CheckIcon />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        onClick={() => handleRejectLeave(leave.id)}
-                                                        color="error"
-                                                    >
-                                                        <CloseIcon />
-                                                    </IconButton>
-                                                </>
-                                            )}
-                                            {!leave.isResolved && (
-                                                <Button
-                                                    variant="contained"
-                                                    color="primary"
-                                                    size="small"
-                                                    onClick={() => handleResolveLeave(leave.id)}
-                                                >
-                                                    Resolve
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                    {/* Error Message */}
+                    {error && (
+                        <Typography color="error" sx={{ mb: 2 }}>
+                            {error}
+                        </Typography>
+                    )}
+
+                    {/* Loading Indicator */}
+                    {loading ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            {/* Table */}
+                            <TableContainer component={Paper}>
+                                <Table>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    indeterminate={
+                                                        selected.length > 0 && selected.length < filteredLeaves.length
+                                                    }
+                                                    checked={filteredLeaves.length > 0 && selected.length === filteredLeaves.length}
+                                                    onChange={handleSelectAll}
+                                                />
+                                            </TableCell>
+                                            <TableCell>ID</TableCell>
+                                            <TableCell>Employee ID</TableCell>
+                                            <TableCell>Date</TableCell>
+                                            <TableCell>Arrival Time</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell>Due Date</TableCell>
+                                            <TableCell>Issue</TableCell>
+                                            <TableCell>Actions</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredLeaves.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={9} align="center">
+                                                    No unsuccessful leaves found
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            filteredLeaves.map((leave) => (
+                                                <TableRow key={leave.id}>
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox
+                                                            checked={selected.includes(leave.id)}
+                                                            onChange={() => handleSelect(leave.id)}
+                                                            disabled={leave.resolve}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>{leave.publicId}</TableCell>
+                                                    <TableCell>{leave.employeeID}</TableCell>
+                                                    <TableCell>{formatDate(leave.date)}</TableCell>
+                                                    <TableCell>{leave.arrivalTime || "-"}</TableCell>
+                                                    <TableCell>
+                                                        {leave.late && <Chip label="Late" color="warning" size="small" sx={{ mr: 0.5 }} />}
+                                                        {leave.absent && <Chip label="Absent" color="error" size="small" sx={{ mr: 0.5 }} />}
+                                                        {leave.resolve ? (
+                                                            <Chip label="Resolved" color="success" size="small" />
+                                                        ) : (
+                                                            <Chip label="Unresolved" color="default" size="small" />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{formatDate(leave.dueDateForUA)}</TableCell>
+                                                    <TableCell sx={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                        {leave.issueDescription}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {!leave.resolve && (
+                                                            <Button
+                                                                variant="contained"
+                                                                color="primary"
+                                                                size="small"
+                                                                onClick={() => handleResolveLeave(leave.id)}
+                                                            >
+                                                                Resolve
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+
+                            {/* Pagination */}
+                            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                                <Pagination
+                                    count={leaveData.totalPages || 1}
+                                    page={leaveData.number + 1}
+                                    onChange={handlePageChange}
+                                    color="primary"
+                                />
+                            </Box>
+                        </>
+                    )}
                 </Box>
             </Container>
-            {/*<Footer/>*/}
         </Box>
     );
 };

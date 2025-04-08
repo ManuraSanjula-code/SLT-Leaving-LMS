@@ -5,13 +5,22 @@
 export const priorityRouteAccess = {
     // Priority 1-9 (Super/System Roles)
     1: [
-        "/system-settings",
-        "/manage-admins"
+        "/manage-employees",
     ],
 
-    // Priority 10-49 (Administrative Roles)
+    // Priority 10-29 (Administrative Roles)
     10: [
-        "/manage-employees",
+        "/employee-activities",
+        "/absent-employees",
+        "/no-pay-leaves",
+        "/manage-leave-requests",
+        "/manage-movement-requests",
+        "/unsuccessful-leaves",
+        "/unauthorized-leaves"
+    ],
+
+    // 30-49 (HR Roles)
+    30:[
         "/employee-activities",
         "/absent-employees",
         "/no-pay-leaves"
@@ -22,7 +31,8 @@ export const priorityRouteAccess = {
         "/manage-leave-requests",
         "/manage-movement-requests",
         "/unsuccessful-leaves",
-        "/unauthorized-leaves"
+        "/unauthorized-leaves",
+        "/no-pay-leaves",
     ],
 
     // Priority 100-199 (Standard Users)
@@ -34,14 +44,10 @@ export const priorityRouteAccess = {
         "/all-leaves",
         "/all-movements",
         "/single-employee-activities",
+        "/unsuccessful-leaves",
+        "/unauthorized-leaves",
+        "/no-pay-leaves",
         "/"
-    ],
-
-    // Priority 200-499 (Restricted/Temp)
-    200: [
-        "/dashboard",
-        "/profile",
-        "/manage-employees",
     ]
 };
 
@@ -53,13 +59,29 @@ export const priorityRouteAccess = {
 export const getAccessibleRoutes = (userPriority) => {
     const accessibleRoutes = new Set();
 
-    // Add all routes where user's priority is <= defined priority
-    Object.entries(priorityRouteAccess).forEach(([priority, routes]) => {
-        if (userPriority <= Number(priority)) {
-            routes.forEach(route => accessibleRoutes.add(route));
-        }
+    // Define the range mappings based on comments
+    const priorityRanges = [
+        { min: 1, max: 9, key: 1 },      // Super/System Roles
+        { min: 10, max: 29, key: 10 },   // Administrative Roles
+        { min: 30, max: 49, key: 30 },   // HR Roles
+        { min: 50, max: 99, key: 50 },   // Managerial Roles
+        { min: 100, max: 199, key: 100 }, // Standard Users
+        { min: 200, max: 499, key: 200 }  // Restricted/Temp
+    ];
+
+    // Find the user's priority range and all higher priority ranges
+    const applicableRanges = priorityRanges.filter(range =>
+        userPriority >= range.min && userPriority <= range.max || // User is in this range
+        userPriority < range.min // User has higher priority than this range
+    );
+
+    // Add routes from all applicable ranges
+    applicableRanges.forEach(range => {
+        const routes = priorityRouteAccess[range.key] || [];
+        routes.forEach(route => accessibleRoutes.add(route));
     });
 
+    console.log(accessibleRoutes);
     return accessibleRoutes;
 };
 

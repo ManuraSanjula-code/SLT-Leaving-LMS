@@ -1,7 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.utils.Service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemaining;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.*;
@@ -51,9 +51,9 @@ public class AttendanceProcessingService {
                     boolean isHalfDay = checkHalfDay(inOut);
                     boolean isFullDayAttendance = checkFullAttendance(inOut);
 
-                    UserLeaveTypeRemaining remaining_half_Day =
+                    UserLeaveTypeRemainingEntity remaining_half_Day =
                             serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", employeeId);
-                    UserLeaveTypeRemaining remaining_short_Leaves =
+                    UserLeaveTypeRemainingEntity remaining_short_Leaves =
                             serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", employeeId);
 
                     if (isFullDayAttendance) {
@@ -76,6 +76,13 @@ public class AttendanceProcessingService {
                         /// IF LATE IS COVER SET LATE_COVER TURE
                     }
 
+                    UserLeaveTypeRemainingEntity userLeaveTypeRemainingEntity = getUserLeaveTypeRemaining(leave.getLeaveType().getName(), leave.getEmployeeID());
+                    if (userLeaveTypeRemainingEntity.getRemainingLeaves() < 1) {
+                        userLeaveTypeRemainingEntity.setRemainingLeaves(userLeaveTypeRemainingEntity.getRemainingLeaves() - 1);
+                        userLeaveTypeRemainingRepo.save(userLeaveTypeRemainingEntity);
+                    }
+
+
                 } else {
                     leave.setNotUsed(false);
                     // No attendance record found → Employee was absent
@@ -86,42 +93,42 @@ public class AttendanceProcessingService {
                     if (user != null)
                         switch (leaveType.getName()) {
                             case "CASUAL" -> {
-                                UserLeaveTypeRemaining casual = getUserLeaveTypeRemaining("CASUAL", user);
+                                UserLeaveTypeRemainingEntity casual = getUserLeaveTypeRemaining("CASUAL", user);
                                 if (casual.getRemainingLeaves() > 1) {
                                     casual.setRemainingLeaves(casual.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(casual);
                                 }
                             }
                             case "ANNUAL" -> {
-                                UserLeaveTypeRemaining annual = getUserLeaveTypeRemaining("ANNUAL", user);
+                                UserLeaveTypeRemainingEntity annual = getUserLeaveTypeRemaining("ANNUAL", user);
                                 if (annual.getRemainingLeaves() > 1) {
                                     annual.setRemainingLeaves(annual.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(annual);
                                 }
                             }
                             case "SICK" -> {
-                                UserLeaveTypeRemaining sick = getUserLeaveTypeRemaining("SICK", user);
+                                UserLeaveTypeRemainingEntity sick = getUserLeaveTypeRemaining("SICK", user);
                                 if (sick.getRemainingLeaves() > 1) {
                                     sick.setRemainingLeaves(sick.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(sick);
                                 }
                             }
                             case "SPECIAL" -> {
-                                UserLeaveTypeRemaining special = getUserLeaveTypeRemaining("SPECIAL", user);
+                                UserLeaveTypeRemainingEntity special = getUserLeaveTypeRemaining("SPECIAL", user);
                                 if (special.getRemainingLeaves() > 1) {
                                     special.setRemainingLeaves(special.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(special);
                                 }
                             }
                             case "DUTY" -> {
-                                UserLeaveTypeRemaining duty = getUserLeaveTypeRemaining("DUTY", user);
+                                UserLeaveTypeRemainingEntity duty = getUserLeaveTypeRemaining("DUTY", user);
                                 if (duty.getRemainingLeaves() > 1) {
                                     duty.setRemainingLeaves(duty.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(duty);
                                 }
                             }
                             case "MATERNITY_LEAVE" -> {
-                                UserLeaveTypeRemaining maternityLeave = getUserLeaveTypeRemaining("MATERNITY_LEAVE", user);
+                                UserLeaveTypeRemainingEntity maternityLeave = getUserLeaveTypeRemaining("MATERNITY_LEAVE", user);
                                 if (maternityLeave.getRemainingLeaves() > 1) {
                                     maternityLeave.setRemainingLeaves(maternityLeave.getRemainingLeaves() - 1);
                                     userLeaveTypeRemainingRepo.save(maternityLeave);
@@ -140,7 +147,7 @@ public class AttendanceProcessingService {
         }
     }
 
-    private UserLeaveTypeRemaining getUserLeaveTypeRemaining(String name, String user) {
+    private UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String name, String user) {
         return serviceEvent.getUserLeaveTypeRemaining(name, user);
     }
 

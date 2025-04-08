@@ -19,6 +19,7 @@ public class AccessLogArchiveEntity {
 
     private String employeeID;
 
+    @Column(name = "LogDate")
     private String logDate;
 
     private String logTime;

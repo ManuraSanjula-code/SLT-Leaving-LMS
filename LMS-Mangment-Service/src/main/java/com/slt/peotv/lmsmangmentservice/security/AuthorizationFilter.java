@@ -6,6 +6,7 @@ import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,47 +25,66 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest req,
-            HttpServletResponse res,
-            FilterChain chain) throws IOException, ServletException {
+                                    HttpServletResponse res,
+                                    FilterChain chain) throws IOException, ServletException {
 
-        String header = req.getHeader(SecurityConstants.HEADER_STRING);
+        // First try to get the token from Authorization header
+        String authorizationHeader = req.getHeader(SecurityConstants.HEADER_STRING);
+        String token = null;
 
-        if (header == null || !header.startsWith(SecurityConstants.TOKEN_PREFIX)) {
-            chain.doFilter(req, res);
-            return;
+        // Check if the Authorization header exists and has the correct prefix
+        if (authorizationHeader != null && authorizationHeader.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+            token = authorizationHeader.replace(SecurityConstants.TOKEN_PREFIX, "");
+        } else {
+            // If no Authorization header, try to get token from cookie
+            token = extractJwtTokenFromCookie(req);
+            if (token == null) {
+                // No token found in either header or cookie
+                chain.doFilter(req, res);
+                return;
+            }
         }
 
-        UsernamePasswordAuthenticationToken authentication = null;
+        // We have a token now, authenticate
         try {
-            authentication = getAuthentication(req);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        } catch (JOSEException e) {
+            UsernamePasswordAuthenticationToken authentication = getAuthentication(req, token, authorizationHeader);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (ParseException | JOSEException e) {
             throw new RuntimeException(e);
         }
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+
         chain.doFilter(req, res);
     }
 
-    private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request) throws ParseException, JOSEException {
-
-        String authorizationHeader = request.getHeader(SecurityConstants.HEADER_STRING);
-
-        if (authorizationHeader == null) {
+    private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request, String signedToken, String originalAuthHeader) throws ParseException, JOSEException {
+        if (signedToken == null) {
             return null;
         }
 
-        String signedToken = authorizationHeader.replace(SecurityConstants.TOKEN_PREFIX, "");
         TokenConverter tokenConverter = (TokenConverter) SpringApplicationContext.getBean("tokenConverter");
-        String token = tokenConverter.decryptToken(signedToken);
-        UserRest user = tokenConverter.validateTokenSignature(token, request);
+
+        // Decrypt token to validate it locally
+        String decryptedToken = tokenConverter.decryptToken(signedToken);
+
+        // Pass the original token in the request to the user service (not the decrypted one)
+        UserRest user = tokenConverter.validateTokenSignature(decryptedToken, request, originalAuthHeader != null ? originalAuthHeader : SecurityConstants.TOKEN_PREFIX + signedToken);
+
         if(user != null){
             return new UsernamePasswordAuthenticationToken(user.getUserId(), null, user.getAuthorities());
-
-        }else {
+        } else {
             return null;
         }
-
     }
 
+    private String extractJwtTokenFromCookie(HttpServletRequest req) {
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("jwt".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
 }

@@ -3,7 +3,7 @@ package com.slt.peotv.lmsmangmentservice.utils.Service;
 import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemaining;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.model.AbsenteeReq;
 import com.slt.peotv.lmsmangmentservice.repository.AbsenteeRepo;
@@ -17,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -53,9 +55,30 @@ public class Helper {
         return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
+    public Date getYesterdayDate_() {
+        String mysqlDate = "2013-01-01 02:37:30.000000";
+//        String mysqlDate = "2015-02-02 03:03:14.000000";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+        LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
+
+        // Convert to java.util.Date
+        Date legacyDate = Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
+        return legacyDate;
+    }
+
+    public Date getYesterdayDate_V2() {
+//        String mysqlDate = "2013-01-01 12:05:32.000000";
+        String mysqlDate = "2015-02-02 11:42:23.000000";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+        LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
+
+        // Convert to java.util.Date
+        Date legacyDate = Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
+        return legacyDate;
+    }
 
     public void handleAbsenteeReq(String employee, LeaveEntity leaveEntity) {
-        List<UserLeaveTypeRemaining> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(leaveEntity.getEmployeeID());
+        List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(leaveEntity.getEmployeeID());
         boolean allMatch = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
 
         if (employee == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
@@ -128,8 +151,8 @@ public class Helper {
 
         attendanceEntity.setIsUnSuccessful(true);
 
-        UserLeaveTypeRemaining remaining_short_Leaves = serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", attendanceEntity.getEmployeeID());
-        UserLeaveTypeRemaining remaining_half_Day = serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", attendanceEntity.getEmployeeID());
+        UserLeaveTypeRemainingEntity remaining_short_Leaves = serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", attendanceEntity.getEmployeeID());
+        UserLeaveTypeRemainingEntity remaining_half_Day = serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", attendanceEntity.getEmployeeID());
 
         if (remaining_short_Leaves.getRemainingLeaves() < 1) { /// check are there any short leaves
            /// No short leaves
