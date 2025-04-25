@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface NoPayRepo extends CrudRepository<NoPayEntity, Long> {
     Page<NoPayEntity> findByEmployeeID(String employeeID, Pageable pageable);
+    Page<NoPayEntity> findByUserId(String userId, Pageable pageable);
     Page<NoPayEntity> findAll(Pageable pageable);
     Optional<NoPayEntity> findByPublicId(String publicId);
 }

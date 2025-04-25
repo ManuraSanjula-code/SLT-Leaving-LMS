@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { Delete, Edit, Search } from "@mui/icons-material";
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchManagementData, saveProfile, deleteProfile } from '../../../store/managementSlice';
+import { fetchManagementData, saveProfile, deleteProfile } from '../../../redux-lms/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 
@@ -83,7 +83,6 @@ const ProfileForm = ({ onSubmit }) => {
     hdEndsMorning: "12:30",
     flexiDays: "5",
     flexiHrsStart: "07:00",
-    users: []
   });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [deletedUsers, setDeletedUsers] = useState([]);
@@ -134,7 +133,6 @@ const ProfileForm = ({ onSubmit }) => {
       hdEndsMorning: "12:30",
       flexiDays: "5",
       flexiHrsStart: "07:00",
-      users: []
     });
 
     if (profile) {
@@ -170,7 +168,6 @@ const ProfileForm = ({ onSubmit }) => {
       hdEndsMorning: "12:30",
       flexiDays: "5",
       flexiHrsStart: "07:00",
-      users: []
     });
     setSelectedUsers([]);
     setDeletedUsers([]);
@@ -255,7 +252,6 @@ const ProfileForm = ({ onSubmit }) => {
       ...formData,
       addedUsers: addedUsers.map(user => user.userId),
       deletedUsers,
-      id: currentProfile?.id || null
     };
 
     dispatch(saveProfile({

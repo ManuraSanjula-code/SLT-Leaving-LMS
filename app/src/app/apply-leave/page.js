@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import ApplyLeave from '../components/dashboard/ApplyLeave';
+import ApplyLeave from '../components/employee/ApplyLeave';
 import NavBar from "../components/navbar/NavBar";
 
 function App() {

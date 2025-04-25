@@ -1,6 +1,7 @@
 package com.slt.peotv.userservice.lms.shared.dto;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class UserDtoArchive implements Serializable{
 
@@ -53,5 +54,28 @@ public class UserDtoArchive implements Serializable{
 	}
 	public void setSltId(String sltId) {
 		this.sltId = sltId;
+	}
+	@Override
+	public int hashCode() {
+		return Objects.hash(email, employeeId, firstName, id, lastName, sltId, userId);
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		UserDtoArchive other = (UserDtoArchive) obj;
+		return Objects.equals(email, other.email) && Objects.equals(employeeId, other.employeeId)
+				&& Objects.equals(firstName, other.firstName) && id == other.id
+				&& Objects.equals(lastName, other.lastName) && Objects.equals(sltId, other.sltId)
+				&& Objects.equals(userId, other.userId);
+	}
+	@Override
+	public String toString() {
+		return "UserDtoArchive [id=" + id + ", userId=" + userId + ", firstName=" + firstName + ", lastName=" + lastName
+				+ ", email=" + email + ", employeeId=" + employeeId + ", sltId=" + sltId + "]";
 	}
 }

@@ -13,8 +13,12 @@ import java.util.Optional;
 @Repository
 public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
     Page<LeaveEntity> findAll(Pageable pageable);
+    Page<LeaveEntity> findByUserId(Pageable pageable, String userId);
+
     Page<LeaveEntity> findByEmployeeID(String employeeID, Pageable pageable);
+    Page<LeaveEntity> findByUserId(String userId, Pageable pageable);
     Optional<LeaveEntity> findByPublicId(String publicId);
+    List<LeaveEntity> findByFromDate(Date fromDate);
     List<LeaveEntity> findByEmployeeIDAndFromDateLessThanEqualAndToDateGreaterThanEqual(String employeeID, Date currentDate1, Date currentDate2);
     List<LeaveEntity> findByEmployeeIDAndIsManualRequest(String employeeID, Boolean isManualRequest);
     /*List<LeaveEntity> findByUserAndFromDateLessThanEqualAndToDateGreaterThanEqual(UserEntity user, Date currentDate);

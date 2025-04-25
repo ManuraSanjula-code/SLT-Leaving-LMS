@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import { Delete, Edit, Search } from "@mui/icons-material";
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchManagementData, saveSection, deleteSection } from '../../../store/managementSlice';
+import { fetchManagementData, saveSection, deleteSection } from '../../../redux-lms/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 

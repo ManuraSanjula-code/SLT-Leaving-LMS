@@ -11,7 +11,7 @@ function App() {
             <>
                 <NavBar />
                 <div className="App">
-                    <UnsuccessfulLeaves />
+                    <UnsuccessfulLeaves isAdmin={false} />
                 </div>
             </>
         </Router>

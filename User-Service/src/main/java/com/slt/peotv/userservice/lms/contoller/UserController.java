@@ -8,6 +8,7 @@ import com.slt.peotv.userservice.lms.entity.TempUser;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.exceptions.UserServiceException;
 import com.slt.peotv.userservice.lms.exceptions.UserUnAuthorizedServiceException;
+import com.slt.peotv.userservice.lms.message.LMSUser;
 import com.slt.peotv.userservice.lms.repository.TempUserRepo;
 import com.slt.peotv.userservice.lms.security.UserPrincipal;
 import com.slt.peotv.userservice.lms.service.AddressService;
@@ -19,11 +20,9 @@ import com.slt.peotv.userservice.lms.utils.UpdateUtils;
 import com.slt.peotv.userservice.lms.utils.UserReqDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
-import org.springframework.data.repository.query.Param;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
@@ -142,6 +141,10 @@ public class UserController {
 
     /// -------------------------------- ROLE ------------------------------------ END *********
 
+    @GetMapping("/all/lms")
+    public List<LMSUser> getAllUsersForService() {
+        return userService.getAllUsersForService();
+    }
 
     @GetMapping("/check/auth/{name}")
     public boolean checkAuth(@PathVariable("name") String name) {
@@ -180,6 +183,16 @@ public class UserController {
             userRest.setHighestRolePriority(highestRolePriority);
             return userRest;
         }
+    }
+
+    @GetMapping(path = "/{userid}/admins")
+    public List<UserRest> getAdminsForUser(@PathVariable String userid, Authentication authentication) {
+        return userService.getAdminsForUserByUserId(userid).stream().map(userDto->{
+            UserRest userRest = UserMapper.mapToUserRest(userDto);
+            userRest.setHighestRolePriority(userDto.getHighestRolePriority());
+            userRest.setSltId(userDto.getSltId());
+            return userRest;
+        }).toList();
     }
 
     @GetMapping(path = "/get-role/{name}")
@@ -251,7 +264,6 @@ public class UserController {
         SimpleModule module = new SimpleModule();
         module.addDeserializer(UserReq.class, new UserReqDeserializer());
         mapper.registerModule(module);
-
         // Parse with debugging
         UserReq userReq = mapper.readValue(rawJson, UserReq.class);
         logger.info("Parsed UserReq with additional: {}", userReq.getAdditional());
@@ -285,24 +297,28 @@ public class UserController {
        return userService.findAllBasicUserDtos(page, limit);
     }
 
+    @GetMapping("/lms")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(100)")
+    public List<UserRest> getAllUserForLms() {
+        return userService.getUsersForLms().stream().map(userDto->{
+            UserRest userRest = UserMapper.mapToUserRest(userDto);
+            userRest.setHighestRolePriority(userDto.getHighestRolePriority());
+            userRest.setSltId(userDto.getSltId());
+            return userRest;
+        }).toList();
+    }
+
     @GetMapping("/all")
-    @PreAuthorize("@prioritySecurity.hasAnyPriority(10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,\n" +
-            "30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,\n" +
-            "50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,\n" +
-            "70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,\n" +
-            "90, 91, 92, 93, 94, 95, 96, 97, 98, 99,200)")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public Page<UserEntity> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
+        UserPrincipal u = (UserPrincipal) authentication.getPrincipal();
         return userService.getAllUsers(page, size);
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("@prioritySecurity.hasAnyPriority(10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,\n" +
-            "30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,\n" +
-            "50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,\n" +
-            "70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89,\n" +
-            "90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 200)")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public Page<UserEntity> getAllAdmins(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -534,7 +550,9 @@ public class UserController {
             userRest.setActive(userDto.getActive());
             userRest.setPhone(userDto.getPhone());
             userRest.setGender(userDto.getGender());
-
+            userRest.setEmployeeId(userDto.getEmployeeId());
+            userRest.setSltId(userDto.getSltId());
+            userRest.setJoiningDate(userDto.getJoin_date());
             // Map AddressDTO to AddressesRest
             if (userDto.getAddresses() != null) {
                 List<AddressesRest> addressesRest = userDto.getAddresses().stream()

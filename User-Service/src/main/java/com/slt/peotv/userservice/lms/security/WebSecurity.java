@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -99,4 +100,11 @@ public class WebSecurity {
         expressionHandler.setPermissionEvaluator(new PriorityPermissionEvaluator());
         return expressionHandler;
     }
+
+//    @Bean
+//    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+//        PrioritySecurityExpressionHandler expressionHandler = new PrioritySecurityExpressionHandler();
+//        expressionHandler.setPermissionEvaluator(new PriorityPermissionEvaluator());
+//        return expressionHandler;
+//    }
 }

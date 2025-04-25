@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import { Delete, Edit, Search } from "@mui/icons-material";
 import { useDispatch, useSelector } from 'react-redux';
-import { deleteRole, fetchManagementData, saveRole } from '../../../store/managementSlice';
+import { deleteRole, fetchManagementData, saveRole } from '../../../redux-lms/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 

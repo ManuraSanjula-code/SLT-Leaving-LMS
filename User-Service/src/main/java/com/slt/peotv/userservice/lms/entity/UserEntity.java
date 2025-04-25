@@ -1,16 +1,23 @@
 package com.slt.peotv.userservice.lms.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.shared.dto.UserAdminDto;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.util.*;
 
 @Entity
 @Table(name = "users")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Data
+@EqualsAndHashCode(exclude = {"administratives", "adminUser"})
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 5313493413859894403L;
     @Id
@@ -20,10 +27,10 @@ public class UserEntity implements Serializable {
 
     private String userId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String employeeId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String sltId;
 
     @Column(nullable = false)
@@ -86,300 +93,50 @@ public class UserEntity implements Serializable {
     @Column(nullable = false)
     private Date join_date;
 
-    @OneToOne
-    private UserEntity hod;
-
-    @OneToOne
-    private UserEntity supervisor;
-
-    @OneToOne
-    private UserEntity other;
-
     @Column(nullable = false)
     private Boolean roaster;
 
-    @OneToMany(mappedBy = "adminUser", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
-    private List<UserEntity> administratives = new ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_user_id")
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
+    @JoinTable(name = "user_admins",
+            joinColumns = @JoinColumn(name = "subordinate_id"),
+            inverseJoinColumns = @JoinColumn(name = "admin_id"))
     @JsonIgnore
-    private UserEntity adminUser;
+    private List<UserEntity> myAdmins = new ArrayList<>();
 
-    public List<UserEntity> getAdministratives() {
-        return administratives;
-    }
+    @ManyToMany(mappedBy = "myAdmins", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
+    @JsonIgnore
+    private List<UserEntity> mySubordinates = new ArrayList<>();
 
-    public void setAdministratives(List<UserEntity> administratives) {
-        this.administratives = administratives;
-    }
+    @Transient
+    private List<UserAdminDto> administrativesDto;
 
-    public UserEntity getAdminUser() {
-        return adminUser;
-    }
-
-    public void setAdminUser(UserEntity adminUser) {
-        this.adminUser = adminUser;
-    }
-
-    public UserEntity getOther() {
-        return other;
-    }
-
-    public void setOther(UserEntity other) {
-        this.other = other;
-    }
-
-    public String getSltId() {
-        return sltId;
-    }
-
-    public void setSltId(String sltId) {
-        this.sltId = sltId;
-    }
-
-    public UserEntity getHod() {
-        return hod;
-    }
-
-    public void setHod(UserEntity hod) {
-        this.hod = hod;
-    }
-
-    public UserEntity getSupervisor() {
-        return supervisor;
-    }
-
-    public void setSupervisor(UserEntity supervisor) {
-        this.supervisor = supervisor;
-    }
-
-    public Boolean getRoaster() {
-        return roaster;
-    }
-
-    public void setRoaster(Boolean roaster) {
-        this.roaster = roaster;
-    }
-
-    public Date getJoin_date() {
-        return join_date;
-    }
-
-    public void setJoin_date(Date join_date) {
-        this.join_date = join_date;
-    }
-
-    public List<AddressEntity> getAddresses() {
-        return addresses;
-    }
-
-    public void setAddresses(List<AddressEntity> addresses) {
-        this.addresses = addresses;
-    }
-
-    public Collection<RoleEntity> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Collection<RoleEntity> roles) {
-        this.roles = roles;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public String getEmployeeId() {
-        return employeeId;
-    }
-
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getEncryptedPassword() {
-        return encryptedPassword;
-    }
-
-    public void setEncryptedPassword(String encryptedPassword) {
-        this.encryptedPassword = encryptedPassword;
-    }
-
-    public String getEmailVerificationToken() {
-        return emailVerificationToken;
-    }
-
-    public void setEmailVerificationToken(String emailVerificationToken) {
-        this.emailVerificationToken = emailVerificationToken;
-    }
-
-    public Boolean getEmailVerificationStatus() {
-        return emailVerificationStatus;
-    }
-
-    public void setEmailVerificationStatus(Boolean emailVerificationStatus) {
-        this.emailVerificationStatus = emailVerificationStatus;
-    }
-
-    public String getProfilePic() {
-        return profilePic;
-    }
-
-    public void setProfilePic(String profilePic) {
-        this.profilePic = profilePic;
-    }
-
-    public String getGender() {
-        return gender;
-    }
-
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public Integer getIsSltEmp() {
-        return isSltEmp;
-    }
-
-    public void setIsSltEmp(Integer isSltEmp) {
-        this.isSltEmp = isSltEmp;
-    }
-
-    public Integer getIsSltIntern() {
-        return isSltIntern;
-    }
-
-    public void setIsSltIntern(Integer isSltIntern) {
-        this.isSltIntern = isSltIntern;
-    }
-
-    public Integer getActive() {
-        return active;
-    }
-
-    public void setActive(Integer active) {
-        this.active = active;
-    }
-
-    public Collection<ProfilesEntity> getProfiles() {
-        return profiles;
-    }
-
-    public void setProfiles(Collection<ProfilesEntity> profiles) {
-        this.profiles = profiles;
-    }
-
-    public Collection<SectionEntity> getSections() {
-        return sections;
-    }
-
-    public void setSections(Collection<SectionEntity> sections) {
-        this.sections = sections;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(active, addresses, email, emailVerificationStatus, emailVerificationToken, employeeId,
-                encryptedPassword, firstName, gender, id, isSltEmp, isSltIntern, join_date, lastName, phone, profilePic,
-                profiles, roles, sections, userId);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
+    public void addAdmin(UserEntity admin) {
+        if (admin != null) {
+            this.myAdmins.add(admin);
+            admin.getMySubordinates().add(this);
         }
-        if ((obj == null) || (getClass() != obj.getClass())) {
-            return false;
-        }
-        UserEntity other = (UserEntity) obj;
-        return Objects.equals(active, other.active) && Objects.equals(addresses, other.addresses)
-                && Objects.equals(email, other.email)
-                && Objects.equals(emailVerificationStatus, other.emailVerificationStatus)
-                && Objects.equals(emailVerificationToken, other.emailVerificationToken)
-                && Objects.equals(employeeId, other.employeeId)
-                && Objects.equals(encryptedPassword, other.encryptedPassword)
-                && Objects.equals(firstName, other.firstName) && Objects.equals(gender, other.gender) && id == other.id
-                && Objects.equals(isSltEmp, other.isSltEmp) && Objects.equals(isSltIntern, other.isSltIntern)
-                && Objects.equals(join_date, other.join_date) && Objects.equals(lastName, other.lastName)
-                && Objects.equals(phone, other.phone) && Objects.equals(profilePic, other.profilePic)
-                && Objects.equals(profiles, other.profiles) && Objects.equals(roles, other.roles)
-                && Objects.equals(sections, other.sections) && Objects.equals(userId, other.userId);
     }
 
-    @Override
-    public String toString() {
-        return "UserEntity{" +
-                "id=" + id +
-                ", userId='" + userId + '\'' +
-                ", employeeId='" + employeeId + '\'' +
-                ", sltId='" + sltId + '\'' +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", encryptedPassword='" + encryptedPassword + '\'' +
-                ", emailVerificationToken='" + emailVerificationToken + '\'' +
-                ", emailVerificationStatus=" + emailVerificationStatus +
-                ", addresses=" + addresses +
-                ", profilePic='" + profilePic + '\'' +
-                ", gender='" + gender + '\'' +
-                ", phone='" + phone + '\'' +
-                ", isSltEmp=" + isSltEmp +
-                ", isSltIntern=" + isSltIntern +
-                ", active=" + active +
-                ", sections=" + sections +
-                ", profiles=" + profiles +
-                ", roles=" + roles +
-                ", join_date=" + join_date +
-                ", hod=" + hod +
-                ", supervisor=" + supervisor +
-                ", other=" + other +
-                ", roaster=" + roaster +
-                '}';
+    public void removeAdmin(UserEntity admin) {
+        if (admin != null) {
+            this.myAdmins.remove(admin);
+            admin.getMySubordinates().remove(this);
+        }
     }
+
+    public void addSubordinate(UserEntity subordinate) {
+        if (subordinate != null) {
+            this.mySubordinates.add(subordinate);
+            subordinate.getMyAdmins().add(this);
+        }
+    }
+
+    public void removeSubordinate(UserEntity subordinate) {
+        if (subordinate != null) {
+            this.mySubordinates.remove(subordinate);
+            subordinate.getMyAdmins().remove(this);
+        }
+    }
+
 }

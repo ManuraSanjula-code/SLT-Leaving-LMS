@@ -50,22 +50,25 @@ const NavBar = () => {
     ].filter(item => allowedRoutes.has(item.path));
 
     const empItems = [
-      { label: "All Leaves", path: "/all-leaves" },
-      { label: "All Movements", path: "/all-movements" },
-      { label: "Single Employee Activities", path: "/single-employee-activities" },
-      { label: "Absent Employees", path: "/absent-employees" },
-      { label: "No-Pay Leaves", path: "/no-pay-leaves" },
-      { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
-      { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
+      { label: "Your Leaves", path: "/all-leaves" },
+      { label: "Your Movements", path: "/all-movements" },
+      { label: "Your Activities", path: "/single-employee-activities" },
+      { label: "Your Absents", path: "/absent-employees" },
+      { label: "Your No-Pay's", path: "/no-pay-leaves" },
+      { label: "Your Unsuccessful Leaves", path: "/unsuccessful-leaves" },
+      { label: "Your Unauthorized Leaves", path: "/unauthorized-leaves" },
     ].filter(item => allowedRoutes.has(item.path));
 
     const admItems = [
-      { label: "Manage Employees", path: "/manage-employees" },
-      { label: "Employee Activities", path: "/employee-activities" },
-      { label: "Manage Leave Requests", path: "/manage-leave-requests" },
-      { label: "Manage Movement Requests", path: "/manage-movement-requests" },
-      { label: "Unsuccessful Leaves", path: "/unsuccessful-leaves" },
-      { label: "Unauthorized Leaves", path: "/unauthorized-leaves" },
+      { label: "Manage Employees-Admin", path: "/manage-employees" },
+      { label: "Employee Activities-Admin", path: "/employee-activities" },
+      { label: "Manage Leave Requests-Admin", path: "/manage-leave-requests" },
+      { label: "Manage Movement Requests-Admin", path: "/manage-movement-requests" },
+      { label: "Unsuccessful Leaves-Admin", path: "/unsuccessful-leaves-admin" },
+      { label: "Unauthorized Leaves-Admin", path: "/unauthorized-leaves-admin" },
+      { label: "No Pay-Admin", path: "/no-pay-leaves-admin" },
+      { label: "Absent Employees-Admin", path: "/absent-employees-admin" },
+
     ].filter(item => allowedRoutes.has(item.path));
 
     return { allNavItems: allItems, employeeItems: empItems, adminItems: admItems };

@@ -10,6 +10,8 @@ import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 
+import java.util.List;
+
 @FeignClient(name = "user-service")
 public interface UserClient {
     @GetMapping("/users/{userid}")
@@ -23,4 +25,14 @@ public interface UserClient {
         userRest.setFirstName("Test");
         return userRest;
     }
+
+    @GetMapping("/users/{userid}/admins")
+    @Retry(name="user-service")
+    @CircuitBreaker(name="user-service")
+    List<UserRest> getEmployeeAdmins(@PathVariable("userid") String userid, @RequestHeader("Authorization") String token);
+
+    @GetMapping("/users/lms")
+    @Retry(name="user-service")
+    @CircuitBreaker(name="user-service")
+    List<UserRest> getAllEmployee(@RequestHeader("Authorization") String token);
 }

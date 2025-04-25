@@ -1,6 +1,7 @@
 package com.slt.peotv.userservice.lms.shared.dto;
 
 import java.util.List;
+import java.util.Objects;
 
 public class SectionDTO {
     private long id;
@@ -30,6 +31,26 @@ public class SectionDTO {
 	}
 	public void setPublicId(String publicId) {
 		this.publicId = publicId;
+	}
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, publicId, section, users);
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SectionDTO other = (SectionDTO) obj;
+		return id == other.id && Objects.equals(publicId, other.publicId) && Objects.equals(section, other.section)
+				&& Objects.equals(users, other.users);
+	}
+	@Override
+	public String toString() {
+		return "SectionDTO [id=" + id + ", section=" + section + ", publicId=" + publicId + ", users=" + users + "]";
 	}
 	
 }

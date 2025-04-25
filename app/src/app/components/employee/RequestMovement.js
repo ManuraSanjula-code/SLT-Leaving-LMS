@@ -1,4 +1,3 @@
-// src/RequestMovement.js
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -29,22 +28,20 @@ const RequestMovement = () => {
     employeeId: '',
     movementType: '',
     comment: '',
-    inTime: '',
-    outTime: '',
     destination: '',
     category: '',
     happenDate: '',
-    isLate: false,
     isAbsent: false,
-    isLateCover: false,
     isUnSuccessfulAttdate: false,
     isHalfDay: false,
-    unAuthorized: false
+    unAuthorized: false,
+    isLate: false,        // Added new field
+    isLateCover: false    // Added new field
   });
 
   useEffect(() => {
-    // Get userId from localStorage
-    const storedUserId = localStorage.getItem('userId');
+    // Get userId from sessionStorage
+    const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
       setUserId(storedUserId);
       setFormData(prev => ({ ...prev, userId: storedUserId }));
@@ -117,17 +114,15 @@ const RequestMovement = () => {
           employeeId: '',
           movementType: '',
           comment: '',
-          inTime: '',
-          outTime: '',
           destination: '',
           category: '',
           happenDate: '',
-          isLate: false,
           isAbsent: false,
-          isLateCover: false,
           isUnSuccessfulAttdate: false,
           isHalfDay: false,
-          unAuthorized: false
+          unAuthorized: false,
+          isLate: false,        // Reset new field
+          isLateCover: false    // Reset new field
         });
       } else {
         const errorData = await response.json();
@@ -173,11 +168,11 @@ const RequestMovement = () => {
                       onChange={handleChange}
                       required
                   >
-                    <MenuItem value="REMOTE">Remote Work</MenuItem>
-                    <MenuItem value="RELOCATION">Office Relocation</MenuItem>
                     <MenuItem value="ABSENT">Absent</MenuItem>
-                    <MenuItem value="LATE">Late</MenuItem>
-                    <MenuItem value="HALF_DAY">Half Day</MenuItem>
+                    <MenuItem value="LATEWORK">Late Work</MenuItem>
+                    <MenuItem value="UNSUCCESSFUL">Unsuccessful</MenuItem>
+                    <MenuItem value="UNAUTHORIZED">Unauthorized</MenuItem>
+                    <MenuItem value="REMOTEWORK">Remote Work</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -204,32 +199,6 @@ const RequestMovement = () => {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                    margin="normal"
-                    fullWidth
-                    id="inTime"
-                    label="In Time"
-                    name="inTime"
-                    type="time"
-                    value={formData.inTime}
-                    onChange={handleChange}
-                    InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                    margin="normal"
-                    fullWidth
-                    id="outTime"
-                    label="Out Time"
-                    name="outTime"
-                    type="time"
-                    value={formData.outTime}
-                    onChange={handleChange}
-                    InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -261,36 +230,12 @@ const RequestMovement = () => {
                 <FormControlLabel
                     control={
                       <Checkbox
-                          name="isLate"
-                          checked={formData.isLate}
-                          onChange={handleChange}
-                      />
-                    }
-                    label="Late"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
                           name="isAbsent"
                           checked={formData.isAbsent}
                           onChange={handleChange}
                       />
                     }
                     label="Absent"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          name="isLateCover"
-                          checked={formData.isLateCover}
-                          onChange={handleChange}
-                      />
-                    }
-                    label="Late Cover"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -327,6 +272,31 @@ const RequestMovement = () => {
                       />
                     }
                     label="Unauthorized"
+                />
+              </Grid>
+              {/* Added new checkboxes for isLate and isLateCover */}
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isLate"
+                          checked={formData.isLate}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Late"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                    control={
+                      <Checkbox
+                          name="isLateCover"
+                          checked={formData.isLateCover}
+                          onChange={handleChange}
+                      />
+                    }
+                    label="Late Cover"
                 />
               </Grid>
             </Grid>

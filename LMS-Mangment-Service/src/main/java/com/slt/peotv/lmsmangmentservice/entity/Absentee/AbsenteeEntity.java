@@ -12,6 +12,7 @@ import java.util.Date;
 @EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class AbsenteeEntity {
 
     @Id
@@ -24,6 +25,7 @@ public class AbsenteeEntity {
     private Date date;
 
     private String employeeID;
+    private String userId;
 
     @Column(name = "Is_halfday")
     @Builder.Default

@@ -57,10 +57,22 @@ public class TokenCreator {
 
     }
 
-    public SignedJWT createSignedJWT(Authentication auth, TempUser tempUser) throws NoSuchAlgorithmException, JOSEException {
+    public SignedJWT createSignedJWTForTemp(Authentication auth, TempUser tempUser) throws NoSuchAlgorithmException, JOSEException {
 
         UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
-        JWTClaimsSet jwtClaimSet = createJWTClaimSet_(auth, applicationUser, tempUser);
+        JWTClaimsSet jwtClaimSet = createJWTClaimSetForTemp(auth, applicationUser, tempUser);
+        KeyPair rsaKeys = generateKeyPair();
+        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
+        RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
+        signedJWT.sign(signer);
+        return signedJWT;
+
+    }
+    
+    public SignedJWT createSignedJWTForLMS(String email) throws NoSuchAlgorithmException, JOSEException {
+        JWTClaimsSet jwtClaimSet = createJWTClaimSetForLMS(email);
         KeyPair rsaKeys = generateKeyPair();
         JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
         SignedJWT signedJWT = new SignedJWT(
@@ -85,6 +97,12 @@ public class TokenCreator {
 
     private JWTClaimsSet createJWTClaimSet(String email) {
         return new JWTClaimsSet.Builder().subject(email)
+                .issuer("SLT PEO TV").issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME)).build();
+    }
+    
+    private JWTClaimsSet createJWTClaimSetForLMS(String email) {
+        return new JWTClaimsSet.Builder().subject(email + " " + "LMS")
                 .issuer("SLT PEO TV").issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME)).build();
     }
@@ -121,7 +139,7 @@ public class TokenCreator {
                 .expirationTime(tempUser.getExpireTime()).build();
     }
 
-    private JWTClaimsSet createJWTClaimSet_(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
+    private JWTClaimsSet createJWTClaimSetForTemp(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
         JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
                 .subject(applicationUser.getUserId() + " " + "TEMP")
                 .claim("authorities",

@@ -2,6 +2,8 @@ package com.slt.peotv.userservice.lms.entity;
 
 import com.slt.peotv.userservice.lms.repository.TempUserRepo;
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.io.Serializable;
 import java.security.MessageDigest;
@@ -10,9 +12,13 @@ import java.util.Date;
 
 @Entity
 @Table(name = "temp_user")
+@Data
+@EqualsAndHashCode
 public class TempUser implements Serializable {
 
-    @Id
+    private static final long serialVersionUID = 1L;
+
+	@Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private Long id;
@@ -38,78 +44,6 @@ public class TempUser implements Serializable {
     private Date expireTime;
 
     private boolean admin;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPeoTvId() {
-        return peoTvId;
-    }
-
-    public void setPeoTvId(String peoTvId) {
-        this.peoTvId = peoTvId;
-    }
-
-    public Date getExpireTime() {
-        return expireTime;
-    }
-
-    public void setExpireTime(Date expireTime) {
-        this.expireTime = expireTime;
-    }
-
-    public boolean isAdmin() {
-        return admin;
-    }
-
-    public void setAdmin(boolean admin) {
-        this.admin = admin;
-    }
 
     public class AuthService {
 

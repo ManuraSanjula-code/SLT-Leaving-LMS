@@ -14,6 +14,7 @@ import java.util.Objects;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class InOutEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

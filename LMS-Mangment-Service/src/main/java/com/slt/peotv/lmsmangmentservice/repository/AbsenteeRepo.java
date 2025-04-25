@@ -1,6 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +15,6 @@ public interface AbsenteeRepo extends JpaRepository<AbsenteeEntity, Long> {
     List<AbsenteeEntity> findByEmployeeID(String employeeID);
     Optional<AbsenteeEntity> findByPublicId(String publicId);
     Optional<AbsenteeEntity> findByEmployeeIDAndDate(String employeeID, Date date);
+    Page<AbsenteeEntity> findAll(Pageable pageable);
+    Page<AbsenteeEntity> findByUserId(String userId, Pageable pageable);
 }

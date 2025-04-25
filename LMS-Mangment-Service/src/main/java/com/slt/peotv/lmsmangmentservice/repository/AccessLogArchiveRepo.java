@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AccessLogArchiveRepo extends JpaRepository<AccessLogArchiveEntity, Long> {
+public interface AccessLogArchiveRepo extends JpaRepository<AccessLogArchiveEntity, Integer> {
 }

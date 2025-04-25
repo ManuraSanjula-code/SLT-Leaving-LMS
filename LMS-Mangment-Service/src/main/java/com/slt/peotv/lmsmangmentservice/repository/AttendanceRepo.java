@@ -16,15 +16,19 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     Page<AttendanceEntity> findAll(Pageable pageable);
+    Page<AttendanceEntity> findByUserId(String userId, Pageable pageable);
     List<AttendanceEntity> findByEmployeeID(String employeeID);
     Optional<AttendanceEntity> findByPublicId(String publicId);
     boolean existsByEmployeeIDAndDate(String EmployeeID, Date date);
     Optional<AttendanceEntity> findByEmployeeIDAndDate(String EmployeeID, Date date);
+    Optional<AttendanceEntity> findByEmployeeIDAndArrivalDate(String employeeID, Date arrivalDate);
 
     Page<AttendanceEntity> findByIsAbsentTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsHalfDayTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnSuccessfulTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnAuthorizedTrue(Pageable pageable);
+    Page<AttendanceEntity> findByIsUnSuccessfulTrueAndUserId(String employeeId, Pageable pageable);
+    Page<AttendanceEntity> findByIsUnAuthorizedTrueAndUserId(String employeeId, Pageable pageable);
     Page<AttendanceEntity> findByIsFullDayTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsLateTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsLateTrueAndLateCoverFalse(Pageable pageable);

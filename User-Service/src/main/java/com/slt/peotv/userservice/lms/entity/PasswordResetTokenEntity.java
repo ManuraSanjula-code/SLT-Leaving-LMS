@@ -1,15 +1,18 @@
 package com.slt.peotv.userservice.lms.entity;
 
 import java.io.Serializable;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Entity(name = "password_reset_tokens")
+@Data
+@EqualsAndHashCode
 public class PasswordResetTokenEntity implements Serializable {
 
 	/**
@@ -26,29 +29,4 @@ public class PasswordResetTokenEntity implements Serializable {
 	@OneToOne()
 	@JoinColumn(name = "users_id")
 	private UserEntity userDetails;
-
-	public long getId() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	public String getToken() {
-		return token;
-	}
-
-	public void setToken(String token) {
-		this.token = token;
-	}
-
-	public UserEntity getUserDetails() {
-		return userDetails;
-	}
-
-	public void setUserDetails(UserEntity userDetails) {
-		this.userDetails = userDetails;
-	}
-
 }

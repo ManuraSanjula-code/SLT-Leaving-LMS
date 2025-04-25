@@ -3,7 +3,7 @@
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import NavBar from "../components/navbar/NavBar";
-import UserProfile from '../components/dashboard/UserProfile';
+import UserProfile from '../components/employee/UserProfile';
 
 function App() {
   return (

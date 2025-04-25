@@ -18,7 +18,7 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import axios from "axios";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setCredentials, setUserDetails } from '../redux/authSlice'; // Replace with the correct path
+import { setCredentials, setUserDetails } from '../redux-user/authSlice'; // Replace with the correct path
 
 const LoginPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false); // State for Snackbar visibility
@@ -52,8 +52,8 @@ const LoginPage = () => {
       const authorizationHeader = response.headers['authorization']?.replace('Bearer ', '');
       const userId = response.headers['userid'];
       // First set local storage
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('jwt', authorizationHeader);
+      sessionStorage.setItem('userId', userId);
+      sessionStorage.setItem('jwt', authorizationHeader);
 
       // Then dispatch credentials
       dispatch(setCredentials({
@@ -83,7 +83,6 @@ const LoginPage = () => {
       }
 
     } catch (error) {
-      console.log(error)
       // Handle login error
       console.error("Login failed:", error.response ? error.response.data : error.message);
       setSnackbarMessage(

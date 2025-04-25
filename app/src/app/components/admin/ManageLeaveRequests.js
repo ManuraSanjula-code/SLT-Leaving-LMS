@@ -37,12 +37,33 @@ const ManageLeaveRequests = () => {
     pageSize: 10
   });
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+
+  useEffect(() => {
+    const storedUserId = sessionStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    } else {
+      setNotification({
+        open: true,
+        message: 'User ID not found. Please log in again.',
+        severity: 'error'
+      });
+    }
+  }, []);
 
   // Fetch leave requests from the server
   const fetchLeaveRequests = async (page = 0, size = 10) => {
+    if (!userId) return;
+
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/lms/leave/all?page=${page}&size=${size}`, {
+      const response = await fetch(`http://localhost:8080/lms/leave/admin/${userId}?page=${page}&size=${size}`, {
         method: 'GET',
         credentials: 'include', // This will send cookies with the request
         headers: {
@@ -55,12 +76,12 @@ const ManageLeaveRequests = () => {
       }
 
       const data = await response.json();
-      setLeaveRequests(data.content);
+      setLeaveRequests(data.content || []);  // Ensure we always set an array even if content is null
       setPagination({
         currentPage: data.number,
         totalPages: data.totalPages,
         totalElements: data.totalElements,
-        pageSize: data.pageable.pageSize
+        pageSize: data.pageable?.pageSize || size
       });
     } catch (err) {
       setError(err.message);
@@ -70,10 +91,12 @@ const ManageLeaveRequests = () => {
     }
   };
 
-  // Load data on component mount
+  // Load data when userId is available
   useEffect(() => {
-    fetchLeaveRequests();
-  }, []);
+    if (userId) {
+      fetchLeaveRequests();
+    }
+  }, [userId]);
 
   // Handle page change
   const handlePageChange = (event, value) => {
@@ -101,14 +124,65 @@ const ManageLeaveRequests = () => {
     if (selected.length === leaveRequests.length) {
       setSelected([]);
     } else {
-      setSelected(leaveRequests.map((request) => request.publicId));
+      setSelected(leaveRequests.filter(request => request && request.publicId).map(request => request.publicId));
     }
+  };
+
+  // Handle approve for a single request
+  const handleApprove = async (publicId) => {
+    try {
+      setLoading(true);
+
+      // Get userId from session storage
+      const storedUserId = sessionStorage.getItem('userId');
+
+      if (!storedUserId) {
+        throw new Error('User ID not found in session storage');
+      }
+
+      // Send the approval request
+      const response = await fetch(`http://localhost:8080/lms/leave/process/${publicId}/${storedUserId}`, {
+        method: 'POST',
+        credentials: 'include', // This will send cookies with the request
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          approved: true,
+          userId: storedUserId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      // After successful API call, refresh the data
+      await fetchLeaveRequests(pagination.currentPage);
+
+      // Show success message (you might want to implement a proper notification system)
+      console.log(`Movement request ${publicId} approved successfully`);
+
+    } catch (err) {
+      setError(`Failed to approve request: ${err.message}`);
+      console.error("Error approving request:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle reject for a single request
+  const handleReject = async (publicId) => {
+    // Implement your rejection API call here
+    console.log("Rejecting:", publicId);
+    // After successful API call:
+    // fetchLeaveRequests(pagination.currentPage);
   };
 
   // Handle bulk approve
   const handleBulkApprove = async () => {
     // Implement your approval API call here
-    console.log("Approving:", selected);
+    console.log("Bulk Approving:", selected);
     // After successful API call:
     // fetchLeaveRequests(pagination.currentPage);
     // setSelected([]);
@@ -117,7 +191,7 @@ const ManageLeaveRequests = () => {
   // Handle bulk reject
   const handleBulkReject = async () => {
     // Implement your rejection API call here
-    console.log("Rejecting:", selected);
+    console.log("Bulk Rejecting:", selected);
     // After successful API call:
     // fetchLeaveRequests(pagination.currentPage);
     // setSelected([]);
@@ -133,14 +207,29 @@ const ManageLeaveRequests = () => {
     }
   };
 
+  // Get leave type display text
+  const getLeaveTypeText = (request) => {
+    if (!request) return "N/A";
+
+    if (request.leaveType && request.leaveType.name) {
+      return request.leaveType.name;
+    } else if (request.leaveCategory) {
+      return request.leaveCategory;
+    } else if (request.short_Leave) {
+      return "Short Leave";
+    } else {
+      return "Regular";
+    }
+  };
+
   // Get status chip for leave request
   const getStatusChip = (leaveRequest) => {
+    if (!leaveRequest) return <Chip label="Unknown" color="default" size="small" />;
+
     if (leaveRequest.canceled) {
       return <Chip label="Canceled" color="error" size="small" />;
-    } else if (leaveRequest.hodapproved) {
+    } else if (leaveRequest.accepted) {
       return <Chip label="Approved" color="success" size="small" />;
-    } else if (leaveRequest.supervisedApproved) {
-      return <Chip label="Supervisor Approved" color="info" size="small" />;
     } else if (leaveRequest.pending) {
       return <Chip label="Pending" color="warning" size="small" />;
     } else {
@@ -217,9 +306,9 @@ const ManageLeaveRequests = () => {
                         <TableCell padding="checkbox">
                           <Checkbox
                               indeterminate={
-                                  selected.length > 0 && selected.length < leaveRequests.length
+                                  selected.length > 0 && selected.length < leaveRequests.filter(req => req && req.publicId).length
                               }
-                              checked={selected.length === leaveRequests.length && leaveRequests.length > 0}
+                              checked={selected.length === leaveRequests.filter(req => req && req.publicId).length && leaveRequests.length > 0}
                               onChange={handleSelectAll}
                           />
                         </TableCell>
@@ -242,49 +331,58 @@ const ManageLeaveRequests = () => {
                             </TableCell>
                           </TableRow>
                       ) : (
-                          leaveRequests.map((request) => (
-                              <TableRow key={request.publicId}>
-                                <TableCell padding="checkbox">
-                                  <Checkbox
-                                      checked={selected.includes(request.publicId)}
-                                      onChange={() => handleSelect(request.publicId)}
-                                  />
-                                </TableCell>
-                                <TableCell>{request.employeeID.substring(0, 8)}...</TableCell>
-                                <TableCell>{formatDate(request.submitDate)}</TableCell>
-                                <TableCell>{formatDate(request.fromDate)}</TableCell>
-                                <TableCell>{formatDate(request.toDate)}</TableCell>
-                                <TableCell>
-                                  {request.leaveType || request.leaveCategory || (request.short_Leave ? "Short Leave" : "Regular")}
-                                  {request.halfDay && " (Half Day)"}
-                                  {request.isNoPay === 1 && " (No Pay)"}
-                                </TableCell>
-                                <TableCell>{request.numOfDays}</TableCell>
-                                <TableCell sx={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {request.description || "N/A"}
-                                </TableCell>
-                                <TableCell>{getStatusChip(request)}</TableCell>
-                                <TableCell>
-                                  <Button
-                                      variant="contained"
-                                      color="primary"
-                                      size="small"
-                                      sx={{ mr: 1, mb: 1 }}
-                                      disabled={request.hodapproved || request.canceled}
-                                  >
-                                    Approve
-                                  </Button>
-                                  <Button
-                                      variant="outlined"
-                                      color="error"
-                                      size="small"
-                                      disabled={request.canceled}
-                                  >
-                                    Reject
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                          ))
+                          leaveRequests.map((request, index) => {
+                            // Skip rendering if request is null or undefined
+                            if (!request || !request.publicId) {
+                              return null;
+                            }
+
+                            return (
+                                <TableRow key={request.publicId || index}>
+                                  <TableCell padding="checkbox">
+                                    <Checkbox
+                                        checked={selected.includes(request.publicId)}
+                                        onChange={() => handleSelect(request.publicId)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{request.employeeID ? request.employeeID.substring(0, 8) + '...' : 'N/A'}</TableCell>
+                                  <TableCell>{formatDate(request.submitDate)}</TableCell>
+                                  <TableCell>{formatDate(request.fromDate)}</TableCell>
+                                  <TableCell>{formatDate(request.toDate)}</TableCell>
+                                  <TableCell>
+                                    {getLeaveTypeText(request)}
+                                    {request.halfDay && " (Half Day)"}
+                                    {request.isNoPay === 1 && " (No Pay)"}
+                                  </TableCell>
+                                  <TableCell>{request.numOfDays}</TableCell>
+                                  <TableCell sx={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {request.description || "N/A"}
+                                  </TableCell>
+                                  <TableCell>{getStatusChip(request)}</TableCell>
+                                  <TableCell>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        size="small"
+                                        sx={{ mr: 1, mb: 1 }}
+                                        disabled={request.accepted || request.isCanceled}
+                                        onClick={() => handleApprove(request.publicId)}
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        disabled={request.accepted || request.isCanceled}
+                                        onClick={() => handleReject(request.publicId)}
+                                    >
+                                      Reject
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                            );
+                          })
                       )}
                     </TableBody>
                   </Table>
@@ -302,7 +400,7 @@ const ManageLeaveRequests = () => {
                           showLastButton
                       />
                       <Typography variant="body2" color="textSecondary">
-                        Showing {leaveRequests.length} of {pagination.totalElements} results
+                        Showing {leaveRequests.filter(req => req && req.publicId).length} of {pagination.totalElements} results
                       </Typography>
                     </Stack>
                 )}

@@ -40,12 +40,14 @@ const EmployeeActivities = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
-    // Fetch data from API
+    // Fetch data from API with pagination parameters
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:8080/lms', {
+                setLoading(true);
+                const response = await fetch(`http://localhost:8080/lms?page=${page}&size=${rowsPerPage}`, {
                     credentials: 'include' // This sends cookies with the request
                 });
 
@@ -56,6 +58,7 @@ const EmployeeActivities = () => {
                 const result = await response.json();
                 setData(result);
                 setTotalElements(result.totalElements);
+                setTotalPages(result.totalPages);
                 setLoading(false);
             } catch (err) {
                 setError(err.message);
@@ -64,7 +67,7 @@ const EmployeeActivities = () => {
         };
 
         fetchData();
-    }, []);
+    }, [page, rowsPerPage]); // Re-fetch when page or rowsPerPage changes
 
     // Handle page change
     const handleChangePage = (event, newPage) => {
@@ -74,7 +77,7 @@ const EmployeeActivities = () => {
     // Handle rows per page change
     const handleChangeRowsPerPage = (event) => {
         setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
+        setPage(0); // Reset to first page when changing rows per page
     };
 
     // Filter activities based on search term and filters
@@ -109,11 +112,14 @@ const EmployeeActivities = () => {
         return matchesSearch && matchesType && matchesStatus && matchesIssue;
     }) : [];
 
+    // Track if we're doing client-side filtering
+    const isFiltering = searchTerm !== "" || filterType !== "all" || filterStatus !== "all" || filterIssue !== "all";
+
     // Get status chip color
     const getStatusColor = (activity) => {
         if (activity.leaveSuccess) return "success";
         if (activity.unSuccessful || activity.unAuthorized) return "error";
-        return "warning";
+        return "success";
     };
 
     // Get status text
@@ -121,7 +127,7 @@ const EmployeeActivities = () => {
         if (activity.leaveSuccess) return "Approved";
         if (activity.unSuccessful) return "Not Approved (Unsuccessful)";
         if (activity.unAuthorized) return "Not Approved (Unauthorized)";
-        return "Pending";
+        return "Okay";
     };
 
     // Get activity type
@@ -213,7 +219,7 @@ const EmployeeActivities = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Employee ID</TableCell>
+                                <TableCell>SLT ID</TableCell>
                                 <TableCell>Type</TableCell>
                                 <TableCell>Date</TableCell>
                                 <TableCell>Arrival Time</TableCell>
@@ -223,53 +229,57 @@ const EmployeeActivities = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {filteredActivities
-                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                .map((activity) => (
-                                    <TableRow key={activity.id}>
-                                        <TableCell>{activity.employeeID}</TableCell>
-                                        <TableCell>{getActivityType(activity)}</TableCell>
-                                        <TableCell>{new Date(activity.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{activity.arrivalTime || '-'}</TableCell>
-                                        <TableCell>{activity.leftTime || '-'}</TableCell>
-                                        <TableCell>
+                            {filteredActivities.map((activity) => (
+                                <TableRow key={activity.id}>
+                                    <TableCell>{activity.employeeID}</TableCell>
+                                    <TableCell>{getActivityType(activity)}</TableCell>
+                                    <TableCell>{new Date(activity.arrivalDate).toLocaleDateString()}</TableCell>
+                                    <TableCell>{activity.arrivalTime || '-'}</TableCell>
+                                    <TableCell>{activity.leftTime || '-'}</TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={getStatusText(activity)}
+                                            color={getStatusColor(activity)}
+                                            size="small"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        {activity.issues ? (
                                             <Chip
-                                                label={getStatusText(activity)}
-                                                color={getStatusColor(activity)}
+                                                label="Yes"
+                                                color="error"
+                                                size="small"
+                                                title={activity.issueDescription}
+                                            />
+                                        ) : (
+                                            <Chip
+                                                label="No"
+                                                color="success"
                                                 size="small"
                                             />
-                                        </TableCell>
-                                        <TableCell>
-                                            {activity.issues ? (
-                                                <Chip
-                                                    label="Yes"
-                                                    color="error"
-                                                    size="small"
-                                                    title={activity.issueDescription}
-                                                />
-                                            ) : (
-                                                <Chip
-                                                    label="No"
-                                                    color="success"
-                                                    size="small"
-                                                />
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
 
                 {/* Pagination */}
                 <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
                     component="div"
-                    count={filteredActivities.length}
+                    count={isFiltering ? filteredActivities.length : totalElements}
                     rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    page={isFiltering ? 0 : page}
+                    onPageChange={isFiltering ? null : handleChangePage}
+                    onRowsPerPageChange={isFiltering ? null : handleChangeRowsPerPage}
+                    disabled={isFiltering}
+                    labelDisplayedRows={
+                        isFiltering
+                            ? ({ from, to, count }) => `${from}-${to} of ${count} (filtered)`
+                            : ({ from, to, count }) => `${from}-${to} of ${count}`
+                    }
                 />
             </Box>
         </ThemeProvider>

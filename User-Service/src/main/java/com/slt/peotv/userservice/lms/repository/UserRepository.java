@@ -22,7 +22,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	UserEntity findByEmployeeId(String employeeId);
     @Override
 	Page<UserEntity> findAll(Pageable pageable);
-
+    List<UserEntity> findAll();
 	@Query(value="select * from users u where u.email_verification_status = true",
 			countQuery="select count(*) from users u where u.email_verification_status = true",
 			nativeQuery = true)
@@ -94,4 +94,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
 	@Query("SELECT NEW com.slt.peotv.userservice.lms.shared.dto.UserBasicDto(u.userId, u.firstName, u.lastName) FROM UserEntity u")
 	Page<UserBasicDto> findAllBasicUserDtos(Pageable pageable);
+
+	@Query("SELECT u FROM UserEntity u JOIN u.myAdmins a WHERE a.userId = :userId")
+	List<UserEntity> findAdministrativesByUserId(@Param("userId") String userId);
 }

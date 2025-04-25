@@ -21,7 +21,6 @@ public class PrioritySecurity {
         if (authentication.getPrincipal() instanceof UserPrincipal) {
             UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
             int userPriority = user.getHighestRolePriority();
-
             for (int priority : priorities) {
                 if (userPriority <= priority) {
                     return true;

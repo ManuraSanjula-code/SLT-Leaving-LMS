@@ -1,7 +1,3 @@
-/**
- * Defines route access based on priority levels
- * Lower number = higher privilege
- */
 export const priorityRouteAccess = {
     // Priority 1-9 (Super/System Roles)
     1: [
@@ -11,28 +7,29 @@ export const priorityRouteAccess = {
     // Priority 10-29 (Administrative Roles)
     10: [
         "/employee-activities",
-        "/absent-employees",
-        "/no-pay-leaves",
+        "/absent-employees-admin",
+        "/no-pay-leaves-admin",
         "/manage-leave-requests",
         "/manage-movement-requests",
-        "/unsuccessful-leaves",
-        "/unauthorized-leaves"
+        "/unsuccessful-leaves-admin",
+        "/unauthorized-leaves-admin",
     ],
 
     // 30-49 (HR Roles)
     30:[
         "/employee-activities",
-        "/absent-employees",
-        "/no-pay-leaves"
+        "/absent-employees-admin",
+        "/no-pay-leaves-admin",
     ],
 
     // Priority 50-99 (Managerial Roles)
     50: [
         "/manage-leave-requests",
         "/manage-movement-requests",
-        "/unsuccessful-leaves",
-        "/unauthorized-leaves",
-        "/no-pay-leaves",
+        "/unsuccessful-leaves-admin",
+        "/unauthorized-leaves-admin",
+        "/no-pay-leaves-admin",
+        "/employee-activities",
     ],
 
     // Priority 100-199 (Standard Users)
@@ -47,50 +44,54 @@ export const priorityRouteAccess = {
         "/unsuccessful-leaves",
         "/unauthorized-leaves",
         "/no-pay-leaves",
+        "/absent-employee",
         "/"
     ]
 };
 
-/**
- * Gets all routes accessible for a given priority level
- * @param {number} userPriority - The user's highest priority (lowest number)
- * @returns {Set<string>} - Set of accessible routes
- */
+
 export const getAccessibleRoutes = (userPriority) => {
     const accessibleRoutes = new Set();
 
-    // Define the range mappings based on comments
+    // Define the range mappings
     const priorityRanges = [
         { min: 1, max: 9, key: 1 },      // Super/System Roles
         { min: 10, max: 29, key: 10 },   // Administrative Roles
-        { min: 30, max: 49, key: 30 },   // HR Roles
-        { min: 50, max: 99, key: 50 },   // Managerial Roles
+        { min: 30, max: 49, key: 30 },    // HR Roles
+        { min: 50, max: 99, key: 50 },    // Managerial Roles
         { min: 100, max: 199, key: 100 }, // Standard Users
-        { min: 200, max: 499, key: 200 }  // Restricted/Temp
+        { min: 0, max: 499, key: 200 }  // Restricted/Temp
     ];
 
-    // Find the user's priority range and all higher priority ranges
-    const applicableRanges = priorityRanges.filter(range =>
-        userPriority >= range.min && userPriority <= range.max || // User is in this range
-        userPriority < range.min // User has higher priority than this range
+    // Find the user's priority range
+    const userRange = priorityRanges.find(range =>
+        userPriority >= range.min && userPriority <= range.max
     );
 
-    // Add routes from all applicable ranges
-    applicableRanges.forEach(range => {
-        const routes = priorityRouteAccess[range.key] || [];
-        routes.forEach(route => accessibleRoutes.add(route));
-    });
+    if (!userRange) return accessibleRoutes;
 
-    console.log(accessibleRoutes);
+    // Add routes from the user's specific role range
+    const roleRoutes = priorityRouteAccess[userRange.key] || [];
+    roleRoutes.forEach(route => accessibleRoutes.add(route));
+
+    // For all non-temp users, add basic user routes
+    if (userRange.key !== 200) {
+        const basicUserRoutes = priorityRouteAccess[100] || [];
+        basicUserRoutes.forEach(route => accessibleRoutes.add(route));
+    }
+
+    // Special case for temp users (200)
+    if (userRange.key === 200) {
+        accessibleRoutes.add("/manage-employees");
+        accessibleRoutes.add("/profile");
+        accessibleRoutes.add("/dashboard");
+        accessibleRoutes.add("/");
+    }
+
     return accessibleRoutes;
 };
 
-/**
- * Checks if a user has access to a specific route
- * @param {number} userPriority - The user's highest priority
- * @param {string} route - The route to check
- * @returns {boolean} - Whether access is granted
- */
+
 export const hasPriorityAccess = (userPriority, route) => {
     const normalizedRoute = route.replace(/^\/|\/$/g, "");
 

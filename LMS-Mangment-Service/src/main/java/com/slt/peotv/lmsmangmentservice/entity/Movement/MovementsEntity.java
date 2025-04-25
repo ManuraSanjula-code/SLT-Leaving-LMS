@@ -8,6 +8,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.Date;
+import java.util.List;
+
 import lombok.*;
 
 @Entity
@@ -18,6 +20,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class MovementsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -38,18 +41,6 @@ public class MovementsEntity {
     @Temporal(TemporalType.TIMESTAMP)
     private Date logTime;
 
-    @Column(name = "Sup_app_time")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date supAppTime;
-
-    @Column(name = "Man_App_time")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date manAppTime;
-
-    @Column(name = "HOD_App_time")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date hodAppTime;
-
     @Column(name = "category", length = 45)
     private String category;
 
@@ -59,14 +50,14 @@ public class MovementsEntity {
     @Column(name = "Employee_ID", length = 45)
     private String employeeId;
 
+    @Column(name = "User_ID", length = 45)
+    private String userId;
+
     @Column(name = "REQ_TIME", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     @Temporal(TemporalType.TIMESTAMP)
     private Date reqDate;
 
-    private String hod;
-    private String supervisor;
-
-    @Enumerated(EnumType.STRING)  // FIXED: Enum mapping
+    @Enumerated(EnumType.STRING)
     private MovementType movementType;
 
     @Column(name = "ATT_SYNC")
@@ -80,23 +71,26 @@ public class MovementsEntity {
     @Builder.Default
     private Boolean isAccepted = false;
     @Builder.Default
-    private Boolean isExpired = false;
-    @Builder.Default
-    private Boolean isHalfDay = false;
-    @Builder.Default
-    private Boolean isFullDay = false;
-    @Builder.Default
-    private Boolean isLate = false;
-    @Builder.Default
     private Boolean isAbsent = false;
     @Builder.Default
     private Boolean isUnSuccessfulAttdate = false;
     @Builder.Default
-    private Boolean isLateCover = false;
-    @Builder.Default
     private Boolean unAuthorized = false;
+    @Builder.Default
+    private Boolean resolve = false;
+    @Builder.Default
+    private Boolean isHalfDay = false;
 
+    @Builder.Default
+    private Boolean isLate = false;
+    
+    @Builder.Default
+    private Boolean isLateCover = false;
+    
     @OneToOne
     @JoinColumn(name = "attendance_id")
     private AttendanceEntity attendance;
+
+    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<MovementAdminsEntity> admins;
 }

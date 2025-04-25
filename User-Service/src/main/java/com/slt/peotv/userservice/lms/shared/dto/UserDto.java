@@ -8,85 +8,86 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-public class UserDto implements Serializable{
+public class UserDto implements Serializable {
 
 	private static final long serialVersionUID = 6835192601898364280L;
 	private long id;
-    private String userId;
-    private String firstName;
-    private String lastName;
-    private String email;
+	private String userId;
+	private String firstName;
+	private String lastName;
+	private String email;
 	private String employeeId;
 	private String sltId;
-    private String password;
-    private String encryptedPassword;
+	private String password;
+	private String encryptedPassword;
 	private String profilePic;
 	private String emailVerificationToken;
-    private Boolean emailVerificationStatus = false;
-    private List<AddressDTO> addresses;
-    private Collection<String> roles;
+	private Boolean emailVerificationStatus = false;
+	private List<AddressDTO> addresses;
+
+	private Collection<String> roles;
 	@JsonProperty("Authorities")
 	private Collection<String> Authorities;
 	private Collection<String> sections;
 	private Collection<String> profiles;
+
 	private Integer isSltEmp;
 	private Integer isSltIntern;
 	private Integer active = 1;
 	private String phone;
 	private String gender;
-	private String hod;
-	private String supervisor;
-	private String other;
 	private Boolean roaster;
 	private List<String> deleteAddresses;
-	private Date joiningDate;
+	private Date join_date;
+	private Integer highestRolePriority;
+	private List<UserAdminDto> administratives;
 
-	public Date getJoiningDate() {
-		return joiningDate;
+	public long getId() {
+		return id;
 	}
 
-	public void setJoiningDate(Date joiningDate) {
-		this.joiningDate = joiningDate;
+	public void setId(long id) {
+		this.id = id;
 	}
 
-	public List<String> getDeleteAddresses() {
-		return deleteAddresses;
+	public String getUserId() {
+		return userId;
 	}
 
-	public void setDeleteAddresses(List<String> deleteAddresses) {
-		this.deleteAddresses = deleteAddresses;
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 
-	public String getOther() {
-		return other;
+	public String getFirstName() {
+		return firstName;
 	}
 
-	public void setOther(String other) {
-		this.other = other;
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
 	}
 
-	public Boolean getRoaster() {
-		return roaster;
+	public String getLastName() {
+		return lastName;
 	}
 
-	public void setRoaster(Boolean roaster) {
-		this.roaster = roaster;
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
 	}
 
-	public String getHod() {
-		return hod;
+	public String getEmail() {
+		return email;
 	}
 
-	public void setHod(String hod) {
-		this.hod = hod;
+	public void setEmail(String email) {
+		this.email = email;
 	}
 
-	public String getSupervisor() {
-		return supervisor;
+	public String getEmployeeId() {
+		return employeeId;
 	}
 
-	public void setSupervisor(String supervisor) {
-		this.supervisor = supervisor;
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
 	}
 
 	public String getSltId() {
@@ -97,12 +98,84 @@ public class UserDto implements Serializable{
 		this.sltId = sltId;
 	}
 
-	public String getEmployeeId() {
-		return employeeId;
+	public String getPassword() {
+		return password;
 	}
 
-	public void setEmployeeId(String employeeId) {
-		this.employeeId = employeeId;
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getEncryptedPassword() {
+		return encryptedPassword;
+	}
+
+	public void setEncryptedPassword(String encryptedPassword) {
+		this.encryptedPassword = encryptedPassword;
+	}
+
+	public String getProfilePic() {
+		return profilePic;
+	}
+
+	public void setProfilePic(String profilePic) {
+		this.profilePic = profilePic;
+	}
+
+	public String getEmailVerificationToken() {
+		return emailVerificationToken;
+	}
+
+	public void setEmailVerificationToken(String emailVerificationToken) {
+		this.emailVerificationToken = emailVerificationToken;
+	}
+
+	public Boolean getEmailVerificationStatus() {
+		return emailVerificationStatus;
+	}
+
+	public void setEmailVerificationStatus(Boolean emailVerificationStatus) {
+		this.emailVerificationStatus = emailVerificationStatus;
+	}
+
+	public List<AddressDTO> getAddresses() {
+		return addresses;
+	}
+
+	public void setAddresses(List<AddressDTO> addresses) {
+		this.addresses = addresses;
+	}
+
+	public Collection<String> getRoles() {
+		return roles;
+	}
+
+	public void setRoles(Collection<String> roles) {
+		this.roles = roles;
+	}
+
+	public Collection<String> getAuthorities() {
+		return Authorities;
+	}
+
+	public void setAuthorities(Collection<String> authorities) {
+		Authorities = authorities;
+	}
+
+	public Collection<String> getSections() {
+		return sections;
+	}
+
+	public void setSections(Collection<String> sections) {
+		this.sections = sections;
+	}
+
+	public Collection<String> getProfiles() {
+		return profiles;
+	}
+
+	public void setProfiles(Collection<String> profiles) {
+		this.profiles = profiles;
 	}
 
 	public Integer getIsSltEmp() {
@@ -145,133 +218,56 @@ public class UserDto implements Serializable{
 		this.gender = gender;
 	}
 
-	public Collection<String> getSections() {
-		return sections;
+	public Boolean getRoaster() {
+		return roaster;
 	}
 
-	public void setSections(Collection<String> sections) {
-		this.sections = sections;
+	public void setRoaster(Boolean roaster) {
+		this.roaster = roaster;
 	}
 
-	public Collection<String> getProfiles() {
-		return profiles;
+	public List<String> getDeleteAddresses() {
+		return deleteAddresses;
 	}
 
-	public void setProfiles(Collection<String> profiles) {
-		this.profiles = profiles;
+	public void setDeleteAddresses(List<String> deleteAddresses) {
+		this.deleteAddresses = deleteAddresses;
 	}
 
-	public Collection<String> getAuthorities() {
-		return Authorities;
+	public Date getJoin_date() {
+		return join_date;
 	}
 
-	public void setAuthorities(Collection<String> authorities) {
-		Authorities = authorities;
+	public void setJoin_date(Date join_date) {
+		this.join_date = join_date;
 	}
 
-	public long getId() {
-		return id;
-	}
-	public void setId(long id) {
-		this.id = id;
-	}
-	public String getUserId() {
-		return userId;
-	}
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
-	public String getFirstName() {
-		return firstName;
-	}
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
-	public String getLastName() {
-		return lastName;
-	}
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
-	public String getEmail() {
-		return email;
-	}
-	public void setEmail(String email) {
-		this.email = email;
+	public Integer getHighestRolePriority() {
+		return highestRolePriority;
 	}
 
-	public String getProfilePic() {
-		return profilePic;
+	public void setHighestRolePriority(Integer highestRolePriority) {
+		this.highestRolePriority = highestRolePriority;
 	}
 
-	public void setProfilePic(String profilePic) {
-		this.profilePic = profilePic;
+	public List<UserAdminDto> getAdministratives() {
+		return administratives;
 	}
 
-	public String getPassword() {
-		return password;
+	public void setAdministratives(List<UserAdminDto> administratives) {
+		this.administratives = administratives;
 	}
-	public void setPassword(String password) {
-		this.password = password;
-	}
-	public String getEncryptedPassword() {
-		return encryptedPassword;
-	}
-	public void setEncryptedPassword(String encryptedPassword) {
-		this.encryptedPassword = encryptedPassword;
-	}
-	public String getEmailVerificationToken() {
-		return emailVerificationToken;
-	}
-	public void setEmailVerificationToken(String emailVerificationToken) {
-		this.emailVerificationToken = emailVerificationToken;
-	}
-	public Boolean getEmailVerificationStatus() {
-		return emailVerificationStatus;
-	}
-	public void setEmailVerificationStatus(Boolean emailVerificationStatus) {
-		this.emailVerificationStatus = emailVerificationStatus;
-	}
-	public List<AddressDTO> getAddresses() {
-		return addresses;
-	}
-	public void setAddresses(List<AddressDTO> addresses) {
-		this.addresses = addresses;
-	}
-	public Collection<String> getRoles() {
-		return roles;
-	}
-	public void setRoles(Collection<String> roles) {
-		this.roles = roles;
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		UserDto userDto = (UserDto) o;
+		return id == userDto.id && Objects.equals(userId, userDto.userId) && Objects.equals(firstName, userDto.firstName) && Objects.equals(lastName, userDto.lastName) && Objects.equals(email, userDto.email) && Objects.equals(employeeId, userDto.employeeId) && Objects.equals(sltId, userDto.sltId) && Objects.equals(password, userDto.password) && Objects.equals(encryptedPassword, userDto.encryptedPassword) && Objects.equals(profilePic, userDto.profilePic) && Objects.equals(emailVerificationToken, userDto.emailVerificationToken) && Objects.equals(emailVerificationStatus, userDto.emailVerificationStatus) && Objects.equals(addresses, userDto.addresses) && Objects.equals(roles, userDto.roles) && Objects.equals(Authorities, userDto.Authorities) && Objects.equals(sections, userDto.sections) && Objects.equals(profiles, userDto.profiles) && Objects.equals(isSltEmp, userDto.isSltEmp) && Objects.equals(isSltIntern, userDto.isSltIntern) && Objects.equals(active, userDto.active) && Objects.equals(phone, userDto.phone) && Objects.equals(gender, userDto.gender) && Objects.equals(roaster, userDto.roaster) && Objects.equals(deleteAddresses, userDto.deleteAddresses) && Objects.equals(join_date, userDto.join_date) && Objects.equals(highestRolePriority, userDto.highestRolePriority) && Objects.equals(administratives, userDto.administratives);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(Authorities, active, addresses, email, emailVerificationStatus, emailVerificationToken,
-				encryptedPassword, firstName, gender, id, isSltEmp, isSltIntern, lastName, password, phone, profilePic,
-				profiles, roles, sections, userId);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if ((obj == null) || (getClass() != obj.getClass())) {
-			return false;
-		}
-		UserDto other = (UserDto) obj;
-		return Objects.equals(Authorities, other.Authorities) && Objects.equals(active, other.active)
-				&& Objects.equals(addresses, other.addresses) && Objects.equals(email, other.email)
-				&& Objects.equals(emailVerificationStatus, other.emailVerificationStatus)
-				&& Objects.equals(emailVerificationToken, other.emailVerificationToken)
-				&& Objects.equals(encryptedPassword, other.encryptedPassword)
-				&& Objects.equals(firstName, other.firstName) && Objects.equals(gender, other.gender) && id == other.id
-				&& Objects.equals(isSltEmp, other.isSltEmp) && Objects.equals(isSltIntern, other.isSltIntern)
-				&& Objects.equals(lastName, other.lastName) && Objects.equals(password, other.password)
-				&& Objects.equals(phone, other.phone) && Objects.equals(profilePic, other.profilePic)
-				&& Objects.equals(profiles, other.profiles) && Objects.equals(roles, other.roles)
-				&& Objects.equals(sections, other.sections) && Objects.equals(userId, other.userId);
+		return Objects.hash(id, userId, firstName, lastName, email, employeeId, sltId, password, encryptedPassword, profilePic, emailVerificationToken, emailVerificationStatus, addresses, roles, Authorities, sections, profiles, isSltEmp, isSltIntern, active, phone, gender, roaster, deleteAddresses, join_date, highestRolePriority, administratives);
 	}
 
 	@Override
@@ -299,11 +295,11 @@ public class UserDto implements Serializable{
 				", active=" + active +
 				", phone='" + phone + '\'' +
 				", gender='" + gender + '\'' +
-				", hod='" + hod + '\'' +
-				", supervisor='" + supervisor + '\'' +
-				", other='" + other + '\'' +
 				", roaster=" + roaster +
 				", deleteAddresses=" + deleteAddresses +
+				", join_date=" + join_date +
+				", highestRolePriority=" + highestRolePriority +
+				", adminDtos=" + administratives +
 				'}';
 	}
 }

@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import dynamic from 'next/dynamic';
 import { useDispatch } from 'react-redux';
-import { setCurrentAdminPage } from '../../../store/managementSlice';
+import { setCurrentAdminPage } from '../../../redux-lms/managementSlice';
 
 const EmployeeSelectionDialog = dynamic(() => import('./EmployeeSelectionDialog'), {
     ssr: false,
@@ -164,11 +164,6 @@ const EmployeeDialog = React.memo(({
             setIsInitialized(true);
         }
     }, [open, memoizedEmployee, isInitialized]);
-
-    useEffect(() => {
-        console.log(paginatedAdmins)
-        console.log(saveLoading)
-    }, []);
 
     // Optimized form handlers with debouncing for rapid changes
     const handleChange = useCallback((field, value) => {
@@ -477,9 +472,9 @@ const EmployeeDialog = React.memo(({
                 roaster: formData.isRoaster || 0,
                 phone: formData.phone.trim(),
                 gender: formData.gender,
-                hod: formData.selectedHod ? formData.selectedHod.employeeId || '' : '',
-                supervisor: formData.selectedHod ? formData.selectedSupervisor.employeeId || '' : '',
-                other: formData.selectedHod ? formData.selectedOtherEmployee.employeeId || '' : '',
+                // hod: formData.selectedHod ? formData.selectedHod.employeeId || '' : '',
+                // supervisor: formData.selectedHod ? formData.selectedSupervisor.employeeId || '' : '',
+                // other: formData.selectedHod ? formData.selectedOtherEmployee.employeeId || '' : '',
                 profilePic: formData.profilePic || '',
                 Authorities: formData.authorities || [],
                 deleteAddresses: formData.deleteAddresses || [],
@@ -917,7 +912,7 @@ const EmployeeDialog = React.memo(({
     ), [formData.joiningDate, errors.joiningDate, saveLoading]);
 
     const getEffectiveAdmins = () => {
-        const backendAdmins = employee?.administratives || [];
+        const backendAdmins = employee?.administrativesDto || [];
         const addedAdmins = formData?.addedAdmins || [];
         const deletedAdmins = formData?.deletedAdmins || [];
 

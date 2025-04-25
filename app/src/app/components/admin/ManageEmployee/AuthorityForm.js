@@ -98,7 +98,7 @@ const AuthorityForm = () => {
     };
 
     const saveAuth = async (newName, oldName, id) => {
-        const userId = localStorage.getItem('userId');
+        const userId = sessionStorage.getItem('userId');
         if (!userId) return;
 
         fetch(`http://localhost:8080/users/auth/${userId}`, {
@@ -135,7 +135,7 @@ const AuthorityForm = () => {
     };
 
     const handleDelete = (id) => {
-        const userId = localStorage.getItem('userId');
+        const userId = sessionStorage.getItem('userId');
         if (!userId) return;
 
         fetch(`http://localhost:8080/users/auth/${id}/${userId}`, {

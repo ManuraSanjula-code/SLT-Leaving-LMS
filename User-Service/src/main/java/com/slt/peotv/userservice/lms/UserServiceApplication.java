@@ -1,8 +1,5 @@
 package com.slt.peotv.userservice.lms;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
@@ -16,8 +13,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 @EnableFeignClients
 @EnableScheduling
 public class UserServiceApplication {
-
-    public static final Map<String, String> tempPasswords = new ConcurrentHashMap<>();
 
 	@Bean
 	public BCryptPasswordEncoder bCryptPasswordEncoder() {

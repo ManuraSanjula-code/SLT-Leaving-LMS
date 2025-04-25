@@ -1,10 +1,13 @@
 package com.slt.peotv.userservice.lms.shared.model.response;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 public class UserRest {
 	private String userId;
+	private String employeeId;
+	private String sltId;
 	private String firstName;
 	private String lastName;
 	private String email;
@@ -19,6 +22,31 @@ public class UserRest {
 	private String phone;
 	private String gender;
 	private Integer highestRolePriority;
+	private Date joiningDate;
+
+	public Date getJoiningDate() {
+		return joiningDate;
+	}
+
+	public void setJoiningDate(Date joiningDate) {
+		this.joiningDate = joiningDate;
+	}
+
+	public String getEmployeeId() {
+		return employeeId;
+	}
+
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
+	}
+
+	public String getSltId() {
+		return sltId;
+	}
+
+	public void setSltId(String sltId) {
+		this.sltId = sltId;
+	}
 
 	public Integer getHighestRolePriority() {
 		return highestRolePriority;

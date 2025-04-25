@@ -27,10 +27,14 @@ import {
   DialogContent,
   DialogActions,
   Grid,
+  Alert,
+  Chip,
+  CircularProgress
 } from "@mui/material";
 import { Check as CheckIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
+import { useSelector } from "react-redux";
 
-const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
+const UnauthorizedLeaves = ({ isAdmin = false }) => {
   // State for leaves data
   const [leavesData, setLeavesData] = useState({
     content: [],
@@ -58,7 +62,22 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
   const fetchLeaves = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/lms/un-authorized?page=${page}&size=${pageSize}`, {
+
+      // Get userId from sessionStorage or use admin endpoint
+      const userId = sessionStorage.getItem('userId');
+
+      if (!userId && !isAdmin) {
+        setError("User ID not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+
+      // Determine the endpoint based on isAdmin flag
+      const endpoint = isAdmin
+          ? `http://localhost:8080/lms/un-authorized`
+          : `http://localhost:8080/lms/un-authorized/${userId}`;
+
+      const response = await fetch(`${endpoint}?page=${page}&size=${pageSize}`, {
         credentials: 'include', // This sends all cookies with the request
       });
 
@@ -78,11 +97,11 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
   // Initial data load
   useEffect(() => {
     fetchLeaves();
-  }, [page, pageSize]);
+  }, [page, pageSize, isAdmin]);
 
   // Format date for display
   const formatDate = (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
@@ -92,12 +111,18 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
     setSearchQuery(event.target.value);
   };
 
+  // Handle page size change
+  const handlePageSizeChange = (event) => {
+    const newSize = parseInt(event.target.value);
+    setPageSize(newSize);
+    setPage(0); // Reset to first page when changing page size
+  };
+
   // Handle resolving a leave
   const handleResolveLeave = async (id) => {
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch(`/lms/un-authorized/${id}/resolve`, {
-        method: 'PUT',
+      const response = await fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {
+        method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -118,9 +143,8 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
   // Handle approving a leave
   const handleApproveLeave = async (id) => {
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch(`/lms/un-authorized/${id}/approve`, {
-        method: 'PUT',
+      const response = await fetch(`http://localhost:8080/lms/approve-unauthorized/${id}`, {
+        method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -152,8 +176,9 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
   // Filter leaves based on search query and filters
   const filteredLeaves = leavesData.content ? leavesData.content.filter((leave) => {
     const matchesSearchQuery =
-        leave.employeeID.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (leave.issueDescription && leave.issueDescription.toLowerCase().includes(searchQuery.toLowerCase()));
+        leave.employeeID?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (leave.issueDescription && leave.issueDescription?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (leave.publicId && leave.publicId?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const leaveDate = new Date(leave.date);
     const matchesStartDateFilter = !startDateFilter || leaveDate >= new Date(startDateFilter);
@@ -188,8 +213,7 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
   // Handle delete all selected leave requests
   const handleDeleteAllSelected = async () => {
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch(`/lms/un-authorized/delete-multiple`, {
+      const response = await fetch(`http://localhost:8080/lms/un-authorized/delete-multiple`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {
@@ -210,6 +234,28 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
     }
   };
 
+  // Handle bulk resolution
+  const handleBulkResolve = async () => {
+    try {
+      await Promise.all(
+          selected.map((id) =>
+              fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              })
+          )
+      );
+      // Refresh data after resolving
+      setSelected([]);
+      fetchLeaves();
+    } catch (err) {
+      setError("Failed to resolve selected leaves. Please try again.");
+    }
+  };
+
   // Handle page change
   const handlePageChange = (event, value) => {
     setPage(value - 1); // API uses 0-based indexing
@@ -224,9 +270,6 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
     return "Unauthorized";
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
-  if (error) return <Typography color="error">Error: {error}</Typography>;
-
   return (
       <Box
           sx={{
@@ -239,12 +282,19 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
         <Container maxWidth="lg">
           <Box sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h4" gutterBottom>
-              Unauthorized Leave Requests
+              Unauthorized Leave
             </Typography>
+
+            {/* Error Message */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+            )}
 
             {/* Search Bar */}
             <TextField
-                label="Search by Employee ID or Issue Description"
+                label="Search by Employee ID, Public ID or Issue Description"
                 variant="outlined"
                 fullWidth
                 value={searchQuery}
@@ -286,118 +336,175 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
               />
             </Box>
 
-            {/* Delete All Selected Button */}
-            <Button
-                variant="contained"
-                color="error"
-                onClick={handleDeleteAllSelected}
-                disabled={selected.length === 0}
-                sx={{ mb: 2 }}
-            >
-              Delete All Selected
-            </Button>
-
-            {/* Table */}
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                          indeterminate={
-                              selected.length > 0 && selected.length < filteredLeaves.length
-                          }
-                          checked={selected.length === filteredLeaves.length && filteredLeaves.length > 0}
-                          onChange={handleSelectAll}
-                      />
-                    </TableCell>
-                    <TableCell>Employee ID</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Leave Type</TableCell>
-                    <TableCell>Left Time</TableCell>
-                    <TableCell>Issue Description</TableCell>
-                    <TableCell>Due Date</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredLeaves.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} align="center">
-                          No unauthorized leaves found
-                        </TableCell>
-                      </TableRow>
-                  ) : (
-                      filteredLeaves.map((leave) => (
-                          <TableRow key={leave.id}>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                  checked={selected.includes(leave.id)}
-                                  onChange={() => handleSelect(leave.id)}
-                              />
-                            </TableCell>
-                            <TableCell>{leave.employeeID}</TableCell>
-                            <TableCell>{formatDate(leave.date)}</TableCell>
-                            <TableCell>{getLeaveType(leave)}</TableCell>
-                            <TableCell>{leave.leftTime || 'N/A'}</TableCell>
-                            <TableCell>{leave.issueDescription || 'N/A'}</TableCell>
-                            <TableCell>{formatDate(leave.dueDateForUA)}</TableCell>
-                            <TableCell
-                                sx={{
-                                  color: leave.resolve ? "green" : "red",
-                                  fontWeight: "bold",
-                                }}
-                            >
-                              {leave.resolve ? "Resolved" : "Unresolved"}
-                            </TableCell>
-                            <TableCell>
-                              {isAdmin && !leave.resolve && (
-                                  <IconButton
-                                      onClick={() => handleApproveLeave(leave.id)}
-                                      color="success"
-                                      size="small"
-                                  >
-                                    <CheckIcon />
-                                  </IconButton>
-                              )}
-                              {!leave.resolve && (
-                                  <Button
-                                      variant="contained"
-                                      color="primary"
-                                      size="small"
-                                      onClick={() => handleResolveLeave(leave.id)}
-                                      sx={{ mx: 1 }}
-                                  >
-                                    Resolve
-                                  </Button>
-                              )}
-                              {isClient && (
-                                  <IconButton
-                                      onClick={() => handleViewDetails(leave)}
-                                      color="info"
-                                      size="small"
-                                  >
-                                    <VisibilityIcon />
-                                  </IconButton>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                      ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Pagination */}
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-              <Pagination
-                  count={leavesData.totalPages}
-                  page={leavesData.number + 1} // Add 1 because API uses 0-based indexing
-                  onChange={handlePageChange}
-                  color="primary"
-              />
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+              {!isAdmin && selected.length > 0 && (
+                  <>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleBulkResolve}
+                        disabled={selected.length === 0}
+                    >
+                      Resolve Selected ({selected.length})
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleDeleteAllSelected}
+                        disabled={selected.length === 0}
+                    >
+                      Delete Selected
+                    </Button>
+                  </>
+              )}
             </Box>
+
+            {/* Loading Indicator */}
+            {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+                  <CircularProgress />
+                </Box>
+            ) : (
+                <>
+                  {/* Records per page selector and data info */}
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                    <Typography variant="body2">
+                      Showing {filteredLeaves.length} of {leavesData.totalElements || 0} total unauthorized leaves
+                    </Typography>
+
+                    <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel>Records per page</InputLabel>
+                      <Select
+                          value={pageSize}
+                          onChange={handlePageSizeChange}
+                          label="Records per page"
+                      >
+                        <MenuItem value={5}>5</MenuItem>
+                        <MenuItem value={10}>10</MenuItem>
+                        <MenuItem value={25}>25</MenuItem>
+                        <MenuItem value={50}>50</MenuItem>
+                        <MenuItem value={100}>100</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {/* Table */}
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          {!isAdmin && (
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                    indeterminate={
+                                        selected.length > 0 && selected.length < filteredLeaves.length
+                                    }
+                                    checked={selected.length === filteredLeaves.length && filteredLeaves.length > 0}
+                                    onChange={handleSelectAll}
+                                />
+                              </TableCell>
+                          )}
+                          <TableCell>Public ID</TableCell>
+                          <TableCell>Employee ID</TableCell>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Leave Type</TableCell>
+                          <TableCell>Left Time</TableCell>
+                          <TableCell>Issue Description</TableCell>
+                          <TableCell>Due Date</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {filteredLeaves.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={!isAdmin ? 10 : 9} align="center">
+                                No unauthorized leaves found
+                              </TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredLeaves.map((leave) => (
+                                <TableRow key={leave.id}>
+                                  {!isAdmin && (
+                                      <TableCell padding="checkbox">
+                                        <Checkbox
+                                            checked={selected.includes(leave.id)}
+                                            onChange={() => handleSelect(leave.id)}
+                                            disabled={leave.resolve}
+                                        />
+                                      </TableCell>
+                                  )}
+                                  <TableCell>{leave.publicId}</TableCell>
+                                  <TableCell>{leave.employeeID}</TableCell>
+                                  <TableCell>{formatDate(leave.arrivalDate)}</TableCell>
+                                  <TableCell>{getLeaveType(leave)}</TableCell>
+                                  <TableCell>{leave.leftTime || 'N/A'}</TableCell>
+                                  <TableCell sx={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {leave.issueDescription || 'N/A'}
+                                  </TableCell>
+                                  <TableCell>{formatDate(leave.dueDateForUA)}</TableCell>
+                                  <TableCell>
+                                    {leave.resolve ? (
+                                        <Chip label="Resolved" color="success" size="small" />
+                                    ) : (
+                                        <Chip label="Unresolved" color="default" size="small" />
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {!isAdmin && !leave.resolve && (
+                                        <IconButton
+                                            onClick={() => handleApproveLeave(leave.id)}
+                                            color="success"
+                                            size="small"
+                                            title="Approve"
+                                        >
+                                          <CheckIcon />
+                                        </IconButton>
+                                    )}
+                                    {/* Show resolve button to both admin and non-admin users */}
+                                    {!leave.resolve && !isAdmin && (
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            size="small"
+                                            onClick={() => handleResolveLeave(leave.id)}
+                                            sx={{ mx: 1 }}
+                                        >
+                                          Resolve
+                                        </Button>
+                                    )}
+                                    {!isAdmin && (
+                                        <IconButton
+                                            onClick={() => handleViewDetails(leave)}
+                                            color="info"
+                                            size="small"
+                                            title="View Details"
+                                        >
+                                          <VisibilityIcon />
+                                        </IconButton>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Pagination */}
+                  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 3, gap: 2 }}>
+                    <Pagination
+                        count={leavesData.totalPages || 1}
+                        page={(leavesData.number || 0) + 1} // Add 1 because API uses 0-based indexing
+                        onChange={handlePageChange}
+                        color="primary"
+                        showFirstButton
+                        showLastButton
+                    />
+                  </Box>
+                </>
+            )}
           </Box>
         </Container>
 
@@ -442,6 +549,7 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
                       <Typography><strong>Short Leave:</strong> {selectedLeave.shortLeave ? 'Yes' : 'No'}</Typography>
                       <Typography><strong>Full Day:</strong> {selectedLeave.fullDay ? 'Yes' : 'No'}</Typography>
                       <Typography><strong>No Pay:</strong> {selectedLeave.noPay ? 'Yes' : 'No'}</Typography>
+                      <Typography><strong>Unauthorized:</strong> {selectedLeave.unAuthorized ? 'Yes' : 'No'}</Typography>
                       <Typography><strong>Active:</strong> {selectedLeave.active ? 'Yes' : 'No'}</Typography>
                     </Paper>
                   </Grid>
@@ -459,13 +567,14 @@ const UnauthorizedLeaves = ({ isAdmin = false, isClient = true }) => {
             )}
           </DialogContent>
           <DialogActions>
-            {selectedLeave && !selectedLeave.resolve && (
+            {!isAdmin && selectedLeave && !selectedLeave.resolve && (
                 <Button
                     onClick={() => {
                       handleResolveLeave(selectedLeave.id);
                       handleCloseDetails();
                     }}
                     color="primary"
+                    variant="contained"
                 >
                   Resolve
                 </Button>

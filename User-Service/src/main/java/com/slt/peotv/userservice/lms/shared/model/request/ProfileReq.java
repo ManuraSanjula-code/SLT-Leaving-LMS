@@ -8,7 +8,7 @@ public class ProfileReq {
     private String workStart;
     private String workEnds;
     private String ignoreSl;
-    private String gracePeriodeStart;
+    private String gracePeriodStart;
     private String hdStart;
     private String slStartMorning;
     private String slStartEvening;
@@ -23,36 +23,20 @@ public class ProfileReq {
     private List<String> addedUsers;
     private List<String> deletedUsers;
 
-    public String getPublicId() {
-        return publicId;
-    }
-
-    public void setPublicId(String publicId) {
-        this.publicId = publicId;
-    }
-
-    public List<String> getAddedUsers() {
-        return addedUsers;
-    }
-
-    public void setAddedUsers(List<String> addedUsers) {
-        this.addedUsers = addedUsers;
-    }
-
-    public List<String> getDeletedUsers() {
-        return deletedUsers;
-    }
-
-    public void setDeletedUsers(List<String> deletedUsers) {
-        this.deletedUsers = deletedUsers;
-    }
-
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
     public String getWorkStart() {
@@ -79,12 +63,12 @@ public class ProfileReq {
         this.ignoreSl = ignoreSl;
     }
 
-    public String getGracePeriodeStart() {
-        return gracePeriodeStart;
+    public String getGracePeriodStart() {
+        return gracePeriodStart;
     }
 
-    public void setGracePeriodeStart(String gracePeriodeStart) {
-        this.gracePeriodeStart = gracePeriodeStart;
+    public void setGracePeriodStart(String gracePeriodStart) {
+        this.gracePeriodStart = gracePeriodStart;
     }
 
     public String getHdStart() {
@@ -173,5 +157,21 @@ public class ProfileReq {
 
     public void setFlexiHrsStart(String flexiHrsStart) {
         this.flexiHrsStart = flexiHrsStart;
+    }
+
+    public List<String> getAddedUsers() {
+        return addedUsers;
+    }
+
+    public void setAddedUsers(List<String> addedUsers) {
+        this.addedUsers = addedUsers;
+    }
+
+    public List<String> getDeletedUsers() {
+        return deletedUsers;
+    }
+
+    public void setDeletedUsers(List<String> deletedUsers) {
+        this.deletedUsers = deletedUsers;
     }
 }

@@ -1,42 +1,45 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class MovementDTO {
     private Long id;
     private String publicId;
-    private String employeeID;
+    private String userId;
     private String inTime;
     private String outTime;
     private String comment;
     private Date logTime;
-    private Date supAppTime;
-    private Date manAppTime;
-    private Date hodAppTime;
     private String category;
     private String destination;
     private String employeeId;
     private Date reqDate;
-    private String hod;
-    private String supervisor;
     @Enumerated(EnumType.STRING)  // FIXED: Enum mapping
     private MovementType movementType;
     private Integer attSync = 0;
     private Date happenDate;
     private Boolean isPending = false;
     private Boolean isAccepted = false;
-    private Boolean isExpired = false;
     private Boolean isHalfDay = false;
-    private Boolean isFullDay = false;
-    private Boolean isLate = false;
     private Boolean isAbsent = false;
     private Boolean isUnSuccessfulAttdate = false;
-    private Boolean isLateCover = false;
     private Boolean unAuthorized = false;
     private String attendance;
+    private List<MovementAdminsDto> movementAdmins = new ArrayList<>();
+
+    public List<MovementAdminsDto> getMovementAdmins() {
+        return movementAdmins;
+    }
+
+    public void setMovementAdmins(List<MovementAdminsDto> movementAdmins) {
+        this.movementAdmins = movementAdmins;
+    }
 
     public Long getId() {
         return id;
@@ -54,12 +57,12 @@ public class MovementDTO {
         this.publicId = publicId;
     }
 
-    public String getEmployeeID() {
-        return employeeID;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setEmployeeID(String employeeID) {
-        this.employeeID = employeeID;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getInTime() {
@@ -94,30 +97,6 @@ public class MovementDTO {
         this.logTime = logTime;
     }
 
-    public Date getSupAppTime() {
-        return supAppTime;
-    }
-
-    public void setSupAppTime(Date supAppTime) {
-        this.supAppTime = supAppTime;
-    }
-
-    public Date getManAppTime() {
-        return manAppTime;
-    }
-
-    public void setManAppTime(Date manAppTime) {
-        this.manAppTime = manAppTime;
-    }
-
-    public Date getHodAppTime() {
-        return hodAppTime;
-    }
-
-    public void setHodAppTime(Date hodAppTime) {
-        this.hodAppTime = hodAppTime;
-    }
-
     public String getCategory() {
         return category;
     }
@@ -148,22 +127,6 @@ public class MovementDTO {
 
     public void setReqDate(Date reqDate) {
         this.reqDate = reqDate;
-    }
-
-    public String getHod() {
-        return hod;
-    }
-
-    public void setHod(String hod) {
-        this.hod = hod;
-    }
-
-    public String getSupervisor() {
-        return supervisor;
-    }
-
-    public void setSupervisor(String supervisor) {
-        this.supervisor = supervisor;
     }
 
     public MovementType getMovementType() {
@@ -206,36 +169,12 @@ public class MovementDTO {
         isAccepted = accepted;
     }
 
-    public Boolean getExpired() {
-        return isExpired;
-    }
-
-    public void setExpired(Boolean expired) {
-        isExpired = expired;
-    }
-
     public Boolean getHalfDay() {
         return isHalfDay;
     }
 
     public void setHalfDay(Boolean halfDay) {
         isHalfDay = halfDay;
-    }
-
-    public Boolean getFullDay() {
-        return isFullDay;
-    }
-
-    public void setFullDay(Boolean fullDay) {
-        isFullDay = fullDay;
-    }
-
-    public Boolean getLate() {
-        return isLate;
-    }
-
-    public void setLate(Boolean late) {
-        isLate = late;
     }
 
     public Boolean getAbsent() {
@@ -252,14 +191,6 @@ public class MovementDTO {
 
     public void setUnSuccessfulAttdate(Boolean unSuccessfulAttdate) {
         isUnSuccessfulAttdate = unSuccessfulAttdate;
-    }
-
-    public Boolean getLateCover() {
-        return isLateCover;
-    }
-
-    public void setLateCover(Boolean lateCover) {
-        isLateCover = lateCover;
     }
 
     public Boolean getUnAuthorized() {

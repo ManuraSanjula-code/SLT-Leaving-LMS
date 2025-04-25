@@ -22,23 +22,23 @@
 /// --- while employee login make tigger fucntion to genarate exact same hash to user given password that matches to db encrypt password
 
 /// Havent add departement 
-/// after login redux not updating
+/// after login redux-user not updating
 
 "use client"
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import NavBar from './components/navbar/NavBar';
-import Dashboard from './components/dashboard/Dashboard';
-import ApplyLeave from './components/dashboard/ApplyLeave';
+import Dashboard from './components/employee/Dashboard';
+import ApplyLeave from './components/employee/ApplyLeave';
 import RequestMovement from './components/employee/RequestMovement';
-import UserProfile from './components/dashboard/UserProfile';
+import UserProfile from './components/employee/UserProfile';
 import AllLeaves from './components/employee/AllLeaves';
 import AllMovements from './components/employee/AllMovements';
 import UnsuccessfulLeaves from './components/employee/UnsuccessfulLeaves';
 import UnauthorizedLeaves from './components/employee/UnauthorizedLeaves';
 import AbsentEmployees from './components/employee/AbsentEmployees';
-import NoPayLeaves from './components/dashboard/NoPayLeaves';
+import NoPayLeaves from './components/employee/NoPayLeaves';
 import ManageEmployees from './components/admin/ManageEmployee/main/ManageEmployees';
 import ManageLeaveRequests from './components/admin/ManageLeaveRequests';
 import ManageMovementRequests from './components/admin/ManageMovementRequests';
@@ -56,23 +56,25 @@ function App() {
       <NavBar />
       <Routes>
 
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard/>} />
         <Route path="/apply-leave" element={<ApplyLeave />} />
         <Route path="/request-movement" element={<RequestMovement />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/all-leaves" element={<AllLeaves />} />
         <Route path="/all-movements" element={<AllMovements />} />
         <Route path="/single-employee-activities" element={<SingleEmployeeActivities />} />
-        <Route path="/unsuccessful-leaves" element={<UnsuccessfulLeaves />} />
-        <Route path="/unauthorized-leaves" element={<UnauthorizedLeaves />} />
+        <Route path="/unsuccessful-leaves" element={<UnsuccessfulLeaves isAdmin={false}/>} />
+        <Route path="/unauthorized-leaves" element={<UnauthorizedLeaves isAdmin={false}/>} />
+        <Route path="/unsuccessful-leaves-admin" element={<UnsuccessfulLeaves isAdmin={true} />} />
+        <Route path="/unauthorized-leaves-admin" element={<UnauthorizedLeaves isAdmin={true}/>} />
         <Route path="/absent-employees" element={<AbsentEmployees />} />
-        <Route path="/no-pay-leaves" element={<NoPayLeaves />} />
+        <Route path="/no-pay-leaves" element={<NoPayLeaves  sAdmin={false}/>} />
+        <Route path="/no-pay-leaves-admin" element={<NoPayLeaves isAdmin={true} />} />
         <Route path="/manage-employees" element={<ManageEmployees />} />
         <Route path="/manage-leave-requests" element={<ManageLeaveRequests />} />
         <Route path="/manage-movement-requests" element={<ManageMovementRequests />} />
         <Route path="/employee-activities" element={<EmployeeActivities />} />
         <Route path="/" element={<Dashboard />} />
-        
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/server-error" element={<ServerError />} />
         <Route path="/network-error" element={<NetworkError />} />

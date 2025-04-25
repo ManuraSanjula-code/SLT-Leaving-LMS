@@ -1,6 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 
 import java.util.Date;
@@ -12,10 +12,7 @@ public class LeaveDTO {
     private Date submitDate;
     private Date fromDate;
     private Date toDate;
-    private LeaveCategoryEntity leaveCategory;
     private LeaveTypeEntity leaveType;
-    private Boolean isSupervisedApproved = false;
-    private Boolean isHODApproved = false;
     private Integer isNoPay = 0;
     private Long numOfDays;
     private String description;
@@ -31,6 +28,15 @@ public class LeaveDTO {
     private Boolean isCanceled = false;
     private Boolean isManualRequest = false;
     private Date happenDate;
+    private String userId;
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
     public String getPublicId() {
         return publicId;
@@ -79,37 +85,12 @@ public class LeaveDTO {
     public void setToDate(Date toDate) {
         this.toDate = toDate;
     }
-
-    public LeaveCategoryEntity getLeaveCategory() {
-        return leaveCategory;
-    }
-
-    public void setLeaveCategory(LeaveCategoryEntity leaveCategory) {
-        this.leaveCategory = leaveCategory;
-    }
-
     public LeaveTypeEntity getLeaveType() {
         return leaveType;
     }
 
     public void setLeaveType(LeaveTypeEntity leaveType) {
         this.leaveType = leaveType;
-    }
-
-    public Boolean getSupervisedApproved() {
-        return isSupervisedApproved;
-    }
-
-    public void setSupervisedApproved(Boolean supervisedApproved) {
-        isSupervisedApproved = supervisedApproved;
-    }
-
-    public Boolean getHODApproved() {
-        return isHODApproved;
-    }
-
-    public void setHODApproved(Boolean HODApproved) {
-        isHODApproved = HODApproved;
     }
 
     public Integer getIsNoPay() {

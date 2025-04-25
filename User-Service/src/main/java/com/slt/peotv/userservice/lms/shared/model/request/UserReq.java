@@ -29,9 +29,6 @@ public class UserReq {
     private Integer active = 1;
     private String phone;
     private String gender;
-    private String hod;
-    private String supervisor;
-    private String other;
     private Boolean roaster;
     private List<String> deleteAddresses;
     private Date joiningDate;
@@ -240,31 +237,6 @@ public class UserReq {
     public void setGender(String gender) {
         this.gender = gender;
     }
-
-    public String getHod() {
-        return hod;
-    }
-
-    public void setHod(String hod) {
-        this.hod = hod;
-    }
-
-    public String getSupervisor() {
-        return supervisor;
-    }
-
-    public void setSupervisor(String supervisor) {
-        this.supervisor = supervisor;
-    }
-
-    public String getOther() {
-        return other;
-    }
-
-    public void setOther(String other) {
-        this.other = other;
-    }
-
     public Boolean getRoaster() {
         return roaster;
     }
@@ -330,9 +302,6 @@ public class UserReq {
                 ", active=" + active +
                 ", phone='" + phone + '\'' +
                 ", gender='" + gender + '\'' +
-                ", hod='" + hod + '\'' +
-                ", supervisor='" + supervisor + '\'' +
-                ", other='" + other + '\'' +
                 ", roaster=" + roaster +
                 ", deleteAddresses=" + deleteAddresses +
                 ", joiningDate=" + joiningDate +

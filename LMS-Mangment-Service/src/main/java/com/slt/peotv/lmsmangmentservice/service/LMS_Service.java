@@ -4,14 +4,13 @@ import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.types.AttendanceTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
-import com.slt.peotv.lmsmangmentservice.model.dto.AttendanceDTO;
-import com.slt.peotv.lmsmangmentservice.model.dto.LeaveDTO;
-import com.slt.peotv.lmsmangmentservice.model.dto.MovementDTO;
-import com.slt.peotv.lmsmangmentservice.model.dto.NopayDTO;
+import com.slt.peotv.lmsmangmentservice.model.LeaveReq;
+import com.slt.peotv.lmsmangmentservice.model.MovementReq;
+import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -24,16 +23,25 @@ public interface LMS_Service {
     public void deleteAbsentee(String publicId);
 
     public Page<AttendanceDTO> getAllAttendance(int page, int size);
+    public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size);
     public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size);
     public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size);
+    public Page<AttendanceDTO> getAllAttendanceThatUnByUserId(String userId, int page, int size);
+    public Page<AttendanceDTO> getAllAttendanceThatUnAByUserId(String userId, int page, int size);
     public List<AttendanceEntity> getAttendanceByUserId(String userId);
     public List<AttendanceEntity> getAttendanceByEmployeeId(String employeeId);
 
+    public Page<AbsenteeDto> getAllAbsentee(int page, int size);
+    public Page<AbsenteeDto> getAllAbsenteeByUserId(String userId, int page, int size);
+
     public void createMovements(MovementsEntity entity);
     public Page<MovementDTO> getAllMovementByUser(String employeeID, int page, int size);
+    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size);
     public Page<MovementDTO> getAllMovements(int page, int size);
     public MovementsEntity getMovement(String publicId);
     public void updateMovement(MovementsEntity entity, String publicId);
+    public void updateMovement(MovementReq req, String publicId);
+
     public void deleteMovements(String publicId);
 
     public void createNoPay(NoPayEntity entity);
@@ -43,7 +51,9 @@ public interface LMS_Service {
     public void deleteNoPay(String publicId);
 
     public void saveLeave(LeaveEntity entity);
-    public Page<LeaveDTO> getAllLeaveByUserByEmployeeId(String employeeID, int page, int size);
+    public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size);
+    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size);
+
     public Page<LeaveDTO> getAllLeaves(int page, int size);
     public LeaveEntity getOneLeave(String publicId);
     public void deleteLeave(String publicId);
@@ -62,5 +72,11 @@ public interface LMS_Service {
     public LeaveTypeEntity getLeaveType(String name);
     public void updateLeaveType(String old_name,String name);
     public void deleteLeaveType(String name);
+    
+    LeaveTypeTotDto getTotalLeaves(String employeeId, String leaveTypeName);
+    LeaveTypeRetDto getRemainingLeaves(String employeeId, String leaveTypeName);
+    UserLeaveDetailsDto getAllLeaveDetails(String employeeId);
+
+    public void updateLeave(LeaveReq req, String leaveId);
 
 }

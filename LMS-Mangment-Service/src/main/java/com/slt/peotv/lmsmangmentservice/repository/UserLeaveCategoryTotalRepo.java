@@ -1,7 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveCategoryTotalEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
+
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

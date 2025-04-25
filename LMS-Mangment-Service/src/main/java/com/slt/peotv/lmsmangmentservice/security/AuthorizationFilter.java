@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.text.ParseException;
 
 public class AuthorizationFilter extends BasicAuthenticationFilter {

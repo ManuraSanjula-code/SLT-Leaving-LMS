@@ -13,6 +13,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class NoPayEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -50,4 +51,7 @@ public class NoPayEntity {
     private String comment;
 
     private Date happenDate;
+
+    @Column(name = "user_id")
+    private String userId;
 }

@@ -52,7 +52,7 @@ public class AccessLogServiceImpl implements AccessLogService {
             try {
                 processAccessLog(log);
             } catch (ParseException e) {
-                logger.error("Failed to process log entry with ID: {}", log.getId(), e);
+                logger.error("Failed to process log entry with ID: {}", log.getEmployeeID(), e);
                 throw e;
             }
         }
@@ -126,7 +126,9 @@ public class AccessLogServiceImpl implements AccessLogService {
             Date date = inputDateFormat.parse(logDate);
 
             // Combine date and time
-            long combinedDateTime = date.getTime() + punchTime.getTime();
+//            long combinedDateTime = date.getTime() + punchTime.getTime();
+            long combinedDateTime = date.getTime();
+
             Timestamp punchTimestamp = new Timestamp(combinedDateTime);
 
             // Set employee ID

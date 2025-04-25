@@ -1,6 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.messaging;
 
 import java.io.Serializable;
+import java.util.Date;
+import java.util.Objects;
 
 public class LMSUser implements Serializable {
     private static final long serialVersionUID = 27363533L;
@@ -10,6 +12,16 @@ public class LMSUser implements Serializable {
     private String firstName;
     private String lastName;
     private String email;
+    private Date join_date;
+    private String publicId;
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
 
     public String getEmployeeId() {
         return employeeId;
@@ -51,6 +63,26 @@ public class LMSUser implements Serializable {
         this.email = email;
     }
 
+    public Date getJoin_date() {
+        return join_date;
+    }
+
+    public void setJoin_date(Date join_date) {
+        this.join_date = join_date;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        LMSUser lmsUser = (LMSUser) o;
+        return Objects.equals(employeeId, lmsUser.employeeId) && Objects.equals(sltId, lmsUser.sltId) && Objects.equals(firstName, lmsUser.firstName) && Objects.equals(lastName, lmsUser.lastName) && Objects.equals(email, lmsUser.email) && Objects.equals(join_date, lmsUser.join_date) && Objects.equals(publicId, lmsUser.publicId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(employeeId, sltId, firstName, lastName, email, join_date, publicId);
+    }
+
     @Override
     public String toString() {
         return "LMSUser{" +
@@ -59,6 +91,8 @@ public class LMSUser implements Serializable {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
+                ", join_date=" + join_date +
+                ", publicId='" + publicId + '\'' +
                 '}';
     }
 }

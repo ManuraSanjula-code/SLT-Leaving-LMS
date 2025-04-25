@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Box, CircularProgress } from "@mui/material";
-import { clearAuth } from "./redux/authSlice";
+import { clearAuth } from "./redux-user/authSlice";
 
 const PUBLIC_ROUTES = ["/login", "/error", "/unauthorized", "/forgot-password"];
 
@@ -17,15 +17,15 @@ export default function ClientProtectedRoute({ children }) {
 
   useEffect(() => {
     const resetInvalidAuth = () => {
-      const userId = localStorage.getItem('userId');
-      const jwt = localStorage.getItem('jwt');
+      const userId = sessionStorage.getItem('userId');
+      const jwt = sessionStorage.getItem('jwt');
 
       // If tokens exist but don't match Redux, or Redux has error state
       if ((userId && !reduxUser.userId) ||
           (userId && reduxUser.userId && userId !== reduxUser.userId) ||
           reduxUser.errorMessage) {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('jwt');
+        sessionStorage.removeItem('userId');
+        sessionStorage.removeItem('jwt');
         dispatch(clearAuth());
       }
     };
@@ -35,8 +35,8 @@ export default function ClientProtectedRoute({ children }) {
 
   useEffect(() => {
     const checkAuth = () => {
-      const userId = localStorage.getItem('userId');
-      const jwt = localStorage.getItem('jwt');
+      const userId = sessionStorage.getItem('userId');
+      const jwt = sessionStorage.getItem('jwt');
 
       // Public routes - no auth needed
       if (PUBLIC_ROUTES.includes(pathname)) {
@@ -48,8 +48,8 @@ export default function ClientProtectedRoute({ children }) {
       }
 
       if (!userId || !jwt || !reduxUser.userId || userId !== reduxUser.userId) {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('jwt');
+        sessionStorage.removeItem('userId');
+        sessionStorage.removeItem('jwt');
         dispatch(clearAuth());
         router.push("/login");
         return;

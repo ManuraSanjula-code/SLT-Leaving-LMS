@@ -59,7 +59,7 @@ public class AuthenticationController {
 
 		SignedJWT signedJWT = null;
 		try {
-			signedJWT = tokenCreator.createSignedJWT(authentication, tempUser);
+			signedJWT = tokenCreator.createSignedJWTForTemp(authentication, tempUser);
 		} catch (NoSuchAlgorithmException | JOSEException e) {
 			throw new RuntimeException(e);
 		}
@@ -93,8 +93,6 @@ public class AuthenticationController {
 
 		res.addHeader(SecurityConstants.HEADER_STRING , SecurityConstants.TOKEN_PREFIX + encryptToken);
 		res.addHeader("UserID" , tempUser.getUserId());
-
-		res.addHeader("ROLE", "ROLE_TEMP");
 
 		return ResponseEntity.ok("");
 	}

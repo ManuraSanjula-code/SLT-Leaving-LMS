@@ -4,5 +4,6 @@ public enum MovementType {
     ABSENT,
     LATEWORK,
     UNSUCCESSFUL,
-    LATE
+    REMOTEWORK,
+    UNAUTHORIZED,
 }

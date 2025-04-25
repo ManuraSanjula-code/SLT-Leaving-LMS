@@ -45,7 +45,7 @@ import {
     saveEmployee,
     resetSaveStatus,
     deleteEmployee
-} from '../../../../store/managementSlice';
+} from '../../../../redux-lms/managementSlice';
 
 // Lazy load dialogs and forms
 const EmployeeDialog = dynamic(() => import('../EmployeeDialog'), {
@@ -121,11 +121,6 @@ const ManageEmployees = React.memo(() => {
         }
     }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize]);
 
-    useEffect(() => {
-        console.log(paginatedAdmins)
-        console.log(saveLoading)
-    }, []);
-
     // Memoized filtered employees
     const filteredEmployees = useMemo(() => {
         if (!paginatedUsers?.content) return [];
@@ -181,7 +176,6 @@ const ManageEmployees = React.memo(() => {
     }, []);
 
     const handleSubmit = useCallback((data) => {
-        console.log('Form Data:', data);
         handleCloseDialog_();
     }, [handleCloseDialog_]);
 

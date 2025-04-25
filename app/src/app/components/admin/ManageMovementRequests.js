@@ -43,7 +43,15 @@ const ManageMovementRequests = () => {
   const fetchMovementRequests = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/lms/movement/all?page=${page}&size=${size}`, {
+      // Get userId from session storage
+      const storedUserId = sessionStorage.getItem('userId');
+
+      if (!storedUserId) {
+        throw new Error('User ID not found in session storage');
+      }
+
+      // Use the new URL with the userId from session storage
+      const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}?page=${page}&size=${size}`, {
         method: 'GET',
         credentials: 'include', // This will send cookies with the request
         headers: {
@@ -56,7 +64,12 @@ const ManageMovementRequests = () => {
       }
 
       const data = await response.json();
-      setMovementRequests(data.content);
+
+      // Filter out null values from the content array
+      const filteredContent = data.content.filter(item => item !== null);
+
+      // Update state with filtered content
+      setMovementRequests(filteredContent);
       setPagination({
         currentPage: data.number,
         totalPages: data.totalPages,
@@ -108,20 +121,42 @@ const ManageMovementRequests = () => {
 
   // Handle bulk approve
   const handleBulkApprove = async () => {
-    // Implement your API call here
-    console.log("Approving:", selected);
-    // After successful API call:
-    // fetchMovementRequests(pagination.currentPage);
-    // setSelected([]);
+    try {
+      const storedUserId = sessionStorage.getItem('userId');
+      if (!storedUserId) {
+        throw new Error('User ID not found in session storage');
+      }
+
+      // You would implement your API call here
+      console.log("Approving:", selected);
+
+      // After successful API call, refresh the data
+      fetchMovementRequests(pagination.currentPage);
+      setSelected([]);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error approving requests:", err);
+    }
   };
 
   // Handle bulk reject
   const handleBulkReject = async () => {
-    // Implement your API call here
-    console.log("Rejecting:", selected);
-    // After successful API call:
-    // fetchMovementRequests(pagination.currentPage);
-    // setSelected([]);
+    try {
+      const storedUserId = sessionStorage.getItem('userId');
+      if (!storedUserId) {
+        throw new Error('User ID not found in session storage');
+      }
+
+      // You would implement your API call here
+      console.log("Rejecting:", selected);
+
+      // After successful API call, refresh the data
+      fetchMovementRequests(pagination.currentPage);
+      setSelected([]);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error rejecting requests:", err);
+    }
   };
 
   // Format date to readable format
@@ -154,8 +189,10 @@ const ManageMovementRequests = () => {
     }
   };
 
-  // Get movement type description
+  // Get movement type display
   const getMovementTypeDisplay = (movement) => {
+    if (!movement) return "Unknown";
+
     if (movement.movementType) {
       return movement.movementType;
     } else if (movement.late) {
@@ -164,6 +201,8 @@ const ManageMovementRequests = () => {
       return "Half Day";
     } else if (movement.fullDay) {
       return "Full Day";
+    } else if (movement.absent) {
+      return "Absent";
     } else {
       return "General Movement";
     }
@@ -171,6 +210,8 @@ const ManageMovementRequests = () => {
 
   // Get status chip for movement request
   const getStatusChip = (movement) => {
+    if (!movement) return <Chip label="Unknown" color="default" size="small" />;
+
     if (movement.expired) {
       return <Chip label="Expired" color="error" size="small" />;
     } else if (movement.accepted) {
@@ -183,6 +224,48 @@ const ManageMovementRequests = () => {
       return <Chip label="Late Cover" color="info" size="small" />;
     } else {
       return <Chip label="Submitted" color="default" size="small" />;
+    }
+  };
+
+  const handleApprove = async (movementId) => {
+    try {
+      setLoading(true);
+
+      // Get userId from session storage
+      const storedUserId = sessionStorage.getItem('userId');
+
+      if (!storedUserId) {
+        throw new Error('User ID not found in session storage');
+      }
+
+      // Send the approval request
+      const response = await fetch(`http://localhost:8080/lms/movement/process/${movementId}/${storedUserId}`, {
+        method: 'POST',
+        credentials: 'include', // This will send cookies with the request
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          approved: true,
+          userId: storedUserId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      // After successful API call, refresh the data
+      fetchMovementRequests(pagination.currentPage);
+
+      // Show success message (you might want to implement a proper notification system)
+      console.log(`Movement request ${movementId} approved successfully`);
+
+    } catch (err) {
+      setError(`Failed to approve request: ${err.message}`);
+      console.error("Error approving request:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -288,7 +371,9 @@ const ManageMovementRequests = () => {
                                       onChange={() => handleSelect(request.publicId)}
                                   />
                                 </TableCell>
-                                <TableCell>{request.employeeID.substring(0, 8)}...</TableCell>
+                                <TableCell>
+                                  {request.employeeID?.substring(0, 8)}...
+                                </TableCell>
                                 <TableCell>{formatDateTime(request.reqDate)}</TableCell>
                                 <TableCell>{formatDate(request.happenDate)}</TableCell>
                                 <TableCell>
@@ -310,7 +395,8 @@ const ManageMovementRequests = () => {
                                       color="primary"
                                       size="small"
                                       sx={{ mr: 1, mb: 1 }}
-                                      disabled={request.accepted || request.expired}
+                                      disabled={request.accepted || request.expired || request.isCanceled}
+                                      onClick={() => handleApprove(request.publicId)}
                                   >
                                     Approve
                                   </Button>
@@ -318,7 +404,7 @@ const ManageMovementRequests = () => {
                                       variant="outlined"
                                       color="error"
                                       size="small"
-                                      disabled={request.accepted || request.expired}
+                                      disabled={request.accepted || request.expired || request.isCanceled}
                                   >
                                     Reject
                                   </Button>

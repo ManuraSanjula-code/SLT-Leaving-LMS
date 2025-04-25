@@ -99,30 +99,10 @@ public class UserServiceImpl implements UserService {
         userEntity.setJoin_date(new Date());
         userEntity.setRoaster(user.getRoaster());
 
-        if (user.getHod() != null) {
-            String hod = user.getHod();
-            UserEntity userHod = userRepository.findByEmployeeId(hod);
-            if (userHod != null) {
-                userEntity.setHod(userHod);
-            }
-        }
-        if (user.getSupervisor() != null) {
-            String sup = user.getHod();
-            UserEntity userSup = userRepository.findByEmployeeId(sup);
-            if (userSup != null) {
-                userEntity.setSupervisor(userSup);
-            }
-        }
+       
         updateFieldIfNotNull(user.getJoiningDate(), userEntity::setJoin_date);
 
-        if (user.getOther() != null) {
-            String other = user.getOther();
-            UserEntity userOther = userRepository.findByEmployeeId(other);
-            if (userOther != null) {
-                userEntity.setOther(userOther);
-            }
-        }
-
+      
         if (!user.getAddresses().isEmpty()) {
             List<AddressEntity> addressEntities = new ArrayList<>();
             for (AddressDTO addressDto : user.getAddresses()) {
@@ -207,6 +187,8 @@ public class UserServiceImpl implements UserService {
         lmsUser.setLastName(storedUserDetails.getLastName());
         lmsUser.setEmployeeId(storedUserDetails.getEmployeeId());
         lmsUser.setSltId(storedUserDetails.getSltId());
+        lmsUser.setJoin_date(storedUserDetails.getJoin_date());
+        lmsUser.setPublicId(storedUserDetails.getUserId());
 
         messageProducerService.sendMessage("user.queue", lmsUser);
         redisService.setValue(storedUserDetails.getEmail(), user.getPassword());
@@ -289,6 +271,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<UserDto> getAdminsForUserByUserId(String userId) {
+        UserEntity user = userRepository.findByUserId(userId);
+        if (user == null) {
+            return Collections.emptyList();
+        }
+
+        List<UserEntity> admins = user.getMyAdmins();
+        if (admins == null) {
+            return Collections.emptyList();
+        }
+
+        return admins.stream()
+                .map(admin -> {
+                    UserDto userDto = UserMapper.transformToUserDto(admin);
+                    Integer highestRolePriority = admin.getRoles() != null ?
+                            admin.getRoles().stream()
+                                    .map(RoleEntity::getPriority)
+                                    .min(Integer::compare)
+                                    .orElse(Integer.MAX_VALUE) :
+                            Integer.MAX_VALUE;
+                    userDto.setHighestRolePriority(highestRolePriority);
+                    return userDto;
+                })
+                .toList();
+    }
+
+    @Override
     public UserRest getUserByUserId_(String userId) {
         TempUser tempUser = tempUserRepo.findTempUserByUserId(userId);
         UserRest userRest = new UserRest();
@@ -346,28 +355,7 @@ public class UserServiceImpl implements UserService {
         if (userDto.getActive() != null) {
             userEntity.setActive(userDto.getActive());
         }
-        if (userDto.getHod() != null) {
-            String hod = userDto.getHod();
-            UserEntity userHod = userRepository.findByEmployeeId(hod);
-            if (userHod != null) {
-                userEntity.setHod(userHod);
-            }
-        }
-        if (userDto.getSupervisor() != null) {
-            String sup = userDto.getHod();
-            UserEntity userSup = userRepository.findByEmployeeId(sup);
-            if (userSup != null) {
-                userEntity.setSupervisor(userSup);
-            }
-        }
-        if (userDto.getOther() != null) {
-            String other = userDto.getOther();
-            UserEntity userOther = userRepository.findByEmployeeId(other);
-            if (userOther != null) {
-                userEntity.setOther(userOther);
-            }
-        }
-
+       
         List<AddressEntity> addressEntities = handleAddresses(userEntity, userDto.getAddresses());
         userEntity.setAddresses(addressEntities);
 
@@ -528,6 +516,52 @@ public class UserServiceImpl implements UserService {
         Page<UserEntity> usersPage = userRepository.findAll(pageableRequest);
         List<UserEntity> users = usersPage.getContent();
 
+        for (UserEntity userEntity : users) {
+
+            Collection<String> roles = new ArrayList();
+            Collection<String> authorities = new ArrayList();
+            Collection<String> sections = new ArrayList();
+            Collection<String> profiles = new ArrayList();
+
+            if (!userEntity.getRoles().isEmpty()) {
+                userEntity.getRoles().forEach(role -> {
+                    roles.add(role.getName());
+                    role.getAuthorities().forEach(aut -> {
+                        authorities.add(aut.getName());
+                    });
+                });
+            }
+
+            if (!userEntity.getSections().isEmpty()) {
+                userEntity.getSections().forEach(sec -> {
+                    sections.add(sec.getSection());
+                });
+            }
+
+            if (!userEntity.getProfiles().isEmpty()) {
+                userEntity.getProfiles().forEach(sec -> {
+                    profiles.add(sec.getName());
+                });
+            }
+
+            UserDto userDto = new UserDto();
+            BeanUtils.copyProperties(userEntity, userDto);
+
+            userDto.setSections(sections);
+            userDto.setAuthorities(authorities);
+            userDto.setRoles(roles);
+            userDto.setProfiles(profiles);
+
+            returnValue.add(userDto);
+        }
+
+        return returnValue;
+    }
+
+    @Override
+    public List<UserDto> getUsersForLms() {
+        List<UserDto> returnValue = new ArrayList<>();
+        List<UserEntity> users = userRepository.findAll();
         for (UserEntity userEntity : users) {
 
             Collection<String> roles = new ArrayList();
@@ -1006,7 +1040,7 @@ public class UserServiceImpl implements UserService {
         profilesEntity.setWorkStart(profileReq.getWorkStart());
         profilesEntity.setWorkEnds(profileReq.getWorkEnds());
         profilesEntity.setIgnoreSl(profileReq.getIgnoreSl());
-        profilesEntity.setGracePeriodeStart(profileReq.getGracePeriodeStart());
+        profilesEntity.setGracePeriodStart(profileReq.getGracePeriodStart());
         profilesEntity.setHdStart(profileReq.getHdStart());
         profilesEntity.setSlStartMorning(profileReq.getSlStartMorning());
         profilesEntity.setSlStartEvening(profileReq.getSlStartEvening());
@@ -1213,7 +1247,23 @@ public class UserServiceImpl implements UserService {
                 userEntity.setRoles(List.of(role));
 
                 return new UserPrincipal(userEntity);
-            } else {
+            } else if("LMS".equalsIgnoreCase(loginType)) {
+            	
+            	UserEntity userEntity = new UserEntity();
+                userEntity.setUserId("lms-service" + " " + "LMS");
+                userEntity.setFirstName("LMS");
+                userEntity.setLastName("LMS");
+                userEntity.setEmail("lms@slt.com");
+                userEntity.setEncryptedPassword(null);
+                userEntity.setEmailVerificationStatus(true);
+
+                RoleEntity role = UserMapper.mapRoleToRoleEntityForLms(userEntity);
+                userEntity.setRoles(List.of(role));
+
+                return new UserPrincipal(userEntity);
+                
+            }
+            else {
                 // Handle regular user case
                 UserEntity userEntity = userRepository.findByUserId(user_id);
 
@@ -1289,10 +1339,107 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+
     @Override
     public Page<UserEntity> getAllUsers(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return userRepository.findAll(pageable);
+        return userRepository.findAll(pageable).map(user->{
+            List<UserAdminDto> adminDtos = user.getMyAdmins().stream()
+                    .map(adminUser -> {
+                        UserAdminDto adminDto = new UserAdminDto();
+                        adminDto.setUserId(adminUser.getUserId());
+                        adminDto.setFirstName(adminUser.getFirstName());
+                        adminDto.setLastName(adminUser.getLastName());
+                        adminDto.setEmail(adminUser.getEmail());
+                        adminDto.setEmployeeId(adminUser.getEmployeeId());
+                        adminDto.setSltId(adminUser.getSltId());
+                        return adminDto;
+                    })
+                    .collect(Collectors.toList());
+
+            user.setAdministrativesDto(adminDtos);
+            return user;
+        });
+    }
+
+    @Override
+    public Page<UserDto> getAllUsersTDTO(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return userRepository.findAll(pageable).map(user -> {
+            UserDto userDto = new UserDto();
+            userDto.setId(user.getId());
+            userDto.setUserId(user.getUserId());
+            userDto.setFirstName(user.getFirstName());
+            userDto.setLastName(user.getLastName());
+            userDto.setEmail(user.getEmail());
+            userDto.setEmployeeId(user.getEmployeeId());
+            userDto.setSltId(user.getSltId());
+            userDto.setEncryptedPassword(user.getEncryptedPassword());
+            userDto.setProfilePic(user.getProfilePic());
+            userDto.setEmailVerificationToken(user.getEmailVerificationToken());
+            userDto.setEmailVerificationStatus(user.getEmailVerificationStatus());
+            userDto.setIsSltEmp(user.getIsSltEmp());
+            userDto.setIsSltIntern(user.getIsSltIntern());
+            userDto.setActive(user.getActive());
+            userDto.setPhone(user.getPhone());
+            userDto.setGender(user.getGender());
+            userDto.setRoaster(user.getRoaster());
+            userDto.setJoin_date(user.getJoin_date());
+
+            // Convert collections
+            if (user.getRoles() != null) {
+                List<String> roleNames = user.getRoles().stream()
+                        .map(role -> role.getName())  // Assuming RoleEntity has a getName() method
+                        .collect(Collectors.toList());
+                userDto.setRoles(roleNames);
+            }
+
+            if (user.getSections() != null) {
+                List<String> sectionNames = user.getSections().stream()
+                        .map(section -> section.getSection())  // Assuming SectionEntity has a getName() method
+                        .collect(Collectors.toList());
+                userDto.setSections(sectionNames);
+            }
+
+            if (user.getProfiles() != null) {
+                List<String> profileNames = user.getProfiles().stream()
+                        .map(profile -> profile.getName())  // Assuming ProfilesEntity has a getName() method
+                        .collect(Collectors.toList());
+                userDto.setProfiles(profileNames);
+            }
+
+            // Convert addresses if they exist
+            if (user.getAddresses() != null) {
+                List<AddressDTO> addressDTOs = user.getAddresses().stream()
+                        .map(address -> {
+                            AddressDTO addressDTO = new AddressDTO();
+                            // Set address properties based on your AddressEntity and AddressDTO structure
+                            // Example: addressDTO.setStreet(address.getStreet());
+                            return addressDTO;
+                        })
+                        .collect(Collectors.toList());
+                userDto.setAddresses(addressDTOs);
+            }
+
+            // Convert administrative users if they exist
+            if (user.getMyAdmins() != null) {
+                List<UserAdminDto> adminDtos = user.getMyAdmins().stream()
+                        .map(adminUser -> {
+                            UserAdminDto adminDto = new UserAdminDto();
+                            adminDto.setUserId(adminUser.getUserId());
+                            adminDto.setFirstName(adminUser.getFirstName());
+                            adminDto.setLastName(adminUser.getLastName());
+                            adminDto.setEmail(adminUser.getEmail());
+                            adminDto.setEmployeeId(adminUser.getEmployeeId());
+                            adminDto.setSltId(adminUser.getSltId());
+                            return adminDto;
+                        })
+                        .collect(Collectors.toList());
+                userDto.setAdministratives(adminDtos);
+            }
+
+            return userDto;
+        });
     }
 
     @Override
@@ -1322,5 +1469,25 @@ public class UserServiceImpl implements UserService {
         } else {
             throw new RuntimeException("Role not found with id: " + sectionId);
         }
+    }
+   
+    @Override
+    public List<LMSUser> getAllUsersForService() {
+        return userRepository.findAll().stream()
+                .map(this::convertToLMSUser)
+                .toList();
+    }
+
+   
+    private LMSUser convertToLMSUser(UserEntity userEntity) {
+        LMSUser lmsUser = new LMSUser();
+        lmsUser.setEmployeeId(userEntity.getEmployeeId());
+        lmsUser.setSltId(userEntity.getSltId());
+        lmsUser.setFirstName(userEntity.getFirstName());
+        lmsUser.setLastName(userEntity.getLastName());
+        lmsUser.setEmail(userEntity.getEmail());
+        lmsUser.setJoin_date(userEntity.getJoin_date());
+        lmsUser.setPublicId(userEntity.getUserId()); // Assuming userId is the publicId
+        return lmsUser;
     }
 }

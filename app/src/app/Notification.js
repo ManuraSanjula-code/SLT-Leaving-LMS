@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { clearAuth } from './redux/authSlice';
 import { Snackbar, Alert } from '@mui/material';
 
 export default function Notification() {

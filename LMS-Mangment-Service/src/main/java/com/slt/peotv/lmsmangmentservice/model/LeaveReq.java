@@ -6,13 +6,99 @@ public class LeaveReq {
     private Date fromDate;
     private Date toDate;
     private String leaveType;
-    private String leaveCategory;
     private String description;
-    private Boolean isHalfDay;
+    private String userId;
     private Long numOfDays;
     private Date happenDate; /// Event that Happened
+
+    private Boolean isHalfDay;
+    private Boolean isFullDay;
     private Boolean isUnauthorized;
     private Boolean isManualRequest;
+    private Boolean isAbsent;
+    private Boolean isLateCover;
+    private Boolean isLate;
+    private Boolean unSuccessful;
+    
+    public Boolean getIsFullDay() {
+		return isFullDay;
+	}
+
+	public void setIsFullDay(Boolean isFullDay) {
+		this.isFullDay = isFullDay;
+	}
+
+	public Boolean getIsLateCover() {
+		return isLateCover;
+	}
+
+	public void setIsLateCover(Boolean isLateCover) {
+		this.isLateCover = isLateCover;
+	}
+
+	public Boolean getIsLate() {
+		return isLate;
+	}
+
+	public void setIsLate(Boolean isLate) {
+		this.isLate = isLate;
+	}
+
+	public Boolean getUnSuccessful() {
+		return unSuccessful;
+	}
+
+	public void setUnSuccessful(Boolean unSuccessful) {
+		this.unSuccessful = unSuccessful;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+
+	public Boolean getIsHalfDay() {
+		return isHalfDay;
+	}
+
+	public void setIsHalfDay(Boolean isHalfDay) {
+		this.isHalfDay = isHalfDay;
+	}
+
+	public Boolean getIsUnauthorized() {
+		return isUnauthorized;
+	}
+
+	public void setIsUnauthorized(Boolean isUnauthorized) {
+		this.isUnauthorized = isUnauthorized;
+	}
+
+	public Boolean getIsManualRequest() {
+		return isManualRequest;
+	}
+
+	public void setIsManualRequest(Boolean isManualRequest) {
+		this.isManualRequest = isManualRequest;
+	}
+
+	public Boolean getIsAbsent() {
+		return isAbsent;
+	}
+
+	public void setIsAbsent(Boolean isAbsent) {
+		this.isAbsent = isAbsent;
+	}
+
+	public Boolean getAbsent() {
+        return isAbsent;
+    }
+
+    public void setAbsent(Boolean absent) {
+        isAbsent = absent;
+    }
 
     public Boolean getManualRequest() {
         return isManualRequest;
@@ -61,15 +147,6 @@ public class LeaveReq {
     public void setLeaveType(String leaveType) {
         this.leaveType = leaveType;
     }
-
-    public String getLeaveCategory() {
-        return leaveCategory;
-    }
-
-    public void setLeaveCategory(String leaveCategory) {
-        this.leaveCategory = leaveCategory;
-    }
-
     public String getDescription() {
         return description;
     }

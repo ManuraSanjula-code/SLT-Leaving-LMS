@@ -3,11 +3,8 @@ package com.slt.peotv.userservice.lms.entity.company;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Objects;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
-
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -34,70 +31,4 @@ public class SectionEntity implements Serializable {
     @ManyToMany(mappedBy="sections")
 	@JsonIgnore
     private Collection<UserEntity> users =  new ArrayList<>();;
-    
-    public void addUser(UserEntity user) {
-        this.users.add(user);
-        user.getSections().add(this);
-    }
-
-    public void removeUser(UserEntity user) {
-        this.users.remove(user);
-        user.getSections().remove(this);
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getPublicId() {
-        return publicId;
-    }
-
-    public void setPublicId(String publicId) {
-        this.publicId = publicId;
-    }
-
-    public String getSection() {
-        return section;
-    }
-
-    public void setSection(String section) {
-        this.section = section;
-    }
-
-    public Collection<UserEntity> getUsers() {
-        return users;
-    }
-
-    public void setUsers(Collection<UserEntity> users) {
-        this.users = users;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-        SectionEntity that = (SectionEntity) o;
-        return id == that.id && Objects.equals(section, that.section) && Objects.equals(publicId, that.publicId) && Objects.equals(users, that.users);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, section, publicId, users);
-    }
-
-    @Override
-    public String toString() {
-        return "SectionEntity{" +
-                "id=" + id +
-                ", section='" + section + '\'' +
-                ", publicId='" + publicId + '\'' +
-                ", users=" + users +
-                '}';
-    }
 }

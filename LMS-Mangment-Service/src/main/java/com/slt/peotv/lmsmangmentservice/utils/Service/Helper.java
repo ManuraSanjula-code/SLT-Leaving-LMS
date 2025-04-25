@@ -1,13 +1,15 @@
-package com.slt.peotv.lmsmangmentservice.utils.Service;
+package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.model.AbsenteeReq;
 import com.slt.peotv.lmsmangmentservice.repository.AbsenteeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
+import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
@@ -20,10 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @Service
 public class Helper {
@@ -42,12 +41,30 @@ public class Helper {
     private AbsenteeRepo absenteeRepo;
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
+    @Autowired
+    private EmployeeRepo employeeRepo;
 
     public Date getDueDate() {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, 1);  // Add 1 month
-        calendar.add(Calendar.WEEK_OF_YEAR, 1); // Add 1 extra week
-        return calendar.getTime(); // Return as Date object
+
+        calendar.add(Calendar.MONTH, 1);
+        calendar.add(Calendar.WEEK_OF_YEAR, 1);
+
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTime();
+    }
+
+    public Date getDateWithoutTime() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTime();
     }
 
     public Date getYesterdayDate() {
@@ -56,7 +73,7 @@ public class Helper {
     }
 
     public Date getYesterdayDate_() {
-        String mysqlDate = "2013-01-01 02:37:30.000000";
+        String mysqlDate = "2024-12-31 00:00:00.000000";
 //        String mysqlDate = "2015-02-02 03:03:14.000000";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
         LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
@@ -68,7 +85,7 @@ public class Helper {
 
     public Date getYesterdayDate_V2() {
 //        String mysqlDate = "2013-01-01 12:05:32.000000";
-        String mysqlDate = "2015-02-02 11:42:23.000000";
+        String mysqlDate = "2024-12-31 00:00:00.000000";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
         LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
 
@@ -119,7 +136,8 @@ public class Helper {
     }
 
     public void handleAbsenteeReq(String employee, Boolean isHalfDay, Boolean isFullDay) {
-
+        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(employee);
+        if(employeeEntity.isEmpty()) return;
         AbsenteeEntity absenteeEntity = new AbsenteeEntity();
         absenteeEntity.setPublicId(utils.generateId(10));
         absenteeEntity.setEmployeeID(employee);
@@ -128,7 +146,7 @@ public class Helper {
         absenteeEntity.setIsSupervisedApproved(false);
         absenteeEntity.setAudited(0);
         absenteeEntity.setIsNoPay(0);
-
+        absenteeEntity.setUserId(employeeEntity.get().getPublicId());
         absenteeEntity.setIsAbsent(true);
         absenteeEntity.setIsLate(false);
         absenteeEntity.setIsLateCover(false);

@@ -12,6 +12,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class AccessLogEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

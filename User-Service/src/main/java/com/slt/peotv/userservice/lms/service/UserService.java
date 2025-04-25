@@ -17,17 +17,21 @@ import org.springframework.web.multipart.MultipartFile;
 import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
 import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.message.LMSUser;
 
 public interface UserService extends UserDetailsService{
 	UserDto createUser(UserReq user) throws Exception;
 	UserDto updateUserProfile(MultipartFile file, String userid) throws Exception;
 	UserDto getUser(String email);
 	UserDto getUserByUserId(String userId);
+	List<UserDto> getAdminsForUserByUserId(String userId);
 	UserRest getUserByUserId_(String userId);
 	@Deprecated
 	UserDto updateUser(String userId, UserReq user) throws Exception;
 	void deleteUser(String userId);
 	List<UserDto> getUsers(int page, int limit);
+	List<UserDto> getUsersForLms();
+
 	Page<UserBasicDto> findAllBasicUserDtos(int page, int limit);
 	boolean verifyEmailToken(String token);
 	boolean requestPasswordReset(String email);
@@ -44,6 +48,7 @@ public interface UserService extends UserDetailsService{
 	List<SectionDTO> getSection();
 	List<ProfilesDTO> getProfile();
 	List<Map<String, String>> getAuthority();
+	List<LMSUser> getAllUsersForService();
 
 	@Deprecated
 	RoleDTO saveRole(RoleReq req);
@@ -58,6 +63,8 @@ public interface UserService extends UserDetailsService{
 	List<String> getAllSectionNames();
 	List<String> getAllProfileNames();
 	Page<UserEntity> getAllUsers(int page, int size);
+	Page<UserDto> getAllUsersTDTO(int page, int size);
+
 	boolean checkAuth(String name);
 	void deleteAuth(Long authId);
 	void deleteSection(Long sectionId);

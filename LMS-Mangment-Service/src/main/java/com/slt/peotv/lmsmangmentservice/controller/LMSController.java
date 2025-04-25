@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,34 +36,80 @@ public class LMSController {
         return lmsService.getAllAttendanceThatUn(page, size);
     }
 
+    @GetMapping("/un-successful/{userid}")
+    public Page<AttendanceDTO> getAttendanceThatUnByUserId(@PathVariable String userid, @RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAttendanceThatUnByUserId(userid, page, size);
+    }
+
     @GetMapping("/un-authorized")
     public Page<AttendanceDTO> getAllAttendanceThatUnA(@RequestParam(defaultValue = "0") int page,
                                                       @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllAttendanceThatUnA(page, size);
     }
 
-    @GetMapping("/no-pay")
-    public Page<NopayDTO> getAllNoPays(@RequestParam(defaultValue = "0") int page,
+    @GetMapping("/un-authorized/{userid}")
+    public Page<AttendanceDTO> getAttendanceThatUnAByUserId(@PathVariable String userid, @RequestParam(defaultValue = "0") int page,
                                                        @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllNoPays(page, size);
+        return lmsService.getAllAttendanceThatUnAByUserId(userid,page, size);
     }
 
+
+
     @GetMapping("/{userId}")
-    public List<AttendanceDTO> getAttendanceByUserId(@PathVariable String userId) {
-        return List.of();
+    public Page<AttendanceDTO> getAttendanceByUserId(@PathVariable String userId, @RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAttendanceByUserId(userId, page, size);
     }
+    
+    /// -------------- Leave 
 
     @GetMapping("/leave/{userId}")
     public Page<LeaveDTO> getAllLeaveByUserId(@PathVariable String userId,
                                       @RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllLeaveByUserByEmployeeId(userId, page, size);
+        return lmsService.getAllLeaveByUserByUserId(userId, page, size);
+    }
+    
+    @GetMapping("/leave/admin/{userId}")
+    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(@PathVariable String userId,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size);
     }
 
     @GetMapping("/leave/all")
     public Page<LeaveDTO> getAllLeave(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllLeaves(page, size);
+    }
+    
+    @DeleteMapping("/leave/{leaveId}")
+    public void deleteLeave(@PathVariable String leaveId) {
+        lmsService.deleteLeave(leaveId);
+    }
+    
+    @GetMapping("/leave-balance/{userId}")
+    public UserLeaveDetailsDto getAllLeaveData(@PathVariable String userId) {
+    	return lmsService.getAllLeaveDetails(userId);
+    }
+    
+    @PostMapping("/leave/process/{leaveId}/{userId}")
+    public void procesLeave(@PathVariable String leaveId, @PathVariable String userId) {
+        checkService.processLeave(leaveId, userId);
+    }
+    
+    /// -------------- Movement 
+
+
+    @DeleteMapping("/movement/{movementId}")
+    public void deleteMovement(@PathVariable String movementId) {
+        lmsService.deleteMovements(movementId);
+    }
+
+    @PostMapping("/movement/process/{movementId}/{userId}")
+    public void processMovement(@PathVariable String movementId, @PathVariable String userId) {
+        checkService.processMovement(movementId, userId);
     }
 
     @GetMapping("/movement/{userId}")
@@ -71,22 +118,46 @@ public class LMSController {
         return lmsService.getAllMovementByUser(userId, page, size);
     }
 
+    @GetMapping("/movement/admin/{userId}")
+    public Page<MovementDTO> getAllMovementByAdmin(@PathVariable String userId,@RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllMovementByAdmin(userId, page, size);
+    }
+
     @GetMapping("/movement/all")
     public Page<MovementDTO> getAllMovement(@RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllMovements(page, size);
     }
 
+    /// -------------- no-pay
+
     @GetMapping("/no-pay/{userId}")
     public Page<NopayDTO> getAllNopayByUserId(@PathVariable String userId,@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllNoPayByUser(userId, page, size);
     }
+    
+    @GetMapping("/no-pay")
+    public Page<NopayDTO> getAllNoPays(@RequestParam(defaultValue = "0") int page,
+                                       @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllNoPays(page, size);
+    }
 
-    @GetMapping("/nopay/all")
+    @GetMapping("/no-pay/user/{userid}")  // Changed URL pattern to avoid conflict
+    public Page<NopayDTO> getNoPaysByUserId(@PathVariable String userid,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllNoPayByUser(userid, page, size);
+    }
+
+    @GetMapping("/no-pay/all")
     public List<NopayDTO> getAllNopay() {
         return List.of();
     }
+    
+    /// -------------- in-out
+
 
     @GetMapping("/in-out/{userId}")
     public Page<InOutDTO> getAllInOutByUserId(@PathVariable String userId,@RequestParam(defaultValue = "0") int page,
@@ -94,15 +165,46 @@ public class LMSController {
         return checkService.getAllInOut(userId, page, size);
     }
 
+    /// -------------- management
+
     @PostMapping("/management/movement/create")
-    public ResponseEntity<Void> manageMovement(@RequestBody MovementReq req) {
-        checkService.requestMovement(req);
+    public ResponseEntity<Void> manageMovement(@RequestBody MovementReq req, HttpServletRequest request, Authentication authentication) {
+        checkService.requestMovement(req, request, authentication);
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping("/management/leave/create/{userId}")
-    public ResponseEntity<Void> manageLeave(@PathVariable String userId, @RequestBody LeaveReq req, HttpServletRequest request) {
-        checkService.requestALeave(req, userId, userId, request);
+    @PutMapping("/management/movement/{movementId}")
+    public ResponseEntity<Void> updateMovement(@RequestBody MovementReq req, @PathVariable String movementId) {
+        lmsService.updateMovement(req, movementId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/management/leave/create/{userId}")
+    public ResponseEntity<Void> manageLeave(@PathVariable String userId, @RequestBody LeaveReq req, HttpServletRequest request, Authentication authentication) {
+        checkService.requestALeave(req, userId,authentication, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/management/leave/{leaveId}")
+    public ResponseEntity<Void> updateLeave(@RequestBody LeaveReq req, @PathVariable String leaveId) {
+        lmsService.updateLeave(req, leaveId);
+        return ResponseEntity.ok().build();
+    }
+    
+    /// -------------- absent
+
+
+    @GetMapping("/absent/{userId}")
+    public Page<AbsenteeDto> getAllAbsenteeByUserId(@PathVariable String userId,@RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAbsenteeByUserId(userId, page, size);
+    }
+
+    @GetMapping("/absent/all")
+    public Page<AbsenteeDto> getAllAbsentee(@RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAbsentee(page, size);
+    }
+    
+
 }

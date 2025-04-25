@@ -1,8 +1,10 @@
 import axios from 'axios';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8080', // Replace with your API URL
-  withCredentials: true, // Set withCredentials globally for all requests
+  baseURL: API_URL,
+  withCredentials: true,
 });
 
 apiClient.interceptors.response.use(
@@ -12,7 +14,8 @@ apiClient.interceptors.response.use(
         switch (error.response.status) {
           case 401:
             console.error('Unauthorized - redirecting to login');
-            localStorage.clear();
+            // Clear all auth data
+            sessionStorage.clear();
             window.location.href = '/login';
             break;
           case 403:
@@ -20,7 +23,9 @@ apiClient.interceptors.response.use(
             window.location.href = '/unauthorized';
             break;
           default:
-            console.error('API Error:', error.response.data);
+            // Sanitize error message
+            const safeErrorMessage = 'API Error: ' + (error.response.status || 'Unknown');
+            console.error(safeErrorMessage);
         }
       } else {
         console.error('Network Error:', error.message);
@@ -29,11 +34,45 @@ apiClient.interceptors.response.use(
     }
 );
 
+// Add request interceptor for security headers
+apiClient.interceptors.request.use(
+    (config) => {
+      // Add security headers
+      config.headers = {
+        ...config.headers,
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+      };
+
+      // Add CSRF token if available
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 export const fetchData = async (endpoint, jwt) => {
   try {
-    const response = await apiClient.get(endpoint, {
-      headers: { Authorization: `Bearer ${jwt}` },
+    if (!endpoint || typeof endpoint !== 'string') {
+      throw new Error('Invalid endpoint');
+    }
+
+    // Sanitize endpoint to prevent path traversal
+    const sanitizedEndpoint = endpoint.replace(/\.\./g, '');
+
+    const response = await apiClient.get(sanitizedEndpoint, {
+      headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
     });
+
+    // Validate response data
+    if (!response.data) {
+      throw new Error('Empty response received');
+    }
+
     return response.data;
   } catch (error) {
     console.error('API Request Failed:', error.response?.data || error.message);
@@ -43,6 +82,15 @@ export const fetchData = async (endpoint, jwt) => {
 
 export const fetchData_ = async (userId, jwt) => {
   try {
+    if (!userId || !jwt) {
+      throw new Error('Missing userId or JWT');
+    }
+
+    // Validate userId to prevent injection
+    if (!/^\d+$/.test(userId)) {
+      throw new Error('Invalid userId format');
+    }
+
     const response = await apiClient.get(`/users/${userId}`, {
       headers: { Authorization: `Bearer ${jwt}` },
     });
@@ -59,13 +107,27 @@ export const fetchData_ = async (userId, jwt) => {
   }
 };
 
-export const putUserData = async (endpoint, payload) => {
+export const putUserData = async (endpoint, payload, jwt) => {
   try {
-    const response = await apiClient.put(endpoint, payload, {
+    if (!endpoint || typeof endpoint !== 'string') {
+      throw new Error('Invalid endpoint');
+    }
+
+    // Sanitize endpoint
+    const sanitizedEndpoint = endpoint.replace(/\.\./g, '');
+
+    // Validate payload
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Invalid payload');
+    }
+
+    const response = await apiClient.put(sanitizedEndpoint, payload, {
       headers: {
         'Content-Type': 'application/json',
+        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
       },
     });
+
     return response.data;
   } catch (error) {
     console.error('API Request Failed:', error.response?.data || error.message);
@@ -73,16 +135,33 @@ export const putUserData = async (endpoint, payload) => {
   }
 };
 
-export const putUserProfile = async (endpoint, file) => {
+export const putUserProfile = async (endpoint, file, jwt) => {
   try {
+    if (!endpoint || !file) {
+      throw new Error('Missing endpoint or file');
+    }
+
+    // Validate file type
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validImageTypes.includes(file.type)) {
+      throw new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('File too large. Maximum size is 5MB.');
+    }
+
     const formData = new FormData();
-    formData.append('image', file); // Append the file to FormData
+    formData.append('image', file);
 
     const response = await apiClient.put(endpoint, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // Set the correct Content-Type for file uploads
+        'Content-Type': 'multipart/form-data',
+        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
       },
     });
+
     return response.data;
   } catch (error) {
     console.error('API Request Failed:', error.response?.data || error.message);

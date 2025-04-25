@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface MovementsRepo extends CrudRepository<MovementsEntity, Long> {
     Page<MovementsEntity> findAll(Pageable pageable);
     Page<MovementsEntity> findAllByEmployeeId(String employeeID, Pageable pageable);
+    Page<MovementsEntity> findAllByUserId(String userId, Pageable pageable);
     Optional<MovementsEntity> findByPublicId(String publicId);
     /*List<MovementsEntity> findByDueDateBefore(Date currentDate);
     List<MovementsEntity> findByDueDate(Date dueDate);*/

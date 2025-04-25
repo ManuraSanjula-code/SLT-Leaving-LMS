@@ -1,7 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeTotalEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeTotalEntity;
+
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +13,6 @@ import java.util.Optional;
 public interface UserLeaveTypeTotalRepo extends CrudRepository<UserLeaveTypeTotalEntity, Long> {
     Optional<UserLeaveTypeTotalEntity> findByPublicId(String publicId);
     List<UserLeaveTypeTotalEntity> findUserLeaveTypeTotalByEmployeeIDAndLeaveType(String employeeID, LeaveTypeEntity leaveTypeEntity);
+    UserLeaveTypeTotalEntity findByEmployeeIDAndLeaveType(String employeeId, LeaveTypeEntity leaveType);
+    List<UserLeaveTypeTotalEntity> findByEmployeeID(String employeeId);
 }

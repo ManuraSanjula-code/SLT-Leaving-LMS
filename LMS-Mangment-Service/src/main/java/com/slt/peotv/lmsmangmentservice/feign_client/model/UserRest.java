@@ -1,12 +1,15 @@
 package com.slt.peotv.lmsmangmentservice.feign_client.model;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
 
 public class UserRest {
 	private String userId;
+	private String sltId;
+	private String employeeId;
 	private String firstName;
 	private String lastName;
 	private String email;
@@ -21,6 +24,32 @@ public class UserRest {
 	private String phone;
 	private String gender;
 	private List<GrantedAuthority> authorities;
+	private Integer highestRolePriority;
+	private Date joiningDate;
+
+	public Date getJoiningDate() {
+		return joiningDate;
+	}
+
+	public void setJoiningDate(Date joiningDate) {
+		this.joiningDate = joiningDate;
+	}
+
+	public String getSltId() {
+		return sltId;
+	}
+
+	public void setSltId(String sltId) {
+		this.sltId = sltId;
+	}
+
+	public Integer getHighestRolePriority() {
+		return highestRolePriority;
+	}
+
+	public void setHighestRolePriority(Integer highestRolePriority) {
+		this.highestRolePriority = highestRolePriority;
+	}
 
 	public List<GrantedAuthority> getAuthorities() {
 		return authorities;
@@ -152,4 +181,11 @@ public class UserRest {
 		this.addresses = addresses;
 	}
 
+	public String getEmployeeId() {
+		return employeeId;
+	}
+
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
+	}
 }

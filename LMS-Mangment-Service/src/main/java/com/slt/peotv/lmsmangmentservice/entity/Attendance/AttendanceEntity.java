@@ -16,6 +16,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class AttendanceEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -80,7 +81,16 @@ public class AttendanceEntity {
 
     @Builder.Default
     private Boolean active = true;
+    
     @Builder.Default
     private Boolean nopay = false;
+
+    private String userId;
+    
+    @Builder.Default
+    private Boolean viaMovement = false;
+    
+    @Builder.Default
+    private Boolean viaLeave = false;
 
 }

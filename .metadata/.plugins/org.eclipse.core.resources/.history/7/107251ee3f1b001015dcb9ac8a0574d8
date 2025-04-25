@@ -1,0 +1,232 @@
+package com.slt.peotv.lmsmangmentservice.service.impl;
+
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeRemainingEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.category.UserLeaveTypeTotalEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.annotation.JmsListener;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+@Service
+public class LeaveManagementService {
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private LeaveTypeRepository leaveTypeRepository;
+
+    @Autowired
+    private UserLeaveTypeRemainingRepository remainingRepository;
+
+    @Autowired
+    private UserLeaveTypeTotalRepository totalRepository;
+
+    // Constants for leave types
+    private static final String ANNUAL_LEAVE = "Annual Leave";
+    private static final String MEDICAL_LEAVE = "Medical Leave";
+    private static final String CASUAL_LEAVE = "Casual Leave";
+    private static final String MATERNITY_LEAVE = "Maternity Leave";
+
+    /**
+     * Listen for new employee messages from ActiveMQ queue
+     */
+    @JmsListener(destination = "employee.new.queue")
+    @Transactional
+    public void processNewEmployee(EmployeeEntity employee) {
+        // Save employee to database if not already exists
+        if (employeeRepository.findByEmployeeId(employee.getEmployeeId()) == null) {
+            employeeRepository.save(employee);
+        }
+        
+        // Process leave allocation for this employee
+        allocateLeaves(employee);
+    }
+
+    /**
+     * Allocate leaves based on employee's years of service
+     */
+    public void allocateLeaves(EmployeeEntity employee) {
+        // Calculate years of service
+        LocalDate joinDate = employee.getJoin_date().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate currentDate = LocalDate.now();
+        
+        long yearsOfService = ChronoUnit.YEARS.between(joinDate, currentDate);
+        
+        // Get or create leave types
+        Map<String, LeaveTypeEntity> leaveTypes = getOrCreateLeaveTypes();
+        
+        // Allocate leaves based on years of service
+        if (yearsOfService < 1) {
+            // Less than 1 year: No annual leaves
+            allocateLeavesForLessThanOneYear(employee, leaveTypes);
+        } else if (yearsOfService < 2) {
+            // Between 1 and 2 years: Annual leaves based on join month
+            allocateLeavesForOneToTwoYears(employee, leaveTypes);
+        } else if (yearsOfService < 3) {
+            // Between 2 and 3 years: Annual leaves based on join month
+            allocateLeavesForTwoToThreeYears(employee, leaveTypes);
+        } else {
+            // 3+ years: Standard allocation regardless of join month
+            allocateLeavesForThreeOrMoreYears(employee, leaveTypes);
+        }
+    }
+
+    /**
+     * Get or create leave types
+     */
+    private Map<String, LeaveTypeEntity> getOrCreateLeaveTypes() {
+        Map<String, LeaveTypeEntity> leaveTypes = new HashMap<>();
+        
+        // Define leave types
+        String[] types = {ANNUAL_LEAVE, MEDICAL_LEAVE, CASUAL_LEAVE, MATERNITY_LEAVE};
+        
+        for (String type : types) {
+            LeaveTypeEntity leaveType = leaveTypeRepository.findByName(type);
+            if (leaveType == null) {
+                leaveType = new LeaveTypeEntity();
+                leaveType.setName(type);
+                leaveType.setPublicId(UUID.randomUUID().toString());
+                leaveType = leaveTypeRepository.save(leaveType);
+            }
+            leaveTypes.put(type, leaveType);
+        }
+        
+        return leaveTypes;
+    }
+
+    /**
+     * Allocate leaves for employees with less than 1 year of service
+     */
+    private void allocateLeavesForLessThanOneYear(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
+        // No annual leaves
+        saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), 0);
+        
+        // Standard allocation for other leave types
+        saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
+        saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
+        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+    }
+
+    /**
+     * Allocate leaves for employees with 1-2 years of service
+     */
+    private void allocateLeavesForOneToTwoYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
+        // Annual leaves based on join month
+        LocalDate joinDate = employee.getJoin_date().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        
+        Month joinMonth = joinDate.getMonth();
+        int annualLeaves;
+        
+        if (joinMonth.getValue() >= Month.JANUARY.getValue() && joinMonth.getValue() <= Month.MARCH.getValue()) {
+            annualLeaves = 14;
+        } else if (joinMonth.getValue() >= Month.APRIL.getValue() && joinMonth.getValue() <= Month.JUNE.getValue()) {
+            annualLeaves = 10;
+        } else if (joinMonth.getValue() >= Month.JULY.getValue() && joinMonth.getValue() <= Month.AUGUST.getValue()) {
+            annualLeaves = 7;
+        } else {
+            annualLeaves = 4;
+        }
+        
+        saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), annualLeaves);
+        
+        // Standard allocation for other leave types
+        saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
+        saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
+        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+    }
+
+    /**
+     * Allocate leaves for employees with 2-3 years of service
+     */
+    private void allocateLeavesForTwoToThreeYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
+        // Same logic as 1-2 years for annual leaves
+        allocateLeavesForOneToTwoYears(employee, leaveTypes);
+    }
+
+    /**
+     * Allocate leaves for employees with 3+ years of service
+     */
+    private void allocateLeavesForThreeOrMoreYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
+        // Standard allocation regardless of join month
+        saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), 14);
+        saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
+        saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
+        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+    }
+
+    /**
+     * Save leave allocation for an employee
+     */
+    private void saveLeaveAllocation(EmployeeEntity employee, LeaveTypeEntity leaveType, int leaves) {
+        // Save total leaves
+        UserLeaveTypeTotalEntity totalEntity = totalRepository.findByEmployeeIDAndLeaveType(
+                employee.getEmployeeId(), leaveType);
+        
+        if (totalEntity == null) {
+            totalEntity = new UserLeaveTypeTotalEntity();
+            totalEntity.setEmployeeID(employee.getEmployeeId());
+            totalEntity.setLeaveType(leaveType);
+            totalEntity.setPublicId(UUID.randomUUID().toString());
+        }
+        
+        totalEntity.setTotalLeaves(leaves);
+        totalRepository.save(totalEntity);
+        
+        // Save remaining leaves (initially equal to total)
+        UserLeaveTypeRemainingEntity remainingEntity = remainingRepository.findByEmployeeIDAndLeaveType(
+                employee.getEmployeeId(), leaveType);
+        
+        if (remainingEntity == null) {
+            remainingEntity = new UserLeaveTypeRemainingEntity();
+            remainingEntity.setEmployeeID(employee.getEmployeeId());
+            remainingEntity.setLeaveType(leaveType);
+            remainingEntity.setPublicId(UUID.randomUUID().toString());
+        }
+        
+        remainingEntity.setRemainingLeaves(leaves);
+        remainingRepository.save(remainingEntity);
+    }
+
+    /**
+     * Monthly check to update leave allocation for employees who reached service milestones
+     * Runs at midnight on the first day of each month
+     */
+    @Scheduled(cron = "0 0 0 1 * ?")
+    @Transactional
+    public void monthlyLeaveUpdate() {
+        List<EmployeeEntity> allEmployees = employeeRepository.findAll();
+        LocalDate currentDate = LocalDate.now();
+        
+        for (EmployeeEntity employee : allEmployees) {
+            LocalDate joinDate = employee.getJoin_date().toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
+            
+            long previousMonthYears = ChronoUnit.YEARS.between(
+                    joinDate, 
+                    currentDate.minusMonths(1)
+            );
+            
+            long currentYears = ChronoUnit.YEARS.between(joinDate, currentDate);
+            
+            // Check if employee has crossed a service milestone this month
+            if (currentYears > previousMonthYears) {
+                // Employee has reached a new year of service
+                allocateLeaves(employee);
+            }
+        }
+    }
+}

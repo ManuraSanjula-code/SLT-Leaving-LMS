@@ -4,7 +4,21 @@
 	<section name="java.lang.Class">
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="createUser"/>
+			<item value="getUsers"/>
+			<item value="processMovement"/>
+			<item value="getUserDetailsByUserId"/>
+			<item value="prerequisiteV1"/>
+			<item value="requestALeave"/>
+			<item value="main"/>
+			<item value="requestMovement"/>
+			<item value="processLeave"/>
+			<item value="getAllLeaveByUserByUserId"/>
+			<item value="getAllLeaveByUserByUserIdAdmin"/>
+			<item value="getAllAttendanceThatUnA"/>
+			<item value="deleteLeave"/>
+			<item value="getAllMovementByAdmin"/>
+			<item value="getUserLeaveTypeRemaining"/>
+			<item value="saveLeave"/>
 		</list>
 	</section>
 </section>
