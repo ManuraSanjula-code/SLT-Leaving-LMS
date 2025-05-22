@@ -1,29 +1,3 @@
-/// If depending on employee joing date calculate the leaves
-/// each employee have a supervicer and hod
-/// in employee address add more thing such as division, electro, disrtic 
-/// employee also have department
-/// system can upload many data imports and it search all the files that similar to table in the database 
-//  ----------- it import and save all the things what are similar
-/// and also please mention system also accepting roaster file those who are part of the raoster 
-/// if admin upload one csv the system read all the things after and notify what missing 
-/// if admin forogot the upload a roaster file admin have manually type roster ids or automate by given all the people that part of roaster
-
-/// CEO -- movemnet approves by chairman and add role call chairman
-/// with in the system admin can add new role and new sections and profiles
-/// in User tabel there is 4 ways indetify the employee -- AA____ which give by SLT company (parent company of the peo tv)
-///                                                     -- VC____ peo tv verison of employee id 
-///                                                     -- System assign public-id
-///                                                     -- Data base also assign a id 
-
-
-/// --------------------------- IMPORTAT -----------------------
-/// TO TEST for we make role and profiles and sections and authorities in code side --- later it will directly inserted in database by sql
-/// and create a tigger funtion in sql if data came to the sql server as soon after data arrived please encrypt the password 
-/// --- while employee login make tigger fucntion to genarate exact same hash to user given password that matches to db encrypt password
-
-/// Havent add departement 
-/// after login redux-user not updating
-
 "use client"
 
 import React from 'react';
@@ -49,6 +23,9 @@ import ServerError from "./server-error/page"
 import NetworkError from "./network-error/page"
 import NotFoundPage from "./not-found-page/page"
 import Error from "./error/page"
+import AttendanceTable from "./roster/all-attendance/page";
+import AttendanceDashboard from "./roster/all/page";
+import RosterDetail from "./roster/detail/page";
 
 function App() {
   return (
@@ -63,13 +40,13 @@ function App() {
         <Route path="/all-leaves" element={<AllLeaves />} />
         <Route path="/all-movements" element={<AllMovements />} />
         <Route path="/single-employee-activities" element={<SingleEmployeeActivities />} />
-        <Route path="/unsuccessful-leaves" element={<UnsuccessfulLeaves isAdmin={false}/>} />
-        <Route path="/unauthorized-leaves" element={<UnauthorizedLeaves isAdmin={false}/>} />
-        <Route path="/unsuccessful-leaves-admin" element={<UnsuccessfulLeaves isAdmin={true} />} />
-        <Route path="/unauthorized-leaves-admin" element={<UnauthorizedLeaves isAdmin={true}/>} />
+        <Route path="/unsuccessful-leaves" element={<UnsuccessfulLeaves/>} />
+        <Route path="/unauthorized-leaves" element={<UnauthorizedLeaves/>} />
+        <Route path="/unsuccessful-leaves-admin" element={<UnsuccessfulLeaves />} />
+        <Route path="/unauthorized-leaves-admin" element={<UnauthorizedLeaves/>} />
         <Route path="/absent-employees" element={<AbsentEmployees />} />
-        <Route path="/no-pay-leaves" element={<NoPayLeaves  sAdmin={false}/>} />
-        <Route path="/no-pay-leaves-admin" element={<NoPayLeaves isAdmin={true} />} />
+        <Route path="/no-pay-leaves" element={<NoPayLeaves/>} />
+        <Route path="/no-pay-leaves-admin" element={<NoPayLeaves/>} />
         <Route path="/manage-employees" element={<ManageEmployees />} />
         <Route path="/manage-leave-requests" element={<ManageLeaveRequests />} />
         <Route path="/manage-movement-requests" element={<ManageMovementRequests />} />
@@ -79,6 +56,9 @@ function App() {
         <Route path="/server-error" element={<ServerError />} />
         <Route path="/network-error" element={<NetworkError />} />
         <Route path="/error" element={<Error />} />
+        <Route path="/roster/all-attendance" element={<AttendanceTable />} />
+        <Route path="/roster/all" element={<AttendanceDashboard />} />
+        <Route path="/roster/detail" element={<RosterDetail />} />
         <Route path="*" element={<NotFoundPage />} />
 
       </Routes>

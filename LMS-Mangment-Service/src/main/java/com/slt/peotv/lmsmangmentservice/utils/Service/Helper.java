@@ -44,6 +44,23 @@ public class Helper {
     @Autowired
     private EmployeeRepo employeeRepo;
 
+    public Date removeTimeFromDate(Date dateWithTime) {
+        if (dateWithTime == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(dateWithTime);
+
+        // Reset hour, minute, second and millisecond
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTime();
+    }
+
     public Date getDueDate() {
         Calendar calendar = Calendar.getInstance();
 
@@ -69,22 +86,10 @@ public class Helper {
 
     public Date getYesterdayDate() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        return removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
     }
 
-    public Date getYesterdayDate_() {
-        String mysqlDate = "2024-12-31 00:00:00.000000";
-//        String mysqlDate = "2015-02-02 03:03:14.000000";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
-        LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
-
-        // Convert to java.util.Date
-        Date legacyDate = Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
-        return legacyDate;
-    }
-
-    public Date getYesterdayDate_V2() {
-//        String mysqlDate = "2013-01-01 12:05:32.000000";
+    public Date getYesterdayDateTest() {
         String mysqlDate = "2024-12-31 00:00:00.000000";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
         LocalDateTime dateTime = LocalDateTime.parse(mysqlDate, formatter);
@@ -104,22 +109,8 @@ public class Helper {
         absenteeEntity.setPublicId(utils.generateId(10));
         absenteeEntity.setEmployeeID(employee);
         absenteeEntity.setDate(new Date());
-        absenteeEntity.setIsHODApproved(false);
-        absenteeEntity.setIsSupervisedApproved(false);
         absenteeEntity.setAudited(0);
         absenteeEntity.setIsNoPay(0);
-
-        absenteeEntity.setIsAbsent(true);
-        absenteeEntity.setIsLate(false);
-        absenteeEntity.setIsLateCover(false);
-        absenteeEntity.setIsUnSuccessfulAttdate(false);
-        absenteeEntity.setIsHalfDay(false);
-        absenteeEntity.setComment("EMPLOYEE ABSENT IN TODAY");
-        absenteeEntity.setHappenDate(getYesterdayDate());
-
-        absenteeEntity.setIsPending(false);
-        absenteeEntity.setIsAccepted(false);
-
         absenteeRepo.save(absenteeEntity);
 
 
@@ -142,22 +133,9 @@ public class Helper {
         absenteeEntity.setPublicId(utils.generateId(10));
         absenteeEntity.setEmployeeID(employee);
         absenteeEntity.setDate(new Date());
-        absenteeEntity.setIsHODApproved(false);
-        absenteeEntity.setIsSupervisedApproved(false);
         absenteeEntity.setAudited(0);
         absenteeEntity.setIsNoPay(0);
         absenteeEntity.setUserId(employeeEntity.get().getPublicId());
-        absenteeEntity.setIsAbsent(true);
-        absenteeEntity.setIsLate(false);
-        absenteeEntity.setIsLateCover(false);
-        absenteeEntity.setIsUnSuccessfulAttdate(false);
-        absenteeEntity.setIsHalfDay(isHalfDay);
-        absenteeEntity.setIsFullDay(isFullDay);
-        absenteeEntity.setComment("EMPLOYEE ABSENT IN TODAY");
-        absenteeEntity.setHappenDate(getYesterdayDate());
-
-        absenteeEntity.setIsPending(false);
-        absenteeEntity.setIsAccepted(false);
 
         absenteeRepo.save(absenteeEntity);
     }

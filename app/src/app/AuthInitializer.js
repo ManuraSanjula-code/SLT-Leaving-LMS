@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setCredentials, setUserDetails, setError, clearAuth } from "./redux-user/authSlice";
+import { setCredentials, setUserDetails, setError, clearAuth } from "../../lib/redux/redux-user/authSlice";
 import { fetchData_ } from "./api";
-import { persistor } from "./redux-user/store";
+import { persistor } from "../../lib/redux/store";
 
 export default function AuthInitializer() {
   const dispatch = useDispatch();

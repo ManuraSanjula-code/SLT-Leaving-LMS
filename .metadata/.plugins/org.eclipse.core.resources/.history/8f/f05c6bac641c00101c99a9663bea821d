@@ -1,0 +1,41 @@
+package com.slt.peotv.userservice.lms.shared.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+
+public class UserDto implements Serializable{
+
+	private static final long serialVersionUID = 6835192601898364280L;
+	private long id;
+    private String userId;
+    private String firstName;
+    private String lastName;
+    private String email;
+	private String employeeId;
+	private String sltId;
+    private String password;
+    private String encryptedPassword;
+	private String profilePic;
+	private String emailVerificationToken;
+    private Boolean emailVerificationStatus = false;
+    private List<AddressDTO> addresses;
+    private Collection<String> roles;
+	@JsonProperty("Authorities")
+	private Collection<String> Authorities;
+	private Collection<String> sections;
+	private Collection<String> profiles;
+	private Integer isSltEmp;
+	private Integer isSltIntern;
+	private Integer active = 1;
+	private String phone;
+	private String gender;
+	private Boolean roaster;
+	private List<String> deleteAddresses;
+	private Date joiningDate;
+	private Integer highestRolePriority;
+}

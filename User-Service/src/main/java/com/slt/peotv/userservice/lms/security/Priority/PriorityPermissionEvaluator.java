@@ -33,8 +33,12 @@ public class PriorityPermissionEvaluator implements PermissionEvaluator {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
             // 3. Check if target is a domain object we support
+            /*if (targetDomainObject instanceof UserEntity) {
+                return checkUserPermission(userPrincipal, (UserEntity) targetDomainObject, permission.toString());
+            }*/
+
             if (targetDomainObject instanceof UserEntity) {
-                return checkUserPermission_(userPrincipal, (UserEntity) targetDomainObject, permission.toString());
+                return true;
             }
 
             // Add other domain object types here as needed
@@ -94,9 +98,6 @@ public class PriorityPermissionEvaluator implements PermissionEvaluator {
         }
     }
 
-    private boolean checkUserPermission_(UserPrincipal userPrincipal, UserEntity targetUser, String permission) {
-        return true;
-    }
 
     private Object resolveTargetDomainObject(Serializable targetId, String targetType) {
         try {

@@ -1,0 +1,243 @@
+package com.slt.peotv.lmsmangmentservice.model.dto;
+
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveCategoryEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
+
+import java.util.Date;
+
+public class LeaveDTO {
+    public String publicId;
+    private Long id;
+    private String employeeID;
+    private Date submitDate;
+    private Date fromDate;
+    private Date toDate;
+    private LeaveCategoryEntity leaveCategory;
+    private LeaveTypeEntity leaveType;
+    private Boolean isSupervisedApproved = false;
+    private Boolean isHODApproved = false;
+    private Integer isNoPay = 0;
+    private Long numOfDays;
+    private String description;
+    private Boolean isHalfDay;
+    private Boolean isFullDay = false;
+    private Boolean unSuccessful = false;
+    private Boolean isLate = false;
+    private Boolean isLateCover = false;
+    private Boolean isShort_Leave = false;
+    private Boolean isPending = false;
+    private Boolean isAccepted = false;
+    private Boolean notUsed = false;
+    private Boolean isCanceled = false;
+    private Boolean isManualRequest = false;
+    private Date happenDate;
+    private String userId;
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmployeeID() {
+        return employeeID;
+    }
+
+    public void setEmployeeID(String employeeID) {
+        this.employeeID = employeeID;
+    }
+
+    public Date getSubmitDate() {
+        return submitDate;
+    }
+
+    public void setSubmitDate(Date submitDate) {
+        this.submitDate = submitDate;
+    }
+
+    public Date getFromDate() {
+        return fromDate;
+    }
+
+    public void setFromDate(Date fromDate) {
+        this.fromDate = fromDate;
+    }
+
+    public Date getToDate() {
+        return toDate;
+    }
+
+    public void setToDate(Date toDate) {
+        this.toDate = toDate;
+    }
+
+    public LeaveCategoryEntity getLeaveCategory() {
+        return leaveCategory;
+    }
+
+    public void setLeaveCategory(LeaveCategoryEntity leaveCategory) {
+        this.leaveCategory = leaveCategory;
+    }
+
+    public LeaveTypeEntity getLeaveType() {
+        return leaveType;
+    }
+
+    public void setLeaveType(LeaveTypeEntity leaveType) {
+        this.leaveType = leaveType;
+    }
+
+    public Boolean getSupervisedApproved() {
+        return isSupervisedApproved;
+    }
+
+    public void setSupervisedApproved(Boolean supervisedApproved) {
+        isSupervisedApproved = supervisedApproved;
+    }
+
+    public Boolean getHODApproved() {
+        return isHODApproved;
+    }
+
+    public void setHODApproved(Boolean HODApproved) {
+        isHODApproved = HODApproved;
+    }
+
+    public Integer getIsNoPay() {
+        return isNoPay;
+    }
+
+    public void setIsNoPay(Integer isNoPay) {
+        this.isNoPay = isNoPay;
+    }
+
+    public Long getNumOfDays() {
+        return numOfDays;
+    }
+
+    public void setNumOfDays(Long numOfDays) {
+        this.numOfDays = numOfDays;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Boolean getHalfDay() {
+        return isHalfDay;
+    }
+
+    public void setHalfDay(Boolean halfDay) {
+        isHalfDay = halfDay;
+    }
+
+    public Boolean getFullDay() {
+        return isFullDay;
+    }
+
+    public void setFullDay(Boolean fullDay) {
+        isFullDay = fullDay;
+    }
+
+    public Boolean getUnSuccessful() {
+        return unSuccessful;
+    }
+
+    public void setUnSuccessful(Boolean unSuccessful) {
+        this.unSuccessful = unSuccessful;
+    }
+
+    public Boolean getLate() {
+        return isLate;
+    }
+
+    public void setLate(Boolean late) {
+        isLate = late;
+    }
+
+    public Boolean getLateCover() {
+        return isLateCover;
+    }
+
+    public void setLateCover(Boolean lateCover) {
+        isLateCover = lateCover;
+    }
+
+    public Boolean getShort_Leave() {
+        return isShort_Leave;
+    }
+
+    public void setShort_Leave(Boolean short_Leave) {
+        isShort_Leave = short_Leave;
+    }
+
+    public Boolean getPending() {
+        return isPending;
+    }
+
+    public void setPending(Boolean pending) {
+        isPending = pending;
+    }
+
+    public Boolean getAccepted() {
+        return isAccepted;
+    }
+
+    public void setAccepted(Boolean accepted) {
+        isAccepted = accepted;
+    }
+
+    public Boolean getNotUsed() {
+        return notUsed;
+    }
+
+    public void setNotUsed(Boolean notUsed) {
+        this.notUsed = notUsed;
+    }
+
+    public Boolean getCanceled() {
+        return isCanceled;
+    }
+
+    public void setCanceled(Boolean canceled) {
+        isCanceled = canceled;
+    }
+
+    public Boolean getManualRequest() {
+        return isManualRequest;
+    }
+
+    public void setManualRequest(Boolean manualRequest) {
+        isManualRequest = manualRequest;
+    }
+
+    public Date getHappenDate() {
+        return happenDate;
+    }
+
+    public void setHappenDate(Date happenDate) {
+        this.happenDate = happenDate;
+    }
+}

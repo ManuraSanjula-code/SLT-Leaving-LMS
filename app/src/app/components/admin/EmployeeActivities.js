@@ -1,6 +1,7 @@
-"use client"; // Ensure this is a Client Component in Next.js
+"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
     Typography,
     Box,
@@ -19,101 +20,88 @@ import {
     TablePagination,
     CircularProgress,
     Chip,
+    Button,
 } from "@mui/material";
 import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
+import {
+    fetchActivityRecords,
+    setSearchTerm,
+    setFilterType,
+    setFilterStatus,
+    setFilterIssue,
+    setPage,
+    setRowsPerPage,
+    clearFilters,
+    selectFilteredActivities,
+    selectActivitiesData,
+    selectIsFiltering,
+} from "../../../../lib/redux/redux-lms/employee-activities/admin/employeeActivitiesSlice";
 
 // Define the theme
 const theme = createTheme();
 
 const EmployeeActivities = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const dispatch = useDispatch();
 
-    // Search and filter states
-    const [searchTerm, setSearchTerm] = useState("");
-    const [filterType, setFilterType] = useState("all");
-    const [filterStatus, setFilterStatus] = useState("all");
-    const [filterIssue, setFilterIssue] = useState("all");
+    // Get state from Redux store
+    const filteredActivities = useSelector(selectFilteredActivities);
+    const {
+        loading,
+        error,
+        searchTerm,
+        filterType,
+        filterStatus,
+        filterIssue,
+        page,
+        rowsPerPage,
+        totalElements,
+        totalPages,
+    } = useSelector(selectActivitiesData);
 
-    // Pagination states
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+    // Check if filtering is applied
+    const isFiltering = useSelector(selectIsFiltering);
 
     // Fetch data from API with pagination parameters
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`http://localhost:8080/lms?page=${page}&size=${rowsPerPage}`, {
-                    credentials: 'include' // This sends cookies with the request
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                setData(result);
-                setTotalElements(result.totalElements);
-                setTotalPages(result.totalPages);
-                setLoading(false);
-            } catch (err) {
-                setError(err.message);
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [page, rowsPerPage]); // Re-fetch when page or rowsPerPage changes
+        if (!isFiltering) {
+            dispatch(fetchActivityRecords({ page, rowsPerPage }));
+        }
+    }, [dispatch, page, rowsPerPage, isFiltering]);
 
     // Handle page change
     const handleChangePage = (event, newPage) => {
-        setPage(newPage);
+        dispatch(setPage(newPage));
     };
 
     // Handle rows per page change
     const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0); // Reset to first page when changing rows per page
+        dispatch(setRowsPerPage(parseInt(event.target.value, 10)));
     };
 
-    // Filter activities based on search term and filters
-    const filteredActivities = data?.content ? data.content.filter((activity) => {
-        const matchesSearch = activity.employeeID.toLowerCase().includes(searchTerm.toLowerCase());
+    // Handle search term change
+    const handleSearchTermChange = (event) => {
+        dispatch(setSearchTerm(event.target.value));
+    };
 
-        // Type filter
-        let matchesType = true;
-        if (filterType !== "all") {
-            if (filterType === "fullDay") matchesType = activity.fullDay;
-            else if (filterType === "halfDay") matchesType = activity.halfDay;
-            else if (filterType === "fullLeave") matchesType = activity.fullLeave;
-            else if (filterType === "shortLeave") matchesType = activity.shortLeave;
-            else if (filterType === "absent") matchesType = activity.absent;
-            else if (filterType === "late") matchesType = activity.late;
-        }
+    // Handle filter type change
+    const handleFilterTypeChange = (event) => {
+        dispatch(setFilterType(event.target.value));
+    };
 
-        // Status filter
-        let matchesStatus = true;
-        if (filterStatus !== "all") {
-            if (filterStatus === "Approved") matchesStatus = activity.leaveSuccess;
-            else if (filterStatus === "Pending") matchesStatus = !activity.leaveSuccess && !activity.unSuccessful && !activity.unAuthorized;
-            else if (filterStatus === "Not Approved") matchesStatus = activity.unSuccessful || activity.unAuthorized;
-        }
+    // Handle filter status change
+    const handleFilterStatusChange = (event) => {
+        dispatch(setFilterStatus(event.target.value));
+    };
 
-        // Issue filter
-        let matchesIssue = true;
-        if (filterIssue !== "all") {
-            matchesIssue = filterIssue === "hasIssue" ? activity.issues : !activity.issues;
-        }
+    // Handle filter issue change
+    const handleFilterIssueChange = (event) => {
+        dispatch(setFilterIssue(event.target.value));
+    };
 
-        return matchesSearch && matchesType && matchesStatus && matchesIssue;
-    }) : [];
-
-    // Track if we're doing client-side filtering
-    const isFiltering = searchTerm !== "" || filterType !== "all" || filterStatus !== "all" || filterIssue !== "all";
+    // Handle clear filters
+    const handleClearFilters = () => {
+        dispatch(clearFilters());
+    };
 
     // Get status chip color
     const getStatusColor = (activity) => {
@@ -158,6 +146,13 @@ const EmployeeActivities = () => {
                 <CssBaseline />
                 <Box sx={{ p: 3 }}>
                     <Typography color="error">Error: {error}</Typography>
+                    <Button
+                        variant="contained"
+                        onClick={() => dispatch(fetchActivityRecords({ page, rowsPerPage }))}
+                        sx={{ mt: 2 }}
+                    >
+                        Try Again
+                    </Button>
                 </Box>
             </ThemeProvider>
         );
@@ -177,13 +172,17 @@ const EmployeeActivities = () => {
                         label="Search by Employee ID"
                         variant="outlined"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={handleSearchTermChange}
                         sx={{ width: 300 }}
                     />
 
                     <FormControl variant="outlined" sx={{ minWidth: 150 }}>
                         <InputLabel>Activity Type</InputLabel>
-                        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} label="Activity Type">
+                        <Select
+                            value={filterType}
+                            onChange={handleFilterTypeChange}
+                            label="Activity Type"
+                        >
                             <MenuItem value="all">All Types</MenuItem>
                             <MenuItem value="fullDay">Full Day</MenuItem>
                             <MenuItem value="halfDay">Half Day</MenuItem>
@@ -196,7 +195,11 @@ const EmployeeActivities = () => {
 
                     <FormControl variant="outlined" sx={{ minWidth: 150 }}>
                         <InputLabel>Status</InputLabel>
-                        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} label="Status">
+                        <Select
+                            value={filterStatus}
+                            onChange={handleFilterStatusChange}
+                            label="Status"
+                        >
                             <MenuItem value="all">All Statuses</MenuItem>
                             <MenuItem value="Approved">Approved</MenuItem>
                             <MenuItem value="Pending">Pending</MenuItem>
@@ -206,12 +209,26 @@ const EmployeeActivities = () => {
 
                     <FormControl variant="outlined" sx={{ minWidth: 150 }}>
                         <InputLabel>Issue</InputLabel>
-                        <Select value={filterIssue} onChange={(e) => setFilterIssue(e.target.value)} label="Issue">
+                        <Select
+                            value={filterIssue}
+                            onChange={handleFilterIssueChange}
+                            label="Issue"
+                        >
                             <MenuItem value="all">All</MenuItem>
                             <MenuItem value="hasIssue">Has Issue</MenuItem>
                             <MenuItem value="noIssue">No Issue</MenuItem>
                         </Select>
                     </FormControl>
+
+                    {isFiltering && (
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={handleClearFilters}
+                        >
+                            Clear Filters
+                        </Button>
+                    )}
                 </Box>
 
                 {/* Table of Employee Activities */}

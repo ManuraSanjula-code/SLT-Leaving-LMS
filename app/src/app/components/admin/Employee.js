@@ -23,37 +23,6 @@ import {
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 
-// Mock data for all-employees
-const allEmployees = [
-    {
-        id: 1,
-        name: "John Doe",
-        profile: "VC-VAS",
-        section: "HE/MCR",
-        role: "ROLE_EMPLOYEE",
-    },
-    {
-        id: 2,
-        name: "Jane Smith",
-        profile: "HEADQUARTERS-EMPLOYEE",
-        section: "FINANCE",
-        role: "ROLE_HOD",
-    },
-    {
-        id: 3,
-        name: "Alice Johnson",
-        profile: "OUT-STATION-STAFF",
-        section: "SALES",
-        role: "ROLE_SUPERVISOR",
-    },
-    {
-        id: 4,
-        name: "Bob Brown",
-        profile: "VC-VAS",
-        section: "ADMIN",
-        role: "ROLE_ADMIN",
-    },
-];
 
 const EmployeeList = () => {
     const [searchQuery, setSearchQuery] = useState("");

@@ -1,6 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchMovementRequests,
+  processMovementRequest,
+  processBulkMovementRequests,
+  selectMovementRequest,
+  selectAllMovementRequests,
+  setPageSize
+} from '../../../../lib/redux/redux-lms/movement/admin/movementSlice';
 import {
   Container,
   CssBaseline,
@@ -28,135 +37,106 @@ import {
 import { format } from "date-fns";
 
 const ManageMovementRequests = () => {
-  const [movementRequests, setMovementRequests] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({
-    currentPage: 0,
-    totalPages: 0,
-    totalElements: 0,
-    pageSize: 10
-  });
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
 
-  // Fetch movement requests from the server
-  const fetchMovementRequests = async (page = 0, size = 10) => {
-    setLoading(true);
-    try {
-      // Get userId from session storage
-      const storedUserId = sessionStorage.getItem('userId');
+  // Get state from Redux store
+  const movementRequests = useSelector(state => state.movement.requests);
+  const selected = useSelector(state => state.movement.selected);
+  const pagination = useSelector(state => state.movement.pagination);
+  const loading = useSelector(state => state.movement.loading);
+  const error = useSelector(state => state.movement.error);
 
-      if (!storedUserId) {
-        throw new Error('User ID not found in session storage');
-      }
-
-      // Use the new URL with the userId from session storage
-      const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}?page=${page}&size=${size}`, {
-        method: 'GET',
-        credentials: 'include', // This will send cookies with the request
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Filter out null values from the content array
-      const filteredContent = data.content.filter(item => item !== null);
-
-      // Update state with filtered content
-      setMovementRequests(filteredContent);
-      setPagination({
-        currentPage: data.number,
-        totalPages: data.totalPages,
-        totalElements: data.totalElements,
-        pageSize: data.pageable.pageSize
-      });
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching movement requests:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load data on component mount
+  // Fetch movement requests when component mounts
   useEffect(() => {
-    fetchMovementRequests();
-  }, []);
+    dispatch(fetchMovementRequests({
+      page: pagination.currentPage,
+      size: pagination.pageSize
+    }));
+  }, [dispatch, pagination.currentPage, pagination.pageSize]);
 
   // Handle page change
   const handlePageChange = (event, value) => {
     // API pages are 0-indexed, but Pagination component is 1-indexed
-    fetchMovementRequests(value - 1, pagination.pageSize);
+    dispatch(fetchMovementRequests({
+      page: value - 1,
+      size: pagination.pageSize
+    }));
   };
 
   // Handle page size change
   const handlePageSizeChange = (event) => {
     const newSize = event.target.value;
-    fetchMovementRequests(0, newSize);
+    dispatch(setPageSize(newSize));
+    dispatch(fetchMovementRequests({
+      page: 0,
+      size: newSize
+    }));
   };
 
   // Handle individual row selection
   const handleSelect = (id) => {
-    if (selected.includes(id)) {
-      setSelected((prev) => prev.filter((item) => item !== id));
-    } else {
-      setSelected((prev) => [...prev, id]);
-    }
+    dispatch(selectMovementRequest(id));
   };
 
   // Handle "Select All" functionality
   const handleSelectAll = () => {
-    if (selected.length === movementRequests.length) {
-      setSelected([]);
-    } else {
-      setSelected(movementRequests.map((request) => request.publicId));
-    }
+    dispatch(selectAllMovementRequests());
   };
 
   // Handle bulk approve
-  const handleBulkApprove = async () => {
-    try {
-      const storedUserId = sessionStorage.getItem('userId');
-      if (!storedUserId) {
-        throw new Error('User ID not found in session storage');
-      }
-
-      // You would implement your API call here
-      console.log("Approving:", selected);
-
-      // After successful API call, refresh the data
-      fetchMovementRequests(pagination.currentPage);
-      setSelected([]);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error approving requests:", err);
-    }
+  const handleBulkApprove = () => {
+    dispatch(processBulkMovementRequests({
+      movementIds: selected,
+      approved: true
+    })).then(() => {
+      // Refresh data after bulk approval
+      dispatch(fetchMovementRequests({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }));
+    });
   };
 
   // Handle bulk reject
-  const handleBulkReject = async () => {
-    try {
-      const storedUserId = sessionStorage.getItem('userId');
-      if (!storedUserId) {
-        throw new Error('User ID not found in session storage');
-      }
+  const handleBulkReject = () => {
+    dispatch(processBulkMovementRequests({
+      movementIds: selected,
+      approved: false
+    })).then(() => {
+      // Refresh data after bulk rejection
+      dispatch(fetchMovementRequests({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }));
+    });
+  };
 
-      // You would implement your API call here
-      console.log("Rejecting:", selected);
+  // Handle individual approve
+  const handleApprove = (movementId) => {
+    dispatch(processMovementRequest({
+      movementId,
+      approved: true
+    })).then(() => {
+      // Refresh data after approval
+      dispatch(fetchMovementRequests({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }));
+    });
+  };
 
-      // After successful API call, refresh the data
-      fetchMovementRequests(pagination.currentPage);
-      setSelected([]);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error rejecting requests:", err);
-    }
+  // Handle individual reject
+  const handleReject = (movementId) => {
+    dispatch(processMovementRequest({
+      movementId,
+      approved: false
+    })).then(() => {
+      // Refresh data after rejection
+      dispatch(fetchMovementRequests({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }));
+    });
   };
 
   // Format date to readable format
@@ -224,48 +204,6 @@ const ManageMovementRequests = () => {
       return <Chip label="Late Cover" color="info" size="small" />;
     } else {
       return <Chip label="Submitted" color="default" size="small" />;
-    }
-  };
-
-  const handleApprove = async (movementId) => {
-    try {
-      setLoading(true);
-
-      // Get userId from session storage
-      const storedUserId = sessionStorage.getItem('userId');
-
-      if (!storedUserId) {
-        throw new Error('User ID not found in session storage');
-      }
-
-      // Send the approval request
-      const response = await fetch(`http://localhost:8080/lms/movement/process/${movementId}/${storedUserId}`, {
-        method: 'POST',
-        credentials: 'include', // This will send cookies with the request
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          approved: true,
-          userId: storedUserId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      // After successful API call, refresh the data
-      fetchMovementRequests(pagination.currentPage);
-
-      // Show success message (you might want to implement a proper notification system)
-      console.log(`Movement request ${movementId} approved successfully`);
-
-    } catch (err) {
-      setError(`Failed to approve request: ${err.message}`);
-      console.error("Error approving request:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -405,6 +343,7 @@ const ManageMovementRequests = () => {
                                       color="error"
                                       size="small"
                                       disabled={request.accepted || request.expired || request.isCanceled}
+                                      onClick={() => handleReject(request.publicId)}
                                   >
                                     Reject
                                   </Button>

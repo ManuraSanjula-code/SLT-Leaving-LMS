@@ -1,4 +1,3 @@
-// components/NavBar.js
 import React, { useState, useMemo, useCallback } from "react";
 import {
   AppBar,
@@ -57,6 +56,8 @@ const NavBar = () => {
       { label: "Your No-Pay's", path: "/no-pay-leaves" },
       { label: "Your Unsuccessful Leaves", path: "/unsuccessful-leaves" },
       { label: "Your Unauthorized Leaves", path: "/unauthorized-leaves" },
+      { label: "In-Outs", path: "/in-outs" },
+
     ].filter(item => allowedRoutes.has(item.path));
 
     const admItems = [
@@ -68,6 +69,10 @@ const NavBar = () => {
       { label: "Unauthorized Leaves-Admin", path: "/unauthorized-leaves-admin" },
       { label: "No Pay-Admin", path: "/no-pay-leaves-admin" },
       { label: "Absent Employees-Admin", path: "/absent-employees-admin" },
+      { label: "Roster All Attendance ", path: "/roster/all-attendance" },
+      { label: "Get All Roster ", path: "/roster/all" },
+      { label: "Roster Detail", path: "/roster/detail" },
+      { label: "Other", path: "/other" },
 
     ].filter(item => allowedRoutes.has(item.path));
 

@@ -81,14 +81,6 @@ public class AttendanceProcessingService {
                         checkService.reportAttendance(attendanceRecord, false, false, false, true, false, true, false, false, false, true, false, new Date());
                         /// IF LATE IS COVER SET LATE_COVER TURE
                     }
-
-                    UserLeaveTypeRemainingEntity userLeaveTypeRemainingEntity = getUserLeaveTypeRemaining(leave.getLeaveType().getName(), leave.getEmployeeID());
-                    if (userLeaveTypeRemainingEntity.getRemainingLeaves() < 1) {
-                        userLeaveTypeRemainingEntity.setRemainingLeaves(userLeaveTypeRemainingEntity.getRemainingLeaves() - 1);
-                        userLeaveTypeRemainingRepo.save(userLeaveTypeRemainingEntity);
-                    }
-
-
                 }
 
                 leaveRepository.save(leave);

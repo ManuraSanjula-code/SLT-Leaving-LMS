@@ -93,4 +93,7 @@ public class MovementsEntity {
 
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<MovementAdminsEntity> admins;
+
+    @Builder.Default
+    private Boolean isReject = false;
 }

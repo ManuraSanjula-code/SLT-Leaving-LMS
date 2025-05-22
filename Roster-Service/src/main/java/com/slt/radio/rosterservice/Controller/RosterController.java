@@ -1,9 +1,10 @@
 package com.slt.radio.rosterservice.Controller;
 
-import com.slt.radio.rosterservice.Model.Dto.RosterDto;
-import com.slt.radio.rosterservice.Model.Roster;
-import com.slt.radio.rosterservice.Model.Shift.ShiftRoster;
+import com.slt.radio.rosterservice.Model.One.Dto.RosterDto;
+import com.slt.radio.rosterservice.Model.One.Roster;
+import com.slt.radio.rosterservice.Model.One.Shift.ShiftRoster;
 import com.slt.radio.rosterservice.Service.Employee.ExcelProcessingService;
+import com.slt.radio.rosterservice.Service.LMS.AttendanceService;
 import com.slt.radio.rosterservice.Service.RosterServiceE;
 import com.slt.radio.rosterservice.Service.RosterServiceM;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,17 @@ public class RosterController {
     private final RosterServiceM rosterServiceM;
     private final RosterServiceE rosterServiceE;
     private final ExcelProcessingService excelProcessingService;
+    private final AttendanceService attendanceService;
 
     @PostMapping("/upload/employee")
     public ResponseEntity<Roster> uploadEmployee(@RequestParam("file") MultipartFile file) {
         RosterDto processedRoster = excelProcessingService.processExcelFile(file);
         return new ResponseEntity<>(rosterServiceE.createRoster(processedRoster), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{month}/{year}")
+    public Roster getMonthlyAttendance(@PathVariable int month, @PathVariable int year) {
+        return attendanceService.getMonthlyAttendance(month, year);
     }
 
     @PostMapping("/upload")

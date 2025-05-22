@@ -18,7 +18,7 @@ import {
     Pagination
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchPaginatedAdmins } from '../../../redux-lms/managementSlice';
+import { fetchPaginatedAdmins } from '../../../../../lib/redux/redux-lms/user/managementSlice';
 
 const EmployeeSelectionDialog = ({
                                      open,

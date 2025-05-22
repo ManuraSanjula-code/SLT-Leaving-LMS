@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { clearAuth } from './redux-user/authSlice';
+import { clearAuth } from '../../lib/redux/redux-user/authSlice';
 
 export function BrowserCloseHandler() {
     const dispatch = useDispatch();

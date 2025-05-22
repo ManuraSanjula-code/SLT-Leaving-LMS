@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.Service;
 
-import com.slt.radio.rosterservice.Model.Shift.ShiftRoster;
+import com.slt.radio.rosterservice.Model.One.Shift.ShiftRoster;
 import com.slt.radio.rosterservice.Repo.ShiftRosterRepository;
 import com.slt.radio.rosterservice.Service.Roster.ExcelParserService;
 import lombok.RequiredArgsConstructor;

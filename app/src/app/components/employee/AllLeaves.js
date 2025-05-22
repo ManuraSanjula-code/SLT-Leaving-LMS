@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
     Container,
     CssBaseline,
@@ -30,34 +31,84 @@ import {
     DialogTitle,
     Pagination,
     Grid,
+    Card,
+    CardContent,
 } from "@mui/material";
+import { Delete as DeleteIcon, Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import {
-    Delete as DeleteIcon,
-    Edit as EditIcon
-} from "@mui/icons-material";
+    fetchLeaveData,
+    fetchLeaveBalances,
+    deleteLeaveRequest,
+    // updateLeaveRequest,
+} from "../../../../lib/redux/redux-lms/leave/leaveSlice";
 
-const PendingLeaves = () => {
-    const [leaveRequests, setLeaveRequests] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+const PendingLeaves = ({ isAdmin = false, userId = null }) => {
+    const dispatch = useDispatch();
+    const [viewDetailsId, setViewDetailsId] = useState(null);
+
+    // Check both possible state locations based on your Redux configuration
+    const leaveState = useSelector((state) => {
+        // First try the correct path based on isAdmin
+        const correctReducer = isAdmin ? state?.leave : state?.leaveNo;
+
+        // If the data exists in the expected place, use it
+        if (correctReducer?.data) {
+            return correctReducer;
+        }
+
+        // Otherwise, try the alternate reducer
+        const alternateReducer = isAdmin ? state?.leaveNo : state?.leave;
+        if (alternateReducer?.data) {
+            return alternateReducer;
+        }
+
+        // If no data in either place, return empty structure
+        return {
+            data: [],
+            pagination: {
+                totalPages: 0,
+                totalElements: 0,
+                currentPage: 0,
+                pageSize: 10
+            },
+            loading: false,
+            error: null
+        };
+    });
+
+    const { data: leaveRequests, pagination, loading, error } = leaveState;
+
+    // Try both potential paths for balances
+    const balanceState = useSelector((state) => {
+        // Try both possible locations for balances
+        if (state?.leave?.balances?.data) {
+            return state.leave.balances;
+        } else if (state?.leaveNo?.balances?.data) {
+            return state.leaveNo.balances;
+        }
+
+        return {
+            data: [],
+            loading: false,
+            error: null
+        };
+    });
+
+    const {
+        data: leaveBalances,
+        loading: fetchingBalance,
+        error: balanceError,
+    } = balanceState;
+
+    // Local state
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [typeFilter, setTypeFilter] = useState("All");
     const [startDateFilter, setStartDateFilter] = useState("");
     const [endDateFilter, setEndDateFilter] = useState("");
     const [selected, setSelected] = useState([]);
-    const [pagination, setPagination] = useState({
-        totalPages: 0,
-        totalElements: 0,
-        currentPage: 0,
-        pageSize: 10
-    });
-
-    // Add state for page size selection
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-
-    // Edit and delete dialog states
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [currentLeave, setCurrentLeave] = useState(null);
@@ -65,142 +116,46 @@ const PendingLeaves = () => {
         startDate: "",
         endDate: "",
         type: "",
-        comment: ""
+        comment: "",
     });
 
-    // Fetch leave data from the server
     useEffect(() => {
-        fetchLeaveData();
-    }, [currentPage, pageSize]); // Add currentPage and pageSize as dependencies
+        // Get the userID for fetching data
+        const userIdToUse = userId || sessionStorage.getItem("userId");
+        if (!userIdToUse) return;
 
-    const fetchLeaveData = async () => {
-        try {
-            setLoading(true);
+        // Get the loggedInUserId - the one making the request
+        const loggedInUserId = sessionStorage.getItem("userId");
+        if (!loggedInUserId) return;
 
-            // Get userId from sessionStorage
-            const userId = sessionStorage.getItem('userId');
+        dispatch(
+            fetchLeaveData({
+                isAdmin,
+                userId: userIdToUse,
+                page: currentPage - 1,
+                size: pageSize,
+            })
+        );
 
-            if (!userId) {
-                throw new Error("User ID not found in sessionStorage");
-            }
+        dispatch(fetchLeaveBalances(userIdToUse));
+    }, [dispatch, isAdmin, userId, currentPage, pageSize]);
 
-            // Update the URL to include page and size parameters
-            const response = await fetch(
-                `http://localhost:8080/lms/leave/${userId}?page=${currentPage - 1}&size=${pageSize}`,
-                {
-                    credentials: 'include'
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            // Transform the data to match our leave component structure
-            const transformedData = data.content.map(item => ({
-                id: item.id,
-                publicId: item.publicId,
-                employeeId: item.employeeID,
-                employeeName: `Employee ${item.employeeID.substring(0, 5)}`,
-                type: getLeaveType(item),
-                startDate: item.fromDate ? new Date(item.fromDate).toISOString().split('T')[0] : "",
-                endDate: item.toDate ? new Date(item.toDate).toISOString().split('T')[0] : "",
-                status: getLeaveStatus(item),
-                comment: item.description,
-                category: item.leaveType?.name || "",
-                leaveTypeName: item.leaveType?.name || "", // Added this to store the original leave type name
-                late: item.late,
-                absent: !item.late && !item.fullDay && !item.halfDay,
-                fullDay: item.fullDay,
-                halfDay: item.halfDay,
-                pending: item.pending,
-                accepted: item.accepted,
-                expired: false
-            }));
-
-            setLeaveRequests(transformedData);
-            setPagination({
-                totalPages: data.totalPages,
-                totalElements: data.totalElements,
-                currentPage: data.number,
-                pageSize: data.pageable.pageSize
-            });
-
-            setError(null);
-        } catch (err) {
-            console.error("Error fetching leave data:", err);
-            setError(err.message);
-            setLeaveRequests([]);
-        } finally {
-            setLoading(false);
-        }
+    const toggleViewDetails = (id) => {
+        setViewDetailsId(viewDetailsId === id ? null : id);
     };
 
-    // Helper function to determine leave type based on item properties
-    const getLeaveType = (item) => {
-        if (item.fullDay) return "Full Day Leave";
-        if (item.halfDay) return "Half Day Leave";
-        if (item.absent) return "Absence";
-        if (item.late) return "Late Arrival";
-        return item.leaveType?.name || "Regular Leave";
-    };
+    // Guard against undefined or null leaveRequests
+    const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : [];
 
-    // Helper function to determine status based on item properties
-    const getLeaveStatus = (item) => {
-        if (item.pending) return "Pending";
-        if (item.accepted) return "Approved";
-        if (item.canceled) return "Canceled";
-        if (item.late && !item.pending && !item.accepted) return "Recorded Late";
-        if (!item.fullDay && !item.halfDay && !item.late && !item.pending && !item.accepted) return "Recorded Absent";
-        return "Processed";
-    };
-
-    // Handle search input change
-    const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value);
-    };
-
-    // Handle status filter change
-    const handleStatusFilterChange = (event) => {
-        setStatusFilter(event.target.value);
-    };
-
-    // Handle type filter change
-    const handleTypeFilterChange = (event) => {
-        setTypeFilter(event.target.value);
-    };
-
-    // Handle start date filter change
-    const handleStartDateFilterChange = (event) => {
-        setStartDateFilter(event.target.value);
-    };
-
-    // Handle end date filter change
-    const handleEndDateFilterChange = (event) => {
-        setEndDateFilter(event.target.value);
-    };
-
-    // Handle page size change
-    const handlePageSizeChange = (event) => {
-        const newPageSize = parseInt(event.target.value);
-        setPageSize(newPageSize);
-        setCurrentPage(1); // Reset to first page when changing page size
-    };
-
-    // Handle page change
-    const handlePageChange = (event, value) => {
-        setCurrentPage(value);
-    };
-
-    // Filter leave requests based on search query, filters, and date range
-    const filteredLeaves = leaveRequests.filter((leave) => {
+    // Filtering logic with safety check
+    const filteredLeaves = safeLeaveRequests.filter((leave) => {
         const matchesSearchQuery =
-            leave.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            leave.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (leave.comment && leave.comment.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (leave.employeeId && leave.employeeId.toLowerCase().includes(searchQuery.toLowerCase()));
+            leave.employeeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leave.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (leave.comment &&
+                leave.comment.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (leave.employeeId &&
+                leave.employeeId.toLowerCase().includes(searchQuery.toLowerCase()));
 
         const matchesStatusFilter =
             statusFilter === "All" || leave.status === statusFilter;
@@ -208,15 +163,25 @@ const PendingLeaves = () => {
         const matchesTypeFilter =
             typeFilter === "All" || leave.type === typeFilter;
 
-        // Convert dates to timestamps for comparison
-        const leaveStartDate = leave.startDate ? new Date(leave.startDate).getTime() : 0;
-        const leaveEndDate = leave.endDate ? new Date(leave.endDate).getTime() : 0;
-        const filterStartDate = startDateFilter ? new Date(startDateFilter).getTime() : null;
-        const filterEndDate = endDateFilter ? new Date(endDateFilter).getTime() : null;
+        const leaveStartDate = leave.startDate
+            ? new Date(leave.startDate).getTime()
+            : 0;
+        const leaveEndDate = leave.endDate
+            ? new Date(leave.endDate).getTime()
+            : 0;
+        const filterStartDate = startDateFilter
+            ? new Date(startDateFilter).getTime()
+            : null;
+        const filterEndDate = endDateFilter
+            ? new Date(endDateFilter).getTime()
+            : null;
 
-        // Check if the leave request falls within the date range
-        const matchesStartDate = filterStartDate ? leaveStartDate >= filterStartDate : true;
-        const matchesEndDate = filterEndDate ? leaveEndDate <= filterEndDate : true;
+        const matchesStartDate = filterStartDate
+            ? leaveStartDate >= filterStartDate
+            : true;
+        const matchesEndDate = filterEndDate
+            ? leaveEndDate <= filterEndDate
+            : true;
 
         return (
             matchesSearchQuery &&
@@ -227,215 +192,204 @@ const PendingLeaves = () => {
         );
     });
 
-    // Handle individual row selection
+    // Handlers
+    const handleSearchChange = (event) => setSearchQuery(event.target.value);
+    const handleStatusFilterChange = (event) => setStatusFilter(event.target.value);
+    const handleTypeFilterChange = (event) => setTypeFilter(event.target.value);
+    const handleStartDateFilterChange = (event) =>
+        setStartDateFilter(event.target.value);
+    const handleEndDateFilterChange = (event) =>
+        setEndDateFilter(event.target.value);
+    const handlePageChange = (event, value) => setCurrentPage(value);
+    const handlePageSizeChange = (event) => {
+        setPageSize(Number(event.target.value));
+        setCurrentPage(1);
+    };
+
     const handleSelect = (id) => {
-        if (selected.includes(id)) {
-            setSelected((prev) => prev.filter((item) => item !== id)); // Un-select
-        } else {
-            setSelected((prev) => [...prev, id]); // Select
-        }
+        setSelected((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
     };
 
-    // Handle "Select All" functionality
     const handleSelectAll = () => {
-        if (selected.length === filteredLeaves.length) {
-            setSelected([]); // Un-select all
-        } else {
-            setSelected(filteredLeaves.map((leave) => leave.id)); // Select all
-        }
+        setSelected((prev) =>
+            prev.length === filteredLeaves.length
+                ? []
+                : filteredLeaves.map((leave) => leave.id)
+        );
     };
 
-    // Open delete confirmation dialog
     const openDeleteDialog = (leave) => {
         setCurrentLeave(leave);
         setDeleteDialogOpen(true);
     };
 
-    // Open edit dialog
     const openEditDialog = (leave) => {
         setCurrentLeave(leave);
-        // Fix: Use the correct property for the leave type
         setEditFormData({
             startDate: leave.startDate || "",
             endDate: leave.endDate || "",
-            type: leave.leaveTypeName || "", // Use leaveTypeName instead of category
-            comment: leave.comment || ""
+            type: leave.leaveTypeName || "",
+            comment: leave.comment || "",
         });
         setEditDialogOpen(true);
     };
 
-    // Handle close dialogs
     const handleCloseDialogs = () => {
         setEditDialogOpen(false);
         setDeleteDialogOpen(false);
         setCurrentLeave(null);
     };
 
-    // Handle form input changes for edit
     const handleEditFormChange = (e) => {
         const { name, value } = e.target;
-        setEditFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setEditFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    // Handle delete individual leave request
     const handleDeleteLeaveRequest = async () => {
         if (!currentLeave) return;
 
         try {
-            const response = await fetch(`http://localhost:8080/lms/leave/${currentLeave.publicId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            // Remove from UI
-            setLeaveRequests((prev) => prev.filter((leave) => leave.id !== currentLeave.id));
-            // Close dialog
+            await dispatch(deleteLeaveRequest(currentLeave.publicId)).unwrap();
+            dispatch(
+                fetchLeaveData({
+                    isAdmin,
+                    userId: userId || sessionStorage.getItem("userId"),
+                    page: currentPage - 1,
+                    size: pageSize,
+                })
+            );
             handleCloseDialogs();
         } catch (err) {
-            console.error("Error deleting leave request:", err);
-            setError(`Failed to delete leave request: ${err.message}`);
+            console.error("Delete failed:", err);
         }
     };
 
-    // Handle delete all selected leave requests
     const handleDeleteAllSelected = async () => {
         try {
-            // In a real application, you might want to batch delete or send multiple requests
-            // For now, let's handle them one by one
-            const deletePromises = selected.map(id => {
-                const leave = leaveRequests.find(l => l.id === id);
-                if (!leave) return Promise.resolve();
-
-                return fetch(`http://localhost:8080/lms/leave/${leave.publicId}`, {
-                    method: 'DELETE',
-                    credentials: 'include',
-                });
-            });
-
-            await Promise.all(deletePromises);
-
-            // Update UI
-            setLeaveRequests((prev) => prev.filter((leave) => !selected.includes(leave.id)));
-            setSelected([]); // Clear selection after deletion
+            await Promise.all(
+                selected.map((id) => {
+                    const leave = safeLeaveRequests.find((l) => l.id === id);
+                    return dispatch(deleteLeaveRequest(leave.publicId)).unwrap();
+                })
+            );
+            dispatch(
+                fetchLeaveData({
+                    isAdmin,
+                    userId: userId || sessionStorage.getItem("userId"),
+                    page: currentPage - 1,
+                    size: pageSize,
+                })
+            );
+            setSelected([]);
         } catch (err) {
-            console.error("Error deleting selected leave requests:", err);
-            setError(`Failed to delete selected leave requests: ${err.message}`);
+            console.error("Delete failed:", err);
         }
     };
 
-    // Handle save edited leave request
     const handleSaveEditedLeave = async () => {
         if (!currentLeave) return;
 
-        try {
-            // Construct the updated leave object to match backend expectations
-            const updatedLeave = {
-                id: currentLeave.id,
-                publicId: currentLeave.publicId,
-                employeeID: currentLeave.employeeId,
-                fromDate: editFormData.startDate,
-                toDate: editFormData.endDate,
-                description: editFormData.comment,
-                leaveType: editFormData.type,
-                fullDay: currentLeave.fullDay,
-                halfDay: currentLeave.halfDay,
-                late: currentLeave.late,
-                pending: currentLeave.pending,
-                accepted: currentLeave.accepted,
-                canceled: currentLeave.canceled
-            };
+        const updatedLeave = {
+            ...currentLeave,
+            fromDate: editFormData.startDate,
+            toDate: editFormData.endDate,
+            description: editFormData.comment,
+            leaveType: editFormData.type,
+        };
 
-            const response = await fetch(`http://localhost:8080/lms/management/leave/${currentLeave.publicId}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(updatedLeave)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            // Update the item in UI
-            setLeaveRequests(prev =>
-                prev.map(leave => {
-                    if (leave.id === currentLeave.id) {
-                        return {
-                            ...leave,
-                            startDate: editFormData.startDate,
-                            endDate: editFormData.endDate,
-                            comment: editFormData.comment,
-                            leaveTypeName: editFormData.type, // Update leaveTypeName
-                            category: editFormData.type,
-                            type: getLeaveTypeFromName(editFormData.type, leave) // Update type based on the new name
-                        };
-                    }
-                    return leave;
+        /*try {
+            await dispatch(
+                updateLeaveRequest({
+                    id: currentLeave.publicId,
+                    data: updatedLeave,
+                })
+            ).unwrap();
+            dispatch(
+                fetchLeaveData({
+                    isAdmin,
+                    userId: userId || sessionStorage.getItem("userId"),
+                    page: currentPage - 1,
+                    size: pageSize,
                 })
             );
-
             handleCloseDialogs();
         } catch (err) {
-            console.error("Error updating leave request:", err);
-            setError(`Failed to update leave request: ${err.message}`);
-        }
+            console.error("Update failed:", err);
+        }*/
+
+        // For now just close since updateLeaveRequest is commented out
+        handleCloseDialogs();
     };
 
-    // Helper function to determine leave type based on name and leave properties
-    const getLeaveTypeFromName = (typeName, leave) => {
-        if (leave.fullDay) return "Full Day Leave";
-        if (leave.halfDay) return "Half Day Leave";
-        if (leave.absent) return "Absence";
-        if (leave.late) return "Late Arrival";
-        return typeName || "Regular Leave";
+    // Safely extract unique values with fallbacks
+    const leaveTypes = [...new Set(safeLeaveRequests.map((leave) => leave.type).filter(Boolean))];
+    const statuses = [...new Set(safeLeaveRequests.map((leave) => leave.status).filter(Boolean))];
+
+    // Get safe pagination values
+    const safePagination = pagination || {
+        totalPages: 0,
+        totalElements: 0,
+        currentPage: 0,
+        pageSize: 10
     };
 
-    // Get unique leave types for filter dropdown
-    const leaveTypes = [...new Set(leaveRequests.map(leave => leave.type).filter(Boolean))];
-
-    // Get unique statuses for filter dropdown
-    const statuses = [...new Set(leaveRequests.map(leave => leave.status).filter(Boolean))];
-
-    // Get available leave type names from the server data
-    const availableLeaveTypes = [...new Set(leaveRequests
-        .map(leave => leave.leaveTypeName)
-        .filter(Boolean))];
+    // Safely handle leave balances
+    const safeLeaveBalances = Array.isArray(leaveBalances) ? leaveBalances : [];
 
     return (
         <Container maxWidth="lg">
             <CssBaseline />
             <Box sx={{ mt: 4, mb: 4 }}>
                 <Typography variant="h4" gutterBottom>
-                    All Leave Requests
+                    {isAdmin ? "All Leave Requests" : "My Leave Requests"}
                 </Typography>
 
-                {/* Error display */}
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
-                        Error: {error}
+                        {error}
                     </Alert>
                 )}
 
-                {/* Loading indicator */}
+                {balanceError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {balanceError}
+                    </Alert>
+                )}
+
+                {fetchingBalance ? (
+                    <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                        {safeLeaveBalances.map((type, index) => (
+                            <Grid item xs={6} sm={4} key={type.leaveTypeName || `type-${index}`}>
+                                <Card variant="outlined">
+                                    <CardContent>
+                                        <Typography variant="subtitle1">
+                                            {type.leaveTypeName || 'Unknown Type'}
+                                        </Typography>
+                                        <Typography variant="h6" color="primary">
+                                            {type.remainingLeaves || 0} days
+                                        </Typography>
+                                        <Typography variant="caption" color="textSecondary">
+                                            Total: {type.totalLeaves || 0} days
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                    </Grid>
+                )}
+
                 {loading ? (
                     <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
                     <>
-                        {/* Search Bar */}
                         <TextField
                             label="Search by Employee ID, Name, Leave Type or Comments"
                             variant="outlined"
@@ -445,9 +399,9 @@ const PendingLeaves = () => {
                             sx={{ mb: 2 }}
                         />
 
-                        {/* Filters */}
-                        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
-                            {/* Status Filter */}
+                        <Box
+                            sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}
+                        >
                             <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                                 <InputLabel>Filter by Status</InputLabel>
                                 <Select
@@ -456,13 +410,14 @@ const PendingLeaves = () => {
                                     label="Filter by Status"
                                 >
                                     <MenuItem value="All">All</MenuItem>
-                                    {statuses.map(status => (
-                                        <MenuItem key={status} value={status}>{status}</MenuItem>
+                                    {statuses.map((status) => (
+                                        <MenuItem key={status} value={status}>
+                                            {status}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
-                            {/* Type Filter */}
                             <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                                 <InputLabel>Filter by Type</InputLabel>
                                 <Select
@@ -471,13 +426,14 @@ const PendingLeaves = () => {
                                     label="Filter by Type"
                                 >
                                     <MenuItem value="All">All</MenuItem>
-                                    {leaveTypes.map(type => (
-                                        <MenuItem key={type} value={type}>{type}</MenuItem>
+                                    {leaveTypes.map((type) => (
+                                        <MenuItem key={type} value={type}>
+                                            {type}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
-                            {/* Start Date Filter */}
                             <TextField
                                 label="Start Date"
                                 type="date"
@@ -488,7 +444,6 @@ const PendingLeaves = () => {
                                 sx={{ minWidth: 200 }}
                             />
 
-                            {/* End Date Filter */}
                             <TextField
                                 label="End Date"
                                 type="date"
@@ -500,13 +455,19 @@ const PendingLeaves = () => {
                             />
                         </Box>
 
-                        {/* Page Size and Record Count Display */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 2,
+                            }}
+                        >
                             <Typography variant="body2">
-                                Showing {filteredLeaves.length} of {pagination.totalElements} total leave requests
+                                Showing {filteredLeaves.length} of{" "}
+                                {safePagination.totalElements} total requests
                             </Typography>
 
-                            {/* Page Size Selector */}
                             <FormControl variant="outlined" sx={{ minWidth: 120 }}>
                                 <InputLabel>Records per page</InputLabel>
                                 <Select
@@ -518,27 +479,27 @@ const PendingLeaves = () => {
                                     <MenuItem value={10}>10</MenuItem>
                                     <MenuItem value={20}>20</MenuItem>
                                     <MenuItem value={50}>50</MenuItem>
-                                    <MenuItem value={100}>100</MenuItem>
                                 </Select>
                             </FormControl>
                         </Box>
 
-                        {/* Delete All Selected Button */}
                         <Button
                             variant="contained"
                             color="error"
                             onClick={handleDeleteAllSelected}
-                            disabled={selected.length === 0 || selected.some(id => {
-                                const leave = leaveRequests.find(l => l.id === id);
-                                return leave && leave.accepted;
-                            })}
+                            disabled={
+                                selected.length === 0 ||
+                                selected.some((id) => {
+                                    const leave = safeLeaveRequests.find((l) => l.id === id);
+                                    return leave?.accepted;
+                                })
+                            }
                             sx={{ mb: 2 }}
                         >
                             Delete Selected ({selected.length})
                         </Button>
 
-                        {/* Table */}
-                        {leaveRequests.length === 0 ? (
+                        {filteredLeaves.length === 0 ? (
                             <Alert severity="info">No leave requests found.</Alert>
                         ) : (
                             <TableContainer component={Paper}>
@@ -548,9 +509,14 @@ const PendingLeaves = () => {
                                             <TableCell padding="checkbox">
                                                 <Checkbox
                                                     indeterminate={
-                                                        selected.length > 0 && selected.length < filteredLeaves.length
+                                                        selected.length > 0 &&
+                                                        selected.length < filteredLeaves.length
                                                     }
-                                                    checked={selected.length === filteredLeaves.length && filteredLeaves.length > 0}
+                                                    checked={
+                                                        selected.length ===
+                                                        filteredLeaves.length &&
+                                                        filteredLeaves.length > 0
+                                                    }
                                                     onChange={handleSelectAll}
                                                 />
                                             </TableCell>
@@ -563,47 +529,114 @@ const PendingLeaves = () => {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredLeaves.map((leave) => (
-                                            <TableRow key={leave.id}>
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox
-                                                        checked={selected.includes(leave.id)}
-                                                        onChange={() => handleSelect(leave.id)}
-                                                        disabled={leave.accepted}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>{leave.employeeId}</TableCell>
-                                                <TableCell>{leave.type}</TableCell>
-                                                <TableCell>{leave.startDate || "N/A"}</TableCell>
-                                                <TableCell>{leave.endDate || "N/A"}</TableCell>
-                                                <TableCell>{leave.status}</TableCell>
-                                                <TableCell>
-                                                    <IconButton
-                                                        onClick={() => openEditDialog(leave)}
-                                                        disabled={leave.accepted}
-                                                        color="primary"
-                                                    >
-                                                        <EditIcon />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        onClick={() => openDeleteDialog(leave)}
-                                                        disabled={leave.accepted}
-                                                        color="error"
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </TableCell>
-                                            </TableRow>
+                                        {filteredLeaves.map((leave, index) => (
+                                            <React.Fragment key={leave.id || `leave-${index}`}>
+                                                <TableRow>
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox
+                                                            checked={selected.includes(leave.id)}
+                                                            onChange={() => handleSelect(leave.id)}
+                                                            disabled={leave.accepted}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>{leave.employeeId || 'N/A'}</TableCell>
+                                                    <TableCell>{leave.type || 'N/A'}</TableCell>
+                                                    <TableCell>
+                                                        {leave.startDate || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {leave.endDate || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>{leave.status || 'N/A'}</TableCell>
+                                                    <TableCell>
+                                                        <IconButton
+                                                            onClick={() => openEditDialog(leave)}
+                                                            disabled={leave.accepted}
+                                                            color="primary"
+                                                        >
+                                                            <EditIcon />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            onClick={() => openDeleteDialog(leave)}
+                                                            disabled={leave.accepted}
+                                                            color="error"
+                                                        >
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            onClick={() => toggleViewDetails(leave.id)}
+                                                            color="info"
+                                                        >
+                                                            <VisibilityIcon />
+                                                        </IconButton>
+                                                    </TableCell>
+                                                </TableRow>
+                                                {viewDetailsId === leave.id && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={7}>
+                                                            <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                                                                <Typography variant="subtitle1" gutterBottom>
+                                                                    Full Leave Details
+                                                                </Typography>
+                                                                <Grid container spacing={2}>
+                                                                    <Grid item xs={12} sm={6}>
+                                                                        <Typography><strong>Public ID:</strong> {leave.publicId || 'N/A'}</Typography>
+                                                                        <Typography><strong>Submit Date:</strong> {leave.submitDate || 'N/A'}</Typography>
+                                                                        <Typography><strong>Description:</strong> {leave.description || 'N/A'}</Typography>
+                                                                        <Typography><strong>Number of Days:</strong> {leave.numOfDays || 'N/A'}</Typography>
+                                                                        <Typography><strong>Is No Pay:</strong> {leave.isNoPay ? 'Yes' : 'No'}</Typography>
+                                                                    </Grid>
+                                                                    <Grid item xs={12} sm={6}>
+                                                                        <Typography><strong>Status Flags:</strong></Typography>
+                                                                        <Typography><strong>Pending:</strong> {leave.pending ? 'Yes' : 'No'}</Typography>
+                                                                        <Typography><strong>Accepted:</strong> {leave.accepted ? 'Yes' : 'No'}</Typography>
+                                                                        <Typography><strong>Canceled:</strong> {leave.canceled ? 'Yes' : 'No'}</Typography>
+                                                                        <Typography><strong>Manual Request:</strong> {leave.manualRequest ? 'Yes' : 'No'}</Typography>
+                                                                    </Grid>
+                                                                    {leave.adminsTra && leave.adminsTra.length > 0 && (
+                                                                        <Grid item xs={12}>
+                                                                            <Typography variant="subtitle2" gutterBottom>
+                                                                                Approval Chain:
+                                                                            </Typography>
+                                                                            <Table size="small">
+                                                                                <TableHead>
+                                                                                    <TableRow>
+                                                                                        <TableCell>Admin ID</TableCell>
+                                                                                        <TableCell>Name</TableCell>
+                                                                                        <TableCell>Email</TableCell>
+                                                                                        <TableCell>Priority</TableCell>
+                                                                                        <TableCell>Status</TableCell>
+                                                                                    </TableRow>
+                                                                                </TableHead>
+                                                                                <TableBody>
+                                                                                    {leave.adminsTra.map((admin, idx) => (
+                                                                                        <TableRow key={`admin-${idx}`}>
+                                                                                            <TableCell>{admin.employeeId || 'N/A'}</TableCell>
+                                                                                            <TableCell>{`${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'N/A'}</TableCell>
+                                                                                            <TableCell>{admin.email || 'N/A'}</TableCell>
+                                                                                            <TableCell>{admin.highestRolePriority || 'N/A'}</TableCell>
+                                                                                            <TableCell>{admin.accepted ? 'Approved' : 'Pending'}</TableCell>
+                                                                                        </TableRow>
+                                                                                    ))}
+                                                                                </TableBody>
+                                                                            </Table>
+                                                                        </Grid>
+                                                                    )}
+                                                                </Grid>
+                                                            </Box>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </React.Fragment>
                                         ))}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
                         )}
 
-                        {/* Pagination Controls */}
                         <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
                             <Pagination
-                                count={pagination.totalPages}
+                                count={safePagination.totalPages}
                                 page={currentPage}
                                 onChange={handlePageChange}
                                 color="primary"
@@ -612,8 +645,12 @@ const PendingLeaves = () => {
                             />
                         </Box>
 
-                        {/* Edit Dialog */}
-                        <Dialog open={editDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
+                        <Dialog
+                            open={editDialogOpen}
+                            onClose={handleCloseDialogs}
+                            maxWidth="sm"
+                            fullWidth
+                        >
                             <DialogTitle>Edit Leave Request</DialogTitle>
                             <DialogContent>
                                 <Box sx={{ mt: 2 }}>
@@ -646,9 +683,13 @@ const PendingLeaves = () => {
                                             label="Leave Type"
                                         >
                                             <MenuItem value="Annual Leave">Annual Leave</MenuItem>
-                                            <MenuItem value="Medical Leave">Medical Leave</MenuItem>
+                                            <MenuItem value="Medical Leave">
+                                                Medical Leave
+                                            </MenuItem>
                                             <MenuItem value="Sick Leave">Sick Leave</MenuItem>
-                                            <MenuItem value="Casual Leave">Casual Leave</MenuItem>
+                                            <MenuItem value="Casual Leave">
+                                                Casual Leave
+                                            </MenuItem>
                                         </Select>
                                     </FormControl>
                                     <TextField
@@ -665,13 +706,16 @@ const PendingLeaves = () => {
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={handleCloseDialogs}>Cancel</Button>
-                                <Button onClick={handleSaveEditedLeave} variant="contained" color="primary">
+                                <Button
+                                    onClick={handleSaveEditedLeave}
+                                    variant="contained"
+                                    color="primary"
+                                >
                                     Save Changes
                                 </Button>
                             </DialogActions>
                         </Dialog>
 
-                        {/* Delete Confirmation Dialog */}
                         <Dialog
                             open={deleteDialogOpen}
                             onClose={handleCloseDialogs}
@@ -685,7 +729,11 @@ const PendingLeaves = () => {
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={handleCloseDialogs}>Cancel</Button>
-                                <Button onClick={handleDeleteLeaveRequest} color="error" autoFocus>
+                                <Button
+                                    onClick={handleDeleteLeaveRequest}
+                                    color="error"
+                                    autoFocus
+                                >
                                     Delete
                                 </Button>
                             </DialogActions>

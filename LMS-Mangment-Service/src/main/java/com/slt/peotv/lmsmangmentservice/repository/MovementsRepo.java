@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
+import org.apache.zookeeper.Op;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.CrudRepository;
@@ -14,10 +15,21 @@ import java.util.Optional;
 public interface MovementsRepo extends CrudRepository<MovementsEntity, Long> {
     Page<MovementsEntity> findAll(Pageable pageable);
     Page<MovementsEntity> findAllByEmployeeId(String employeeID, Pageable pageable);
+    List<MovementsEntity> findAllByEmployeeId(String employeeID);
+    /*List<MovementsEntity> findAllByEmployeeIdAndReqDate(String employeeId, Date reqDate);*/
+    Optional<MovementsEntity> findAllByEmployeeIdAndReqDate(String employeeId, Date reqDate);
+
     Page<MovementsEntity> findAllByUserId(String userId, Pageable pageable);
+    List<MovementsEntity> findAllByUserId(String userId);
     Optional<MovementsEntity> findByPublicId(String publicId);
     /*List<MovementsEntity> findByDueDateBefore(Date currentDate);
     List<MovementsEntity> findByDueDate(Date dueDate);*/
     List<MovementsEntity> findByHappenDate(Date happenDate);
     List<MovementsEntity> findByIsPendingAndEmployeeId(Boolean isPending, String employeeID);
+
+    List<MovementsEntity> findByEmployeeIdAndReqDateBetween(
+            String employeeId,
+            Date startDate,
+            Date endDate
+    );
 }

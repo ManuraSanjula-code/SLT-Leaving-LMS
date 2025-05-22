@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.Service.Employee;
 
-import com.slt.radio.rosterservice.Model.Obj.EmployeeShift;
-import com.slt.radio.rosterservice.Model.Dto.EmployeeShiftDto;
+import com.slt.radio.rosterservice.Model.One.Obj.EmployeeShift;
+import com.slt.radio.rosterservice.Model.One.Dto.EmployeeShiftDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

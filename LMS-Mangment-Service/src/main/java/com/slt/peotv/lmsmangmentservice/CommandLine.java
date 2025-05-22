@@ -5,7 +5,6 @@ import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.feign_client.UserClient;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
-import com.slt.peotv.lmsmangmentservice.security.JwtConfiguration;
 import com.slt.peotv.lmsmangmentservice.security.TokenCreator;
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
@@ -13,11 +12,8 @@ import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 @Component

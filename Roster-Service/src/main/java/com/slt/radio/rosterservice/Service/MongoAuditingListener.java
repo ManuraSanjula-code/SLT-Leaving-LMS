@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.slt.radio.rosterservice.Model.Roster;
+import com.slt.radio.rosterservice.Model.One.Roster;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

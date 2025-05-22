@@ -27,24 +27,27 @@ import {
     Alert
 } from "@mui/material";
 import { Check as CheckIcon, Close as CloseIcon } from "@mui/icons-material";
-import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import {
+    fetchUnsuccessfulLeaves,
+    resolveLeave,
+    bulkResolveLeaves,
+    setCurrentPage,
+    setPageSize,
+    clearError
+} from "../../../../lib/redux/redux-lms/unsuccessful-leaves/unsuccessfulLeavesSlice";
 
 const UnsuccessfulLeaves = ({ isAdmin = false }) => {
-    // State for data and pagination
-    const [leaveData, setLeaveData] = useState({
-        content: [],
-        totalPages: 0,
-        totalElements: 0,
-        number: 0,
-        size: 10
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [pageSize, setPageSize] = useState(10); // Default page size
+    const dispatch = useDispatch();
+    const {
+        leaves,
+        loading,
+        error,
+        currentPage,
+        pageSize
+    } = useSelector((state) => state.unsuccessfulLeaves);
 
-    // State for filters
+    // Local state for filters and selection
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [resolveFilter, setResolveFilter] = useState("All");
@@ -53,58 +56,22 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
     const [selected, setSelected] = useState([]);
     const reduxUser = useSelector((state) => state.auth);
 
-    // Fetch data from the server
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-
-            // Get userId from sessionStorage
-            const userId = sessionStorage.getItem('userId');
-
-            if (!userId) {
-                setError("User ID not found. Please login again.");
-                setLoading(false);
-                return;
-            }
-
-            // Determine the endpoint based on isAdmin flag
-            const endpoint = isAdmin
-                ? `http://localhost:8080/lms/un-successful`
-                : `http://localhost:8080/lms/un-successful/${userId}`;
-
-
-            const response = await axios.get(endpoint, {
-                params: {
-                    page: currentPage,
-                    size: pageSize // Use dynamic page size
-                },
-                withCredentials: true
-            });
-
-            setLeaveData(response.data);
-            setError(null);
-        } catch (err) {
-            console.error("Error fetching un-successful leaves:", err);
-            setError("Failed to load data. Please try again.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Fetch data on component mount and when page or page size changes
+    // Fetch data when page or page size changes
     useEffect(() => {
-        fetchData();
-    }, [currentPage, pageSize]);
+        const userId = sessionStorage.getItem('userId');
+        if (userId) {
+            dispatch(fetchUnsuccessfulLeaves({ isAdmin, currentPage, pageSize, userId }));
+        }
+    }, [currentPage, pageSize, dispatch, isAdmin]);
 
     // Handle page change
     const handlePageChange = (event, value) => {
-        setCurrentPage(value - 1); // API uses 0-based indexing
+        dispatch(setCurrentPage(value - 1)); // API uses 0-based indexing
     };
 
     // Handle page size change
     const handlePageSizeChange = (event) => {
-        setPageSize(event.target.value);
-        setCurrentPage(0); // Reset to first page when changing page size
+        dispatch(setPageSize(event.target.value));
     };
 
     // Handle search input change
@@ -123,21 +90,12 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
     };
 
     // Handle resolving a leave
-    const handleResolveLeave = async (id) => {
-        try {
-            await axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {}, {
-                withCredentials: true
-            });
-            // Refresh data after resolving
-            fetchData();
-        } catch (err) {
-            console.error(`Error resolving leave ID ${id}:`, err);
-            setError("Failed to resolve leave request. Please try again.");
-        }
+    const handleResolveLeave = (id) => {
+        dispatch(resolveLeave(id));
     };
 
     // Filter leaves based on search query and filters
-    const filteredLeaves = leaveData.content?.filter((leave) => {
+    const filteredLeaves = leaves.content?.filter((leave) => {
         const matchesSearchQuery =
             leave.employeeID?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             leave.publicId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,21 +146,9 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
     };
 
     // Handle bulk resolution
-    const handleBulkResolve = async () => {
-        try {
-            await Promise.all(
-                selected.map((id) =>
-                    axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {}, {
-                        withCredentials: true
-                    })
-                )
-            );
-            setSelected([]);
-            fetchData();
-        } catch (err) {
-            console.error("Error resolving selected leaves:", err);
-            setError("Failed to resolve selected leaves. Please try again.");
-        }
+    const handleBulkResolve = () => {
+        dispatch(bulkResolveLeaves(selected));
+        setSelected([]);
     };
 
     // Format date for display
@@ -211,6 +157,13 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         const date = new Date(dateString);
         return date.toLocaleDateString();
     };
+
+    // Clear error when component unmounts or when alert is closed
+    useEffect(() => {
+        return () => {
+            dispatch(clearError());
+        };
+    }, [dispatch]);
 
     return (
         <Box
@@ -255,7 +208,7 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
 
                     {/* Error Alert */}
                     {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
+                        <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
                             {error}
                         </Alert>
                     )}
@@ -423,15 +376,15 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                             {/* Pagination controls without rows per page selector */}
                             <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mt: 2 }}>
                                 <Typography variant="body2" sx={{ mr: 2 }}>
-                                    {leaveData.totalElements > 0 ?
+                                    {leaves.totalElements > 0 ?
                                         `Showing ${currentPage * pageSize + 1} to 
-                                        ${Math.min((currentPage + 1) * pageSize, leaveData.totalElements)} 
-                                        of ${leaveData.totalElements} entries` :
+                                        ${Math.min((currentPage + 1) * pageSize, leaves.totalElements)} 
+                                        of ${leaves.totalElements} entries` :
                                         'No entries to display'}
                                 </Typography>
                                 <Pagination
-                                    count={leaveData.totalPages || 1}
-                                    page={leaveData.number + 1}
+                                    count={leaves.totalPages || 1}
+                                    page={currentPage + 1}
                                     onChange={handlePageChange}
                                     color="primary"
                                 />

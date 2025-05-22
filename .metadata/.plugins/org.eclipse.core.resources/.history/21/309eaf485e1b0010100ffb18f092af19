@@ -1,0 +1,27 @@
+package com.slt.peotv.lmsmangmentservice.entity.Leave;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "leave_admins")
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
+@AllArgsConstructor
+@NoArgsConstructor
+public class LeaveAdminsEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String movementId;
+    private String userId;
+    private String sltId;
+    private String employeeId;
+    private Date approvedDate;
+    private Integer highestRolePriority;
+    private Boolean isAccepted;
+}

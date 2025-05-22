@@ -14,6 +14,15 @@ public class InOutDTO {
     private Boolean isMoaning = false;
     private Boolean isEvening = false;
     private Boolean isPast = false;
+    private String terminalID;
+
+    public String getTerminalID() {
+        return terminalID;
+    }
+
+    public void setTerminalID(String terminalID) {
+        this.terminalID = terminalID;
+    }
 
     public String getEmployeeID() {
         return employeeID;

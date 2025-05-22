@@ -1,11 +1,13 @@
 package com.slt.radio.rosterservice.Mapper.Impl;
 
 import com.slt.radio.rosterservice.Mapper.EmployeeMapper;
-import com.slt.radio.rosterservice.Model.Dto.EmployeeDto;
-import com.slt.radio.rosterservice.Model.Employeee.Employee;
+import com.slt.radio.rosterservice.Model.One.Dto.EmployeeDto;
+import com.slt.radio.rosterservice.Model.One.Employeee.Employee;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -16,14 +18,28 @@ public class EmployeeMapperImpl implements EmployeeMapper {
         if (dto == null) {
             return null;
         }
+        int yearFromLocalDate = LocalDate.now().getYear();
+
+        Map<String, Map<String, String>> shiftCodeMap = new HashMap<>();
+        Map<String, String> teams = new HashMap<>();
 
         Employee employee = new Employee();
         employee.setId(dto.getId());
+        employee.setTeamId(dto.getTeamId());
         employee.setEmployeeId(dto.getEmployeeId());
         employee.setName(dto.getName());
         employee.setMobileNo(dto.getMobileNo());
         employee.setShortName(dto.getShortName());
         employee.setActive(dto.isActive());
+
+        String year = String.valueOf(yearFromLocalDate);
+        SimpleDateFormat monthFormat = new SimpleDateFormat("MMMM", Locale.ENGLISH);
+        String currentMonth = monthFormat.format(new Date());
+
+        teams.put(currentMonth, dto.getTeamId());
+        shiftCodeMap.put(year, teams);
+
+        employee.setShiftCodeMap(shiftCodeMap);
 
         return employee;
     }

@@ -28,14 +28,13 @@ import {
 import { CameraAlt as CameraIcon } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { putUserProfile } from '../../api';
-import { setUserDetails} from '../../redux-user/authSlice';
+import { setUserDetails} from '../../../../lib/redux/redux-user/authSlice';
 import isEqual from 'lodash/isEqual';
 import debounce from 'lodash/debounce';
 import throttle from 'lodash/throttle';
 import SuccessDialog from '../SuccessDialog';
 import ErrorDialog from '../ErrorDialog';
 
-// Constants for better maintainability
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const DEBOUNCE_DELAY = 300;
 const THROTTLE_DELAY = 1000;
@@ -262,6 +261,7 @@ const UserProfile = () => {
     setPreviewImage(null);
     setSelectedFile(null);
     setErrors({});
+    setIsSubmitting(false)
   }, []);
 
   const handleFileChange = useCallback((event) => {
@@ -303,6 +303,7 @@ const UserProfile = () => {
       setOriginalProfile(prev => ({ ...prev, profilePic: newProfilePic }));
 
       handleClose();
+
       await showSuccessDialog();
     } catch (error) {
       console.error('Upload failed:', error);

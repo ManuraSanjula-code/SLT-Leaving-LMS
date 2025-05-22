@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import dynamic from 'next/dynamic';
 import { useDispatch } from 'react-redux';
-import { setCurrentAdminPage } from '../../../redux-lms/managementSlice';
+import { setCurrentAdminPage } from '../../../../../lib/redux/redux-lms/user/managementSlice';
 
 const EmployeeSelectionDialog = dynamic(() => import('./EmployeeSelectionDialog'), {
     ssr: false,

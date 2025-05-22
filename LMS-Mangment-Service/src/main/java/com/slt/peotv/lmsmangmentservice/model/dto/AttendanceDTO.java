@@ -29,6 +29,33 @@ public class AttendanceDTO {
     private Date dueDateForUA;
     private Boolean active = true;
     private Boolean nopay = false;
+    private Boolean isManual = false;
+    private String userId;
+    private String terminalID;
+
+    public String getTerminalID() {
+        return terminalID;
+    }
+
+    public void setTerminalID(String terminalID) {
+        this.terminalID = terminalID;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public Boolean getManual() {
+        return isManual;
+    }
+
+    public void setManual(Boolean manual) {
+        isManual = manual;
+    }
 
     public Long getId() {
         return id;
@@ -228,5 +255,38 @@ public class AttendanceDTO {
 
     public void setNopay(Boolean nopay) {
         this.nopay = nopay;
+    }
+
+    @Override
+    public String toString() {
+        return "AttendanceDTO{" +
+                "id=" + id +
+                ", publicId='" + publicId + '\'' +
+                ", date=" + date +
+                ", employeeID='" + employeeID + '\'' +
+                ", isFullDay=" + isFullDay +
+                ", arrivalDate=" + arrivalDate +
+                ", arrivalTime=" + arrivalTime +
+                ", leftTime=" + leftTime +
+                ", isLate=" + isLate +
+                ", lateCover=" + lateCover +
+                ", isHalfDay=" + isHalfDay +
+                ", isFullLeave=" + isFullLeave +
+                ", isShortLeave=" + isShortLeave +
+                ", isAbsent=" + isAbsent +
+                ", isUnSuccessful=" + isUnSuccessful +
+                ", isNoPay=" + isNoPay +
+                ", issues=" + issues +
+                ", isUnAuthorized=" + isUnAuthorized +
+                ", resolve=" + resolve +
+                ", leaveSuccess=" + leaveSuccess +
+                ", leaveReq=" + leaveReq +
+                ", issueDescription='" + issueDescription + '\'' +
+                ", dueDateForUA=" + dueDateForUA +
+                ", active=" + active +
+                ", nopay=" + nopay +
+                ", isManual=" + isManual +
+                ", userId='" + userId + '\'' +
+                '}';
     }
 }

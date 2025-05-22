@@ -93,4 +93,12 @@ public class AttendanceEntity {
     @Builder.Default
     private Boolean viaLeave = false;
 
+    @Builder.Default
+    private Boolean isManual = false;
+
+    @Column(name = "TerminalID", nullable = false)
+    private String terminalID;
+
+    @Builder.Default
+    private Boolean isHoliday = false;
 }

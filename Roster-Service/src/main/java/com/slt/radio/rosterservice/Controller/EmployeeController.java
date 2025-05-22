@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.Controller;
 
-import com.slt.radio.rosterservice.Model.Dto.EmployeeDto;
+import com.slt.radio.rosterservice.Model.One.Dto.EmployeeDto;
 import com.slt.radio.rosterservice.Service.Employee.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

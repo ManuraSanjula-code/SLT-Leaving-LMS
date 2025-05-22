@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { getCookie } from 'cookies-next';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchData } from './api';
-import { setCredentials, setUserDetails, setError, setLoading } from '@/app/redux-user/authSlice';
+import { setCredentials, setUserDetails, setError, setLoading } from '../../lib/redux/redux-user/authSlice';
 import LoadingSpinner from './components/LoadingSpinner'; // Import the spinner
 
 const ProtectedRoute = ({ children }) => {

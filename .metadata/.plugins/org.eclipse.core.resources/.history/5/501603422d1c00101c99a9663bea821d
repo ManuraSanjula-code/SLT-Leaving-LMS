@@ -1,0 +1,93 @@
+package com.slt.peotv.lmsmangmentservice.entity.Movement;
+
+import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
+import jakarta.persistence.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import java.util.Date;
+import java.util.List;
+
+import lombok.*;
+
+@Entity
+@Table(name = "movements")
+@Setter
+@Getter
+@EqualsAndHashCode
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class MovementsEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String publicId; //-
+
+    @Column(name = "In_Time", length = 45)
+    private String inTime;
+
+    @Column(name = "Out_Time", length = 45)
+    private String outTime;
+
+    @Column(name = "comment", columnDefinition = "TEXT")
+    private String comment; //-
+
+    @Column(name = "Log_Time")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date logTime; //-
+
+    @Column(name = "category", length = 45)
+    private String category; //-
+
+    @Column(name = "Destination", length = 45)
+    private String destination; //-
+
+    @Column(name = "Employee_ID", length = 45)
+    private String employeeId; //-
+
+    @Column(name = "User_ID", length = 45)
+    private String userId; //-
+
+    @Column(name = "REQ_TIME", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date reqDate; //-
+
+    @Enumerated(EnumType.STRING)  // FIXED: Enum mapping
+    private MovementType movementType; //-
+
+    @Column(name = "ATT_SYNC")
+    @Builder.Default
+    private Integer attSync = 0;
+
+    private Date happenDate; /// The Day situation happened to make a movement to resolve it
+
+    @Builder.Default
+    private Boolean isPending = false; //-
+    @Builder.Default
+    private Boolean isExpired = false; //-
+    @Builder.Default
+    private Boolean isAccepted = false; //-
+    @Builder.Default
+    private Boolean isAbsent = false; //-
+    @Builder.Default
+    private Boolean isUnSuccessfulAttdate = false; //-
+    @Builder.Default
+    private Boolean unAuthorized = false;
+    @Builder.Default
+    private Boolean resolve = false; //-
+
+    @Builder.Default
+    private Boolean isHalfDay = false; //-
+
+    @OneToOne
+    @JoinColumn(name = "attendance_id")
+    private AttendanceEntity attendance;
+
+    @OneToMany
+    private List<MovementAdminsEntity> admins;
+}

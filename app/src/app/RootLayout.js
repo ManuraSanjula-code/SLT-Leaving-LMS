@@ -2,7 +2,7 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import './styles/globals.css';
-import { ReduxProvider } from './redux-user/provider';
+import { ReduxProvider } from '../../lib/redux/provider';
 import AuthInitializer from './AuthInitializer';
 import Notification from './Notification';
 import ClientProtectedRoute from './ClientProtectedRoute';

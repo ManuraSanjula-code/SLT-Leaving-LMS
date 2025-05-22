@@ -1,0 +1,596 @@
+package com.slt.peotv.userservice.lms.utils;
+
+import com.slt.peotv.userservice.lms.entity.AddressEntity;
+import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.slt.peotv.userservice.lms.entity.UserEntity;
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.repository.*;
+import com.slt.peotv.userservice.lms.shared.dto.*;
+import com.slt.peotv.userservice.lms.shared.model.request.UserReq;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class UserMapper {
+
+    public static RoleEntity mapRoleToRoleEntity(UserEntity userEntity) {
+        RoleEntity role = new RoleEntity();
+        role.setPriority(200);
+        role.setName("ROLE_TEMP");
+        role.setUsers(Set.of(userEntity));
+
+        // Create authorities
+        Set<AuthorityEntity> authorities = new HashSet<>();
+
+        AuthorityEntity authority_read = new AuthorityEntity();
+        authority_read.setName("READ_AUTHORITY");
+        authority_read.setWeight(1);
+        authority_read.setRoles(Set.of(role));
+        authorities.add(authority_read);
+
+        AuthorityEntity authority_write = new AuthorityEntity();
+        authority_write.setName("WRITE_AUTHORITY");
+        authority_write.setWeight(1);
+        authority_write.setRoles(Set.of(role));
+        authorities.add(authority_write);
+
+        AuthorityEntity authority_delete = new AuthorityEntity();
+        authority_delete.setName("DELETE_AUTHORITY");
+        authority_delete.setWeight(1);
+        authority_delete.setRoles(Set.of(role));
+        authorities.add(authority_delete);
+
+        role.setAuthorities(authorities);
+        return role;
+    }
+    
+    public static RoleEntity mapRoleToRoleEntityForLms(UserEntity userEntity) {
+        RoleEntity role = new RoleEntity();
+        role.setPriority(200);
+        role.setName("ROLE_LMS");
+        role.setUsers(Set.of(userEntity));
+
+        // Create authorities
+        Set<AuthorityEntity> authorities = new HashSet<>();
+
+        AuthorityEntity authority_read = new AuthorityEntity();
+        authority_read.setName("READ_AUTHORITY");
+        authority_read.setWeight(1);
+        authority_read.setRoles(Set.of(role));
+        authorities.add(authority_read);
+
+        AuthorityEntity authority_write = new AuthorityEntity();
+        authority_write.setName("WRITE_AUTHORITY");
+        authority_write.setWeight(1);
+        authority_write.setRoles(Set.of(role));
+        authorities.add(authority_write);
+
+        AuthorityEntity authority_delete = new AuthorityEntity();
+        authority_delete.setName("DELETE_AUTHORITY");
+        authority_delete.setWeight(1);
+        authority_delete.setRoles(Set.of(role));
+        authorities.add(authority_delete);
+
+        role.setAuthorities(authorities);
+        return role;
+    }
+    
+    public static SectionEntity mapToSectionEntity(SectionDTO sectionDTO, UserRepository userRepository) {
+        SectionEntity sectionEntity = new SectionEntity();
+
+        // Map simple fields
+        sectionEntity.setId(sectionDTO.getId());
+        sectionEntity.setSection(sectionDTO.getSection());
+        sectionEntity.setPublicId(sectionDTO.getPublicId());
+
+        // Map users (convert UserDto to UserEntity)
+        if (sectionDTO.getUsers() != null) {
+            Collection<UserEntity> userEntities = sectionDTO.getUsers().stream()
+                    .map(userDto -> userRepository.findByUserId(userDto.getUserId())) // Fetch UserEntity from the database
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            sectionEntity.setUsers(userEntities);
+        }
+
+        return sectionEntity;
+    }
+
+    public static SectionDTO mapToSectionDTO(SectionEntity sectionEntity) {
+        SectionDTO sectionDTO = new SectionDTO();
+
+        // Map simple fields
+        sectionDTO.setId(sectionEntity.getId());
+        sectionDTO.setSection(sectionEntity.getSection());
+        sectionDTO.setPublicId(sectionEntity.getPublicId());
+
+        // Map users (convert UserEntity to UserDto)
+        if (sectionEntity.getUsers() != null) {
+            List<UserDto> userDtos = sectionEntity.getUsers().stream()
+                    .map(UserMapper::mapToUserDto) // Assuming UserMapper.mapToUserDto exists
+                    .collect(Collectors.toList());
+            sectionDTO.setUsers(userDtos);
+        }
+
+        return sectionDTO;
+    }
+    public static UserEntity mapToUserEntity(UserDto userDto, RoleRepository roleRepository,
+                                             ProfilesRepo profilesRepository,
+                                             SectionRepo sectionRepository,
+                                             UserRepository userRepository) {
+        UserEntity userEntity = new UserEntity();
+
+        // Map simple fields
+        userEntity.setId(userDto.getId());
+        userEntity.setUserId(userDto.getUserId());
+        userEntity.setFirstName(userDto.getFirstName());
+        userEntity.setLastName(userDto.getLastName());
+        userEntity.setEmail(userDto.getEmail());
+        userEntity.setEmployeeId(userDto.getEmployeeId());
+        userEntity.setSltId(userDto.getSltId());
+        userEntity.setEncryptedPassword(userDto.getEncryptedPassword());
+        userEntity.setEmailVerificationToken(userDto.getEmailVerificationToken());
+        userEntity.setEmailVerificationStatus(userDto.getEmailVerificationStatus());
+        userEntity.setProfilePic(userDto.getProfilePic());
+        userEntity.setGender(userDto.getGender());
+        userEntity.setPhone(userDto.getPhone());
+        userEntity.setIsSltEmp(userDto.getIsSltEmp());
+        userEntity.setIsSltIntern(userDto.getIsSltIntern());
+        userEntity.setActive(userDto.getActive());
+        userEntity.setRoaster(userDto.getRoaster());
+
+        // Map addresses
+        if (userDto.getAddresses() != null) {
+            List<AddressEntity> addressEntities = userDto.getAddresses().stream()
+                    .map(UserMapper::mapToAddressEntity)
+                    .collect(Collectors.toList());
+            userEntity.setAddresses(addressEntities);
+        }
+
+        // Map roles
+        if (userDto.getRoles() != null) {
+            Collection<RoleEntity> roleEntities = userDto.getRoles().stream()
+                    .map(roleName -> roleRepository.findByName(roleName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setRoles(roleEntities);
+        }
+
+        // Map sections
+        if (userDto.getSections() != null) {
+            Collection<SectionEntity> sectionEntities = userDto.getSections().stream()
+                    .map(sectionName -> sectionRepository.findBySection(sectionName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setSections(sectionEntities);
+        }
+
+        // Map profiles
+        if (userDto.getProfiles() != null) {
+            Collection<ProfilesEntity> profilesEntities = userDto.getProfiles().stream()
+                    .map(profileName -> profilesRepository.findByName(profileName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setProfiles(profilesEntities);
+        }
+
+        return userEntity;
+    }
+    public static UserEntity mapToUserEntity(UserReq userDto, RoleRepository roleRepository,
+                                             ProfilesRepo profilesRepository,
+                                             SectionRepo sectionRepository,
+                                             UserRepository userRepository) {
+        UserEntity userEntity = new UserEntity();
+
+        // Map simple fields
+        userEntity.setId(userDto.getId());
+        userEntity.setUserId(userDto.getUserId());
+        userEntity.setFirstName(userDto.getFirstName());
+        userEntity.setLastName(userDto.getLastName());
+        userEntity.setEmail(userDto.getEmail());
+        userEntity.setEmployeeId(userDto.getEmployeeId());
+        userEntity.setSltId(userDto.getSltId());
+        userEntity.setEncryptedPassword(userDto.getEncryptedPassword());
+        userEntity.setEmailVerificationToken(userDto.getEmailVerificationToken());
+        userEntity.setEmailVerificationStatus(userDto.getEmailVerificationStatus());
+        userEntity.setProfilePic(userDto.getProfilePic());
+        userEntity.setGender(userDto.getGender());
+        userEntity.setPhone(userDto.getPhone());
+        userEntity.setIsSltEmp(userDto.getIsSltEmp());
+        userEntity.setIsSltIntern(userDto.getIsSltIntern());
+        userEntity.setActive(userDto.getActive());
+        userEntity.setRoaster(userDto.getRoaster());
+
+        // Map addresses
+        if (userDto.getAddresses() != null) {
+            List<AddressEntity> addressEntities = userDto.getAddresses().stream()
+                    .map(UserMapper::mapToAddressEntity)
+                    .collect(Collectors.toList());
+            userEntity.setAddresses(addressEntities);
+        }
+
+        // Map roles
+        if (userDto.getRoles() != null) {
+            Collection<RoleEntity> roleEntities = userDto.getRoles().stream()
+                    .map(roleName -> roleRepository.findByName(roleName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setRoles(roleEntities);
+        }
+
+        // Map sections
+        if (userDto.getSections() != null) {
+            Collection<SectionEntity> sectionEntities = userDto.getSections().stream()
+                    .map(sectionName -> sectionRepository.findBySection(sectionName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setSections(sectionEntities);
+        }
+
+        // Map profiles
+        if (userDto.getProfiles() != null) {
+            Collection<ProfilesEntity> profilesEntities = userDto.getProfiles().stream()
+                    .map(profileName -> profilesRepository.findByName(profileName))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            userEntity.setProfiles(profilesEntities);
+        }
+
+       
+        return userEntity;
+    }
+
+    // Map AddressDTO to AddressEntity
+    public static AddressEntity mapToAddressEntity(AddressDTO addressDTO) {
+        AddressEntity addressEntity = new AddressEntity();
+        addressEntity.setId(addressDTO.getId());
+        addressEntity.setAddressId(addressDTO.getAddressId());
+        addressEntity.setCity(addressDTO.getCity());
+        addressEntity.setCountry(addressDTO.getCountry());
+        addressEntity.setStreetName(addressDTO.getStreetName());
+        addressEntity.setPostalCode(addressDTO.getPostalCode());
+        addressEntity.setIsDefault(addressDTO.getIsDefault());
+        return addressEntity;
+    }
+    public static AddressEntity mapToAddressEntity_(AddressDTO addressDTO) {
+        AddressEntity addressEntity = new AddressEntity();
+        addressEntity.setCity(addressDTO.getCity());
+        addressEntity.setCountry(addressDTO.getCountry());
+        addressEntity.setStreetName(addressDTO.getStreetName());
+        addressEntity.setPostalCode(addressDTO.getPostalCode());
+        addressEntity.setIsDefault(addressDTO.getIsDefault());
+        return addressEntity;
+    }
+    public static UserDto mapToUserDto(UserEntity userEntity) {
+        UserDto userDto = new UserDto();
+
+        // Map simple fields
+        userDto.setId(userEntity.getId());
+        userDto.setUserId(userEntity.getUserId());
+        userDto.setFirstName(userEntity.getFirstName());
+        userDto.setLastName(userEntity.getLastName());
+        userDto.setEmail(userEntity.getEmail());
+        userDto.setEmployeeId(userEntity.getEmployeeId());
+        userDto.setSltId(userEntity.getSltId());
+        userDto.setEncryptedPassword(userEntity.getEncryptedPassword());
+        userDto.setEmailVerificationToken(userEntity.getEmailVerificationToken());
+        userDto.setEmailVerificationStatus(userEntity.getEmailVerificationStatus());
+        userDto.setProfilePic(userEntity.getProfilePic());
+        userDto.setGender(userEntity.getGender());
+        userDto.setPhone(userEntity.getPhone());
+        userDto.setIsSltEmp(userEntity.getIsSltEmp());
+        userDto.setIsSltIntern(userEntity.getIsSltIntern());
+        userDto.setActive(userEntity.getActive());
+        userDto.setRoaster(userEntity.getRoaster());
+
+        // Map addresses
+        if (userEntity.getAddresses() != null) {
+            List<AddressDTO> addressDTOs = userEntity.getAddresses().stream()
+                    .map(UserMapper::mapToAddressDTO)
+                    .collect(Collectors.toList());
+            userDto.setAddresses(addressDTOs);
+        }
+
+        // Map roles
+        if (userEntity.getRoles() != null) {
+            Collection<String> roleNames = userEntity.getRoles().stream()
+                    .map(RoleEntity::getName)
+                    .collect(Collectors.toList());
+            userDto.setRoles(roleNames);
+        }
+
+        // Map sections
+        if (userEntity.getSections() != null) {
+            Collection<String> sectionNames = userEntity.getSections().stream()
+                    .map(SectionEntity::getSection)
+                    .collect(Collectors.toList());
+            userDto.setSections(sectionNames);
+        }
+
+        // Map profiles
+        if (userEntity.getProfiles() != null) {
+            Collection<String> profileNames = userEntity.getProfiles().stream()
+                    .map(ProfilesEntity::getName)
+                    .collect(Collectors.toList());
+            userDto.setProfiles(profileNames);
+        }
+
+      
+        return userDto;
+    }
+
+    // Map AddressEntity to AddressDTO
+    public static AddressDTO mapToAddressDTO(AddressEntity addressEntity) {
+        AddressDTO addressDTO = new AddressDTO();
+        addressDTO.setId(addressEntity.getId());
+        addressDTO.setAddressId(addressEntity.getAddressId());
+        addressDTO.setCity(addressEntity.getCity());
+        addressDTO.setCountry(addressEntity.getCountry());
+        addressDTO.setStreetName(addressEntity.getStreetName());
+        addressDTO.setPostalCode(addressEntity.getPostalCode());
+        addressDTO.setIsDefault(addressEntity.getIsDefault());
+        return addressDTO;
+    }
+    public static ProfilesDTO mapToProfilesDTO(ProfilesEntity profilesEntity) {
+        ProfilesDTO profilesDTO = new ProfilesDTO();
+
+        // Map simple fields
+        profilesDTO.setId(profilesEntity.getId());
+        profilesDTO.setName(profilesEntity.getName());
+        profilesDTO.setPublicId(profilesEntity.getPublicId());
+        profilesDTO.setWorkStart(profilesEntity.getWorkStart());
+        profilesDTO.setWorkEnds(profilesEntity.getWorkEnds());
+        profilesDTO.setIgnoreSl(profilesEntity.getIgnoreSl());
+        profilesDTO.setGracePeriodeStart(profilesEntity.getGracePeriodStart());
+        profilesDTO.setHdStart(profilesEntity.getHdStart());
+        profilesDTO.setSlStartMorning(profilesEntity.getSlStartMorning());
+        profilesDTO.setSlStartEvening(profilesEntity.getSlStartEvening());
+        profilesDTO.setPossibleFpLocations(profilesEntity.getPossibleFpLocations());
+        profilesDTO.setDefaultHrs(profilesEntity.getDefaultHrs());
+        profilesDTO.setHdHrs(profilesEntity.getHdHrs());
+        profilesDTO.setMinHrsForSl(profilesEntity.getMinHrsForSl());
+        profilesDTO.setShortLeaveCount(profilesEntity.getShortLeaveCount());
+        profilesDTO.setHdEndsMorning(profilesEntity.getHdEndsMorning());
+        profilesDTO.setFlexiDays(profilesEntity.getFlexiDays());
+        profilesDTO.setFlexiHrsStart(profilesEntity.getFlexiHrsStart());
+
+        // Map users (convert UserEntity to UserDto)
+        if (profilesEntity.getUsers() != null) {
+            Collection<UserDto> userDtos = profilesEntity.getUsers().stream()
+                    .map(UserMapper::mapToUserDto) // Assuming UserMapper.mapToUserDto exists
+                    .collect(Collectors.toList());
+            profilesDTO.setUsers(userDtos);
+        }
+
+        return profilesDTO;
+    }
+
+    public static ProfilesEntity mapToProfilesEntity(ProfilesDTO profilesDTO, UserRepository userRepository) {
+        ProfilesEntity profilesEntity = new ProfilesEntity();
+
+        // Map simple fields
+        profilesEntity.setId(profilesDTO.getId());
+        profilesEntity.setName(profilesDTO.getName());
+        profilesEntity.setPublicId(profilesDTO.getPublicId());
+        profilesEntity.setWorkStart(profilesDTO.getWorkStart());
+        profilesEntity.setWorkEnds(profilesDTO.getWorkEnds());
+        profilesEntity.setIgnoreSl(profilesDTO.getIgnoreSl());
+        profilesEntity.setGracePeriodStart(profilesDTO.getGracePeriodeStart());
+        profilesEntity.setHdStart(profilesDTO.getHdStart());
+        profilesEntity.setSlStartMorning(profilesDTO.getSlStartMorning());
+        profilesEntity.setSlStartEvening(profilesDTO.getSlStartEvening());
+        profilesEntity.setPossibleFpLocations(profilesDTO.getPossibleFpLocations());
+        profilesEntity.setDefaultHrs(profilesDTO.getDefaultHrs());
+        profilesEntity.setHdHrs(profilesDTO.getHdHrs());
+        profilesEntity.setMinHrsForSl(profilesDTO.getMinHrsForSl());
+        profilesEntity.setShortLeaveCount(profilesDTO.getShortLeaveCount());
+        profilesEntity.setHdEndsMorning(profilesDTO.getHdEndsMorning());
+        profilesEntity.setFlexiDays(profilesDTO.getFlexiDays());
+        profilesEntity.setFlexiHrsStart(profilesDTO.getFlexiHrsStart());
+
+        // Map users (convert UserDto to UserEntity)
+        if (profilesDTO.getUsers() != null) {
+            Collection<UserEntity> userEntities = profilesDTO.getUsers().stream()
+                    .map(userDto -> userRepository.findByUserId(userDto.getUserId())) // Fetch UserEntity from the database
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            profilesEntity.setUsers(userEntities);
+        }
+
+        return profilesEntity;
+    }
+
+    public static RoleEntity mapToRoleEntity(RoleDTO roleDTO, UserRepository userRepository, AuthorityRepository authorityRepository) {
+        RoleEntity roleEntity = new RoleEntity();
+
+        // Map simple fields
+        roleEntity.setId(roleDTO.getId());
+        roleEntity.setName(roleDTO.getName());
+
+        // Map users (convert UserDto_ to UserEntity)
+        if (roleDTO.getUsers() != null) {
+            Collection<UserEntity> userEntities = roleDTO.getUsers().stream()
+                    .map(userDto_ -> userRepository.findByUserId(userDto_.getUserId())) // Fetch UserEntity from the database
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            roleEntity.setUsers(userEntities);
+        }
+
+        // Map authorities (convert AuthorityDTO to AuthorityEntity)
+        if (roleDTO.getAuthorities() != null) {
+            Collection<AuthorityEntity> authorityEntities = roleDTO.getAuthorities().stream()
+                    .map(authorityDTO -> authorityRepository.findByName(authorityDTO.getName())) // Fetch AuthorityEntity from the database
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            roleEntity.setAuthorities(authorityEntities);
+        }
+
+        return roleEntity;
+    }
+    public static UserDtoArchive mapToUserDto_(UserEntity userEntity) {
+        UserDtoArchive userDto_ = new UserDtoArchive();
+
+        userDto_.setId(userEntity.getId());
+        userDto_.setUserId(userEntity.getUserId());
+        userDto_.setFirstName(userEntity.getFirstName());
+        userDto_.setLastName(userEntity.getLastName());
+        userDto_.setEmail(userEntity.getEmail());
+
+        return userDto_;
+    }
+    public static RoleDTO mapToRoleDTO(RoleEntity roleEntity) {
+        RoleDTO roleDTO = new RoleDTO();
+
+        // Map simple fields
+        roleDTO.setId(roleEntity.getId());
+        roleDTO.setName(roleEntity.getName());
+
+        // Map users (convert UserEntity to UserDto_)
+        if (roleEntity.getUsers() != null) {
+            List<UserDtoArchive> userDtos = roleEntity.getUsers().stream()
+                    .map(UserMapper::mapToUserDto_) // Assuming UserMapper.mapToUserDto_ exists
+                    .collect(Collectors.toList());
+            roleDTO.setUsers(userDtos);
+        }
+
+        // Map authorities (convert AuthorityEntity to AuthorityDTO)
+        if (roleEntity.getAuthorities() != null) {
+            List<AuthorityDTO> authorityDTOs = roleEntity.getAuthorities().stream()
+                    .map(UserMapper::mapToAuthorityDTO) // Assuming AuthorityMapper.mapToAuthorityDTO exists
+                    .collect(Collectors.toList());
+            roleDTO.setAuthorities(authorityDTOs);
+        }
+        if(roleEntity.getPriority() != 0){
+            roleDTO.setPriority(roleEntity.getPriority());
+        }
+        return roleDTO;
+    }
+
+    public static RoleDTOArchive mapToRoleDTO_(RoleEntity roleEntity) {
+        RoleDTOArchive roleDTO = new RoleDTOArchive();
+
+        // Map simple fields
+        roleDTO.setId(roleEntity.getId());
+        roleDTO.setName(roleEntity.getName());
+
+        // Map users (convert UserEntity to UserDto_)
+        if (roleEntity.getUsers() != null) {
+            List<UserDtoArchive> userDtos = roleEntity.getUsers().stream()
+                    .map(UserMapper::mapToUserDto_) // Assuming UserMapper.mapToUserDto_ exists
+                    .collect(Collectors.toList());
+            roleDTO.setUsers(userDtos);
+        }
+
+        // Map authorities (convert AuthorityEntity to AuthorityDTO)
+        if (roleEntity.getAuthorities() != null) {
+            List<AuthorityDTOArchive> authorityDTOs = roleEntity.getAuthorities().stream()
+                    .map(UserMapper::mapToAuthorityDTO_) // Assuming AuthorityMapper.mapToAuthorityDTO exists
+                    .collect(Collectors.toList());
+            roleDTO.setAuthorities(authorityDTOs);
+        }
+        if(roleEntity.getPriority() != 0){
+            roleDTO.setPriority(roleEntity.getPriority());
+        }
+        if(roleEntity.getPublicId() != null){
+            roleDTO.setPublicId(roleEntity.getPublicId());
+        }
+        return roleDTO;
+    }
+
+    public static AuthorityDTOArchive mapToAuthorityDTO_(AuthorityEntity authorityEntity) {
+        AuthorityDTOArchive authority = new AuthorityDTOArchive();
+        authority.setId(authorityEntity.getId());
+        authority.setName(authorityEntity.getName());
+        return authority;
+    }
+
+    public static AuthorityDTO mapToAuthorityDTO(AuthorityEntity authorityEntity) {
+        AuthorityDTO authorityDTO = new AuthorityDTO();
+
+        // Map simple fields
+        authorityDTO.setId(authorityEntity.getId());
+        authorityDTO.setName(authorityEntity.getName());
+
+        // Map roles (convert RoleEntity to RoleDTO)
+        if (authorityEntity.getRoles() != null) {
+            List<RoleDTO> roleDTOs = authorityEntity.getRoles().stream()
+                    .map(UserMapper::mapToRoleDTO) // Assuming RoleMapper.mapToRoleDTO exists
+                    .collect(Collectors.toList());
+            authorityDTO.setRoles(roleDTOs);
+        }
+
+        return authorityDTO;
+    }
+    public static AuthorityEntity mapToAuthorityEntity(AuthorityDTO authorityDTO, RoleRepository roleRepository) {
+        AuthorityEntity authorityEntity = new AuthorityEntity();
+
+        // Map simple fields
+        authorityEntity.setId(authorityDTO.getId());
+        authorityEntity.setName(authorityDTO.getName());
+
+        // Map roles (convert RoleDTO to RoleEntity)
+        if (authorityDTO.getRoles() != null) {
+            Collection<RoleEntity> roleEntities = authorityDTO.getRoles().stream()
+                    .map(roleDTO -> roleRepository.findById(roleDTO.getId()).orElse(null)) // Fetch RoleEntity from the database
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            authorityEntity.setRoles(roleEntities);
+        }
+
+        return authorityEntity;
+    }
+    public static UserDto transformToUserDto(UserEntity userEntity) {
+        if (userEntity == null) {
+            return null;
+        }
+
+        UserDto userDto = new UserDto();
+        userDto.setId(userEntity.getId());
+        userDto.setUserId(userEntity.getUserId());
+        userDto.setFirstName(userEntity.getFirstName());
+        userDto.setLastName(userEntity.getLastName());
+        userDto.setEmail(userEntity.getEmail());
+        userDto.setEmployeeId(userEntity.getEmployeeId());
+        userDto.setSltId(userEntity.getSltId());
+        userDto.setEncryptedPassword(userEntity.getEncryptedPassword());
+        userDto.setProfilePic(userEntity.getProfilePic());
+        userDto.setEmailVerificationToken(userEntity.getEmailVerificationToken());
+        userDto.setEmailVerificationStatus(userEntity.getEmailVerificationStatus());
+        userDto.setAddresses(userEntity.getAddresses().stream()
+                .map(addressEntity -> {
+                    AddressDTO addressDTO = new AddressDTO();
+                    addressDTO.setId(addressEntity.getId());
+                    addressDTO.setAddressId(addressEntity.getAddressId());
+                    addressDTO.setCity(addressEntity.getCity());
+                    addressDTO.setCountry(addressEntity.getCountry());
+                    addressDTO.setStreetName(addressEntity.getStreetName());
+                    addressDTO.setPostalCode(addressEntity.getPostalCode());
+                    addressDTO.setIsDefault(addressEntity.getIsDefault());
+                    return addressDTO;
+                })
+                .collect(Collectors.toList()));
+        userDto.setRoles(userEntity.getRoles().stream()
+                .map(RoleEntity::getName)
+                .collect(Collectors.toList()));
+        userDto.setAuthorities(userEntity.getRoles().stream()
+                .flatMap(roleEntity -> roleEntity.getAuthorities().stream())
+                .map(AuthorityEntity::getName)
+                .collect(Collectors.toList()));
+        userDto.setSections(userEntity.getSections().stream()
+                .map(SectionEntity::getSection)
+                .collect(Collectors.toList()));
+        userDto.setProfiles(userEntity.getProfiles().stream()
+                .map(ProfilesEntity::getName)
+                .collect(Collectors.toList()));
+        userDto.setIsSltEmp(userEntity.getIsSltEmp());
+        userDto.setIsSltIntern(userEntity.getIsSltIntern());
+        userDto.setActive(userEntity.getActive());
+        userDto.setPhone(userEntity.getPhone());
+        userDto.setGender(userEntity.getGender());
+        userDto.setRoaster(userEntity.getRoaster());
+
+        return userDto;
+    }
+
+}

@@ -1,4 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  submitMovementRequest,
+  updateFormField,
+  setUserId,
+  clearError,
+  clearSuccessMessage,
+  selectMovementRequestForm,
+  selectMovementRequestStatus,
+  selectMovementRequestError,
+  selectMovementRequestSuccess
+} from '../../../../lib/redux/redux-lms/movement/req/movementRequestSlice';
 import {
   Container,
   CssBaseline,
@@ -15,124 +27,50 @@ import {
   InputLabel,
   Select,
   Grid,
+  CircularProgress
 } from '@mui/material';
 
 const RequestMovement = () => {
-  const [userId, setUserId] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showError, setShowError] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const dispatch = useDispatch();
 
-  const [formData, setFormData] = useState({
-    employeeId: '',
-    movementType: '',
-    comment: '',
-    destination: '',
-    category: '',
-    happenDate: '',
-    isAbsent: false,
-    isUnSuccessfulAttdate: false,
-    isHalfDay: false,
-    unAuthorized: false,
-    isLate: false,        // Added new field
-    isLateCover: false    // Added new field
-  });
+  // Get state from Redux store
+  const formData = useSelector(selectMovementRequestForm);
+  const status = useSelector(selectMovementRequestStatus);
+  const error = useSelector(selectMovementRequestError);
+  const successMessage = useSelector(selectMovementRequestSuccess);
+
+  // Derived states for UI
+  const isLoading = status === 'loading';
+  const showError = Boolean(error);
+  const showSuccess = Boolean(successMessage);
 
   useEffect(() => {
     // Get userId from sessionStorage
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
-      setUserId(storedUserId);
-      setFormData(prev => ({ ...prev, userId: storedUserId }));
-    } else {
-      setErrorMessage('User ID not found in local storage. Please login again.');
-      setShowError(true);
+      dispatch(setUserId(storedUserId));
     }
-  }, []);
+  }, [dispatch]);
 
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
+    dispatch(updateFormField({
+      name,
+      value: type === 'checkbox' ? checked : value
+    }));
   };
 
-  const validate = () => {
-    if (!formData.movementType) {
-      setErrorMessage('Movement Type is required');
-      return false;
-    }
-    if (!formData.happenDate) {
-      setErrorMessage('Date is required');
-      return false;
-    }
-    if (!formData.comment) {
-      setErrorMessage('Comment/Reason is required');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
+    dispatch(submitMovementRequest());
+  };
 
-    if (!userId) {
-      setErrorMessage('User ID not found. Please login again.');
-      setShowError(true);
-      return;
-    }
+  const handleCloseError = () => {
+    dispatch(clearError());
+  };
 
-    if (!validate()) {
-      setShowError(true);
-      return;
-    }
-
-    // Convert date string to Date object for API
-    const requestData = {
-      ...formData,
-      userId: userId,
-      happenDate: formData.happenDate ? new Date(formData.happenDate) : null
-    };
-
-    try {
-      const response = await fetch('http://localhost:8080/lms/management/movement/create', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (response.ok) {
-        setSuccessMessage('Movement request submitted successfully!');
-        setShowSuccess(true);
-        // Reset form after successful submission
-        setFormData({
-          employeeId: '',
-          movementType: '',
-          comment: '',
-          destination: '',
-          category: '',
-          happenDate: '',
-          isAbsent: false,
-          isUnSuccessfulAttdate: false,
-          isHalfDay: false,
-          unAuthorized: false,
-          isLate: false,        // Reset new field
-          isLateCover: false    // Reset new field
-        });
-      } else {
-        const errorData = await response.json();
-        setErrorMessage(errorData.message || 'Failed to submit movement request');
-        setShowError(true);
-      }
-    } catch (error) {
-      setErrorMessage('Error submitting request: ' + error.message);
-      setShowError(true);
-    }
+  const handleCloseSuccess = () => {
+    dispatch(clearSuccessMessage());
   };
 
   return (
@@ -274,7 +212,6 @@ const RequestMovement = () => {
                     label="Unauthorized"
                 />
               </Grid>
-              {/* Added new checkboxes for isLate and isLateCover */}
               <Grid item xs={12} sm={6}>
                 <FormControlLabel
                     control={
@@ -305,8 +242,9 @@ const RequestMovement = () => {
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
+                disabled={isLoading}
             >
-              Submit Movement Request
+              {isLoading ? <CircularProgress size={24} /> : 'Submit Movement Request'}
             </Button>
           </Box>
         </Box>
@@ -314,19 +252,19 @@ const RequestMovement = () => {
         <Snackbar
             open={showError}
             autoHideDuration={6000}
-            onClose={() => setShowError(false)}
+            onClose={handleCloseError}
         >
-          <Alert onClose={() => setShowError(false)} severity="error">
-            {errorMessage}
+          <Alert onClose={handleCloseError} severity="error">
+            {error}
           </Alert>
         </Snackbar>
 
         <Snackbar
             open={showSuccess}
             autoHideDuration={6000}
-            onClose={() => setShowSuccess(false)}
+            onClose={handleCloseSuccess}
         >
-          <Alert onClose={() => setShowSuccess(false)} severity="success">
+          <Alert onClose={handleCloseSuccess} severity="success">
             {successMessage}
           </Alert>
         </Snackbar>

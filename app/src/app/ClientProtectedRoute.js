@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Box, CircularProgress } from "@mui/material";
-import { clearAuth } from "./redux-user/authSlice";
+import { clearAuth } from "../../lib/redux/redux-user/authSlice";
 
 const PUBLIC_ROUTES = ["/login", "/error", "/unauthorized", "/forgot-password"];
 

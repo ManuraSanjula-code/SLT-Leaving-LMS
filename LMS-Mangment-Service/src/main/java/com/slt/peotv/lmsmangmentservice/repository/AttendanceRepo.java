@@ -18,6 +18,7 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     Page<AttendanceEntity> findAll(Pageable pageable);
     Page<AttendanceEntity> findByUserId(String userId, Pageable pageable);
     List<AttendanceEntity> findByEmployeeID(String employeeID);
+
     Optional<AttendanceEntity> findByPublicId(String publicId);
     boolean existsByEmployeeIDAndDate(String EmployeeID, Date date);
     Optional<AttendanceEntity> findByEmployeeIDAndDate(String EmployeeID, Date date);
@@ -39,4 +40,10 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
 
     @Query("SELECT e FROM AttendanceEntity e WHERE e.dueDateForUA < :currentDate")
     List<AttendanceEntity> findByDueDateForUA(@Param("currentDate") Date currentDate);
+
+    List<AttendanceEntity> findByEmployeeIDAndArrivalDateBetween(
+            String employeeID,
+            Date startDate,
+            Date endDate
+    );
 }

@@ -1,9 +1,9 @@
 package com.slt.radio.rosterservice.Service.Employee;
 
 import com.slt.radio.rosterservice.Exception.ExcelProcessingException;
-import com.slt.radio.rosterservice.Model.Dto.*;
-import com.slt.radio.rosterservice.Model.Employeee.Employee;
-import com.slt.radio.rosterservice.Model.Teamm.Team;
+import com.slt.radio.rosterservice.Model.One.Dto.*;
+import com.slt.radio.rosterservice.Model.One.Employeee.Employee;
+import com.slt.radio.rosterservice.Model.One.Teamm.Team;
 import com.slt.radio.rosterservice.Repo.EmployeeRepository;
 import com.slt.radio.rosterservice.Repo.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -272,7 +272,8 @@ public class ExcelProcessingService {
                         employee.getName(),
                         employee.getSrNo(),
                         employee.getMobileNo(),
-                        employee.getCodeName()
+                        employee.getCodeName(),
+                        teamId
                 );
 
                 // Create employee shift DTO
@@ -446,20 +447,21 @@ public class ExcelProcessingService {
         return initials.toString().toUpperCase();
     }
 
-    // Get or create team in the database
+
     private String getOrCreateTeam(String teamName) {
-        // Check for existing team
         Optional<Team> existingTeam = teamRepository.findByName(teamName);
         if (existingTeam.isPresent()) {
             return existingTeam.get().getId();
         }
 
-        // Create a new team
-        String shortName = teamName.replaceAll("[^0-9]", "");
-        if (shortName.isEmpty()) {
-            shortName = "T" + (teamRepository.count() + 1);
+        String shortName;
+        Pattern pattern = Pattern.compile("\\d+");
+        Matcher matcher = pattern.matcher(teamName);
+
+        if (matcher.find()) {
+            shortName = "T " + Integer.parseInt(matcher.group());
         } else {
-            shortName = "T" + shortName;
+            shortName = "T " + (teamRepository.count() + 1);
         }
 
         TeamDto teamDto = TeamDto.builder()
@@ -472,7 +474,7 @@ public class ExcelProcessingService {
     }
 
     // Get or create employee in the database
-    private String getOrCreateEmployee(String name, String employeeId, String mobileNo, String codeName) {
+    private String getOrCreateEmployee(String name, String employeeId, String mobileNo, String codeName, String teamId) {
         // Check for existing employee
         Optional<Employee> existingEmployee = employeeRepository.findByEmployeeId(employeeId);
         if (existingEmployee.isPresent()) {
@@ -483,6 +485,7 @@ public class ExcelProcessingService {
         EmployeeDto employeeDto = EmployeeDto.builder()
                 .employeeId(employeeId)
                 .name(name)
+                .teamId(teamId)
                 .mobileNo(mobileNo)
                 .shortName(codeName)
                 .active(true)

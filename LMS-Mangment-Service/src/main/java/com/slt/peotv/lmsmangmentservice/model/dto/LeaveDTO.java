@@ -1,9 +1,11 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveTra;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
+import jakarta.persistence.Transient;
 
 import java.util.Date;
+import java.util.List;
 
 public class LeaveDTO {
     public String publicId;
@@ -29,6 +31,16 @@ public class LeaveDTO {
     private Boolean isManualRequest = false;
     private Date happenDate;
     private String userId;
+    @Transient
+    private List<LeaveTra> adminsTra;
+
+    public List<LeaveTra> getAdminsTra() {
+        return adminsTra;
+    }
+
+    public void setAdminsTra(List<LeaveTra> adminsTra) {
+        this.adminsTra = adminsTra;
+    }
 
     public String getUserId() {
         return userId;

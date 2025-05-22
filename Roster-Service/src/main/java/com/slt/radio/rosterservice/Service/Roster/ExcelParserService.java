@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.Service.Roster;
 
-import com.slt.radio.rosterservice.Model.Shift.ShiftAssignment;
-import com.slt.radio.rosterservice.Model.Shift.ShiftRoster;
+import com.slt.radio.rosterservice.Model.One.Shift.ShiftAssignment;
+import com.slt.radio.rosterservice.Model.One.Shift.ShiftRoster;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;

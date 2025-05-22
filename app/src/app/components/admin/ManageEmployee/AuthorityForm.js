@@ -147,7 +147,7 @@ const AuthorityForm = () => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
-                return response.json();
+                return id;
             })
             .then(async (data) => {
                 setAuthorities((prevAuthorities) =>

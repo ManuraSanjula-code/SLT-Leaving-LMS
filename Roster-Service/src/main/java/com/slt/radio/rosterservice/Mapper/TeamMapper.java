@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.Mapper;
 
-import com.slt.radio.rosterservice.Model.Dto.TeamDto;
-import com.slt.radio.rosterservice.Model.Teamm.Team;
+import com.slt.radio.rosterservice.Model.One.Dto.TeamDto;
+import com.slt.radio.rosterservice.Model.One.Teamm.Team;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;

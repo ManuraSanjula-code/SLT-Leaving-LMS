@@ -16,7 +16,11 @@ public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
     Page<LeaveEntity> findByUserId(Pageable pageable, String userId);
 
     Page<LeaveEntity> findByEmployeeID(String employeeID, Pageable pageable);
+    List<LeaveEntity> findByEmployeeID(String employeeID);
+    Optional<LeaveEntity> findByEmployeeIDAndSubmitDate(String employeeID, Date submitDate);
     Page<LeaveEntity> findByUserId(String userId, Pageable pageable);
+    List<LeaveEntity> findByUserId(String userId);
+
     Optional<LeaveEntity> findByPublicId(String publicId);
     List<LeaveEntity> findByFromDate(Date fromDate);
     List<LeaveEntity> findByEmployeeIDAndFromDateLessThanEqualAndToDateGreaterThanEqual(String employeeID, Date currentDate1, Date currentDate2);
@@ -29,5 +33,11 @@ public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
     List<LeaveEntity> findOverdueEntities(@Param("currentDate") Date currentDate);*/
 
     List<LeaveEntity> findApprovedLeavesByEmployeeIDAndFromDateAndToDate(String employeeID, Date fromDate, Date toDate);
+
+    List<LeaveEntity> findByEmployeeIDAndSubmitDateBetween(
+            String employeeID,
+            Date startDate,
+            Date endDate
+    );
 
 }

@@ -1,0 +1,38 @@
+package com.slt.peotv.userservice.lms.entity;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+
+@Entity
+@Table(name="authorities")
+@EqualsAndHashCode(callSuper = false)
+@Data
+public class AuthorityEntity implements Serializable {
+
+	private static final long serialVersionUID = -5828101164006114538L;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+
+	@Column(nullable=false, length=20)
+	private String name;
+
+	private String publicId;
+
+	@ManyToMany(mappedBy="authorities")
+	@JsonIgnore
+	@Column(nullable = false)
+	private Collection<RoleEntity> roles =  new ArrayList<>();;
+	
+	public AuthorityEntity() {}
+
+	public AuthorityEntity(String name) {
+		 this.name = name;
+	}
+}

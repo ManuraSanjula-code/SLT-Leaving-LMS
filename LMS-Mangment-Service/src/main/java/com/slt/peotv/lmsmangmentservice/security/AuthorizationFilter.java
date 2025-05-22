@@ -71,7 +71,7 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
         UserRest user = tokenConverter.validateTokenSignature(decryptedToken, request, originalAuthHeader != null ? originalAuthHeader : SecurityConstants.TOKEN_PREFIX + signedToken);
 
         if(user != null){
-            return new UsernamePasswordAuthenticationToken(user.getUserId(), null, user.getAuthorities());
+            return new UsernamePasswordAuthenticationToken(new UserPrincipal(user), null, user.getAuthorities());
         } else {
             return null;
         }

@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.Repo;
 
-import com.slt.radio.rosterservice.Model.Teamm.Team;
+import com.slt.radio.rosterservice.Model.One.Teamm.Team;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

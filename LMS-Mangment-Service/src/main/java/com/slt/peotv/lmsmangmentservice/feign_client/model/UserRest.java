@@ -188,4 +188,30 @@ public class UserRest {
 	public void setEmployeeId(String employeeId) {
 		this.employeeId = employeeId;
 	}
+
+	@Override
+	public String toString() {
+		return "UserRest{" +
+				"userId='" + userId + '\'' +
+				", sltId='" + sltId + '\'' +
+				", employeeId='" + employeeId + '\'' +
+				", firstName='" + firstName + '\'' +
+				", lastName='" + lastName + '\'' +
+				", email='" + email + '\'' +
+				", addresses=" + addresses +
+				", profilePic='" + profilePic + '\'' +
+				", roles=" + roles +
+				", sections=" + sections +
+				", profiles=" + profiles +
+				", isSltEmp=" + isSltEmp +
+				", isSltIntern=" + isSltIntern +
+				", active=" + active +
+				", phone='" + phone + '\'' +
+				", gender='" + gender + '\'' +
+				", authorities=" + authorities +
+				", highestRolePriority=" + highestRolePriority +
+				", joiningDate=" + joiningDate +
+				", defaultAddress=" + defaultAddress +
+				'}';
+	}
 }

@@ -1,0 +1,30 @@
+package com.slt.peotv.lmsmangmentservice.entity.Leave.category;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "user_leave_type_remaining")
+@Setter
+@Getter
+@EqualsAndHashCode
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class UserLeaveTypeRemainingEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    private String publicId;
+
+    private String employeeID;
+
+    @ManyToOne
+    @JoinColumn(name = "leave_type_id")
+    private LeaveTypeEntity leaveType;
+
+    private Integer remainingLeaves;
+}
+
+

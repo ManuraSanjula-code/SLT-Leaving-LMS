@@ -1,8 +1,8 @@
 package com.slt.radio.rosterservice.Mapper.Impl;
 
 import com.slt.radio.rosterservice.Mapper.TeamMapper;
-import com.slt.radio.rosterservice.Model.Dto.TeamDto;
-import com.slt.radio.rosterservice.Model.Teamm.Team;
+import com.slt.radio.rosterservice.Model.One.Dto.TeamDto;
+import com.slt.radio.rosterservice.Model.One.Teamm.Team;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

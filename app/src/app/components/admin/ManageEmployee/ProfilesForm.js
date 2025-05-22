@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { Delete, Edit, Search } from "@mui/icons-material";
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchManagementData, saveProfile, deleteProfile } from '../../../redux-lms/managementSlice';
+import { fetchManagementData, saveProfile, deleteProfile } from '../../../../../lib/redux/redux-lms/user/managementSlice';
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 

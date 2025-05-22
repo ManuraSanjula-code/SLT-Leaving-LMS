@@ -19,6 +19,8 @@ public class CorsConfig {
         corsConfig.addAllowedOrigin("http://10.0.2.2");  // Android Emulator
         corsConfig.addAllowedOrigin("http://192.168.1.8"); // Local network (Android devices)
         corsConfig.addAllowedOriginPattern("*"); // Allow all for development
+        corsConfig.addAllowedOrigin("http://localhost:8080");
+        corsConfig.addAllowedOrigin("http://localhost:3000");
 
         // Allowed methods
         corsConfig.addAllowedMethod("*"); // Allow all HTTP methods

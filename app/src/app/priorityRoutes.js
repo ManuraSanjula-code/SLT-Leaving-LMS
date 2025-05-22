@@ -2,6 +2,8 @@ export const priorityRouteAccess = {
     // Priority 1-9 (Super/System Roles)
     1: [
         "/manage-employees",
+        "/in-outs",
+        "/other"
     ],
 
     // Priority 10-29 (Administrative Roles)
@@ -13,6 +15,11 @@ export const priorityRouteAccess = {
         "/manage-movement-requests",
         "/unsuccessful-leaves-admin",
         "/unauthorized-leaves-admin",
+        "/roster/all-attendance",
+        "/roster/all",
+        "/roster/detail",
+        "/in-outs",
+        "/other"
     ],
 
     // 30-49 (HR Roles)
@@ -20,6 +27,11 @@ export const priorityRouteAccess = {
         "/employee-activities",
         "/absent-employees-admin",
         "/no-pay-leaves-admin",
+        "/roster/all-attendance",
+        "/roster/all",
+        "/roster/detail",
+        "/in-outs",
+        "/other"
     ],
 
     // Priority 50-99 (Managerial Roles)
@@ -30,6 +42,8 @@ export const priorityRouteAccess = {
         "/unauthorized-leaves-admin",
         "/no-pay-leaves-admin",
         "/employee-activities",
+        "/in-outs",
+        "/other"
     ],
 
     // Priority 100-199 (Standard Users)
@@ -45,7 +59,8 @@ export const priorityRouteAccess = {
         "/unauthorized-leaves",
         "/no-pay-leaves",
         "/absent-employee",
-        "/"
+        "/",
+        "/in-outs"
     ]
 };
 

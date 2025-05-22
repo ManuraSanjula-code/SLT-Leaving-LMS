@@ -98,4 +98,6 @@ public class LeaveEntity {
     @OneToOne
     @JoinColumn(name = "attendance_id")
     private AttendanceEntity attendance;
+    @Builder.Default
+    private Boolean isReject = false;
 }

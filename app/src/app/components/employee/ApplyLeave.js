@@ -1,6 +1,24 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchLeaveBalances,
+  submitLeaveRequest,
+  setUserId,
+  updateFormField,
+  calculateDays,
+  validateForm,
+  closeNotification,
+  selectUserId,
+  selectFormData,
+  selectErrors,
+  selectLeaveBalances,
+  selectLoading,
+  selectFetchingBalance,
+  selectNotification,
+  leaveHelpers
+} from '../../../../lib/redux/redux-lms/leave/apply/leaveSlice';
 import {
   Container,
   CssBaseline,
@@ -21,294 +39,81 @@ import {
 } from '@mui/material';
 
 const ApplyLeave = () => {
-  const [userId, setUserId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [fetchingBalance, setFetchingBalance] = useState(false);
-  const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
-  const [leaveBalances, setLeaveBalances] = useState([]);
+  const dispatch = useDispatch();
 
-  const [formData, setFormData] = useState({
-    fromDate: '',
-    toDate: '',
-    leaveCategory: '', // HALF_DAY or FULL_DAY
-    leaveType: '', // Annual Leave, Medical Leave, etc.
-    description: '',
-    isHalfDay: false,
-    isFullDay: true, // Default to true
-    numOfDays: 0,
-    happenDate: '',
-    isUnauthorized: false,
-    isManualRequest: true, // Default to true as per requirements
-    isAbsent: false,
-    isLateCover: false,
-    isLate: false,
-    unSuccessful: false
-  });
+  // Select from Redux store
+  const userId = useSelector(selectUserId);
+  const formData = useSelector(selectFormData);
+  const errors = useSelector(selectErrors);
+  const leaveBalances = useSelector(selectLeaveBalances);
+  const loading = useSelector(selectLoading);
+  const fetchingBalance = useSelector(selectFetchingBalance);
+  const notification = useSelector(selectNotification);
 
-  const [errors, setErrors] = useState({});
+  // Destructure leave helpers
+  const { getRemainingLeaveBalance, leaveTypes } = leaveHelpers;
 
-  // Updated leave types to match server data
-  const leaveTypes = [
-    { value: "Annual Leave", label: "Annual Leave" },
-    { value: "Medical Leave", label: "Medical Leave" },
-    { value: "Casual Leave", label: "Casual Leave" },
-    { value: "Maternity Leave", label: "Maternity Leave" }
-  ];
-
+  // Initialize user data from session storage
   useEffect(() => {
-    // Get userId from sessionStorage on component mount
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
-      setUserId(storedUserId);
-      fetchLeaveBalances(storedUserId);
+      dispatch(setUserId(storedUserId));
+      dispatch(fetchLeaveBalances(storedUserId));
     } else {
-      setNotification({
-        open: true,
-        message: 'User ID not found. Please log in again.',
-        severity: 'error'
+      dispatch({
+        type: 'leaveApplication/setNotification',
+        payload: {
+          open: true,
+          message: 'User ID not found. Please log in again.',
+          severity: 'error'
+        }
       });
     }
-  }, []);
+  }, [dispatch]);
 
-  const fetchLeaveBalances = async (employeeId) => {
-    setFetchingBalance(true);
-    try {
-      // Updated URL endpoint
-      const response = await fetch(`http://localhost:8080/lms/leave-balance/${employeeId}`, {
-        credentials: 'include' // Include cookies with the request
-      });
-      if (!response.ok) {
-        throw new Error(`Error fetching leave balances: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data && data.leaveDetails) {
-        setLeaveBalances(data.leaveDetails);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      console.error('Error fetching leave balances:', error);
-      setNotification({
-        open: true,
-        message: 'Failed to fetch leave balances. Please try again later.',
-        severity: 'warning'
-      });
-    } finally {
-      setFetchingBalance(false);
-    }
-  };
-
+  // Calculate days when dates or half-day changes
   useEffect(() => {
-    // Calculate number of days when dates change
     if (formData.fromDate && formData.toDate) {
-      const start = new Date(formData.fromDate);
-      const end = new Date(formData.toDate);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-
-      setFormData({
-        ...formData,
-        numOfDays: formData.isHalfDay ? diffDays / 2 : diffDays,
-        leaveCategory: formData.isHalfDay ? "HALF_DAY" : "FULL_DAY"
-      });
+      dispatch(calculateDays());
     }
-  }, [formData.fromDate, formData.toDate, formData.isHalfDay]);
+  }, [dispatch, formData.fromDate, formData.toDate, formData.isHalfDay]);
 
-  // Update isFullDay when isHalfDay changes
-  useEffect(() => {
-    if (formData.isHalfDay) {
-      setFormData(prev => ({
-        ...prev,
-        isFullDay: false
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        isFullDay: true
-      }));
-    }
-  }, [formData.isHalfDay]);
-
-  // Update isManualRequest based on other flags
-  useEffect(() => {
-    if (formData.isHalfDay || formData.isUnauthorized || formData.isAbsent ||
-        formData.isLateCover || formData.isLate || formData.unSuccessful) {
-      setFormData(prev => ({
-        ...prev,
-        isManualRequest: false
-      }));
-    }
-  }, [
-    formData.isHalfDay,
-    formData.isUnauthorized,
-    formData.isAbsent,
-    formData.isLateCover,
-    formData.isLate,
-    formData.unSuccessful
-  ]);
-
+  // Handle form field changes
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
-
-    if (type === 'checkbox') {
-      setFormData(prev => {
-        const updatedData = { ...prev, [name]: checked };
-
-        // Handle half day and full day relationship
-        if (name === 'isHalfDay') {
-          updatedData.isFullDay = !checked;
-          updatedData.leaveCategory = checked ? "HALF_DAY" : "FULL_DAY";
-        }
-
-        if (name === 'isFullDay') {
-          updatedData.isHalfDay = !checked;
-          updatedData.leaveCategory = !checked ? "HALF_DAY" : "FULL_DAY";
-        }
-
-        // If any of these are being checked, set isManualRequest to false
-        if ((name === 'isHalfDay' || name === 'isUnauthorized' || name === 'isAbsent' ||
-            name === 'isLateCover' || name === 'isLate' || name === 'unSuccessful') && checked) {
-          updatedData.isManualRequest = false;
-        }
-
-        return updatedData;
-      });
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null
-      });
-    }
+    dispatch(updateFormField({ name, value, checked, type }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.fromDate) newErrors.fromDate = 'Start date is required';
-    if (!formData.toDate) newErrors.toDate = 'End date is required';
-    if (!formData.leaveType) newErrors.leaveType = 'Leave type is required';
-    if (!formData.description) newErrors.description = 'Reason is required';
-
-    if (formData.fromDate && formData.toDate) {
-      const start = new Date(formData.fromDate);
-      const end = new Date(formData.toDate);
-      if (end < start) {
-        newErrors.toDate = 'End date cannot be before start date';
-      }
-    }
-
-    // Validate available leave balance
-    if (formData.leaveType && formData.numOfDays > 0) {
-      const selectedType = formData.leaveType;
-      const typeBalance = leaveBalances.find(
-          balance => balance.leaveTypeName === selectedType
-      );
-
-      if (typeBalance && typeBalance.remainingLeaves < formData.numOfDays) {
-        newErrors.leaveType = `Insufficient ${selectedType.toLowerCase()} leave balance`;
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
+  // Handle form submission
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!validateForm()) return;
+    const isValid = dispatch(validateForm()).payload;
+    if (!isValid) return;
+
     if (!userId) {
-      setNotification({
-        open: true,
-        message: 'User ID not found. Please log in again.',
-        severity: 'error'
+      dispatch({
+        type: 'leaveApplication/setNotification',
+        payload: {
+          open: true,
+          message: 'User ID not found. Please log in again.',
+          severity: 'error'
+        }
       });
       return;
     }
 
-    setLoading(true);
-
-    try {
-      // Format dates for backend
-      const payload = {
-        ...formData,
-        userId: userId,
-        fromDate: new Date(formData.fromDate).toISOString(),
-        toDate: new Date(formData.toDate).toISOString(),
-        happenDate: formData.happenDate ? new Date(formData.happenDate).toISOString() : null,
-        numOfDays: Math.round(formData.numOfDays) // Ensure we send an integer
-      };
-      console.log(payload);
-      const response = await fetch(`http://localhost:8080/lms/management/leave/create/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        credentials: 'include' // Include cookies with the request
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      setNotification({
-        open: true,
-        message: 'Leave request submitted successfully!',
-        severity: 'success'
-      });
-
-      // Refresh leave balances after submission
-      fetchLeaveBalances(userId);
-
-      // Reset form after successful submission
-      setFormData({
-        fromDate: '',
-        toDate: '',
-        leaveCategory: '',
-        leaveType: '',
-        description: '',
-        isHalfDay: false,
-        isFullDay: true,
-        numOfDays: 0,
-        happenDate: '',
-        isUnauthorized: false,
-        isManualRequest: true, // Reset to default true
-        isAbsent: false,
-        isLateCover: false,
-        isLate: false,
-        unSuccessful: false
-      });
-
-    } catch (error) {
-      console.error('Error submitting leave request:', error);
-      setNotification({
-        open: true,
-        message: `Failed to submit leave request: ${error.message}`,
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
+    dispatch(submitLeaveRequest({ formData, userId }))
+        .unwrap()
+        .then(() => {
+          // Refresh leave balances after successful submission
+          dispatch(fetchLeaveBalances(userId));
+        });
   };
 
+  // Handle notification close
   const handleCloseNotification = () => {
-    setNotification({ ...notification, open: false });
-  };
-
-  // Helper function to get remaining leave balance
-  const getRemainingLeaveBalance = (typeName) => {
-    const leaveType = leaveBalances.find(b => b.leaveTypeName === typeName);
-    return leaveType ? leaveType.remainingLeaves : 0;
+    dispatch(closeNotification());
   };
 
   return (
@@ -362,7 +167,7 @@ const ApplyLeave = () => {
             >
               {leaveTypes.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
-                    {option.label} ({getRemainingLeaveBalance(option.value)} days remaining)
+                    {option.label} ({getRemainingLeaveBalance(leaveBalances, option.value)} days remaining)
                   </MenuItem>
               ))}
             </TextField>

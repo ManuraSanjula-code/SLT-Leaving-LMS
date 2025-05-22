@@ -906,7 +906,9 @@ public class UserServiceImpl implements UserService {
         if (req == null) {
             throw new IllegalArgumentException("Section request cannot be null");
         }
-
+        if(req.getSection() == null || req.getSection().trim().isEmpty()) {
+            throw new IllegalArgumentException("Section cannot be null or empty");
+        }
         // Use section name as synchronization key
         final String lockKey = StringUtils.hasText(req.getPublicId())
                 ? req.getPublicId()
@@ -1218,9 +1220,6 @@ public class UserServiceImpl implements UserService {
         String user_id = parts[0].trim();  // Added trim() to remove any whitespace
         String loginType = parts.length > 1 ? parts[1].trim() : "DEFAULT";
 
-        // Debug logging
-        System.out.println("Parsed userId: '" + user_id + "'");
-        System.out.println("Parsed loginType: '" + loginType + "'");
 
         try {
             if ("TEMP".equalsIgnoreCase(loginType)) {
@@ -1458,7 +1457,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteSection(Long sectionId) {
         sectionRepo.deleteById(sectionId);
-        Optional<SectionEntity> sectionOpt = sectionRepo.findById(sectionId);
+        /*Optional<SectionEntity> sectionOpt = sectionRepo.findById(sectionId);
         if (sectionOpt.isPresent()) {
             SectionEntity profile = sectionOpt.get();
             for (UserEntity user : profile.getUsers()) {
@@ -1468,7 +1467,7 @@ public class UserServiceImpl implements UserService {
             sectionRepo.delete(profile);
         } else {
             throw new RuntimeException("Role not found with id: " + sectionId);
-        }
+        }*/
     }
    
     @Override

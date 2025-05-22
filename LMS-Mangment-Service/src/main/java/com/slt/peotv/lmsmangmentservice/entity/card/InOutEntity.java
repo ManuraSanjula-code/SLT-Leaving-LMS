@@ -8,13 +8,16 @@ import java.util.Date;
 import java.util.Objects;
 
 @Entity
-@Table(name = "InOut")
 @Setter
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
+@Table(name = "InOut", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"employeeID", "date", "punchInMoa", "punchInEv", "timeMoa", "timeEve"})
+})
+@EqualsAndHashCode
 public class InOutEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -33,20 +36,12 @@ public class InOutEntity {
     @Builder.Default
     private Boolean isMoaning = false;
 
+    @Column(name = "TerminalID", nullable = false)
+    private String terminalID;
+
     @Builder.Default
     private Boolean isEvening = false;
     @Builder.Default
     private Boolean isPast = false; /// CHECK IN PAST DATA (THERE ARE SOME TIMES DATA IN PAST DATA NOT SAVED IN OUR LOCAL-DB ) BUT SOME HOW
                                     /// IN TOMARROW DATA BECAME VALID THEN I PROCESS THE DATA MAKE IT IS PAST IS TRUE
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        InOutEntity that = (InOutEntity) o;
-        return Objects.equals(employeeID, that.employeeID);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(employeeID);
-    }
 }

@@ -18,7 +18,7 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import axios from "axios";
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setCredentials, setUserDetails } from '../redux-user/authSlice'; // Replace with the correct path
+import { setCredentials, setUserDetails } from '../../../lib/redux/redux-user/authSlice'; // Replace with the correct path
 
 const LoginPage = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false); // State for Snackbar visibility

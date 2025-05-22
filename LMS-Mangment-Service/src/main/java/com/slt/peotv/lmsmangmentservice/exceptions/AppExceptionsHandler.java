@@ -1,6 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.exceptions;
 
-import com.slt.peotv.lmsmangmentservice.model.ErrorMessage;
+import com.slt.peotv.lmsmangmentservice.model.req.ErrorMessage;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

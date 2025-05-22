@@ -8,8 +8,9 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntit
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
-import com.slt.peotv.lmsmangmentservice.model.LeaveReq;
-import com.slt.peotv.lmsmangmentservice.model.MovementReq;
+import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
+import com.slt.peotv.lmsmangmentservice.model.req.LeaveReq;
+import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import org.springframework.data.domain.Page;
 
@@ -30,6 +31,8 @@ public interface LMS_Service {
     public Page<AttendanceDTO> getAllAttendanceThatUnAByUserId(String userId, int page, int size);
     public List<AttendanceEntity> getAttendanceByUserId(String userId);
     public List<AttendanceEntity> getAttendanceByEmployeeId(String employeeId);
+    public void deleteAttendance(String publicId);
+    public void makeInAttendanceActive(String publicId);
 
     public Page<AbsenteeDto> getAllAbsentee(int page, int size);
     public Page<AbsenteeDto> getAllAbsenteeByUserId(String userId, int page, int size);
@@ -71,6 +74,7 @@ public interface LMS_Service {
     public void saveLeaveType(String name);
     public LeaveTypeEntity getLeaveType(String name);
     public void updateLeaveType(String old_name,String name);
+    public void updateLeaveType(String old_name,String userId, int days);
     public void deleteLeaveType(String name);
     
     LeaveTypeTotDto getTotalLeaves(String employeeId, String leaveTypeName);
@@ -78,5 +82,6 @@ public interface LMS_Service {
     UserLeaveDetailsDto getAllLeaveDetails(String employeeId);
 
     public void updateLeave(LeaveReq req, String leaveId);
-
+    public AttendanceDTO createAttendance(AttendanceReq req);
+    public AttendanceDTO updateAttendance(AttendanceReq req, String publicId);
 }

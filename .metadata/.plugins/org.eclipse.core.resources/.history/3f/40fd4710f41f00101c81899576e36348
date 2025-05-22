@@ -1,0 +1,50 @@
+package com.slt.peotv.lmsmangmentservice;
+
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.feign_client.UserClient;
+import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
+import com.slt.peotv.lmsmangmentservice.security.JwtConfiguration;
+import com.slt.peotv.lmsmangmentservice.security.TokenCreator;
+import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
+import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class CommandLine implements CommandLineRunner {
+
+    @Autowired
+    private AccessLogService accessLogService;
+
+    @Autowired
+    private Check_Service checkService;
+
+    @Autowired
+    private EmployeeRepo employeeRepo;
+
+    @Autowired
+    private UserClient client;
+    
+    @Autowired
+    private TokenCreator tokenCreator;
+
+    @Override
+    public void run(String... args) throws Exception {
+        List<EmployeeEntity> employeeEntities = (List<EmployeeEntity>) employeeRepo.findAll();
+
+        if(employeeEntities == null) employeeEntities = new ArrayList<>();
+
+        if(!employeeEntities.isEmpty()){
+            accessLogService.main();
+            checkService.main();
+        }
+        tokenCreator.createSignedJWT("lms@slt.com");
+        client.getEmployeeAdmins()
+
+    }
+}

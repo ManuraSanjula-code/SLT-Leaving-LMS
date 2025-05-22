@@ -17,4 +17,6 @@ public interface AbsenteeRepo extends JpaRepository<AbsenteeEntity, Long> {
     Optional<AbsenteeEntity> findByEmployeeIDAndDate(String employeeID, Date date);
     Page<AbsenteeEntity> findAll(Pageable pageable);
     Page<AbsenteeEntity> findByUserId(String userId, Pageable pageable);
+    List<AbsenteeEntity> findByUserId(String userId);
+
 }

@@ -25,11 +25,9 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, MoreHoriz as MoreHorizIcon } from '@mui/icons-material';
 import dynamic from 'next/dynamic';
 import { debounce, isEqual } from 'lodash';
-import SuccessDialog from '../../../SuccessDialog';
-import ErrorDialog from '../../../ErrorDialog';
 import DynamicDialog from '../DynamicDialog';
 import EntityDialog from '../EntityDialog';
 import SectionForm from '../SectionForm';
@@ -45,9 +43,10 @@ import {
     saveEmployee,
     resetSaveStatus,
     deleteEmployee
-} from '../../../../redux-lms/managementSlice';
+} from '../../../../../../lib/redux/redux-lms/user/managementSlice';
+import Menu from '@mui/material/Menu';
+import { useRouter } from 'next/navigation';
 
-// Lazy load dialogs and forms
 const EmployeeDialog = dynamic(() => import('../EmployeeDialog'), {
     ssr: false,
     loading: () => <CircularProgress size={24} />
@@ -92,6 +91,19 @@ const ManageEmployees = React.memo(() => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [employeeToDelete, setEmployeeToDelete] = useState(null);
     const [initialFormData, setInitialFormData] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const router = useRouter();
+    const [anchorEl, setAnchorEl] = React.useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleMenuItemClick = (path) => {
+        handleClose();
+        router.push(path);
+    };
+
+    const handleClose = useCallback(() => {
+        setAnchorEl(null);
+    }, []);
 
     // Initialize data
     useEffect(() => {
@@ -175,6 +187,8 @@ const ManageEmployees = React.memo(() => {
         setOpenDialog_(false);
     }, []);
 
+
+
     const handleSubmit = useCallback((data) => {
         handleCloseDialog_();
     }, [handleCloseDialog_]);
@@ -228,6 +242,13 @@ const ManageEmployees = React.memo(() => {
         setDeleteConfirmOpen(true);
     }, []);
 
+
+
+    const handleClick = useCallback((event, id) => {
+        setAnchorEl(event.currentTarget);
+        setUserId(id)
+    }, [userId]);
+
     const handleConfirmDelete = useCallback(() => {
         if (employeeToDelete) {
             dispatch(deleteEmployee(employeeToDelete));
@@ -271,6 +292,27 @@ const ManageEmployees = React.memo(() => {
             {/*    title="Oops! Something Went Wrong"*/}
             {/*    message={saveError || deleteError || "There was an error processing your request. Please try again."}*/}
             {/*/>*/}
+
+            <Menu
+                id="demo-positioned-menu"
+                aria-labelledby="demo-positioned-button"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+            >
+                <MenuItem onClick={()=> handleMenuItemClick(`/all-movements/${userId}`)}>Movements</MenuItem>
+                <MenuItem onClick={()=> handleMenuItemClick(`/all-leaves/${userId}`)}>Leave</MenuItem>
+                <MenuItem onClick={()=> handleMenuItemClick(`/single-employee-activities/${userId}`)}>Attendance</MenuItem>
+                <MenuItem onClick={()=> handleMenuItemClick(`/in-outs/${userId}`)}>In-Outs</MenuItem>
+            </Menu>
 
             <ConfirmationDialog
                 open={deleteConfirmOpen}
@@ -438,6 +480,11 @@ const ManageEmployees = React.memo(() => {
                                                     disabled={isLoading || deleteLoading}
                                                 >
                                                     <DeleteIcon/>
+                                                </IconButton>
+                                                <IconButton
+                                                    onClick={(event) => handleClick(event, employee.userId)}
+                                                >
+                                                    <MoreHorizIcon/>
                                                 </IconButton>
                                             </TableCell>
                                         </TableRow>

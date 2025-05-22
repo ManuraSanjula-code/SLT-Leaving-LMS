@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementTra;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 
@@ -31,7 +32,27 @@ public class MovementDTO {
     private Boolean isUnSuccessfulAttdate = false;
     private Boolean unAuthorized = false;
     private String attendance;
+    @JsonIgnore
     private List<MovementAdminsDto> movementAdmins = new ArrayList<>();
+    @Transient
+    private List<MovementTra> adminsTra;
+    private Boolean isReject = false;
+
+    public Boolean getReject() {
+        return isReject;
+    }
+
+    public void setReject(Boolean reject) {
+        isReject = reject;
+    }
+
+    public List<MovementTra> getAdminsTra() {
+        return adminsTra;
+    }
+
+    public void setAdminsTra(List<MovementTra> adminsTra) {
+        this.adminsTra = adminsTra;
+    }
 
     public List<MovementAdminsDto> getMovementAdmins() {
         return movementAdmins;

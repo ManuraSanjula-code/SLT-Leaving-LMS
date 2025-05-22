@@ -32,72 +32,44 @@ import {
   CircularProgress
 } from "@mui/material";
 import { Check as CheckIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchUnauthorizedLeaves,
+  resolveUnauthorizedLeave,
+  approveUnauthorizedLeave,
+  bulkResolveUnauthorizedLeaves,
+  deleteMultipleUnauthorizedLeaves,
+  setPage,
+  setPageSize,
+  clearError
+} from "../../../../lib/redux/redux-lms/unauthorized-leaves/unauthorizedLeavesSlice";
 
 const UnauthorizedLeaves = ({ isAdmin = false }) => {
-  // State for leaves data
-  const [leavesData, setLeavesData] = useState({
-    content: [],
-    totalPages: 0,
-    totalElements: 0,
-    number: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const {
+    leaves,
+    loading,
+    error,
+    page,
+    pageSize
+  } = useSelector((state) => state.unauthorizedLeaves);
 
-  // Filters and pagination state
+  // Local state for filters, selection, and dialog
   const [searchQuery, setSearchQuery] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
   const [resolutionFilter, setResolutionFilter] = useState("All");
   const [selected, setSelected] = useState([]);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Detail dialog state
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
 
-  // Fetch data from the server
-  const fetchLeaves = async () => {
-    try {
-      setLoading(true);
-
-      // Get userId from sessionStorage or use admin endpoint
-      const userId = sessionStorage.getItem('userId');
-
-      if (!userId && !isAdmin) {
-        setError("User ID not found. Please login again.");
-        setLoading(false);
-        return;
-      }
-
-      // Determine the endpoint based on isAdmin flag
-      const endpoint = isAdmin
-          ? `http://localhost:8080/lms/un-authorized`
-          : `http://localhost:8080/lms/un-authorized/${userId}`;
-
-      const response = await fetch(`${endpoint}?page=${page}&size=${pageSize}`, {
-        credentials: 'include', // This sends all cookies with the request
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const data = await response.json();
-      setLeavesData(data);
-      setLoading(false);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  // Initial data load
+  // Fetch data when page or page size changes
   useEffect(() => {
-    fetchLeaves();
-  }, [page, pageSize, isAdmin]);
+    const userId = sessionStorage.getItem('userId');
+    if (userId || isAdmin) {
+      dispatch(fetchUnauthorizedLeaves({ isAdmin, page, pageSize, userId }));
+    }
+  }, [page, pageSize, dispatch, isAdmin]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -113,53 +85,17 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
 
   // Handle page size change
   const handlePageSizeChange = (event) => {
-    const newSize = parseInt(event.target.value);
-    setPageSize(newSize);
-    setPage(0); // Reset to first page when changing page size
+    dispatch(setPageSize(parseInt(event.target.value)));
   };
 
   // Handle resolving a leave
-  const handleResolveLeave = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to resolve leave');
-      }
-
-      // Refresh the data
-      fetchLeaves();
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleResolveLeave = (id) => {
+    dispatch(resolveUnauthorizedLeave(id));
   };
 
   // Handle approving a leave
-  const handleApproveLeave = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:8080/lms/approve-unauthorized/${id}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to approve leave');
-      }
-
-      // Refresh the data
-      fetchLeaves();
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleApproveLeave = (id) => {
+    dispatch(approveUnauthorizedLeave(id));
   };
 
   // Open details dialog
@@ -174,7 +110,7 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
   };
 
   // Filter leaves based on search query and filters
-  const filteredLeaves = leavesData.content ? leavesData.content.filter((leave) => {
+  const filteredLeaves = leaves.content ? leaves.content.filter((leave) => {
     const matchesSearchQuery =
         leave.employeeID?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (leave.issueDescription && leave.issueDescription?.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -195,70 +131,36 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
   // Handle individual row selection
   const handleSelect = (id) => {
     if (selected.includes(id)) {
-      setSelected((prev) => prev.filter((item) => item !== id)); // Un-select
+      setSelected((prev) => prev.filter((item) => item !== id));
     } else {
-      setSelected((prev) => [...prev, id]); // Select
+      setSelected((prev) => [...prev, id]);
     }
   };
 
   // Handle "Select All" functionality
   const handleSelectAll = () => {
     if (selected.length === filteredLeaves.length) {
-      setSelected([]); // Un-select all
+      setSelected([]);
     } else {
-      setSelected(filteredLeaves.map((leave) => leave.id)); // Select all
+      setSelected(filteredLeaves.map((leave) => leave.id));
     }
   };
 
   // Handle delete all selected leave requests
-  const handleDeleteAllSelected = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/lms/un-authorized/delete-multiple`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ids: selected }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete selected leaves');
-      }
-
-      // Refresh the data and clear selection
-      fetchLeaves();
-      setSelected([]);
-    } catch (err) {
-      setError(err.message);
-    }
+  const handleDeleteAllSelected = () => {
+    dispatch(deleteMultipleUnauthorizedLeaves(selected));
+    setSelected([]);
   };
 
   // Handle bulk resolution
-  const handleBulkResolve = async () => {
-    try {
-      await Promise.all(
-          selected.map((id) =>
-              fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json',
-                }
-              })
-          )
-      );
-      // Refresh data after resolving
-      setSelected([]);
-      fetchLeaves();
-    } catch (err) {
-      setError("Failed to resolve selected leaves. Please try again.");
-    }
+  const handleBulkResolve = () => {
+    dispatch(bulkResolveUnauthorizedLeaves(selected));
+    setSelected([]);
   };
 
   // Handle page change
   const handlePageChange = (event, value) => {
-    setPage(value - 1); // API uses 0-based indexing
+    dispatch(setPage(value - 1)); // API uses 0-based indexing
   };
 
   // Determine leave type based on the data properties
@@ -269,6 +171,13 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
     if (leave.absent) return "Absent";
     return "Unauthorized";
   };
+
+  // Clear error when component unmounts or when alert is closed
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   return (
       <Box
@@ -287,7 +196,7 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
 
             {/* Error Message */}
             {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
                   {error}
                 </Alert>
             )}
@@ -370,7 +279,7 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                   {/* Records per page selector and data info */}
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                     <Typography variant="body2">
-                      Showing {filteredLeaves.length} of {leavesData.totalElements || 0} total unauthorized leaves
+                      Showing {filteredLeaves.length} of {leaves.totalElements || 0} total unauthorized leaves
                     </Typography>
 
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
@@ -462,7 +371,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                                           <CheckIcon />
                                         </IconButton>
                                     )}
-                                    {/* Show resolve button to both admin and non-admin users */}
                                     {!leave.resolve && !isAdmin && (
                                         <Button
                                             variant="contained"
@@ -495,8 +403,8 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                   {/* Pagination */}
                   <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 3, gap: 2 }}>
                     <Pagination
-                        count={leavesData.totalPages || 1}
-                        page={(leavesData.number || 0) + 1} // Add 1 because API uses 0-based indexing
+                        count={leaves.totalPages || 1}
+                        page={page + 1} // Add 1 because API uses 0-based indexing
                         onChange={handlePageChange}
                         color="primary"
                         showFirstButton

@@ -1,10 +1,13 @@
 package com.slt.radio.rosterservice.Mapper;
 
-import com.slt.radio.rosterservice.Model.*;
-import com.slt.radio.rosterservice.Model.Dto.*;
-import com.slt.radio.rosterservice.Model.Obj.DailyShift;
-import com.slt.radio.rosterservice.Model.Obj.EmployeeShift;
-import com.slt.radio.rosterservice.Model.Teamm.TeamRoster;
+import com.slt.radio.rosterservice.Model.One.Dto.DailyShiftDto;
+import com.slt.radio.rosterservice.Model.One.Dto.EmployeeShiftDto;
+import com.slt.radio.rosterservice.Model.One.Dto.RosterDto;
+import com.slt.radio.rosterservice.Model.One.Dto.TeamRosterDto;
+import com.slt.radio.rosterservice.Model.One.Obj.DailyShift;
+import com.slt.radio.rosterservice.Model.One.Obj.EmployeeShift;
+import com.slt.radio.rosterservice.Model.One.Roster;
+import com.slt.radio.rosterservice.Model.One.Teamm.TeamRoster;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;

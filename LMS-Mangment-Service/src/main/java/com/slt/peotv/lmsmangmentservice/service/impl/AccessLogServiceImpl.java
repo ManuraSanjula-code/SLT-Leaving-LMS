@@ -1,12 +1,11 @@
 package com.slt.peotv.lmsmangmentservice.service.impl;
 
-import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogArchiveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
-import com.slt.peotv.lmsmangmentservice.repository.AccessLogArchiveRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AccessLogRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
+import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,21 +33,23 @@ public class AccessLogServiceImpl implements AccessLogService {
     private final SimpleDateFormat inputDateFormat = new SimpleDateFormat("dd/MM/yyyy");
     private final SimpleDateFormat currentDateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
+
     @Autowired
     private AccessLogRepo accessLogRepository;
 
     @Autowired
-    private AccessLogArchiveRepo accessLogRepositoryArchive;
+    private InOutRepo inOutRepository;
 
     @Autowired
-    private InOutRepo inOutRepository;
+    private Helper helper;
 
     @Override
     public void processLogEntry() throws ParseException {
-        logger.info("Processing log entries from archive");
-        List<AccessLogArchiveEntity> logs = accessLogRepositoryArchive.findAll();
 
-        for (AccessLogArchiveEntity log : logs) {
+        logger.info("Processing log entries from archive");
+        List<AccessLogEntity> logs = accessLogRepository.findAll();
+
+        for (AccessLogEntity log : logs) {
             try {
                 processAccessLog(log);
             } catch (ParseException e) {
@@ -59,14 +60,14 @@ public class AccessLogServiceImpl implements AccessLogService {
     }
 
     @Transactional
-    public void processAccessLog(AccessLogArchiveEntity log) throws ParseException {
+    public void processAccessLog(AccessLogEntity log) throws ParseException {
         String logDate = log.getLogDate() != null ? log.getLogDate() : currentDateFormat.format(new Date());
         Date punchDate = parseDate(logDate);
         Time punchTime = parseTime(log.getLogTime());
 
         logger.debug("Processing log - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
                 punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID());
     }
 
     @Override
@@ -90,7 +91,7 @@ public class AccessLogServiceImpl implements AccessLogService {
 
         logger.debug("Processing log entry - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
                 punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID());
     }
 
     private Date parseDate(String dateString) throws ParseException {
@@ -111,13 +112,14 @@ public class AccessLogServiceImpl implements AccessLogService {
         }
     }
 
-    private void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout) throws ParseException {
+    private void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout, String terminalId) throws ParseException {
         if (inout == null) {
             logger.error("Inout value is null for employee: {}", employeeID);
             throw new IllegalArgumentException("Inout value cannot be null");
         }
 
         InOutEntity inOut = new InOutEntity();
+        inOut.setTerminalID(terminalId);
         LocalTime punchLocalTime = LocalTime.parse(punchTime.toString());
         boolean isMorning = punchLocalTime.isBefore(NOON);
 
@@ -133,7 +135,7 @@ public class AccessLogServiceImpl implements AccessLogService {
 
             // Set employee ID
             inOut.setEmployeeID(employeeID);
-
+            inOut.setDate(helper.removeTimeFromDate(new Date()));
             String normalizedInout = inout.trim().toUpperCase();
             switch (normalizedInout) {
                 case "IN":
@@ -172,7 +174,17 @@ public class AccessLogServiceImpl implements AccessLogService {
                     throw new IllegalArgumentException("Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
             }
 
-            inOutRepository.save(inOut);
+
+            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDate(
+                    inOut.getEmployeeID(),
+                    inOut.getDate());
+
+            for (InOutEntity existing : existingEntries) {
+                if (!existing.equals(inOut)) {
+                    inOutRepository.save(inOut);
+                }
+            }
+
         } catch (ParseException e) {
             logger.error("Failed to parse date while saving InOut record for employee {}: {}",
                     employeeID, logDate, e);

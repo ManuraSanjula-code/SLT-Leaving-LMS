@@ -1,31 +1,69 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.util.Date;
 
-@Getter
-@Setter
 public class AbsenteeDto {
     private Long id;
     private String publicId;
     private Date date;
     private String employeeID;
     private String userId;
-    private Boolean isHalfDay = false;
-    private Boolean isFullDay = false;
-    private Boolean isSupervisedApproved = false;
-    private Boolean isHODApproved = false;
     private Integer audited = 0;
     private Integer isNoPay = 0;
-    private Boolean isPending = false;
-    private Boolean isAccepted = false;
-    private Boolean isLate = false;
-    private Boolean isAbsent = false;
-    private Boolean isUnSuccessfulAttdate = false;
-    private Boolean isLateCover = false;
-    private Date happenDate = null; // Explicitly initialized
-    private Boolean isArchived = false;
-    private String comment = "";
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public String getEmployeeID() {
+        return employeeID;
+    }
+
+    public void setEmployeeID(String employeeID) {
+        this.employeeID = employeeID;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public Integer getAudited() {
+        return audited;
+    }
+
+    public void setAudited(Integer audited) {
+        this.audited = audited;
+    }
+
+    public Integer getIsNoPay() {
+        return isNoPay;
+    }
+
+    public void setIsNoPay(Integer isNoPay) {
+        this.isNoPay = isNoPay;
+    }
 }

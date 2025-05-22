@@ -34,81 +34,8 @@ public class ServiceEventImpl implements ServiceEvent {
     private LMS_Service lmsService;
     @Autowired
     private Utils utils;
+
     private final ModelMapper modelMapper = new ModelMapper();
-
-    @Override
-    public void userCreatedEvent() {
-
-    }
-
-    @Override
-    public void saveUserLeaveCategoryTotal(String cat_name,String employee_id, Integer totalLeaves) {
-
-        Optional<LeaveCategoryEntity> byName = leaveCategoryRepo.findByName(cat_name);
-
-        if(employee_id != null && byName.isPresent()) {
-            LeaveCategoryEntity leaveCategoryEntity = byName.get();
-            UserLeaveCategoryTotalEntity userLeaveCategoryTotalEntity = new UserLeaveCategoryTotalEntity();
-            userLeaveCategoryTotalEntity.setPublicId(utils.generateId(10));
-            userLeaveCategoryTotalEntity.setLeaveCategory(leaveCategoryEntity);
-            userLeaveCategoryTotalEntity.setEmployeeID(employee_id);
-            userLeaveCategoryTotalRepo.save(userLeaveCategoryTotalEntity);
-        }else{
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public List<UserLeaveCategoryTotalEntity> getUserLeaveCategoryTotal(String employee_id) {
-        if(employee_id != null) return userLeaveCategoryTotalRepo.findByEmployeeID(employee_id);
-        else throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-    }
-
-
-    @Override
-    public UserLeaveCategoryTotalEntity getUserLeaveCategoryTotal(String cat_name,String employee_id) {
-
-        Optional<LeaveCategoryEntity> byName = leaveCategoryRepo.findByName(cat_name);
-        if(employee_id != null && byName.isPresent()) {
-            List<UserLeaveCategoryTotalEntity> byLeaveCategoryAndUser = userLeaveCategoryTotalRepo.findByLeaveCategoryAndEmployeeID(byName.get(), employee_id);
-            if(byLeaveCategoryAndUser.isEmpty())
-                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-            else
-                return byLeaveCategoryAndUser.get(0);
-        }else{
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void deleteUserLeaveCategoryTotal(String publicId) {
-        Optional<UserLeaveCategoryTotalEntity> byPublicId = userLeaveCategoryTotalRepo.findByPublicId(publicId);
-        if(byPublicId.isPresent())
-            userLeaveCategoryTotalRepo.delete(byPublicId.get());
-        else
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-    }
-
-    @Override
-    public void saveUserLeaveTypeRemaining(String employee_id, Integer remainingLeaves, String type_name) {
-        Optional<LeaveTypeEntity> byName = leaveTypeRepo.findByName(type_name);
-
-        if(byName.isPresent() && employee_id != null) {
-            LeaveTypeEntity leaveCategoryEntity = byName.get();
-
-            UserLeaveTypeRemainingEntity userLeaveTypeRemainingEntity = new UserLeaveTypeRemainingEntity();
-            userLeaveTypeRemainingEntity.setPublicId(utils.generateId(10));
-            userLeaveTypeRemainingEntity.setLeaveType(leaveCategoryEntity);
-            userLeaveTypeRemainingEntity.setRemainingLeaves(remainingLeaves);
-            userLeaveTypeRemainingEntity.setEmployeeID(employee_id);
-
-            userLeaveTypeRemainingRepo.save(userLeaveTypeRemainingEntity);
-
-        }else{
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
 
     @Override
     public List<UserLeaveTypeRemainingEntity> getUserLeaveTypeRemaining(String employee_id) {
@@ -127,56 +54,6 @@ public class ServiceEventImpl implements ServiceEvent {
         }else{
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         }
-    }
-
-    @Override
-    public void deleteUserLeaveTypeRemaining(String publicId) {
-        userLeaveTypeRemainingRepo.findByPublicId(publicId).ifPresent(userLeaveTypeRemainingRepo::delete);
-    }
-
-    @Override
-    public void saveUserLeaveTypeTotal(String employee_id, Integer totalLeaves, String type_name) {
-        Optional<LeaveTypeEntity> byName = leaveTypeRepo.findByName(type_name);
-
-        if(byName.isPresent() && employee_id != null) {
-            LeaveTypeEntity leaveCategoryEntity = byName.get();
-
-            UserLeaveTypeTotalEntity userLeaveTypeTotal = new UserLeaveTypeTotalEntity();
-            userLeaveTypeTotal.setPublicId(utils.generateId(10));
-            userLeaveTypeTotal.setLeaveType(leaveCategoryEntity);
-            userLeaveTypeTotal.setEmployeeID(employee_id);
-            userLeaveTypeTotal.setTotalLeaves(totalLeaves);
-
-            userLeaveTypeTotalRepo.save(userLeaveTypeTotal);
-
-        }else{
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public UserLeaveTypeTotalEntity getUserLeaveTypeTotal(String employee_id) {
-        return null;
-    }
-
-    @Override
-    public UserLeaveTypeTotalEntity getUserLeaveTypeTotal(String type_name,String employee_id) {
-        Optional<LeaveTypeEntity> byName = leaveTypeRepo.findByName(type_name);
-
-        if(employee_id != null && byName.isPresent()) {
-            List<UserLeaveTypeTotalEntity> byLeaveTypeAndUser = userLeaveTypeTotalRepo.findUserLeaveTypeTotalByEmployeeIDAndLeaveType(employee_id,byName.get());
-            if(byLeaveTypeAndUser.isEmpty())
-                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-            else
-                return byLeaveTypeAndUser.get(0);
-        }else{
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void deleteUserLeaveTypeTotal(String publicId) {
-        userLeaveTypeTotalRepo.findByPublicId(publicId).ifPresent(userLeaveTypeTotalRepo::delete);
     }
 
 }

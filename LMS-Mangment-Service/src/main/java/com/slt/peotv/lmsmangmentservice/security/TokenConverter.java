@@ -59,8 +59,14 @@ public class TokenConverter {
 
         // Use the original authorization header or token - NOT the decrypted one
         UserRest user = userClient.getEmployeeById(subject, originalAuthHeader);
+        String requestURI = request.getRequestURI();
+        String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
 
         if (user == null) {
+            return null;
+        }
+
+        if(!user.getUserId().equals(id)){
             return null;
         }
 

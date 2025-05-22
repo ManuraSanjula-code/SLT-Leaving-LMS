@@ -1,6 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchLeaveRequests,
+  processLeaveRequest,
+  processBulkLeaveRequests,
+  selectLeaveRequest,
+  selectAllLeaveRequests,
+  clearNotification,
+  setPageSize
+} from '../../../../lib/redux/redux-lms/leave/admin/leaveSlice';
 import {
   Container,
   CssBaseline,
@@ -22,179 +32,95 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import { format } from "date-fns";
 
 const ManageLeaveRequests = () => {
-  const [leaveRequests, setLeaveRequests] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({
-    currentPage: 0,
-    totalPages: 0,
-    totalElements: 0,
-    pageSize: 10
-  });
-  const [error, setError] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [notification, setNotification] = useState({
-    open: false,
-    message: '',
-    severity: 'info'
-  });
+  const dispatch = useDispatch();
 
+  // Get state from Redux store
+  const leaveRequests = useSelector(state => state.leave.requests);
+  const selected = useSelector(state => state.leave.selected);
+  const pagination = useSelector(state => state.leave.pagination);
+  const loading = useSelector(state => state.leave.loading);
+  const error = useSelector(state => state.leave.error);
+  const notification = useSelector(state => state.leave.notification);
+
+  // Fetch leave requests when component mounts
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
-      setNotification({
-        open: true,
-        message: 'User ID not found. Please log in again.',
-        severity: 'error'
-      });
-    }
-  }, []);
-
-  // Fetch leave requests from the server
-  const fetchLeaveRequests = async (page = 0, size = 10) => {
-    if (!userId) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/lms/leave/admin/${userId}?page=${page}&size=${size}`, {
-        method: 'GET',
-        credentials: 'include', // This will send cookies with the request
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setLeaveRequests(data.content || []);  // Ensure we always set an array even if content is null
-      setPagination({
-        currentPage: data.number,
-        totalPages: data.totalPages,
-        totalElements: data.totalElements,
-        pageSize: data.pageable?.pageSize || size
-      });
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching leave requests:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load data when userId is available
-  useEffect(() => {
-    if (userId) {
-      fetchLeaveRequests();
-    }
-  }, [userId]);
+    dispatch(fetchLeaveRequests({
+      page: pagination.currentPage,
+      size: pagination.pageSize
+    }));
+  }, [dispatch, pagination.currentPage, pagination.pageSize]);
 
   // Handle page change
   const handlePageChange = (event, value) => {
     // API pages are 0-indexed, but Pagination component is 1-indexed
-    fetchLeaveRequests(value - 1, pagination.pageSize);
+    dispatch(fetchLeaveRequests({
+      page: value - 1,
+      size: pagination.pageSize
+    }));
   };
 
   // Handle page size change
   const handlePageSizeChange = (event) => {
     const newSize = event.target.value;
-    fetchLeaveRequests(0, newSize);
+    dispatch(setPageSize(newSize));
+    dispatch(fetchLeaveRequests({
+      page: 0,
+      size: newSize
+    }));
   };
 
   // Handle individual row selection
   const handleSelect = (id) => {
-    if (selected.includes(id)) {
-      setSelected((prev) => prev.filter((item) => item !== id));
-    } else {
-      setSelected((prev) => [...prev, id]);
-    }
+    dispatch(selectLeaveRequest(id));
   };
 
   // Handle "Select All" functionality
   const handleSelectAll = () => {
-    if (selected.length === leaveRequests.length) {
-      setSelected([]);
-    } else {
-      setSelected(leaveRequests.filter(request => request && request.publicId).map(request => request.publicId));
-    }
+    dispatch(selectAllLeaveRequests());
   };
 
   // Handle approve for a single request
-  const handleApprove = async (publicId) => {
-    try {
-      setLoading(true);
-
-      // Get userId from session storage
-      const storedUserId = sessionStorage.getItem('userId');
-
-      if (!storedUserId) {
-        throw new Error('User ID not found in session storage');
-      }
-
-      // Send the approval request
-      const response = await fetch(`http://localhost:8080/lms/leave/process/${publicId}/${storedUserId}`, {
-        method: 'POST',
-        credentials: 'include', // This will send cookies with the request
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          approved: true,
-          userId: storedUserId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      // After successful API call, refresh the data
-      await fetchLeaveRequests(pagination.currentPage);
-
-      // Show success message (you might want to implement a proper notification system)
-      console.log(`Movement request ${publicId} approved successfully`);
-
-    } catch (err) {
-      setError(`Failed to approve request: ${err.message}`);
-      console.error("Error approving request:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleApprove = (publicId) => {
+    dispatch(processLeaveRequest({
+      publicId,
+      approved: true
+    }));
   };
 
   // Handle reject for a single request
-  const handleReject = async (publicId) => {
-    // Implement your rejection API call here
-    console.log("Rejecting:", publicId);
-    // After successful API call:
-    // fetchLeaveRequests(pagination.currentPage);
+  const handleReject = (publicId) => {
+    dispatch(processLeaveRequest({
+      publicId,
+      approved: false
+    }));
   };
 
   // Handle bulk approve
-  const handleBulkApprove = async () => {
-    // Implement your approval API call here
-    console.log("Bulk Approving:", selected);
-    // After successful API call:
-    // fetchLeaveRequests(pagination.currentPage);
-    // setSelected([]);
+  const handleBulkApprove = () => {
+    dispatch(processBulkLeaveRequests({
+      leaveIds: selected,
+      approved: true
+    }));
   };
 
   // Handle bulk reject
-  const handleBulkReject = async () => {
-    // Implement your rejection API call here
-    console.log("Bulk Rejecting:", selected);
-    // After successful API call:
-    // fetchLeaveRequests(pagination.currentPage);
-    // setSelected([]);
+  const handleBulkReject = () => {
+    dispatch(processBulkLeaveRequests({
+      leaveIds: selected,
+      approved: false
+    }));
+  };
+
+  // Handle notification close
+  const handleNotificationClose = () => {
+    dispatch(clearNotification());
   };
 
   // Format date to readable format
@@ -252,6 +178,22 @@ const ManageLeaveRequests = () => {
               </Box>
           )}
 
+          {/* Notification Snackbar */}
+          <Snackbar
+              open={notification.open}
+              autoHideDuration={6000}
+              onClose={handleNotificationClose}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <Alert
+                onClose={handleNotificationClose}
+                severity={notification.severity}
+                sx={{ width: '100%' }}
+            >
+              {notification.message}
+            </Alert>
+          </Snackbar>
+
           {/* Bulk Actions */}
           <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between" }}>
             <Box>
@@ -259,7 +201,7 @@ const ManageLeaveRequests = () => {
                   variant="contained"
                   color="primary"
                   onClick={handleBulkApprove}
-                  disabled={selected.length === 0}
+                  disabled={selected.length === 0 || loading}
                   sx={{ mr: 1 }}
               >
                 Approve Selected
@@ -268,7 +210,7 @@ const ManageLeaveRequests = () => {
                   variant="contained"
                   color="secondary"
                   onClick={handleBulkReject}
-                  disabled={selected.length === 0}
+                  disabled={selected.length === 0 || loading}
                   sx={{ mr: 1 }}
               >
                 Reject Selected
@@ -282,6 +224,7 @@ const ManageLeaveRequests = () => {
                   value={pagination.pageSize}
                   label="Rows"
                   onChange={handlePageSizeChange}
+                  disabled={loading}
               >
                 <MenuItem value={5}>5</MenuItem>
                 <MenuItem value={10}>10</MenuItem>
@@ -365,7 +308,7 @@ const ManageLeaveRequests = () => {
                                         color="primary"
                                         size="small"
                                         sx={{ mr: 1, mb: 1 }}
-                                        disabled={request.accepted || request.isCanceled}
+                                        disabled={request.accepted || request.canceled || loading}
                                         onClick={() => handleApprove(request.publicId)}
                                     >
                                       Approve
@@ -374,7 +317,7 @@ const ManageLeaveRequests = () => {
                                         variant="outlined"
                                         color="error"
                                         size="small"
-                                        disabled={request.accepted || request.isCanceled}
+                                        disabled={request.accepted || request.canceled || loading}
                                         onClick={() => handleReject(request.publicId)}
                                     >
                                       Reject
@@ -398,6 +341,7 @@ const ManageLeaveRequests = () => {
                           color="primary"
                           showFirstButton
                           showLastButton
+                          disabled={loading}
                       />
                       <Typography variant="body2" color="textSecondary">
                         Showing {leaveRequests.filter(req => req && req.publicId).length} of {pagination.totalElements} results

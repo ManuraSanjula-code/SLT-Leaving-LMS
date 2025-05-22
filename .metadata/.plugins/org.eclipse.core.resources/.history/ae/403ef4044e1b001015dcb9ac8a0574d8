@@ -1,0 +1,7 @@
+package com.slt.peotv.lmsmangmentservice.model.dto;
+
+public class LeaveTypeTotDto {
+	private String name;
+	private Integer remainLeave;
+	
+}

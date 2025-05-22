@@ -1,6 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchNoPayRecords,
+  setSearchQuery,
+  setStartDateFilter,
+  setEndDateFilter,
+  setUserIdFilter,
+  setCurrentPage,
+  setPageSize
+} from '../../../../lib/redux/redux-lms/no-pay/noPaySlice';
 import {
   Container,
   CssBaseline,
@@ -37,161 +47,94 @@ import {
 } from "@mui/icons-material";
 
 const ManageNoPay = ({ isAdmin = false }) => {
-  const [noPayRecords, setNoPayRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [startDateFilter, setStartDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
-  const [userIdFilter, setUserIdFilter] = useState(""); // For admin to filter by userId
-  const [pagination, setPagination] = useState({
-    totalPages: 0,
-    totalElements: 0,
-    currentPage: 0,
-    pageSize: 10
-  });
+  const dispatch = useDispatch();
 
-  // Detail dialog state
+  // Get state from Redux store
+  const noPayRecords = useSelector(state => state.noPay.records);
+  const loading = useSelector(state => state.noPay.loading);
+  const error = useSelector(state => state.noPay.error);
+  const pagination = useSelector(state => state.noPay.pagination);
+  const filters = useSelector(state => state.noPay.filters);
+
+  // Local component state
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [adminMode, setAdminMode] = useState(isAdmin);
 
-  // Fetch no pay data from the server
+  // Get userId from sessionStorage on component mount
+  const userId = typeof window !== 'undefined' ? sessionStorage.getItem('userId') : null;
+
+  // Fetch no pay data when relevant state changes
   useEffect(() => {
-    fetchNoPayData(pagination.currentPage);
-  }, [pagination.currentPage, pagination.pageSize, isAdmin]);
-
-  const fetchNoPayData = async (page = 0) => {
-    try {
-      setLoading(true);
-
-      // Get userId from sessionStorage
-      const userId = sessionStorage.getItem('userId');
-
-      if (!userId) {
-        throw new Error("User ID not found in sessionStorage");
-      }
-
-      // Set the base URL based on admin status
-      let baseUrl = isAdmin
-          ? "http://localhost:8080/lms/no-pay"
-          : `http://localhost:8080/lms/no-pay/user/${userId}`;
-
-      // Add query parameters
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        size: pagination.pageSize.toString()
-      });
-
-      // Add additional query params if in admin mode and filtering by user ID
-      if (isAdmin && userIdFilter) {
-        queryParams.append('userId', userIdFilter);
-      }
-
-      // Make API call to fetch no pay data with pagination
-      const response = await fetch(`${baseUrl}?${queryParams.toString()}`, {
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data || !data.content) {
-        setNoPayRecords([]);
-        setPagination({
-          ...pagination,
-          totalPages: 0,
-          totalElements: 0
-        });
-      } else {
-        // Transform the data to match our component structure
-        const transformedData = data.content.map(item => ({
-          id: item.id || 0,
-          publicId: item.publicId || "",
-          employeeID: item.employeeID || "",
-          submissionDate: item.submissionDate ? new Date(item.submissionDate).toISOString().split('T')[0] : "",
-          acctualDate: item.acctualDate ? new Date(item.acctualDate).toISOString().split('T')[0] : "",
-          happenDate: item.happenDate ? new Date(item.happenDate).toISOString().split('T')[0] : "",
-          unSuccessful: item.unSuccessful || false,
-          attendance: item.attendance || "",
-          comment: item.comment || "",
-          halfDay: item.halfDay || false,
-          absent: item.absent || false,
-          late: item.late || false,
-          lateCover: item.lateCover || false
-        }));
-
-        setNoPayRecords(transformedData);
-        setPagination({
-          totalPages: data.totalPages || 0,
-          totalElements: data.totalElements || 0,
-          currentPage: data.number || 0,
-          pageSize: pagination.pageSize
-        });
-      }
-
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching no pay data:", err);
-      setError(err.message);
-      setNoPayRecords([]);
-    } finally {
-      setLoading(false);
+    if (userId) {
+      dispatch(fetchNoPayRecords({
+        isAdmin: adminMode,
+        userId,
+        page: pagination.currentPage,
+        size: pagination.pageSize,
+        userIdFilter: filters.userIdFilter
+      }));
     }
-  };
+  }, [
+    dispatch,
+    adminMode,
+    userId,
+    pagination.currentPage,
+    pagination.pageSize,
+    filters.userIdFilter
+  ]);
 
   // Handle page change
   const handlePageChange = (event, value) => {
-    // Update current page (subtract 1 because API is 0-indexed but MUI Pagination is 1-indexed)
-    setPagination({
-      ...pagination,
-      currentPage: value - 1
-    });
+    // MUI Pagination is 1-indexed but API is 0-indexed
+    dispatch(setCurrentPage(value - 1));
   };
 
   // Handle page size change
   const handlePageSizeChange = (event) => {
     const newSize = parseInt(event.target.value);
-    setPagination({
-      ...pagination,
-      pageSize: newSize,
-      currentPage: 0 // Reset to first page when changing page size
-    });
+    dispatch(setPageSize(newSize));
   };
 
   // Handle admin mode toggle
   const handleAdminModeToggle = (event) => {
-    setIsAdmin(event.target.checked);
-    // Reset pagination and filters when switching modes
-    setPagination({
-      ...pagination,
-      currentPage: 0
-    });
-    setUserIdFilter("");
+    setAdminMode(event.target.checked);
+    dispatch(setCurrentPage(0));
+    dispatch(setUserIdFilter(""));
   };
 
   // Handle search input change
   const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
+    dispatch(setSearchQuery(event.target.value));
+  };
+
+  // Handle date filter changes
+  const handleStartDateChange = (event) => {
+    dispatch(setStartDateFilter(event.target.value));
+  };
+
+  const handleEndDateChange = (event) => {
+    dispatch(setEndDateFilter(event.target.value));
   };
 
   // Handle user ID filter change (admin only)
   const handleUserIdFilterChange = (event) => {
-    setUserIdFilter(event.target.value);
+    dispatch(setUserIdFilter(event.target.value));
   };
 
   // Apply filter and search
   const handleApplyFilters = () => {
     // Reset to first page when applying new filters
-    setPagination({
-      ...pagination,
-      currentPage: 0
-    });
+    dispatch(setCurrentPage(0));
 
-    // In a real implementation, you would pass these filters to your API call
-    fetchNoPayData(0);
+    // Fetch data with updated filters
+    dispatch(fetchNoPayRecords({
+      isAdmin: adminMode,
+      userId,
+      page: 0,
+      size: pagination.pageSize,
+      userIdFilter: filters.userIdFilter
+    }));
   };
 
   // Filter no pay records based on search query and date filters (client-side filtering)
@@ -199,17 +142,17 @@ const ManageNoPay = ({ isAdmin = false }) => {
     // Safely handle potentially undefined string properties
     const employeeIdLower = (record.employeeID || "").toLowerCase();
     const commentLower = (record.comment || "").toLowerCase();
-    const searchQueryLower = searchQuery.toLowerCase();
+    const searchQueryLower = filters.searchQuery.toLowerCase();
 
     const matchesSearchQuery =
         employeeIdLower.includes(searchQueryLower) ||
         commentLower.includes(searchQueryLower);
 
     const matchesStartDateFilter =
-        !startDateFilter || record.happenDate >= startDateFilter;
+        !filters.startDateFilter || record.happenDate >= filters.startDateFilter;
 
     const matchesEndDateFilter =
-        !endDateFilter || record.happenDate <= endDateFilter;
+        !filters.endDateFilter || record.happenDate <= filters.endDateFilter;
 
     return (
         matchesSearchQuery &&
@@ -235,7 +178,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
 
   // Check if user has admin role
   const checkIsAdminRole = () => {
-    const userRole = sessionStorage.getItem('userRole');
+    const userRole = typeof window !== 'undefined' ? sessionStorage.getItem('userRole') : null;
     return userRole && userRole.includes("ADMIN");
   };
 
@@ -252,7 +195,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
               <FormControlLabel
                   control={
                     <Switch
-                        checked={isAdmin}
+                        checked={adminMode}
                         onChange={handleAdminModeToggle}
                         color="primary"
                     />
@@ -282,18 +225,18 @@ const ManageNoPay = ({ isAdmin = false }) => {
                       label="Search by Employee ID or Comments"
                       variant="outlined"
                       fullWidth
-                      value={searchQuery}
+                      value={filters.searchQuery}
                       onChange={handleSearchChange}
                       sx={{ mb: 2 }}
                   />
 
                   <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
                     {/* Admin-only user ID filter */}
-                    {isAdmin && checkIsAdminRole() && (
+                    {adminMode && checkIsAdminRole() && (
                         <TextField
                             label="Filter by User ID"
                             variant="outlined"
-                            value={userIdFilter}
+                            value={filters.userIdFilter}
                             onChange={handleUserIdFilterChange}
                             placeholder="Enter employee ID"
                         />
@@ -303,16 +246,16 @@ const ManageNoPay = ({ isAdmin = false }) => {
                         label="Start Date"
                         type="date"
                         variant="outlined"
-                        value={startDateFilter}
-                        onChange={(e) => setStartDateFilter(e.target.value)}
+                        value={filters.startDateFilter}
+                        onChange={handleStartDateChange}
                         InputLabelProps={{ shrink: true }}
                     />
                     <TextField
                         label="End Date"
                         type="date"
                         variant="outlined"
-                        value={endDateFilter}
-                        onChange={(e) => setEndDateFilter(e.target.value)}
+                        value={filters.endDateFilter}
+                        onChange={handleEndDateChange}
                         InputLabelProps={{ shrink: true }}
                     />
 
@@ -396,7 +339,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
                     </TableContainer>
                 )}
 
-                {/* Pagination and Items Per Page */}
+                {/* Pagination */}
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
                   {pagination.totalPages > 0 && (
                       <Pagination

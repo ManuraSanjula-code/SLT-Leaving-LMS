@@ -11,7 +11,7 @@ function App() {
         <>
           <NavBar />
           <div className="App">
-            <SingleEmployeeActivities />
+            <SingleEmployeeActivities isAdmin={false} />
           </div>
         </>
       </Router>
