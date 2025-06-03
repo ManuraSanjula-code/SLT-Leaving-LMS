@@ -26,12 +26,18 @@ import {
     IconButton,
     Collapse,
     Grid,
-    Badge,
     Avatar,
     Tooltip,
-    Pagination,
     TableFooter,
-    TablePagination, FormControlLabel, Checkbox, Button
+    TablePagination,
+    FormControlLabel,
+    Checkbox,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions
 } from "@mui/material";
 import {
     ThemeProvider,
@@ -54,23 +60,20 @@ import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import { TrashIcon, X} from "lucide-react";
-import Dialog from "@mui/material/Dialog";
-import {Edit as EditIcon, StopRounded} from "@mui/icons-material";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
+import { TrashIcon, X } from "lucide-react";
+import { Edit as EditIcon } from "@mui/icons-material";
 import {
     fetchEmployeeActivities,
     createEmployeeActivity,
     updateEmployeeActivity,
     deleteEmployeeActivity,
+    deleteEmployeeDeActivity,
     setPage,
     setRowsPerPage,
     setSearchTerm,
     setFilterType,
     setFilterStatus,
+    setFilterActive,
     setStartDateFilter,
     setEndDateFilter,
     setFormData,
@@ -84,6 +87,7 @@ import {
     clearError,
     handleFormChange
 } from "../../../../lib/redux/redux-lms/employee-activities/employeeActivitiesSlice";
+import {ActivityDetailsMenu} from "../../components/employee/ActivityDetailsMenu";
 
 // Custom theme with better colors
 const theme = createTheme({
@@ -139,15 +143,12 @@ const formatDate = (dateString) => {
 const formatTimeForInput = (timeString) => {
     if (!timeString) return "";
 
-    // If it's already in HH:MM or HH:MM:SS format, format it correctly
     if (typeof timeString === 'string') {
-        // Handle various time formats
         const parts = timeString.split(':');
         if (parts.length >= 2) {
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
     }
-
     return "";
 };
 
@@ -158,7 +159,6 @@ const formatDateForInput = (dateString) => {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) {
-            // If invalid date, return today's date
             return new Date().toISOString().split('T')[0];
         }
         return date.toISOString().split('T')[0];
@@ -345,6 +345,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         searchTerm,
         filterType,
         filterStatus,
+        filterActive,
         startDateFilter,
         endDateFilter,
         formData,
@@ -355,6 +356,8 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         openDeleteDialog,
         idToDelete
     } = useSelector(state => state.employeeActivities);
+
+    const [anchorEl, setAnchorEl] = React.useState(false);
 
     // Fetch data on component mount
     useEffect(() => {
@@ -391,10 +394,11 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
             leaveReq: activity.leaveReq || false,
             issueDescription: activity.issueDescription || '',
             dueDateForUA: formatDateForInput(activity.dueDateForUA),
-            active: activity.active !== false, // Default to true if undefined
+            active: activity.active !== false,
             nopay: activity.nopay || false,
             viaMovement: activity.viaMovement || false,
-            viaLeave: activity.viaLeave || false
+            viaLeave: activity.viaLeave || false,
+            terminalID: activity.terminalID || ''
         };
 
         dispatch(setFormData(preparedData));
@@ -403,10 +407,16 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(setShowModal(true));
     };
 
-    // Handle delete button click
     const handleDeleteClick = (id) => {
         dispatch(setIdToDelete(id));
         dispatch(setOpenDeleteDialog(true));
+        setAnchorEl(false);
+    };
+
+    const handleDeleteDeClick = (id) => {
+        dispatch(setIdToDelete(id));
+        dispatch(setOpenDeleteDialog(true));
+        setAnchorEl(true);
     };
 
     // Function to handle confirmation dialog close
@@ -442,7 +452,11 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
 
     // Function to delete an attendance record
     const deleteAttendance = () => {
-        dispatch(deleteEmployeeActivity(idToDelete));
+        if (anchorEl) {
+            dispatch(deleteEmployeeDeActivity(idToDelete));
+        } else {
+            dispatch(deleteEmployeeActivity(idToDelete));
+        }
     };
 
     // Handle search input change
@@ -458,6 +472,11 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
     // Handle status filter change
     const handleStatusFilterChange = (event) => {
         dispatch(setFilterStatus(event.target.value));
+    };
+
+    // Handle active filter change
+    const handleActiveFilterChange = (event) => {
+        dispatch(setFilterActive(event.target.value));
     };
 
     // Handle page change
@@ -492,7 +511,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         return "Normal";
     };
 
-    // Filter activities based on search term, type, status, and date range
+    // Filter activities based on search term, type, status, active status, and date range
     const filteredActivities = activities.filter((activity) => {
         const activityType = getActivityType(activity);
         const activityStatus = getActivityStatus(activity);
@@ -500,6 +519,9 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         const matchesSearch = activity.employeeID?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = filterType === "all" || activityType === filterType;
         const matchesStatus = filterStatus === "all" || activityStatus === filterStatus;
+        const matchesActive = filterActive === "all" ||
+            (filterActive === "active" && activity.active !== false) ||
+            (filterActive === "inactive" && activity.active === false);
 
         // Convert date strings to Date objects for comparison
         const activityDate = activity.date ? new Date(activity.date).toISOString().split('T')[0] : "";
@@ -509,7 +531,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         const matchesStartDate = !startDate || activityDate >= startDate;
         const matchesEndDate = !endDate || activityDate <= endDate;
 
-        return matchesSearch && matchesType && matchesStatus && matchesStartDate && matchesEndDate;
+        return matchesSearch && matchesType && matchesStatus && matchesActive && matchesStartDate && matchesEndDate;
     });
 
     // Get current page of data
@@ -622,6 +644,24 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
+                            {/* Terminal ID */}
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Terminal ID"
+                                    name="terminalID"
+                                    value={formData.terminalID}
+                                    onChange={handleChange}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <PersonIcon fontSize="small" />
+                                            </Box>
+                                        ),
+                                    }}
+                                />
+                            </Grid>
+
                             {/* Arrival Date */}
                             <Grid item xs={12} md={6}>
                                 <TextField
@@ -722,280 +762,41 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 </Typography>
 
                                 <Grid container spacing={1}>
-                                    {/* First Row */}
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isFullDay}
-                                                    onChange={handleChange}
-                                                    name="isFullDay"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Full Day"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isLate}
-                                                    onChange={handleChange}
-                                                    name="isLate"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Late"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.lateCover}
-                                                    onChange={handleChange}
-                                                    name="lateCover"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Late Cover"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isHalfDay}
-                                                    onChange={handleChange}
-                                                    name="isHalfDay"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Half Day"
-                                        />
-                                    </Grid>
-
-                                    {/* Second Row */}
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isFullLeave}
-                                                    onChange={handleChange}
-                                                    name="isFullLeave"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Full Leave"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isShortLeave}
-                                                    onChange={handleChange}
-                                                    name="isShortLeave"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Short Leave"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isAbsent}
-                                                    onChange={handleChange}
-                                                    name="isAbsent"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Absent"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isUnSuccessful}
-                                                    onChange={handleChange}
-                                                    name="isUnSuccessful"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Unsuccessful"
-                                        />
-                                    </Grid>
-
-                                    {/* Third Row */}
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isNoPay}
-                                                    onChange={handleChange}
-                                                    name="isNoPay"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="No Pay"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.issues}
-                                                    onChange={handleChange}
-                                                    name="issues"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Issues"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.isUnAuthorized}
-                                                    onChange={handleChange}
-                                                    name="isUnAuthorized"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Unauthorized"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.resolve}
-                                                    onChange={handleChange}
-                                                    name="resolve"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Resolved"
-                                        />
-                                    </Grid>
-
-                                    {/* Fourth Row */}
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.leaveSuccess}
-                                                    onChange={handleChange}
-                                                    name="leaveSuccess"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Leave Success"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.leaveReq}
-                                                    onChange={handleChange}
-                                                    name="leaveReq"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Leave Request"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.active}
-                                                    onChange={handleChange}
-                                                    name="active"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Active"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.nopay}
-                                                    onChange={handleChange}
-                                                    name="nopay"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="No Pay"
-                                        />
-                                    </Grid>
-
-                                    {/* Fifth Row */}
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.viaMovement}
-                                                    onChange={handleChange}
-                                                    name="viaMovement"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Via Movement"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={6} sm={4} md={3}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.viaLeave}
-                                                    onChange={handleChange}
-                                                    name="viaLeave"
-                                                    color="primary"
-                                                    size="small"
-                                                />
-                                            }
-                                            label="Via Leave"
-                                        />
-                                    </Grid>
+                                    {[
+                                        { name: 'isFullDay', label: 'Full Day' },
+                                        { name: 'isLate', label: 'Late' },
+                                        { name: 'lateCover', label: 'Late Cover' },
+                                        { name: 'isHalfDay', label: 'Half Day' },
+                                        { name: 'isFullLeave', label: 'Full Leave' },
+                                        { name: 'isShortLeave', label: 'Short Leave' },
+                                        { name: 'isAbsent', label: 'Absent' },
+                                        { name: 'isUnSuccessful', label: 'Unsuccessful' },
+                                        { name: 'isNoPay', label: 'No Pay' },
+                                        { name: 'issues', label: 'Issues' },
+                                        { name: 'isUnAuthorized', label: 'Unauthorized' },
+                                        { name: 'resolve', label: 'Resolved' },
+                                        { name: 'leaveSuccess', label: 'Leave Success' },
+                                        { name: 'leaveReq', label: 'Leave Request' },
+                                        { name: 'active', label: 'Active' },
+                                        { name: 'nopay', label: 'No Pay' },
+                                        { name: 'viaMovement', label: 'Via Movement' },
+                                        { name: 'viaLeave', label: 'Via Leave' }
+                                    ].map((field) => (
+                                        <Grid item xs={6} sm={4} md={3} key={field.name}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        checked={formData[field.name] || false}
+                                                        onChange={handleChange}
+                                                        name={field.name}
+                                                        color="primary"
+                                                        size="small"
+                                                    />
+                                                }
+                                                label={field.label}
+                                            />
+                                        </Grid>
+                                    ))}
                                 </Grid>
                             </Grid>
                         </Grid>
@@ -1147,7 +948,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                         </Box>
 
                                         <Grid container spacing={2} sx={{ mt: 1 }}>
-                                            <Grid item xs={12} md={3}>
+                                            <Grid item xs={12} md={2.4}>
                                                 <FormControl variant="outlined" size="small" fullWidth>
                                                     <InputLabel>Type</InputLabel>
                                                     <Select
@@ -1167,7 +968,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 </FormControl>
                                             </Grid>
 
-                                            <Grid item xs={12} md={3}>
+                                            <Grid item xs={12} md={2.4}>
                                                 <FormControl variant="outlined" size="small" fullWidth>
                                                     <InputLabel>Status</InputLabel>
                                                     <Select
@@ -1186,7 +987,22 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 </FormControl>
                                             </Grid>
 
-                                            <Grid item xs={12} md={3}>
+                                            <Grid item xs={12} md={2.4}>
+                                                <FormControl variant="outlined" size="small" fullWidth>
+                                                    <InputLabel>Active Status</InputLabel>
+                                                    <Select
+                                                        value={filterActive}
+                                                        onChange={handleActiveFilterChange}
+                                                        label="Active Status"
+                                                    >
+                                                        <MenuItem value="all">All Records</MenuItem>
+                                                        <MenuItem value="active">Active Only</MenuItem>
+                                                        <MenuItem value="inactive">Inactive Only</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+
+                                            <Grid item xs={12} md={2.4}>
                                                 <TextField
                                                     label="Start Date"
                                                     type="date"
@@ -1199,7 +1015,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 />
                                             </Grid>
 
-                                            <Grid item xs={12} md={3}>
+                                            <Grid item xs={12} md={2.4}>
                                                 <TextField
                                                     label="End Date"
                                                     type="date"
@@ -1274,11 +1090,21 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                         sx={{
                                                             '&:hover': {
                                                                 backgroundColor: '#f5f5f5',
-                                                            }
+                                                            },
+                                                            backgroundColor: activity.active === false ? '#ffebee' : 'inherit'
                                                         }}
                                                     >
-                                                        <TableCell
-                                                            sx={{ fontWeight: 500 }}>{activity.employeeID}</TableCell>
+                                                        <TableCell sx={{ fontWeight: 500 }}>
+                                                            {activity.employeeID}
+                                                            {activity.active === false && (
+                                                                <Chip
+                                                                    label="Inactive"
+                                                                    size="small"
+                                                                    color="error"
+                                                                    sx={{ ml: 1, fontSize: '0.7rem' }}
+                                                                />
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell>{formatDate(activity.arrivalDate)}</TableCell>
                                                         <TableCell>{activity.arrivalTime || "-"}</TableCell>
                                                         <TableCell>{activity.leftTime || "-"}</TableCell>
@@ -1314,12 +1140,17 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {isAdmin && (
+                                                            <ActivityDetailsMenu
+                                                                activity={activity}
+                                                                onEdit={handleEditClick.bind(activity)}
+                                                                onDelete={activity.manual ? handleDeleteClick.bind(activity.publicId) : handleDeleteDeClick.bind(activity.publicId)}
+                                                                isAdmin={isAdmin}
+                                                            />
+                                                            {/*{isAdmin && activity.manual && (
                                                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                                                     <IconButton
                                                                         color="primary"
                                                                         onClick={() => handleEditClick(activity)}
-                                                                        disabled={activity.isManual}
                                                                         size="small"
                                                                     >
                                                                         <EditIcon fontSize="small" />
@@ -1327,13 +1158,23 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                                     <IconButton
                                                                         color="error"
                                                                         onClick={() => handleDeleteClick(activity.publicId)}
-                                                                        disabled={activity.isManual}
                                                                         size="small"
                                                                     >
                                                                         <TrashIcon size={18} />
                                                                     </IconButton>
                                                                 </Box>
                                                             )}
+                                                            {isAdmin && !activity.manual && (
+                                                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                                                    <IconButton
+                                                                        color="error"
+                                                                        onClick={() => handleDeleteDeClick(activity.publicId)}
+                                                                        size="small"
+                                                                    >
+                                                                        <X size={18} />
+                                                                    </IconButton>
+                                                                </Box>
+                                                            )}*/}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))

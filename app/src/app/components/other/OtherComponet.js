@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
-import { Button, Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, Grid, Paper } from '@mui/material';
+import React, {use, useState} from 'react';
+import {
+    Button,
+    Box,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Typography,
+    Grid,
+    Paper
+} from '@mui/material';
+import {useSelector, useDispatch} from 'react-redux';
 
 const Other = () => {
+    const {userDetails, loading} = useSelector((state) => state.auth);
+
     // State for file uploads
     const [rosterFile, setRosterFile] = useState(null);
     const [rosterShiftFile, setRosterShiftFile] = useState(null);
@@ -13,6 +27,9 @@ const Other = () => {
     const [openDeleteRosterShift, setOpenDeleteRosterShift] = useState(false);
     const [openGetAttendance, setOpenGetAttendance] = useState(false);
     const [openGetAttendanceByDate, setOpenGetAttendanceByDate] = useState(false);
+    // New dialogs for duty roster
+    const [openUploadDutyRoster, setOpenUploadDutyRoster] = useState(false);
+    const [openDeleteDutyRoster, setOpenDeleteDutyRoster] = useState(false);
 
     // State for user inputs
     const [userId, setUserId] = useState('');
@@ -20,6 +37,11 @@ const Other = () => {
     const [endDate, setEndDate] = useState('');
     const [rosterDate, setRosterDate] = useState('');
     const [rosterShiftDate, setRosterShiftDate] = useState('');
+
+    // New state for duty roster upload fields
+    const [dutyRosterFile, setDutyRosterFile] = useState(null);
+    const [rosterName, setRosterName] = useState('CharanaTV_MCR');
+    const [weekStartingDate, setWeekStartingDate] = useState('');
 
     // Function to handle roster file upload
     const handleRosterFileChange = (event) => {
@@ -29,6 +51,11 @@ const Other = () => {
     // Function to handle roster shift file upload
     const handleRosterShiftFileChange = (event) => {
         setRosterShiftFile(event.target.files[0]);
+    };
+
+    // Function to handle duty roster file upload
+    const handleDutyRosterFileChange = (event) => {
+        setDutyRosterFile(event.target.files[0]);
     };
 
     // Function handlers for each action
@@ -42,7 +69,7 @@ const Other = () => {
         const formData = new FormData();
         formData.append('file', rosterFile);
 
-        // Make the API call to upload roster
+        // Make the API call to upload roster (original endpoint)
         fetch('http://localhost:8080/api/roster/upload/employee', {
             method: 'POST',
             body: formData
@@ -59,6 +86,42 @@ const Other = () => {
             .catch(error => {
                 console.error('Error uploading roster:', error);
                 alert(`Error uploading roster: ${error.message}`);
+            });
+    };
+
+    const handleUploadDutyRoster = () => {
+        if (!dutyRosterFile) {
+            alert('Please select a file first');
+            return;
+        }
+
+        if (!weekStartingDate) {
+            alert('Please select a week starting date');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', dutyRosterFile, dutyRosterFile.name);
+        formData.append('rosterName', rosterName);
+        formData.append('weekStartingDate', weekStartingDate);
+
+        fetch('http://localhost:8080/api/duty-roster/upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('Duty Roster uploaded successfully!');
+                    setOpenUploadDutyRoster(false);
+                    setDutyRosterFile(null);
+                    setWeekStartingDate('');
+                } else {
+                    throw new Error('Failed to upload duty roster');
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading duty roster:', error);
+                alert(`Error uploading duty roster: ${error.message}`);
             });
     };
 
@@ -96,7 +159,7 @@ const Other = () => {
         // Format date to only include the date part (YYYY-MM-DD)
         const dateOnly = rosterDate.split('T')[0];
 
-        // Make the DELETE request to the API
+        // Make the DELETE request to the API (original endpoint)
         fetch(`http://localhost:8080/api/attendance/${dateOnly}/roster`, {
             method: 'DELETE',
             headers: {
@@ -120,8 +183,36 @@ const Other = () => {
             });
     };
 
+    const handleDeleteDutyRoster = () => {
+        if (!weekStartingDate) {
+            alert('Please select a week starting date');
+            return;
+        }
+
+        fetch(`http://localhost:8080/api/duty-roster/charana-tv/delete/${weekStartingDate}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert(`Duty Roster ${rosterName} for week starting ${weekStartingDate} deleted successfully!`);
+                } else {
+                    throw new Error('Failed to delete duty roster');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting duty roster:', error);
+                alert(`Error deleting duty roster: ${error.message}`);
+            })
+            .finally(() => {
+                setOpenDeleteDutyRoster(false);
+                setWeekStartingDate('');
+            });
+    };
+
     const handleDeleteRosterShift = () => {
-        // Format date to only include the date part (YYYY-MM-DD)
         const dateOnly = rosterShiftDate.split('T')[0];
 
         // Make the DELETE request to the API
@@ -265,55 +356,78 @@ const Other = () => {
     };
 
     return (
-        <Paper elevation={3} sx={{ p: 3, m: 2 }}>
+        <Paper elevation={3} sx={{p: 3, m: 2}}>
             <Typography variant="h5" gutterBottom>
                 Roster Management
             </Typography>
 
-            <Grid container spacing={2} sx={{ mt: 2 }}>
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        onClick={() => setOpenUploadRosterShift(true)}
-                    >
-                        Upload Roster Shift
-                    </Button>
-                </Grid>
+            <Grid container spacing={2} sx={{mt: 2}}>
+                {userDetails.roaster && (userDetails.highestRolePriority > 0  && userDetails.highestRolePriority < 10) && (
+                    <>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                fullWidth
+                                onClick={() => setOpenUploadRosterShift(true)}
+                            >
+                                Upload Roster Shift
+                            </Button>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                fullWidth
+                                onClick={() => setOpenUploadRoster(true)}
+                            >
+                                Upload Roster
+                            </Button>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="info"
+                                fullWidth
+                                onClick={() => setOpenUploadDutyRoster(true)}
+                            >
+                                For Charana Tv
+                            </Button>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                fullWidth
+                                onClick={() => setOpenDeleteRosterShift(true)}
+                            >
+                                Delete Roster Shift
+                            </Button>
+                        </Grid>
 
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        onClick={() => setOpenUploadRoster(true)}
-                    >
-                        Upload Roster
-                    </Button>
-                </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                fullWidth
+                                onClick={() => setOpenDeleteRoster(true)}
+                            >
+                                Delete Roster
+                            </Button>
+                        </Grid>
 
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        fullWidth
-                        onClick={() => setOpenDeleteRosterShift(true)}
-                    >
-                        Delete Roster Shift
-                    </Button>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        fullWidth
-                        onClick={() => setOpenDeleteRoster(true)}
-                    >
-                        Delete Roster
-                    </Button>
-                </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                fullWidth
+                                onClick={() => setOpenDeleteDutyRoster(true)}
+                            >
+                                Delete Roster (For Charana Tv)
+                            </Button>
+                        </Grid>
+                    </>
+                )}
 
                 <Grid item xs={12} sm={6} md={4}>
                     <Button
@@ -342,10 +456,10 @@ const Other = () => {
             <Dialog open={openUploadRoster} onClose={() => setOpenUploadRoster(false)}>
                 <DialogTitle>Upload Roster</DialogTitle>
                 <DialogContent>
-                    <Box sx={{ mt: 2 }}>
+                    <Box sx={{mt: 2}}>
                         <input
                             accept=".csv,.xlsx,.xls"
-                            style={{ display: 'none' }}
+                            style={{display: 'none'}}
                             id="roster-file-upload"
                             type="file"
                             onChange={handleRosterFileChange}
@@ -356,7 +470,7 @@ const Other = () => {
                             </Button>
                         </label>
                         {rosterFile && (
-                            <Typography variant="body2" sx={{ mt: 1 }}>
+                            <Typography variant="body2" sx={{mt: 1}}>
                                 Selected file: {rosterFile.name}
                             </Typography>
                         )}
@@ -374,14 +488,71 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
+            <Dialog open={openUploadDutyRoster} onClose={() => setOpenUploadDutyRoster(false)}>
+                <DialogTitle>Upload Roster For Charana Tv</DialogTitle>
+                <DialogContent>
+                    <Box sx={{mt: 2}}>
+                        <TextField
+                            label="Roster Name"
+                            fullWidth
+                            value={rosterName}
+                            onChange={(e) => setRosterName(e.target.value)}
+                            sx={{mb: 2}}
+                        />
+
+                        <Typography variant="subtitle2" gutterBottom>
+                            Week Starting Date
+                        </Typography>
+                        <TextField
+                            type="date"
+                            fullWidth
+                            InputLabelProps={{
+                                shrink: true,
+                            }}
+                            value={weekStartingDate}
+                            onChange={(e) => setWeekStartingDate(e.target.value)}
+                            sx={{mb: 2}}
+                        />
+
+                        <input
+                            accept=".csv,.xlsx,.xls"
+                            style={{display: 'none'}}
+                            id="duty-roster-file-upload"
+                            type="file"
+                            onChange={handleDutyRosterFileChange}
+                        />
+                        <label htmlFor="duty-roster-file-upload">
+                            <Button variant="outlined" component="span">
+                                Select File
+                            </Button>
+                        </label>
+                        {dutyRosterFile && (
+                            <Typography variant="body2" sx={{mt: 1}}>
+                                Selected file: {dutyRosterFile.name}
+                            </Typography>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenUploadDutyRoster(false)}>Cancel</Button>
+                    <Button
+                        onClick={handleUploadDutyRoster}
+                        color="primary"
+                        disabled={!dutyRosterFile || !weekStartingDate}
+                    >
+                        Upload
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* Upload Roster Shift Dialog */}
             <Dialog open={openUploadRosterShift} onClose={() => setOpenUploadRosterShift(false)}>
                 <DialogTitle>Upload Roster Shift</DialogTitle>
                 <DialogContent>
-                    <Box sx={{ mt: 2 }}>
+                    <Box sx={{mt: 2}}>
                         <input
                             accept=".csv,.xlsx,.xls"
-                            style={{ display: 'none' }}
+                            style={{display: 'none'}}
                             id="roster-shift-file-upload"
                             type="file"
                             onChange={handleRosterShiftFileChange}
@@ -392,7 +563,7 @@ const Other = () => {
                             </Button>
                         </label>
                         {rosterShiftFile && (
-                            <Typography variant="body2" sx={{ mt: 1 }}>
+                            <Typography variant="body2" sx={{mt: 1}}>
                                 Selected file: {rosterShiftFile.name}
                             </Typography>
                         )}
@@ -433,6 +604,34 @@ const Other = () => {
                         onClick={handleDeleteRoster}
                         color="error"
                         disabled={!rosterDate}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={openDeleteDutyRoster} onClose={() => setOpenDeleteDutyRoster(false)}>
+                <DialogTitle>Delete Roster (Charan Tv)</DialogTitle>
+                <DialogContent>
+                    <Typography variant="subtitle2" gutterBottom>
+                        Week Starting Date
+                    </Typography>
+                    <TextField
+                        type="date"
+                        fullWidth
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                        value={weekStartingDate}
+                        onChange={(e) => setWeekStartingDate(e.target.value)}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteDutyRoster(false)}>Cancel</Button>
+                    <Button
+                        onClick={handleDeleteDutyRoster}
+                        color="error"
+                        disabled={!weekStartingDate}
                     >
                         Delete
                     </Button>
@@ -506,7 +705,7 @@ const Other = () => {
                         fullWidth
                         value={userId}
                         onChange={(e) => setUserId(e.target.value)}
-                        sx={{ mb: 2 }}
+                        sx={{mb: 2}}
                     />
 
                     <Typography variant="subtitle2" gutterBottom>

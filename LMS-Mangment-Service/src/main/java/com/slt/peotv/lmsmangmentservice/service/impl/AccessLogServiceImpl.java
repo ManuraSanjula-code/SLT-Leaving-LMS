@@ -135,7 +135,8 @@ public class AccessLogServiceImpl implements AccessLogService {
 
             // Set employee ID
             inOut.setEmployeeID(employeeID);
-            inOut.setDate(helper.removeTimeFromDate(new Date()));
+            inOut.setDate(helper.getYesterdayDate());
+            inOut.setEtlRunTime(new Date());
             String normalizedInout = inout.trim().toUpperCase();
             switch (normalizedInout) {
                 case "IN":
@@ -178,6 +179,8 @@ public class AccessLogServiceImpl implements AccessLogService {
             List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDate(
                     inOut.getEmployeeID(),
                     inOut.getDate());
+
+            if(existingEntries == null || existingEntries.isEmpty())  inOutRepository.save(inOut);
 
             for (InOutEntity existing : existingEntries) {
                 if (!existing.equals(inOut)) {

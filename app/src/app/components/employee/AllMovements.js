@@ -94,7 +94,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
     // Fetch movement data
     useEffect(() => {
         if (userId == null) userId = sessionStorage.getItem('userId');
-
+        console.log(userId)
         if (userId) {
             dispatch(fetchMovementRequests({
                 isAdmin,
@@ -468,7 +468,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                               <Checkbox
                                   checked={selected.includes(request.id)}
                                   onChange={() => handleSelect(request.id)}
-                                  disabled={isApproved(request)}
+                                  disabled={isApproved(request) || request.reject}
                               />
                             </span>
                                                     </Tooltip>
@@ -486,7 +486,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                               <IconButton
                                   onClick={() => !isApproved(request) && handleOpenEditDialog(request)}
                                   color="primary"
-                                  disabled={isApproved(request)}
+                                  disabled={isApproved(request) || request.reject}
                               >
                                 <EditIcon />
                               </IconButton>
@@ -498,7 +498,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                               <IconButton
                                   onClick={() => !isApproved(request) && handleOpenDeleteDialog(request.publicId)}
                                   color="error"
-                                  disabled={isApproved(request)}
+                                  disabled={isApproved(request) || request.reject}
                               >
                                 <DeleteIcon />
                               </IconButton>
@@ -579,7 +579,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                     <Button onClick={() => setEditDialogOpen(false)} startIcon={<CloseIcon />}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSaveEdit} variant="contained" color="primary" startIcon={<SaveIcon />}>
+                    <Button onClick={handleSaveEdit}  variant="contained" color="primary" startIcon={<SaveIcon />}>
                         Save
                     </Button>
                 </DialogActions>

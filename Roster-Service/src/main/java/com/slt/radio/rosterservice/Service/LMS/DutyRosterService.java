@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +26,16 @@ public class DutyRosterService {
     public DutyRoster saveRoster(DutyRoster roster) {
         roster.setUpdatedDate(LocalDate.now());
         return dutyRosterRepository.save(roster);
+    }
+
+    public DutyRoster getTheDuty(String weekDays){
+        LocalDate weekStartingDate = LocalDate.parse(weekDays);
+        return dutyRosterRepository.findByWeekStartingDate(weekStartingDate).orElse(null);
+    }
+
+    public void deleteRosterForWeek(String week) {
+        LocalDate weekStartingDate = LocalDate.parse(week);
+        dutyRosterRepository.deleteDutyRosterByWeekStartingDate(weekStartingDate);
     }
 
     public List<DutyRoster> getAllRosters() {
@@ -52,7 +61,11 @@ public class DutyRosterService {
             // Parse the Excel structure similar to your file
             List<DailyDuty> dailyDuties = parseExcelToDailyDuties(sheet, weekStartingDate);
 
-            DutyRoster roster = new DutyRoster(weekStartingDate, rosterName, dailyDuties);
+            DutyRoster roster = new DutyRoster(weekStartingDate, rosterName, dailyDuties, true);
+            dutyRosterRepository.findAll().forEach(r -> {
+                r.setActive(false);
+                saveRoster(r);
+            });
             return saveRoster(roster);
         }
     }

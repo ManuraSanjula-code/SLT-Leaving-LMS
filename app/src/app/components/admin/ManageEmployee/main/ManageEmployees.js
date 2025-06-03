@@ -237,13 +237,6 @@ const ManageEmployees = React.memo(() => {
         }));
     }, [dispatch, initialFormData, handleCloseDialog]);
 
-    const handleDeleteClick = useCallback((id) => {
-        setEmployeeToDelete(id);
-        setDeleteConfirmOpen(true);
-    }, []);
-
-
-
     const handleClick = useCallback((event, id) => {
         setAnchorEl(event.currentTarget);
         setUserId(id)
@@ -474,12 +467,6 @@ const ManageEmployees = React.memo(() => {
                                                     disabled={isLoading || deleteLoading}
                                                 >
                                                     <EditIcon/>
-                                                </IconButton>
-                                                <IconButton
-                                                    onClick={() => handleDeleteClick(employee.userId)}
-                                                    disabled={isLoading || deleteLoading}
-                                                >
-                                                    <DeleteIcon/>
                                                 </IconButton>
                                                 <IconButton
                                                     onClick={(event) => handleClick(event, employee.userId)}

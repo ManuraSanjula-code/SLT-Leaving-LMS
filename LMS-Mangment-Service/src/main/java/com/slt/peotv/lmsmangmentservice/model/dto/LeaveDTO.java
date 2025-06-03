@@ -29,10 +29,19 @@ public class LeaveDTO {
     private Boolean notUsed = false;
     private Boolean isCanceled = false;
     private Boolean isManualRequest = false;
+    private Boolean reject = false;
     private Date happenDate;
     private String userId;
     @Transient
     private List<LeaveTra> adminsTra;
+
+    public Boolean getReject() {
+        return reject;
+    }
+
+    public void setReject(Boolean reject) {
+        this.reject = reject;
+    }
 
     public List<LeaveTra> getAdminsTra() {
         return adminsTra;

@@ -41,6 +41,7 @@ public class LeaveManagementService {
     private static final String MEDICAL_LEAVE = "Medical Leave";
     private static final String CASUAL_LEAVE = "Casual Leave";
     private static final String MATERNITY_LEAVE = "Maternity Leave";
+    private static final String SHORT_LEAVE = "Short Leave";
 
 
     @JmsListener(destination = "employee.new.queue")
@@ -91,7 +92,7 @@ public class LeaveManagementService {
         Map<String, LeaveTypeEntity> leaveTypes = new HashMap<>();
         
         // Define leave types
-        String[] types = {ANNUAL_LEAVE, MEDICAL_LEAVE, CASUAL_LEAVE, MATERNITY_LEAVE};
+        String[] types = {ANNUAL_LEAVE, MEDICAL_LEAVE, CASUAL_LEAVE, MATERNITY_LEAVE,SHORT_LEAVE};
         
         for (String type : types) {
             Optional<LeaveTypeEntity> leaveTypeOp = leaveTypeRepository.findByName(type);
@@ -118,6 +119,7 @@ public class LeaveManagementService {
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
         saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+        saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
     }
 
 
@@ -146,6 +148,7 @@ public class LeaveManagementService {
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
         saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+        saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
     }
 
 
@@ -161,6 +164,7 @@ public class LeaveManagementService {
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
         saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+        saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
     }
 
     private void saveLeaveAllocation(EmployeeEntity employee, LeaveTypeEntity leaveType, int leaves) {

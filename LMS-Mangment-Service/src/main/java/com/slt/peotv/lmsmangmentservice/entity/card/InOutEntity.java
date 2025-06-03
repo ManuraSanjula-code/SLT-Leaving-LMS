@@ -42,6 +42,8 @@ public class InOutEntity {
     @Builder.Default
     private Boolean isEvening = false;
     @Builder.Default
-    private Boolean isPast = false; /// CHECK IN PAST DATA (THERE ARE SOME TIMES DATA IN PAST DATA NOT SAVED IN OUR LOCAL-DB ) BUT SOME HOW
-                                    /// IN TOMARROW DATA BECAME VALID THEN I PROCESS THE DATA MAKE IT IS PAST IS TRUE
+    private Boolean isPast = false;
+
+    private Date etlRunTime;
+
 }

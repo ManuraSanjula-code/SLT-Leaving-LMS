@@ -22,7 +22,6 @@ export const fetchMovementRequests = createAsyncThunk(
                     'Content-Type': 'application/json'
                 }
             });
-
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
@@ -47,7 +46,6 @@ export const fetchMovementRequests = createAsyncThunk(
     }
 );
 
-// Async thunk to process movement requests (approve/reject)
 export const processMovementRequest = createAsyncThunk(
     'movement/processMovementRequest',
     async ({ movementId, approved }, { rejectWithValue }) => {
@@ -90,6 +88,7 @@ export const processMovementRequest = createAsyncThunk(
     }
 );
 
+/*
 export const processBulkMovementRequests = createAsyncThunk(
     'movement/processBulkMovementRequests',
     async ({ movementIds, approved }, { getState, rejectWithValue }) => {
@@ -123,7 +122,7 @@ export const processBulkMovementRequests = createAsyncThunk(
                 approvedIds: movementIds
             };
 
-
+            console.log(requestBody)
             const endpoint = approved
                 ? `http://localhost:8080/lms/bulk/approved/movement/${empId}`
                 : `http://localhost:8080/lms/bulk/reject/movement/${empId}`;
@@ -153,6 +152,77 @@ export const processBulkMovementRequests = createAsyncThunk(
                 response: data
             };
         } catch (error) {
+            return rejectWithValue(error.message || 'An unknown error occurred');
+        }
+    }
+);
+*/
+
+export const processBulkMovementRequests = createAsyncThunk(
+    'movement/processBulkMovementRequests',
+    async ({ movementIds, approved }, { getState, rejectWithValue }) => {
+        try {
+            // Get userId from session storage
+            const storedUserId = sessionStorage.getItem('userId');
+            const empId = sessionStorage.getItem('userId');
+            if (!empId) {
+                return rejectWithValue('Employee ID not found in session storage');
+            }
+            if (!storedUserId) {
+                throw new Error('User ID not found in session storage');
+            }
+
+            // Get the movement requests from the state
+            const state = getState();
+            const movementRequests = state.movement.requests;
+
+            // Extract employee IDs from the selected movement requests
+            const approvedEmployeesToday = [];
+
+            movementRequests.forEach(request => {
+                if (request && request.publicId && movementIds.includes(request.publicId) && request.employeeId) {
+                    // Fixed: Changed from request.employeeID to request.employeeId (lowercase 'd')
+                    approvedEmployeesToday.push(request.employeeId);
+                }
+            });
+
+            // Create the request body
+            const requestBody = {
+                approvedEmployeesToday,
+                approvedIds: movementIds
+            };
+
+            const endpoint = approved
+                ? `http://localhost:8080/lms/bulk/approved/movement/${empId}`
+                : `http://localhost:8080/lms/bulk/reject/movement/${empId}`;
+
+            const response = await fetch(
+                endpoint,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                    credentials: 'include'
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            return {
+                movementIds,
+                approvedEmployeesToday,
+                approved,
+                response: data
+            };
+        } catch (error) {
+            console.error('Bulk movement processing error:', error);
             return rejectWithValue(error.message || 'An unknown error occurred');
         }
     }

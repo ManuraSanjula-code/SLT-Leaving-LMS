@@ -14,6 +14,15 @@ public class LMSUser implements Serializable {
     private String email;
     private Date join_date;
     private String publicId;
+    private Boolean roaster;
+
+    public Boolean getRoaster() {
+        return roaster;
+    }
+
+    public void setRoaster(Boolean roaster) {
+        this.roaster = roaster;
+    }
 
     public String getPublicId() {
         return publicId;

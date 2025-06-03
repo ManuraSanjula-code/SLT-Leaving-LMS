@@ -26,6 +26,15 @@ public class UserRest {
 	private List<GrantedAuthority> authorities;
 	private Integer highestRolePriority;
 	private Date joiningDate;
+	private Boolean roaster;
+
+	public Boolean getRoaster() {
+		return roaster;
+	}
+
+	public void setRoaster(Boolean roaster) {
+		this.roaster = roaster;
+	}
 
 	public Date getJoiningDate() {
 		return joiningDate;

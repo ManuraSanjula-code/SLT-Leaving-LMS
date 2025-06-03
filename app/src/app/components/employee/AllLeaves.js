@@ -536,7 +536,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                                         <Checkbox
                                                             checked={selected.includes(leave.id)}
                                                             onChange={() => handleSelect(leave.id)}
-                                                            disabled={leave.accepted}
+                                                            disabled={leave.accepted || leave.reject ||  leave.canceled }
                                                         />
                                                     </TableCell>
                                                     <TableCell>{leave.employeeId || 'N/A'}</TableCell>
@@ -551,14 +551,14 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                                     <TableCell>
                                                         <IconButton
                                                             onClick={() => openEditDialog(leave)}
-                                                            disabled={leave.accepted}
+                                                            disabled={leave.accepted || leave.reject || leave.canceled ||false}
                                                             color="primary"
                                                         >
                                                             <EditIcon />
                                                         </IconButton>
                                                         <IconButton
                                                             onClick={() => openDeleteDialog(leave)}
-                                                            disabled={leave.accepted}
+                                                            disabled={leave.accepted || leave.reject || leave.canceled ||false}
                                                             color="error"
                                                         >
                                                             <DeleteIcon />
@@ -566,6 +566,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                                         <IconButton
                                                             onClick={() => toggleViewDetails(leave.id)}
                                                             color="info"
+                                                            disabled={leave.reject ||  leave.canceled || false}
                                                         >
                                                             <VisibilityIcon />
                                                         </IconButton>

@@ -28,7 +28,7 @@ export const fetchLeaveRequests = createAsyncThunk(
             }
 
             const data = await response.json();
-
+            console.log(data)
             return {
                 content: data.content || [], // Ensure we always have an array even if content is null
                 pagination: {
@@ -44,7 +44,6 @@ export const fetchLeaveRequests = createAsyncThunk(
     }
 );
 
-// Async thunk to process a single leave request
 export const processLeaveRequest = createAsyncThunk(
     'leave/processLeaveRequest',
     async ({ publicId, approved }, { rejectWithValue }) => {
@@ -74,6 +73,7 @@ export const processLeaveRequest = createAsyncThunk(
                     userId: storedUserId
                 })
             });
+            console.log(response)
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -130,13 +130,15 @@ export const processBulkLeaveRequests = createAsyncThunk(
                 }
             );
 
+            console.log(response);
+
+            // Check if response is ok
             if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                return rejectWithValue(errorData?.message || `Server responded with status: ${response.status}`);
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
-            const data = await response.json();
-
+            // Handle void response - API doesn't return data
+            // We'll return the data we need for the fulfilled case
             return {
                 leaveIds,
                 approvedEmployeesToday,

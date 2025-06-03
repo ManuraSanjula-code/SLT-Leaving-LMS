@@ -27,6 +27,15 @@ public class AttendanceReq {
     private Date dueDateForUA;
     private Boolean active = true;
     private Boolean nopay = false;
+    private String terminalID;
+
+    public String getTerminalID() {
+        return terminalID;
+    }
+
+    public void setTerminalID(String terminalID) {
+        this.terminalID = terminalID;
+    }
 
     private Boolean viaMovement = false;
     private Boolean viaLeave = false;

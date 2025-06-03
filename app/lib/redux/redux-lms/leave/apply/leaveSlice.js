@@ -67,7 +67,7 @@ export const submitLeaveRequest = createAsyncThunk(
                 throw new Error(`Error: ${response.status}`);
             }
 
-            return await response.json();
+            return "DONE"
         } catch (error) {
             return rejectWithValue(error.message);
         }
@@ -102,6 +102,7 @@ const leaveApplicationSlice = createSlice({
 
         // Form validation
         errors: {},
+        isValid: false, // Add this to track validation state
 
         // Leave balances
         leaveBalances: [],
@@ -173,7 +174,7 @@ const leaveApplicationSlice = createSlice({
             }
         },
 
-        // Validate form
+        // Validate form - FIXED: Only modify draft, don't return
         validateForm: (state) => {
             const newErrors = {};
 
@@ -203,7 +204,8 @@ const leaveApplicationSlice = createSlice({
             }
 
             state.errors = newErrors;
-            return Object.keys(newErrors).length === 0; // Return true if no errors
+            state.isValid = Object.keys(newErrors).length === 0; // Store validation result in state
+            // Don't return anything - just modify the draft
         },
 
         // Reset form
@@ -226,6 +228,7 @@ const leaveApplicationSlice = createSlice({
                 unSuccessful: false
             };
             state.errors = {};
+            state.isValid = false;
         },
 
         // Set notification
@@ -286,6 +289,8 @@ const leaveApplicationSlice = createSlice({
                     isLate: false,
                     unSuccessful: false
                 };
+                state.errors = {};
+                state.isValid = false;
             })
             .addCase(submitLeaveRequest.rejected, (state, action) => {
                 state.loading = false;
@@ -314,6 +319,7 @@ export const {
 export const selectUserId = state => state.leaveApplication.userId;
 export const selectFormData = state => state.leaveApplication.formData;
 export const selectErrors = state => state.leaveApplication.errors;
+export const selectIsValid = state => state.leaveApplication.isValid; // Add this selector
 export const selectLeaveBalances = state => state.leaveApplication.leaveBalances;
 export const selectLoading = state => state.leaveApplication.loading;
 export const selectFetchingBalance = state => state.leaveApplication.fetchingBalance;

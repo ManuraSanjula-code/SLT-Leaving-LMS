@@ -8,6 +8,7 @@ import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
+import com.slt.peotv.lmsmangmentservice.utils.service.ApprovalProcessor;
 import com.slt.peotv.lmsmangmentservice.utils.service.ExelUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +40,9 @@ public class LMSController {
 
     @Autowired
     private ExelUtils exelUtils;
+
+    @Autowired
+    private ApprovalProcessor threadSafeBulkApprovalService;
 
     private Date convertStringToDate(String dateString) {
         LocalDate localDate = LocalDate.parse(dateString);
@@ -74,13 +77,13 @@ public class LMSController {
 
     @PostMapping("/bulk/approved/movement/{empId}")
     public ResponseEntity<Void> bulkApprovedM(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
-        checkService.allApproved(req, true);
+        threadSafeBulkApprovalService.allApproved(req, empId, true);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/bulk/approved/leave/{empId}")
     public ResponseEntity<Void> bulkApprovedL(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
-        checkService.allApproved(req, false);
+        threadSafeBulkApprovalService.allApproved(req, empId, false);
         return ResponseEntity.ok().build();
     }
 
@@ -162,6 +165,11 @@ public class LMSController {
         return checkService.getAllAccessLogsToday(date);
     }
 
+    @GetMapping("/access-log")
+    public List<AccessLogRest> getAllAccessLogsToday(@RequestParam String date) {
+        return checkService.getAllAccessLogsToday(date);
+    }
+
     /// ----------------- ADMIN-----------------------------
     @PostMapping("/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
@@ -180,6 +188,12 @@ public class LMSController {
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public void deleteAttendance(@PathVariable String publicId, @PathVariable String empId) {
         lmsService.deleteAttendance(publicId);
+    }
+
+    @DeleteMapping("/attendance/de/{publicId}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
+    public void deleteAttendanceByde(@PathVariable String publicId, @PathVariable String empId) {
+        lmsService.deleteAttendanceV1(publicId);
     }
 
     /// ----------------- ADMIN-----------------------------
@@ -269,7 +283,7 @@ public class LMSController {
     /// ----------------- ADMIN-----------------------------
 
     @PostMapping("/leave/process/{leaveId}/{userId}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(30, 49)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(50, 99)")
     public void procesLeave(@PathVariable String leaveId, @PathVariable String userId, @PathVariable String empId) {
         checkService.processLeave(leaveId, userId);
     }
@@ -284,7 +298,7 @@ public class LMSController {
     /// ----------------- ADMIN-----------------------------
 
     @PostMapping("/movement/process/{movementId}/{userId}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(30, 49)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(50, 99)")
     public void processMovement(@PathVariable String movementId, @PathVariable String userId, @PathVariable String empId) {
         checkService.processMovement(movementId, userId);
     }

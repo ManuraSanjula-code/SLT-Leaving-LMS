@@ -20,7 +20,8 @@ const initialState = {
         defaultAddress: 0, // Default address index
         isAuthenticated: false,
         integrityHash: null,
-        highestRolePriority: 0
+        highestRolePriority: 0,
+        roaster: false
     },
     loading: false,
     successMessage: null,
@@ -64,8 +65,7 @@ const authSlice = createSlice({
 
             if (sanitizedDetails.profilePic && typeof sanitizedDetails.profilePic === 'string') {
                 if (!sanitizedDetails.profilePic.startsWith('/') &&
-                    !sanitizedDetails.profilePic.startsWith('http://localhost') &&
-                    !sanitizedDetails.profilePic.startsWith('https://yourdomain.com')) {
+                    !sanitizedDetails.profilePic.startsWith('http://localhost')){
                     sanitizedDetails.profilePic = '';
                 }
             }

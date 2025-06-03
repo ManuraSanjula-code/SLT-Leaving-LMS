@@ -15,4 +15,8 @@ public interface MovementAdminsRepo extends JpaRepository<MovementAdminsEntity, 
     List<MovementAdminsEntity> findBySltId(String sltId);
 
     List<MovementAdminsEntity> findByEmployeeId(String employeeId);
+
+    List<MovementAdminsEntity> findByMovementId(String movementId);
+
+
 }

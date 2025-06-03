@@ -205,7 +205,8 @@ const movementSlice = createSlice({
                         happenDate: item.happenDate || "",
                         reqDate: item.reqDate || "",
                         movementType: item.movementType || "",
-                        adminsTra: item.adminsTra || []
+                        adminsTra: item.adminsTra || [],
+                        reject: item.reject || false
                     }));
 
                     state.pagination = {

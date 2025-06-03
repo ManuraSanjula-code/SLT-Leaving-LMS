@@ -21,7 +21,7 @@ public class MovementDTO {
     private String destination;
     private String employeeId;
     private Date reqDate;
-    @Enumerated(EnumType.STRING)  // FIXED: Enum mapping
+    @Enumerated(EnumType.STRING)
     private MovementType movementType;
     private Integer attSync = 0;
     private Date happenDate;
@@ -37,7 +37,6 @@ public class MovementDTO {
     @Transient
     private List<MovementTra> adminsTra;
     private Boolean isReject = false;
-
     public Boolean getReject() {
         return isReject;
     }

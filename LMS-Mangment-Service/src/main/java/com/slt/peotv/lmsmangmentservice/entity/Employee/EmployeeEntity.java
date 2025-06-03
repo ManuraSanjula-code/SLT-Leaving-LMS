@@ -29,4 +29,5 @@ public class EmployeeEntity {
     @Column(unique = true)
     private String email;
     private Date join_date;
+    private Boolean roaster;
 }

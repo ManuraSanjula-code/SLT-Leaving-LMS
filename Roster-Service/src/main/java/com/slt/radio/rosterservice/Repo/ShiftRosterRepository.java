@@ -12,6 +12,5 @@ public interface ShiftRosterRepository extends MongoRepository<ShiftRoster, Stri
     Optional<ShiftRoster> findByMonthAndYear(String month, int year);
     void deleteByYearAndMonth(int year, String month);
     List<ShiftRoster> findByYearAndMonth(int year, String month);
-
 }
 

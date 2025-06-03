@@ -152,8 +152,10 @@ const ManageLeaveRequests = () => {
   const getStatusChip = (leaveRequest) => {
     if (!leaveRequest) return <Chip label="Unknown" color="default" size="small" />;
 
-    if (leaveRequest.canceled) {
+    if (leaveRequest.cancelled) {
       return <Chip label="Canceled" color="error" size="small" />;
+    } else if (leaveRequest.reject) {
+      return <Chip label="Reject" color="error" size="small" />;
     } else if (leaveRequest.accepted) {
       return <Chip label="Approved" color="success" size="small" />;
     } else if (leaveRequest.pending) {
@@ -308,7 +310,7 @@ const ManageLeaveRequests = () => {
                                         color="primary"
                                         size="small"
                                         sx={{ mr: 1, mb: 1 }}
-                                        disabled={request.accepted || request.canceled || loading}
+                                        disabled={request.accepted || request.reject || loading}
                                         onClick={() => handleApprove(request.publicId)}
                                     >
                                       Approve
@@ -317,7 +319,7 @@ const ManageLeaveRequests = () => {
                                         variant="outlined"
                                         color="error"
                                         size="small"
-                                        disabled={request.accepted || request.canceled || loading}
+                                        disabled={request.accepted || request.reject || loading}
                                         onClick={() => handleReject(request.publicId)}
                                     >
                                       Reject

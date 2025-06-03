@@ -165,6 +165,45 @@ const RequestMovement = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="logTime"
+                    label="Log Time"
+                    name="logTime"
+                    type="datetime-local"
+                    value={formData.logTime}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="intime"
+                    label="In Time"
+                    name="intime"
+                    type="time"
+                    value={formData.intime}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                    margin="normal"
+                    fullWidth
+                    id="outtime"
+                    label="Out Time"
+                    name="outtime"
+                    type="time"
+                    value={formData.outtime}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <FormControlLabel
                     control={
                       <Checkbox

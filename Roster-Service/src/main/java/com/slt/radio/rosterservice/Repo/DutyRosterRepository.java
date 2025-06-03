@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface DutyRosterRepository extends MongoRepository<DutyRoster, String> {
 
+    Optional<DutyRoster> findByIsActive(Boolean isActive);
     // Find roster by week starting date
     Optional<DutyRoster> findByWeekStartingDate(LocalDate weekStartingDate);
 
@@ -27,4 +28,6 @@ public interface DutyRosterRepository extends MongoRepository<DutyRoster, String
     // Find current week roster
     @Query("{'weekStartingDate': {$lte: ?0}, 'weekStartingDate': {$gte: ?1}}")
     List<DutyRoster> findCurrentWeekRoster(LocalDate currentDate, LocalDate weekStart);
+
+    void deleteDutyRosterByWeekStartingDate(LocalDate weekStartingDate);
 }

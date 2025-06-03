@@ -18,12 +18,14 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     Page<AttendanceEntity> findAll(Pageable pageable);
     Page<AttendanceEntity> findByUserId(String userId, Pageable pageable);
     List<AttendanceEntity> findByEmployeeID(String employeeID);
-
+    List<AttendanceEntity> findByUserId(String userId);
+    Page<AttendanceEntity> findByEmployeeID(String employeeID, Pageable pageable);
+    List<AttendanceEntity> findByDateAndEmployeeID(Date date, String employeeID);
+    List<AttendanceEntity> findByEmployeeIDAndDateBetween(String employeeID, Date startDate, Date endDate);
     Optional<AttendanceEntity> findByPublicId(String publicId);
     boolean existsByEmployeeIDAndDate(String EmployeeID, Date date);
     Optional<AttendanceEntity> findByEmployeeIDAndDate(String EmployeeID, Date date);
     Optional<AttendanceEntity> findByEmployeeIDAndArrivalDate(String employeeID, Date arrivalDate);
-
     Page<AttendanceEntity> findByIsAbsentTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsHalfDayTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnSuccessfulTrue(Pageable pageable);
@@ -46,4 +48,13 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
             Date startDate,
             Date endDate
     );
+
+    List<AttendanceEntity> findByUserIdAndArrivalDateBetween(
+            String userId,
+            Date startDate,
+            Date endDate
+    );
+
+    List<AttendanceEntity> findByEmployeeIDAndDateAndTerminalID(String employeeID, Date date, String terminalID);
+    long countByEmployeeIDAndDate(String employeeID, Date date);
 }

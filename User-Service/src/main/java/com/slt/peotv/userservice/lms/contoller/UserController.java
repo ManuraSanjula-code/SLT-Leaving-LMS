@@ -180,6 +180,7 @@ public class UserController {
         } else {
             UserDto userDto = userService.getUserByUserId(userid);
             UserRest userRest = UserMapper.mapToUserRest(userDto);
+            userRest.setRoaster(userDto.getRoaster());
             userRest.setHighestRolePriority(highestRolePriority);
             return userRest;
         }
@@ -553,6 +554,7 @@ public class UserController {
             userRest.setEmployeeId(userDto.getEmployeeId());
             userRest.setSltId(userDto.getSltId());
             userRest.setJoiningDate(userDto.getJoin_date());
+            userRest.setRoaster(userDto.getRoaster());
             // Map AddressDTO to AddressesRest
             if (userDto.getAddresses() != null) {
                 List<AddressesRest> addressesRest = userDto.getAddresses().stream()

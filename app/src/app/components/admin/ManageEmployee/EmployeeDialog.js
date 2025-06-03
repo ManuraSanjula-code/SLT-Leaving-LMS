@@ -73,7 +73,7 @@ const INITIAL_FORM_DATA = {
     additional: {},
     admins: [],
     addedAdmins: [],
-    deletedAdmins: []
+    deletedAdmins: [],
 };
 
 const EmployeeDialog = React.memo(({
@@ -125,7 +125,7 @@ const EmployeeDialog = React.memo(({
                 gender: memoizedEmployee.gender || '',
                 isSltEmp: memoizedEmployee.isSltEmp || 0,
                 isSltIntern: memoizedEmployee.isSltIntern || 0,
-                isRoaster: memoizedEmployee.isRoaster || 0,
+                isRoaster: memoizedEmployee.roaster || 0,
                 active: memoizedEmployee.active || 1,
                 employeeId: memoizedEmployee.employeeId || '',
                 sltId: memoizedEmployee.sltId || '',
@@ -745,7 +745,7 @@ const EmployeeDialog = React.memo(({
             <FormControlLabel
                 control={
                     <Checkbox
-                        checked={formData.isRoaster === 1}
+                        checked={formData.isRoaster}
                         onChange={(e) => handleChange('isRoaster', e.target.checked ? 1 : 0)}
                         disabled={saveLoading}
                     />

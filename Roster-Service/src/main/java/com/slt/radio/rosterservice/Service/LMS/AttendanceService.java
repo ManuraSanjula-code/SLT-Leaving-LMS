@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,9 +48,108 @@ public class AttendanceService {
     private final ShiftRosterRepository shiftRosterRepository;
     private final RosterRepository rosterRepository;
     private final EmployeeArchiveRepository employeeArchiveRepository;
+    private final DutyRosterRepository dutyRosterRepository;
 
+    public void processDutyAttendances() {
+        // Fetch duty roster within transaction
+        DutyRoster duty = dutyRosterRepository.findByIsActive(true).orElse(null);
+        if (duty == null) return;
 
-    public void processAccessLogs(List<AccessLog> accessLogs) {
+        LocalDate today = LocalDate.now();
+        List<Attendance> attendancesToSave = new ArrayList<>();
+
+        // Process daily duties sequentially (parallelism at employee level)
+        duty.getDailyDuties().forEach(dailyDuty -> {
+            if (!dailyDuty.getDate().equals(today)) return;
+
+            dailyDuty.getTimeSlots().forEach(timeSlot -> {
+                // Process employees in parallel with proper ID handling
+                timeSlot.getAssignedEmployees().parallelStream().forEach(emId -> {
+
+                    try {
+                        // Clean and validate employee ID
+                        String cleanEmId = cleanEmployeeId(emId);
+                        if (cleanEmId.isEmpty()) {
+                            log.warn("Invalid employee ID format: {}", emId);
+                            return;
+                        }
+
+                        // Verify employee exists and is on roster
+                        Optional<EmployeeArchive> employee = employeeArchiveRepository.findByEmployeeId(cleanEmId);
+                        if (employee.isEmpty()) {
+                            return;
+                        }
+
+                        // Get attendance data with cleaned ID
+                        Optional<InOut> punchInMoaAsc = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(
+                                employee.get().getSltId(),
+                                getYesterdayDate()
+                        );
+
+                        if (punchInMoaAsc.isEmpty()) {
+                            log.debug("No attendance data for employee: {}", cleanEmId);
+                            return;
+                        }
+
+                        // Create attendance record
+                        InOut inouts = punchInMoaAsc.get();
+                        Attendance attendance = new Attendance();
+                        attendance.setPublicId(UUID.randomUUID().toString());
+                        attendance.setEmployeeID(cleanEmId);
+                        attendance.setTerminalID(inouts.getTerminalID());
+                        attendance.setDate(new Date());
+                        attendance.setArrivalDate(inouts.getPunchInMoa());
+                        attendance.setArrivalTime(inouts.getTimeMoa());
+                        attendance.setUserId(cleanEmId);
+                        attendance.setIsFullDay(true);
+
+                        // Synchronized add to prevent duplicates
+                        synchronized (attendancesToSave) {
+                            attendancesToSave.add(attendance);
+                        }
+
+                    } catch (Exception e) {
+                        log.error("Error processing employee {}: {}", emId, e.getMessage());
+                    }
+                });
+            });
+        });
+
+        // Batch save with duplicate check
+        if (!attendancesToSave.isEmpty()) {
+            List<String> existingIds = attendanceRepository.findExistingAttendances(
+                    attendancesToSave.stream()
+                            .map(Attendance::getEmployeeID)
+                            .collect(Collectors.toList()),
+                    new Date()
+            ).stream().filter(Objects::nonNull).map(Attendance::getEmployeeID).collect(Collectors.toList());
+
+            List<Attendance> uniqueAttendances = attendancesToSave.stream()
+                    .filter(a -> !existingIds.contains(a.getEmployeeID()))
+                    .collect(Collectors.toList());
+
+            attendanceRepository.saveAll(uniqueAttendances);
+        }
+    }
+
+    // Helper method to clean employee IDs
+    private String cleanEmployeeId(String rawId) {
+        if (rawId == null) return "";
+
+        // Remove all whitespace and non-alphanumeric characters
+        String cleaned = rawId.trim()
+                .replaceAll("\\s+", "")
+                .replaceAll("[^a-zA-Z0-9]", "");
+
+        // Convert to uppercase for consistency
+        return cleaned.toUpperCase();
+    }
+
+    public Optional<ShiftRoster> getAttendance(int year, String month) {
+        return shiftRosterRepository.findByMonthAndYear(month, year);
+    }
+
+    public synchronized void processAccessLogs(List<AccessLog> accessLogs) {
         Map<String, List<AccessLog>> employeeLogsMap = accessLogs.stream()
                 .collect(Collectors.groupingBy(AccessLog::getEmployeeID));
 
@@ -85,39 +185,9 @@ public class AttendanceService {
     }
 
     public Date getYesterdayDate() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now().minusDays(3);
         return removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
     }
-
-    public void processAttendanceForDate(DutyRoster roster) {
-        roster.getDailyDuties().forEach(day_duty -> {
-            day_duty.getTimeSlots().forEach(time -> {
-                time.getAssignedEmployees().forEach(emId -> {
-
-                    Optional<EmployeeArchive> employee = employeeArchiveRepository.findByEmployeeId(emId);
-                    EmployeeArchive emp = employee.orElse(null);
-                    if (emp == null) return;
-
-                    Optional<InOut> inouts = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(emId, getYesterdayDate());
-
-                    if(inouts.isEmpty()) return;
-
-                    Attendance attendance = new Attendance();
-                    attendance.setPublicId(UUID.randomUUID().toString());
-                    attendance.setEmployeeID(emId);
-                    attendance.setTerminalID(inouts.get().getTerminalID());
-                    attendance.setDate(new Date());
-                    attendance.setArrivalDate(inouts.get().getPunchInMoa());
-                    attendance.setArrivalTime(inouts.get().getTimeMoa());
-                    attendance.setUserId(emp.getUserId());
-                    attendance.setIsFullDay(true);
-
-                    attendanceRepository.save(attendance);
-                });
-            });
-        });
-    }
-
 
     private void createInOutFromLogs(String employeeId, String dateStr, List<AccessLog> logs) throws ParseException {
         Date date = ALT_DATE_FORMAT.parse(dateStr);
@@ -188,14 +258,13 @@ public class AttendanceService {
         }
     }
 
-    private void createInOutFromLogsV1(String employeeId, String dateStr, List<AccessLog> logs) throws ParseException {
+    private synchronized void createInOutFromLogsV1(String employeeId, String dateStr, List<AccessLog> logs) throws ParseException {
         Date date = ALT_DATE_FORMAT.parse(dateStr);
         logs.sort(Comparator.comparing(AccessLog::getLogTime));
 
         for (AccessLog log : logs) {
             try {
                 // Parse the time
-                Date timeDate = TIME_FORMAT.parse(log.getLogTime());
                 String timeStr = log.getLogTime();
 
                 // Extract hour to determine if it's morning or evening
@@ -211,11 +280,11 @@ public class AttendanceService {
                     inOut.setInOut(1);  // IN = 1
 
                     if (isMorning) {
-                        inOut.setPunchInMoa(timeDate);
+                        inOut.setPunchInMoa(getYesterdayDate());
                         inOut.setTimeMoa(timeStr);
                         inOut.setIsMorning(true);
                     } else {
-                        inOut.setPunchInEv(timeDate);
+                        inOut.setPunchInEv(getYesterdayDate());
                         inOut.setTimeEve(timeStr);
                         inOut.setIsEvening(true);
                     }
@@ -223,11 +292,11 @@ public class AttendanceService {
                     inOut.setInOut(-1);  // OUT = -1
 
                     if (isMorning) {
-                        inOut.setPunchInMoa(timeDate);
+                        inOut.setPunchInMoa(getYesterdayDate());
                         inOut.setTimeMoa(timeStr);
                         inOut.setIsMorning(true);
                     } else {
-                        inOut.setPunchInEv(timeDate);
+                        inOut.setPunchInEv(getYesterdayDate());
                         inOut.setTimeEve(timeStr);
                         inOut.setIsEvening(true);
                     }
@@ -256,7 +325,7 @@ public class AttendanceService {
                     InOut savedInOut = inOutRepository.save(inOut);
                     logger.info("Saved InOut record: {}", savedInOut);
                 }
-            } catch (ParseException e) {
+            } catch (Exception e) {
                 logger.error("Error parsing time for employee: {} on log: {}", employeeId, log, e);
             }
         }
@@ -294,14 +363,14 @@ public class AttendanceService {
             Month month = Month.of(monthNumber);
             String monthDisplayName = month.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH);
 
-            Optional<ShiftRoster> shiftRosterOpt = shiftRosterRepository.findByMonthAndYear("January", year);
+            Optional<ShiftRoster> shiftRosterOpt = shiftRosterRepository.findByMonthAndYear(monthDisplayName, year);
             if (shiftRosterOpt.isEmpty()) {
                 log.error("No shift roster found for month: {} and year: {}", month, year);
                 return null;
             }
             ShiftRoster shiftRoster = shiftRosterOpt.get();
             String dayPart = dateStr.split("-")[2];
-            dayPart = dayPart.split("0")[1];
+            //dayPart = dayPart.split("0")[1];
 
             // Check if the date exists in the roster
             if (!shiftRoster.getDates().contains(dayPart)) {
@@ -309,7 +378,7 @@ public class AttendanceService {
                 return null;
             }
 
-            Map<String, TeamAttendanceSummary> teamSummaries = new HashMap<>();
+            ConcurrentHashMap<String, TeamAttendanceSummary> teamSummaries = new ConcurrentHashMap<>();
             List<EmployeeAttendanceDetail> employeeDetails = new ArrayList<>();
 
             processShifts(dateStr, shiftRoster.getDutyTurn(), teamSummaries, employeeDetails, false);
@@ -340,6 +409,216 @@ public class AttendanceService {
     }
 
     private void processShifts(String dateStr, Map<String, List<ShiftAssignment>> shifts,
+                               ConcurrentHashMap<String, TeamAttendanceSummary> teamSummaries,
+                               List<EmployeeAttendanceDetail> employeeDetails,
+                               boolean isRotationShift) {
+
+        shifts.forEach((shiftTime, assignments) -> {
+            assignments.forEach(assignment -> {
+                String dayPart = dateStr.split("-")[2];
+                if (!dayPart.equals(assignment.getDate())) return;
+
+                String teamNameOrId = assignment.getTeam();
+                boolean isTeamRotation = teamNameOrId.contains("ROT");
+
+                if (isRotationShift != isTeamRotation) return;
+
+                String teamId = teamNameOrId.replace(" ROT", "");
+                Team team = teamRepository.findByShortName(teamId).orElse(null);
+                if (team == null) {
+                    log.error("Team not found: {}", teamId);
+                    return;
+                }
+
+                List<Employee> teamEmployees = employeeRepository.findByTeamId(team.getId());
+                if (teamEmployees.isEmpty()) {
+                    log.warn("No employees for team: {}", team.getName());
+                    return;
+                }
+
+                // Process employees in parallel
+                List<Attendance> attendances = teamEmployees.parallelStream()
+                        .map(employee -> processEmployee(employee, dateStr, shiftTime, team, isRotationShift, employeeDetails))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                if (!attendances.isEmpty()) {
+                    attendanceRepository.saveAll(attendances);
+                }
+
+                // Create team summary
+                TeamAttendanceSummary summary = createTeamSummary(team, shiftTime, isRotationShift, attendances, teamEmployees.size());
+                teamSummaries.put(team.getId(), summary);
+            });
+        });
+    }
+
+    private TeamAttendanceSummary createTeamSummary(Team team, String shiftTime, boolean isRotationShift,
+                                                    List<Attendance> attendances, int totalEmployees) {
+        int presentCount = 0;
+        int lateCount = 0;
+        int absentCount = 0;
+        int halfDayCount = 0;
+
+        for (Attendance attendance : attendances) {
+            if (attendance.getIsAbsent()) {
+                absentCount++;
+            } else if (attendance.getIsLate()) {
+                lateCount++;
+                if (attendance.getIsHalfDay()) {
+                    halfDayCount++;
+                }
+            } else {
+                presentCount++;
+            }
+        }
+
+        return TeamAttendanceSummary.builder()
+                .teamId(team.getId())
+                .teamName(team.getName())
+                .shiftTime(shiftTime)
+                .totalEmployees(totalEmployees)
+                .presentEmployees(presentCount)
+                .lateEmployees(lateCount)
+                .absentEmployees(absentCount)
+                .halfDayEmployees(halfDayCount)
+                .isRotationShift(isRotationShift)
+                .build();
+    }
+
+    private Attendance processEmployee(Employee employee, String dateStr, String shiftTime,
+                                       Team team, boolean isRotationShift,
+                                       List<EmployeeAttendanceDetail> employeeDetails) {
+        try {
+            Date date = DATE_FORMAT.parse(dateStr);
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(date);
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
+
+            EmployeeArchive employeeArchive = employeeArchiveRepository.findByEmployeeId(employee.getEmployeeId())
+                    .orElse(null);
+            if (employeeArchive == null) return null;
+
+            String cleanId = cleanEmployeeId(employeeArchive.getSltId());
+            Optional<InOut> inOutOpt = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(
+                    cleanId, getYesterdayDate());
+
+            if (!inOutOpt.isPresent()) {
+                return createAbsentAttendance(employee, team, date, shiftTime, isRotationShift, employeeDetails);
+            }
+
+            InOut inOut = inOutOpt.get();
+            String[] shiftTimeParts = shiftTime.split("-");
+            if (shiftTimeParts.length != 2) {
+                log.error("Invalid shift time format: {}", shiftTime);
+                return null;
+            }
+
+            LocalTime expectedStartTime = LocalTime.parse(shiftTimeParts[0].trim(), TIME_FORMATTER);
+            Attendance attendance = buildBaseAttendance(employee, team, date, shiftTime, isRotationShift);
+
+            // Process attendance logic
+            if (inOut.getIsMorning() && inOut.getTimeMoa() != null) {
+                LocalTime actualStartTime = LocalTime.parse(inOut.getTimeMoa(), TIME_FORMATTER);
+                attendance.setArrivalDate(date);
+                attendance.setArrivalTime(inOut.getTimeMoa());
+
+                long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
+                if (lateMinutes > LATE_THRESHOLD_MINUTES) {
+                    attendance.setIsLate(true);
+                    if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
+                        attendance.setIsHalfDay(true);
+                    }
+                } else {
+                    attendance.setIsFullDay(true);
+                }
+            } else {
+                attendance.setIsAbsent(true);
+            }
+
+            if (inOut.getIsEvening() && inOut.getTimeEve() != null) {
+                attendance.setLeftTime(inOut.getTimeEve());
+            }
+
+            employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut));
+            return attendance;
+
+        } catch (Exception e) {
+            log.error("Error processing employee {}: {}", employee.getEmployeeId(), e.getMessage());
+            return null;
+        }
+    }
+
+    // Helper methods
+    private Attendance createAbsentAttendance(Employee employee, Team team, Date date,
+                                              String shiftTime, boolean isRotationShift,
+                                              List<EmployeeAttendanceDetail> employeeDetails) {
+        Attendance attendance = buildBaseAttendance(employee, team, date, shiftTime, isRotationShift);
+        attendance.setIsAbsent(true);
+        employeeDetails.add(EmployeeAttendanceDetail.builder()
+                .employeeId(employee.getEmployeeId())
+                .employeeName(employee.getName())
+                .teamId(team.getId())
+                .shiftTime(shiftTime)
+                .isRotationShift(isRotationShift)
+                .attendanceStatus("ABSENT")
+                .build());
+        return attendance;
+    }
+
+    private Attendance buildBaseAttendance(Employee employee, Team team, Date date,
+                                           String shiftTime, boolean isRotationShift) {
+        return Attendance.builder()
+                .publicId(UUID.randomUUID().toString())
+                .date(date)
+                .employeeID(employee.getEmployeeId())
+                .teamId(team.getId())
+                .shiftCode(team.getShortName() + (isRotationShift ? " ROT" : ""))
+                .shiftTime(shiftTime)
+                .isOvertimeShift(isRotationShift)
+                .build();
+    }
+
+    private EmployeeAttendanceDetail createEmployeeDetail(Employee employee, Team team,
+                                                          Attendance attendance, InOut inOut) {
+        String status = "PRESENT";
+        if (attendance.getIsAbsent()) {
+            status = "ABSENT";
+        } else if (attendance.getIsLate()) {
+            status = attendance.getIsHalfDay() ? "HALF_DAY" : "LATE";
+        }
+
+        return EmployeeAttendanceDetail.builder()
+                .employeeId(employee.getEmployeeId())
+                .employeeName(employee.getName())
+                .teamId(team.getId())
+                .shiftTime(attendance.getShiftTime())
+                .isRotationShift(attendance.getIsOvertimeShift())
+                .arrivalTime(inOut.getTimeMoa())
+                .leftTime(inOut.getTimeEve())
+                .attendanceStatus(status)
+                .build();
+    }
+
+    /*private String cleanEmployeeId(String rawId) {
+        if (rawId == null) return "";
+        return rawId.trim()
+                .replaceAll("\\s+", "")
+                .replaceAll("[^a-zA-Z0-9]", "");
+    }*/
+
+    /*private LocalTime parseTime(String timeStr) {
+        try {
+            return LocalTime.parse(timeStr);
+        } catch (Exception e) {
+            return LocalTime.MAX; // Put invalid times at the end
+        }
+    }*/
+
+    /*private void processShifts(String dateStr, Map<String, List<ShiftAssignment>> shifts,
                                Map<String, TeamAttendanceSummary> teamSummaries,
                                List<EmployeeAttendanceDetail> employeeDetails,
                                boolean isRotationShift) {
@@ -349,7 +628,7 @@ public class AttendanceService {
             for (ShiftAssignment assignment : assignments) {
 
                 String dayPart = dateStr.split("-")[2];
-                dayPart = dayPart.split("0")[1];
+//                dayPart = dayPart.split("0")[1];
 
                 if (!dayPart.equals(assignment.getDate())) {
                     continue;
@@ -415,17 +694,23 @@ public class AttendanceService {
                         calendar.set(Calendar.MILLISECOND, 0);
 
                         Date dateWithoutTime = calendar.getTime();
-                        // Get InOut record for the employee and date
-                        Optional<InOut> inOutOpt = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(
-                                employee.getEmployeeId(), date);
+                        Optional<EmployeeArchive> employeeOpt = employeeArchiveRepository.findByEmployeeId(employee.getEmployeeId());
+                        if(employeeOpt.isEmpty()) continue;
 
-                        // Get expected shift times
+                        EmployeeArchive employeeArchive = employeeOpt.get();
+                        List<InOut> inOuts = inOutRepository.findByDateAndEmployeeID(getYesterdayDate(), employeeArchive.getSltId());
+
+                        Optional<InOut> inOutOpt = inOuts.stream()
+                                .filter(inOut -> inOut.getTimeMoa() != null && !inOut.getTimeMoa().trim().isEmpty())
+                                .min(Comparator.comparing(inOut -> parseTime(inOut.getTimeMoa().trim())));
+
+                        if(inOutOpt.isEmpty()) continue;
+
                         String[] shiftTimeParts = shiftTime.split("-");
                         if (shiftTimeParts.length != 2) {
                             log.error("Invalid shift time format: {}", shiftTime);
                             continue;
                         }
-
                         LocalTime expectedStartTime = LocalTime.parse(shiftTimeParts[0].trim(), TIME_FORMATTER);
                         LocalTime expectedEndTime = LocalTime.parse(shiftTimeParts[1].trim(), TIME_FORMATTER);
 
@@ -520,7 +805,233 @@ public class AttendanceService {
                 teamSummaries.put(String.valueOf(uniqueNumber), teamSummary);
             }
         });
-    }
+    }*/
+
+    /*private void processShifts(String dateStr, Map<String, List<ShiftAssignment>> shifts,
+                               ConcurrentHashMap<String, TeamAttendanceSummary> teamSummaries,
+                               List<EmployeeAttendanceDetail> employeeDetails,
+                               boolean isRotationShift) {
+
+        // Use thread-safe collections for local operations
+        List<Attendance> attendancesToSave = Collections.synchronizedList(new ArrayList<>());
+        List<EmployeeAttendanceDetail> localEmployeeDetails = Collections.synchronizedList(new ArrayList<>());
+
+        shifts.entrySet().parallelStream().forEach(entry -> {
+            String shiftTime = entry.getKey();
+            List<ShiftAssignment> assignments = entry.getValue();
+
+            for (ShiftAssignment assignment : assignments) {
+                String dayPart = dateStr.split("-")[2];
+
+                if (!dayPart.equals(assignment.getDate())) {
+                    continue;
+                }
+
+                String teamNameOrId = assignment.getTeam();
+                boolean isTeamRotation = teamNameOrId.contains("ROT");
+
+                // Skip if we're not processing rotation shifts but the team is rotation
+                if (!isRotationShift && isTeamRotation) {
+                    continue;
+                }
+
+                // Skip if we're processing rotation shifts but the team is not rotation
+                if (isRotationShift && !isTeamRotation) {
+                    continue;
+                }
+
+                // Clean up team ID from ROT suffix if needed
+                String teamId = teamNameOrId.replace(" ROT", "");
+
+                Optional<Team> teamOpt = teamRepository.findByShortName(teamId);
+                if (teamOpt.isEmpty()) {
+                    log.error("Team not found with ID/shortName: {}", teamId);
+                    continue;
+                }
+
+                Team team = teamOpt.get();
+                List<Employee> teamEmployees = employeeRepository.findByTeamId(team.getId());
+                if (teamEmployees.isEmpty()) {
+                    log.warn("No employees found for team: {}", team.getName());
+                    continue;
+                }
+
+                // Thread-safe counters using AtomicInteger
+                AtomicInteger presentCount = new AtomicInteger(0);
+                AtomicInteger lateCount = new AtomicInteger(0);
+                AtomicInteger absentCount = new AtomicInteger(0);
+                AtomicInteger halfDayCount = new AtomicInteger(0);
+
+                // Process employees in parallel
+                teamEmployees.parallelStream().forEach(employee -> {
+                    try {
+                        Date date = DATE_FORMAT.parse(dateStr);
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.setTime(date);
+                        calendar.set(Calendar.HOUR_OF_DAY, 0);
+                        calendar.set(Calendar.MINUTE, 0);
+                        calendar.set(Calendar.SECOND, 0);
+                        calendar.set(Calendar.MILLISECOND, 0);
+
+                        Date dateWithoutTime = calendar.getTime();
+                        Optional<EmployeeArchive> employeeOpt = employeeArchiveRepository.findByEmployeeId(employee.getEmployeeId());
+                        if (employeeOpt.isEmpty()) return;
+
+                        EmployeeArchive employeeArchive = employeeOpt.get();
+                        *//*List<InOut> inOuts = inOutRepository.findByDateAndEmployeeID(getYesterdayDate(), employeeArchive.getSltId());
+
+                        System.out.println("Processing attendance for employee: " + employeeArchive.getSltId().trim());
+                        System.out.println("Processing attendance for employee: " + inOuts.size());*//*
+
+                        String stld = employeeArchive.getSltId()
+                                .trim()
+                                .replaceAll("\\s+", "")
+                                .replaceAll("[\\x00-\\x1F\\x7F]", "");
+
+                        System.out.println("Processing attendance for employee - Original ID: '" + employeeArchive.getSltId() +
+                                "', Cleaned ID: '" + stld + "'");
+
+                        List<InOut> inOuts = inOutRepository.findByDateAndEmployeeID(getYesterdayDate(), stld);
+                        Optional<InOut> inOutOpt = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(stld, getYesterdayDate());
+
+                        if (inOuts.isEmpty()) {
+                            System.out.println("No records found with cleaned ID, trying with original ID");
+                            inOuts = inOutRepository.findByDateAndEmployeeID(getYesterdayDate(), employeeArchive.getSltId().trim());
+                            inOutOpt = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(employeeArchive.getSltId().trim(), getYesterdayDate());
+                        }
+
+                        System.out.println("Found " + inOuts.size() + " records for employee: " + stld);
+
+                        *//*Optional<InOut> inOutOpt = inOutRepository.findTopByEmployeeIDAndDateOrderByPunchInMoaAsc(stld, getYesterdayDate());
+
+                        System.out.println(stld);
+                        System.out.println("Processing attendance for employee: " + employee.getEmployeeId() + " on date: isEmpty --> " + inOutOpt.isEmpty());*//*
+
+     *//* Optional<InOut> inOutOpt = inOuts.stream()
+                                .filter(inOut -> inOut.getTimeMoa() != null && !inOut.getTimeMoa().trim().isEmpty())
+                                .min(Comparator.comparing(inOut -> parseTime(inOut.getTimeMoa().trim())));*//*
+
+     *//*if (inOutOpt.isEmpty()) return;*//*
+
+                        String[] shiftTimeParts = shiftTime.split("-");
+                        if (shiftTimeParts.length != 2) {
+                            log.error("Invalid shift time format: {}", shiftTime);
+                            return;
+                        }
+                        LocalTime expectedStartTime = LocalTime.parse(shiftTimeParts[0].trim(), TIME_FORMATTER);
+                        LocalTime expectedEndTime = LocalTime.parse(shiftTimeParts[1].trim(), TIME_FORMATTER);
+
+                        // Create attendance
+                        Attendance attendance = Attendance.builder()
+                                .publicId(UUID.randomUUID().toString())
+                                .date(dateWithoutTime)
+                                .employeeID(employee.getEmployeeId())
+                                .teamId(team.getId())
+                                .shiftCode(teamNameOrId)
+                                .shiftTime(shiftTime)
+                                .isOvertimeShift(isRotationShift)
+                                .build();
+
+                        EmployeeAttendanceDetail employeeDetail = EmployeeAttendanceDetail.builder()
+                                .employeeId(employee.getEmployeeId())
+                                .employeeName(employee.getName())
+                                .teamId(team.getId())
+                                .shiftTime(shiftTime)
+                                .isRotationShift(isRotationShift)
+                                .build();
+
+                        if (inOutOpt.isPresent()) {
+                            InOut inOut = inOutOpt.get();
+                            attendance.setTerminalID(inOut.getTerminalID());
+                            attendance.setArrivalTime(inOut.getTimeMoa());
+                            attendance.setArrivalDate(inOut.getPunchInMoa());
+
+                            // Process arrival time
+                            if (inOut.getIsMorning() && inOut.getTimeMoa() != null) {
+                                LocalTime actualStartTime = LocalTime.parse(inOut.getTimeMoa(), TIME_FORMATTER);
+                                attendance.setArrivalDate(date);
+                                attendance.setArrivalTime(inOut.getTimeMoa());
+                                employeeDetail.setArrivalTime(inOut.getTimeMoa());
+
+                                // Check if late
+                                long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
+                                if (lateMinutes > LATE_THRESHOLD_MINUTES) {
+                                    attendance.setIsLate(true);
+                                    employeeDetail.setLateMinutes(lateMinutes);
+                                    lateCount.incrementAndGet();
+
+                                    // Check if half day (late for more than 4 hours)
+                                    if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
+                                        attendance.setIsHalfDay(true);
+                                        halfDayCount.incrementAndGet();
+                                        employeeDetail.setAttendanceStatus("HALF_DAY");
+                                    } else {
+                                        employeeDetail.setAttendanceStatus("LATE");
+                                    }
+                                } else {
+                                    attendance.setIsFullDay(true);
+                                    presentCount.incrementAndGet();
+                                    employeeDetail.setAttendanceStatus("PRESENT");
+                                }
+                            } else {
+                                // No morning punch, mark as absent
+                                attendance.setIsAbsent(true);
+                                absentCount.incrementAndGet();
+                                employeeDetail.setAttendanceStatus("ABSENT");
+                            }
+
+                            // Process departure time
+                            if (inOut.getIsEvening() && inOut.getTimeEve() != null) {
+                                attendance.setLeftTime(inOut.getTimeEve());
+                                employeeDetail.setLeftTime(inOut.getTimeEve());
+                            }
+                        } else {
+                            // No InOut record, mark as absent
+                            attendance.setIsAbsent(true);
+                            absentCount.incrementAndGet();
+                            employeeDetail.setAttendanceStatus("ABSENT");
+                        }
+
+                        // Add to thread-safe collections
+                        attendancesToSave.add(attendance);
+                        localEmployeeDetails.add(employeeDetail);
+
+                    } catch (Exception e) {
+                        log.error("Error processing attendance for employee: {} on date: {}",
+                                employee.getEmployeeId(), dateStr, e);
+                    }
+                });
+
+                // Create team summary after processing all employees
+                TeamAttendanceSummary teamSummary = TeamAttendanceSummary.builder()
+                        .teamId(team.getId())
+                        .teamName(team.getName())
+                        .shiftTime(shiftTime)
+                        .totalEmployees(teamEmployees.size())
+                        .presentEmployees(presentCount.get())
+                        .lateEmployees(lateCount.get())
+                        .absentEmployees(absentCount.get())
+                        .halfDayEmployees(halfDayCount.get())
+                        .isRotationShift(isRotationShift)
+                        .build();
+
+                // Thread-safe update of team summaries
+                UUID uuid = UUID.randomUUID();
+                long uniqueNumber = uuid.getMostSignificantBits() & Long.MAX_VALUE;
+                teamSummaries.put(String.valueOf(uniqueNumber), teamSummary);
+            }
+        });
+
+        // Batch save operations (more efficient and reduces database load)
+        if (!attendancesToSave.isEmpty()) {
+            attendanceRepository.saveAll(attendancesToSave);
+        }
+
+        // Thread-safe addition to the main employeeDetails list
+        synchronized (employeeDetails) {
+            employeeDetails.addAll(localEmployeeDetails);
+        }
+    }*/
 
 
     public Roster getMonthlyAttendance(int month, int year) {

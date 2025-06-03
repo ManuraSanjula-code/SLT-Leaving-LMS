@@ -72,7 +72,9 @@ const NavBar = () => {
       { label: "Roster All Attendance ", path: "/roster/all-attendance" },
       { label: "Get All Roster ", path: "/roster/all" },
       { label: "Roster Detail", path: "/roster/detail" },
-      { label: "Other", path: "/other" },
+      {label: "Shift-Roster-Table", path: "/shift-roster-table"},
+      {label: "Charana Tv", path: "/charana-tv"},
+      { label: "Other", path: "/other" }
 
     ].filter(item => allowedRoutes.has(item.path));
 

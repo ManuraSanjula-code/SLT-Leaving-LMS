@@ -189,9 +189,11 @@ public class UserServiceImpl implements UserService {
         lmsUser.setSltId(storedUserDetails.getSltId());
         lmsUser.setJoin_date(storedUserDetails.getJoin_date());
         lmsUser.setPublicId(storedUserDetails.getUserId());
+        lmsUser.setRoaster(storedUserDetails.getRoaster());
 
         messageProducerService.sendMessage("user.queue", lmsUser);
-        redisService.setValue(storedUserDetails.getEmail(), user.getPassword());
+        messageProducerService.sendMessage("user.queue.roster", lmsUser);
+        redisService.setValue(storedUserDetails.getEmployeeId(), user.getPassword());
         return UserMapper.mapToUserDto(storedUserDetails);
     }
 
@@ -251,7 +253,7 @@ public class UserServiceImpl implements UserService {
             return new UserPrincipal(userEntity);
         } else {
 
-            UserEntity userEntity = userRepository.findByEmail(email);
+            UserEntity userEntity = userRepository.findByEmployeeId(email);
 
             if (userEntity == null) {
                 throw new UsernameNotFoundException(email);

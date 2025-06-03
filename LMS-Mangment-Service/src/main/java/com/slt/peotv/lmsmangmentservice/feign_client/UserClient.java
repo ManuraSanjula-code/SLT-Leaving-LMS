@@ -21,8 +21,11 @@ public interface UserClient {
 
     default UserRest getCustomerByIdFallback(String userid, String token, Throwable exception){
         UserRest userRest = new UserRest();
-        userRest.setEmail("test@gmail.com");
-        userRest.setFirstName("Test");
+        userRest.setUserId("access-log");
+        userRest.setEmployeeId("lms@slt.com");
+        userRest.setSltId("lms@slt.com");
+        userRest.setEmail("lms@slt.com");
+        userRest.setFirstName("PEOTV");
         return userRest;
     }
 

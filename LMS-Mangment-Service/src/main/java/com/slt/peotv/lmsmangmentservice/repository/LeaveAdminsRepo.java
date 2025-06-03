@@ -15,4 +15,6 @@ public interface LeaveAdminsRepo extends JpaRepository<LeaveAdminsEntity, Intege
     List<LeaveAdminsEntity> findBySltId(String sltId);
 
     List<LeaveAdminsEntity> findByEmployeeId(String employeeId);
+
+    List<LeaveAdminsEntity> findByLeaveId(String leaveId);
 }

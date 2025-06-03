@@ -16,7 +16,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/duty-roster")
-@CrossOrigin(origins = "*")
 public class DutyRosterController {
 
     @Autowired
@@ -34,6 +33,17 @@ public class DutyRosterController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @GetMapping("/charana-tv/week/{weekStartingDate}")
+    public DutyRoster getRosterForWeek(@PathVariable String weekStartingDate ) {
+        return dutyRosterService.getTheDuty(weekStartingDate);
+    }
+
+    @DeleteMapping("/charana-tv/delete/{day}")
+    public ResponseEntity<Void> deleteDuty(@PathVariable String day) {
+        dutyRosterService.deleteRosterForWeek(day);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/all")

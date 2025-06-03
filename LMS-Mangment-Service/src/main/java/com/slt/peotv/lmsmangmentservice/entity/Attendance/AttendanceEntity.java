@@ -27,6 +27,7 @@ public class AttendanceEntity {
 
     @Column(nullable = false)
     private Date date;
+    private Date etl_run_time;
 
     private String employeeID;
     @Builder.Default

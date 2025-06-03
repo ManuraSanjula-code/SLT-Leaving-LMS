@@ -1,13 +1,23 @@
 package com.slt.radio.rosterservice.Service.LMS;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jwt.SignedJWT;
 import com.slt.radio.rosterservice.Model.One.LMS.AccessLog;
 import com.slt.radio.rosterservice.Model.Second.DutyRoster;
 import com.slt.radio.rosterservice.Repo.AccessLogRepository;
 import com.slt.radio.rosterservice.Repo.DutyRosterRepository;
+import com.slt.radio.rosterservice.Utils.Helper;
+import com.slt.radio.rosterservice.Utils.TokenCreator;
+import com.slt.radio.rosterservice.feign_client.LMSClient;
+import com.slt.radio.rosterservice.feign_client.model.AccessLogArchiveRest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -26,7 +36,13 @@ public class AccessLogSyncService {
     private final AttendanceService attendanceService;
     private final DutyRosterRepository dutyRosterRepository;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private final Helper helper;
 
+    @Autowired
+    private LMSClient lmsClient;
+
+    @Autowired
+    private TokenCreator tokenCreator;
 
     private Optional<DutyRoster> findCurrentWeekDutyRoster() {
         LocalDate currentDate = LocalDate.now();
@@ -53,14 +69,29 @@ public class AccessLogSyncService {
     private String getYesterdayDate() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         Date date = removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+//        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
+
         return formatter.format(date);
     }
-    /**
-     * Scheduled job to sync access logs from SLT server and process attendance
-     * Runs daily at 1:00 AM - @Scheduled(cron = "0 0 1 * * ?")
-     */
-    @Scheduled(cron = "0 28 20 * * ?")
+
+    @Scheduled(cron = "0 41 12  * * ?")
+    public void getLogs() throws NoSuchAlgorithmException, JOSEException {
+
+        log.info("Starting getting logs form the lms server");
+
+        SignedJWT signToken = tokenCreator.createSignedJWT("lms@slt.com");
+        String token = "Bearer " + tokenCreator.encryptToken(signToken);
+
+        List<AccessLogArchiveRest> allAccessLogsToday = lmsClient.getAllAccessLogsToday(helper.getFormattedYesterdayDate(), token);
+        allAccessLogsToday.forEach(lms->{
+            System.out.println(lms.toString());
+            AccessLog accessLog = new AccessLog(lms);
+            accessLogRepository.save(accessLog);
+        });
+    }
+
+    @Scheduled(cron = "0 58 10 * * ?")
     public void syncAccessLogsAndProcessAttendance() {
         log.info("Starting daily sync of access logs and attendance processing");
 
@@ -70,13 +101,13 @@ public class AccessLogSyncService {
 
         try {
             List<AccessLog> accessLogs = fetchAccessLogsFromSLT(getYesterdayDate());
-            findCurrentWeekDutyRoster().ifPresent(attendanceService::processAttendanceForDate);
+            attendanceService.processDutyAttendances();
 
             // Process access logs to create InOut records
-            //attendanceService.processAccessLogs(accessLogs);
+//            attendanceService.processAccessLogs(accessLogs);
 
             // Process attendance for yesterday
-            //attendanceService.processAttendanceForDate(yesterdayStr);
+//            attendanceService.processAttendanceForDate(yesterdayStr);
 
             log.info("Completed daily sync of access logs and attendance processing");
         } catch (Exception e) {
@@ -84,19 +115,13 @@ public class AccessLogSyncService {
         }
     }
 
-    /**
-     * Method to fetch access logs from SLT server
-     * This is a placeholder method that should be implemented based on SLT API
-     */
+
     private List<AccessLog> fetchAccessLogsFromSLT(String dateStr) {
         log.info("Fetching access logs from SLT server for date: {}", dateStr);
         return accessLogRepository.findByLogDate(dateStr);
     }
 
-    /**
-     * Manual method to process attendance for a specific date range
-     * Useful for backfilling or correcting attendance data
-     */
+
     public void processAttendanceForDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {

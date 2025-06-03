@@ -104,8 +104,9 @@ public class UpdateUtils {
         lmsUser.setEmployeeId(updatedUserEntity.getEmployeeId());
         lmsUser.setSltId(updatedUserEntity.getSltId());
         lmsUser.setPublicId(updatedUserEntity.getUserId());
-
+        lmsUser.setRoaster(updatedUserEntity.getRoaster());
         messageProducerService.sendMessage("user.queue", lmsUser);
+        messageProducerService.sendMessage("user.queue.roster", lmsUser);
         redisService.setValue(userEntity.getEmail(), userDto.getPassword());
 
         // Return the updated user as a DTO
@@ -163,8 +164,10 @@ public class UpdateUtils {
         lmsUser.setSltId(updatedUserEntity.getSltId());
         lmsUser.setPublicId(updatedUserEntity.getUserId());
         lmsUser.setJoin_date(updatedUserEntity.getJoin_date());
+        lmsUser.setRoaster(updatedUserEntity.getRoaster());
 
         messageProducerService.sendMessage("user.queue", lmsUser);
+        messageProducerService.sendMessage("user.queue.roster", lmsUser);
         redisService.setValue(userEntity.getEmail(), userReq.getPassword());
         // Return the updated user as a DTO
         return UserMapper.mapToUserDto(updatedUserEntity);

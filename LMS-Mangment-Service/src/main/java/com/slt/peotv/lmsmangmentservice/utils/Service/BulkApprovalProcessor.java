@@ -1,0 +1,523 @@
+package com.slt.peotv.lmsmangmentservice.utils.service;
+
+import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
+import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
+import com.slt.peotv.lmsmangmentservice.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+@Component
+public class BulkApprovalProcessor {
+
+    private static final Logger logger = LoggerFactory.getLogger(BulkApprovalProcessor.class);
+
+    @Autowired
+    private MovementsRepo movementsRepo;
+
+    @Autowired
+    private LeaveRepo leaveRepo;
+
+    @Autowired
+    private MovementAdminsRepo movementAdminsRepo;
+
+    @Autowired
+    private LeaveAdminsRepo leaveAdminsRepo;
+
+    @Autowired
+    private AttendanceRepo attendanceRepo;
+
+    // Thread pool for processing - limit concurrent operations
+    private final ExecutorService executorService = Executors.newFixedThreadPool(5);
+
+    // Cache to prevent duplicate processing
+    private final ConcurrentHashMap<String, Boolean> processingCache = new ConcurrentHashMap<>();
+
+    /**
+     * Process bulk approvals without nested loops and with proper thread safety
+     */
+    public void processBulkApprovals(BulkApprovedReq bulkApprovedReq, String emp, boolean isMovement) {
+        if (bulkApprovedReq == null ||
+                bulkApprovedReq.getApprovedIds() == null ||
+                bulkApprovedReq.getApprovedEmployeesToday() == null) {
+            logger.warn("Invalid bulk approval request");
+            return;
+        }
+
+        List<String> approvedIds = bulkApprovedReq.getApprovedIds();
+        List<String> approvedEmployees = bulkApprovedReq.getApprovedEmployeesToday();
+
+        logger.info("Processing bulk approvals for {} items, {} employees, type: {}",
+                approvedIds.size(), approvedEmployees.size(), isMovement ? "Movement" : "Leave");
+
+        // Process each ID-Employee combination
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+        for (String id : approvedIds) {
+            for (String employeeId : approvedEmployees) {
+                // Create unique key for this combination
+                String cacheKey = id + ":" + employeeId + ":" + isMovement;
+
+                // Skip if already processing
+                if (processingCache.putIfAbsent(cacheKey, true) != null) {
+                    logger.debug("Skipping duplicate processing for key: {}", cacheKey);
+                    continue;
+                }
+
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
+                        if (isMovement) {
+                            processMovementApprovalWithNewTransaction(id,emp, employeeId);
+                        } else {
+                            processLeaveApprovalWithNewTransaction(id, emp, employeeId);
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error processing approval for ID: {}, Employee: {}", id, employeeId, e);
+                    } finally {
+                        // Remove from cache when done
+                        processingCache.remove(cacheKey);
+                    }
+                }, executorService);
+
+                futures.add(future);
+            }
+        }
+
+        // Wait for all operations to complete with timeout
+        try {
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0])
+            );
+
+            // Wait max 30 seconds for all operations
+            allFutures.get(30, TimeUnit.SECONDS);
+            logger.info("Bulk approval processing completed successfully");
+
+        } catch (Exception e) {
+            logger.error("Error in bulk approval processing", e);
+            // Cancel remaining operations
+            futures.forEach(future -> future.cancel(true));
+        }
+    }
+
+    /**
+     * Process bulk rejections safely
+     */
+    public void processBulkRejections(BulkApprovedReq bulkApprovedReq, boolean isMovement) {
+        if (bulkApprovedReq == null || bulkApprovedReq.getApprovedIds() == null) {
+            logger.warn("Invalid bulk rejection request");
+            return;
+        }
+
+        List<String> approvedIds = bulkApprovedReq.getApprovedIds();
+        logger.info("Processing bulk rejections for {} items, type: {}",
+                approvedIds.size(), isMovement ? "Movement" : "Leave");
+
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+        for (String id : approvedIds) {
+            String cacheKey = "reject:" + id + ":" + isMovement;
+
+            if (processingCache.putIfAbsent(cacheKey, true) != null) {
+                continue;
+            }
+
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                try {
+                    if (isMovement) {
+                        rejectMovementWithNewTransaction(id);
+                    } else {
+                        rejectLeaveWithNewTransaction(id);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error rejecting ID: {}", id, e);
+                } finally {
+                    processingCache.remove(cacheKey);
+                }
+            }, executorService);
+
+            futures.add(future);
+        }
+
+        // Wait for completion
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(30, TimeUnit.SECONDS);
+            logger.info("Bulk rejection processing completed");
+        } catch (Exception e) {
+            logger.error("Error in bulk rejection processing", e);
+            futures.forEach(future -> future.cancel(true));
+        }
+    }
+
+    /**
+     * Process movement approval with new transaction
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processMovementApprovalWithNewTransaction(String movementId, String employeeId, String userId) {
+        try {
+            Optional<MovementsEntity> movementOpt = movementsRepo.findByPublicId(movementId);
+            if (!movementOpt.isPresent()) {
+                logger.warn("Movement not found: {}", movementId);
+                return;
+            }
+
+            MovementsEntity movement = movementOpt.get();
+
+            // Validate employee matches
+            if (!movement.getEmployeeId().equals(userId)) {
+                logger.warn("Employee ID mismatch for movement: {}", movementId);
+                return;
+            }
+
+            // Call the approval logic
+            approvedMoveInternal(movement, employeeId);
+            logger.debug("Processing movement approval for ID: {}, Employee: {}", movementId, employeeId);
+
+        } catch (Exception e) {
+            logger.error("Error in processMovementApprovalWithNewTransaction: {}", movementId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Process leave approval with new transaction
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processLeaveApprovalWithNewTransaction(String leaveId, String employeeId, String userId) {
+        try {
+            Optional<LeaveEntity> leaveOpt = leaveRepo.findByPublicId(leaveId);
+            if (!leaveOpt.isPresent()) {
+                logger.warn("Leave not found: {}", leaveId);
+                return;
+            }
+
+            LeaveEntity leave = leaveOpt.get();
+            // Validate employee matches
+            if (!leave.getEmployeeID().equals(userId)) {
+                logger.warn("Employee ID mismatch for leave: {}", leaveId);
+                return;
+            }
+
+            // Call the approval logic
+            approvedLeaveInternal(leave, employeeId);
+            logger.debug("Processing leave approval for ID: {}, Employee: {}", leaveId, employeeId);
+
+        } catch (Exception e) {
+            logger.error("Error in processLeaveApprovalWithNewTransaction: {}", leaveId, e);
+            throw e;
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void rejectMovementWithNewTransaction(String movementId) {
+        try {
+            Optional<MovementsEntity> movementOpt = movementsRepo.findByPublicId(movementId);
+            if (movementOpt.isPresent()) {
+                MovementsEntity movement = movementOpt.get();
+                movement.setIsReject(true);
+                movementsRepo.save(movement);
+                logger.debug("Rejected movement: {}", movementId);
+            }
+        } catch (Exception e) {
+            logger.error("Error rejecting movement: {}", movementId, e);
+            throw e;
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void rejectLeaveWithNewTransaction(String leaveId) {
+        try {
+            Optional<LeaveEntity> leaveOpt = leaveRepo.findByPublicId(leaveId);
+            if (leaveOpt.isPresent()) {
+                LeaveEntity leave = leaveOpt.get();
+                leave.setIsReject(true);
+                leaveRepo.save(leave);
+                logger.debug("Rejected leave: {}", leaveId);
+            }
+        } catch (Exception e) {
+            logger.error("Error rejecting leave: {}", leaveId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Public method for single movement approval
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void approvedMove(MovementsEntity movement, String userId) {
+        try {
+            approvedMoveInternal(movement, userId);
+        } catch (Exception e) {
+            logger.error("Error in approvedMove: {}", movement.getPublicId(), e);
+            throw new RuntimeException("Failed to approve movement", e);
+        }
+    }
+
+    /**
+     * Public method for single leave approval
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void approvedLeave(LeaveEntity leave, String userId) {
+        try {
+            approvedLeaveInternal(leave, userId);
+        } catch (Exception e) {
+            logger.error("Error in approvedLeave: {}", leave.getPublicId(), e);
+            throw new RuntimeException("Failed to approve leave", e);
+        }
+    }
+
+    /**
+     * Internal method for movement approval logic
+     */
+    private void approvedMoveInternal(MovementsEntity movement, String userId) {
+
+        if (movement == null || userId == null) {
+            logger.warn("Invalid parameters for approvedMoveInternal");
+            return;
+        }
+
+        try {
+            AttendanceEntity attendance = movement.getAttendance();
+            if (attendance == null) {
+                logger.warn("No attendance found for movement: {}", movement.getPublicId());
+                return;
+            }
+
+            // Load admins separately to avoid lazy loading issues
+            List<MovementAdminsEntity> admins_ = movementAdminsRepo.findByMovementId(movement.getPublicId());
+            if (admins_ == null || admins_.isEmpty()) {
+                logger.warn("No admins found for movement: {}", movement.getPublicId());
+                return;
+            }
+
+            boolean isAuthorizedAdmin = admins_.stream()
+                    .anyMatch(admin ->
+                            userId.equals(admin.getUserId()) ||
+                                    userId.equals(admin.getSltId()) ||
+                                    userId.equals(admin.getEmployeeId())
+                    );
+
+            if (!isAuthorizedAdmin) {
+                logger.warn("User {} not authorized to approve movement {}", userId, movement.getPublicId());
+                return;
+            }
+
+            // Get admins sorted by priority (lowest priority first)
+            List<MovementAdminsEntity> admins = admins_.stream()
+                    .sorted(Comparator.comparingInt(MovementAdminsEntity::getHighestRolePriority).reversed())
+                    .collect(Collectors.toList());
+
+            // Find the admin matching the current user
+            MovementAdminsEntity currentAdmin = admins.stream()
+                    .filter(admin ->
+                            userId.equals(admin.getUserId()) ||
+                                    userId.equals(admin.getSltId()) ||
+                                    userId.equals(admin.getEmployeeId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (currentAdmin == null) {
+                logger.warn("Current admin not found for user: {}", userId);
+                return;
+            }
+
+            if (Boolean.TRUE.equals(currentAdmin.getIsAccepted())) {
+                logger.debug("Admin {} already approved movement {}", userId, movement.getPublicId());
+                return;
+            }
+
+            // Get the index of the current admin in the sorted list
+            int currentAdminIndex = admins.indexOf(currentAdmin);
+
+            // Check if all lower priority admins have approved
+            boolean allLowerPriorityApproved = true;
+            for (int i = 0; i < currentAdminIndex; i++) {
+                if (admins.get(i).getApprovedDate() == null ||
+                        !Boolean.TRUE.equals(admins.get(i).getIsAccepted())) {
+                    allLowerPriorityApproved = false;
+                    break;
+                }
+            }
+
+            // If not all lower priority admins have approved, don't allow this approval
+            if (!allLowerPriorityApproved) {
+                logger.warn("Lower priority admins have not approved movement {}", movement.getPublicId());
+                return;
+            }
+
+            // Process the current admin's approval
+            if (currentAdmin.getApprovedDate() == null) {
+                System.out.println("Processing movement approval for ID: " + movement.getPublicId() + ", Employee: " + userId);
+                currentAdmin.setApprovedDate(new Date());
+                currentAdmin.setIsAccepted(true);
+                movementAdminsRepo.save(currentAdmin);
+            }
+
+            // Check if all admins have approved now
+            boolean allApproved = admins.stream()
+                    .allMatch(admin -> admin.getApprovedDate() != null &&
+                            Boolean.TRUE.equals(admin.getIsAccepted()));
+
+            // If all admins have approved or there are no admins
+            if (allApproved || admins.isEmpty()) {
+                movement.setIsPending(false);
+                movement.setIsAccepted(true);
+
+                attendance.setResolve(true);
+                attendance.setDueDateForUA(null);
+                attendance.setIssues(false);
+
+                // Save all changes
+                attendanceRepo.save(attendance);
+                movementsRepo.save(movement);
+
+                logger.info("Movement {} fully approved", movement.getPublicId());
+            }
+        } catch (Exception e) {
+            logger.error("Error in approvedMoveInternal: {}", movement.getPublicId(), e);
+            // Don't rethrow here to avoid breaking the async operation
+        }
+    }
+
+    /**
+     * Internal method for leave approval logic with proper lazy loading handling
+     */
+    private void approvedLeaveInternal(LeaveEntity leave, String userId) {
+        if (leave == null || userId == null) {
+            logger.warn("Invalid parameters for approvedLeaveInternal");
+            return;
+        }
+//        if(leave.getIsReject() || leave.getIsCanceled() || leave.getIsAccepted()) return;
+        try {
+            AttendanceEntity attendance = leave.getAttendance();
+            if (!leave.getIsManualRequest() && attendance == null) {
+                logger.warn("No attendance found for non-manual leave: {}", leave.getPublicId());
+                return;
+            }
+
+            // Load admins separately to avoid lazy loading issues
+            List<LeaveAdminsEntity> admins_ = leaveAdminsRepo.findByLeaveId(leave.getPublicId());
+            if (admins_ == null || admins_.isEmpty()) {
+                logger.warn("No admins found for leave: {}", leave.getPublicId());
+                return;
+            }
+
+            boolean isAuthorizedAdmin = admins_.stream()
+                    .anyMatch(admin ->
+                            userId.equals(admin.getUserId()) ||
+                                    userId.equals(admin.getSltId()) ||
+                                    userId.equals(admin.getEmployeeId())
+                    );
+
+            if (!isAuthorizedAdmin) {
+                logger.warn("User {} not authorized to approve leave {}", userId, leave.getPublicId());
+                return;
+            }
+
+            // Get admins sorted by priority (lowest priority first)
+            List<LeaveAdminsEntity> admins = admins_.stream()
+                    .sorted(Comparator.comparingInt(LeaveAdminsEntity::getHighestRolePriority).reversed())
+                    .collect(Collectors.toList());
+
+            // Find the admin matching the current user
+            LeaveAdminsEntity currentAdmin = admins.stream()
+                    .filter(admin ->
+                            userId.equals(admin.getUserId()) ||
+                                    userId.equals(admin.getSltId()) ||
+                                    userId.equals(admin.getEmployeeId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (currentAdmin == null) {
+                logger.warn("Current admin not found for user: {}", userId);
+                return;
+            }
+
+            if (Boolean.TRUE.equals(currentAdmin.getIsAccepted())) {
+                logger.debug("Admin {} already approved leave {}", userId, leave.getPublicId());
+                return;
+            }
+
+            // Get the index of the current admin in the sorted list
+            int currentAdminIndex = admins.indexOf(currentAdmin);
+
+            // Check if all lower priority admins have approved
+            boolean allLowerPriorityApproved = true;
+            for (int i = 0; i < currentAdminIndex; i++) {
+                if (admins.get(i).getApprovedDate() == null ||
+                        !Boolean.TRUE.equals(admins.get(i).getIsAccepted())) {
+                    allLowerPriorityApproved = false;
+                    break;
+                }
+            }
+
+            // If not all lower priority admins have approved, don't allow this approval
+            if (!allLowerPriorityApproved) {
+                logger.warn("Lower priority admins have not approved leave {}", leave.getPublicId());
+                return;
+            }
+
+            // Process the current admin's approval
+            if (currentAdmin.getApprovedDate() == null) {
+                currentAdmin.setApprovedDate(new Date());
+                currentAdmin.setIsAccepted(true);
+                leaveAdminsRepo.save(currentAdmin);
+            }
+
+            // Check if all admins have approved now
+            boolean allApproved = admins.stream()
+                    .allMatch(admin -> admin.getApprovedDate() != null &&
+                            Boolean.TRUE.equals(admin.getIsAccepted()));
+
+            // If all admins have approved or there are no admins
+            if (allApproved || admins.isEmpty()) {
+                leave.setIsPending(false);
+                leave.setIsAccepted(true);
+
+                if (attendance != null) {
+                    attendance.setResolve(true);
+                    attendance.setDueDateForUA(null);
+                    attendance.setIssues(false);
+                    attendanceRepo.save(attendance);
+                }
+                leaveRepo.save(leave);
+
+                logger.info("Leave {} fully approved", leave.getPublicId());
+            }
+        } catch (Exception e) {
+            logger.error("Error in approvedLeaveInternal: {}", leave.getPublicId(), e);
+            // Don't rethrow here to avoid breaking the async operation
+        }
+    }
+
+    /**
+     * Clean shutdown of executor service
+     */
+    public void shutdown() {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+}

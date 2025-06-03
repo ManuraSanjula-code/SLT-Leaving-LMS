@@ -29,6 +29,7 @@ export const fetchLeaveData = createAsyncThunk(
             const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
+            console.log(data)
             return {
                 data: data.content.map(transformLeaveItem),
                 pagination: {
@@ -145,6 +146,8 @@ const transformLeaveItem = (item) => ({
     pending: item.pending,
     accepted: item.accepted,
     expired: false,
+    reject: item.reject || false,
+    canceled: item.canceled,
     adminsTra: [...item.adminsTra]
 });
 
@@ -157,11 +160,12 @@ const getLeaveType = (item) => {
 };
 
 const getLeaveStatus = (item) => {
-    if (item.pending) return "Pending";
-    if (item.accepted) return "Approved";
-    if (item.canceled) return "Canceled";
-    if (item.late && !item.pending && !item.accepted) return "Recorded Late";
-    if (!item.fullDay && !item.halfDay && !item.late && !item.pending && !item.accepted) return "Recorded Absent";
+    if (item.reject) return "Reject";
+    else if (item.pending) return "Pending";
+    else if (item.accepted) return "Approved";
+    else if (item.canceled) return "Canceled";
+    else if (item.late && !item.pending && !item.accepted) return "Recorded Late";
+    else if (!item.fullDay && !item.halfDay && !item.late && !item.pending && !item.accepted) return "Recorded Absent";
     return "Processed";
 };
 

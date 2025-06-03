@@ -13,6 +13,7 @@ import {
   selectUserId,
   selectFormData,
   selectErrors,
+  selectIsValid, // Import the new selector
   selectLeaveBalances,
   selectLoading,
   selectFetchingBalance,
@@ -45,6 +46,7 @@ const ApplyLeave = () => {
   const userId = useSelector(selectUserId);
   const formData = useSelector(selectFormData);
   const errors = useSelector(selectErrors);
+  const isValid = useSelector(selectIsValid); // Use the new selector
   const leaveBalances = useSelector(selectLeaveBalances);
   const loading = useSelector(selectLoading);
   const fetchingBalance = useSelector(selectFetchingBalance);
@@ -84,31 +86,40 @@ const ApplyLeave = () => {
     dispatch(updateFormField({ name, value, checked, type }));
   };
 
-  // Handle form submission
+  // Handle form submission - FIXED: Use selector instead of action payload
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const isValid = dispatch(validateForm()).payload;
-    if (!isValid) return;
+    // Dispatch validation and then check the result from state
+    dispatch(validateForm());
 
-    if (!userId) {
-      dispatch({
-        type: 'leaveApplication/setNotification',
-        payload: {
-          open: true,
-          message: 'User ID not found. Please log in again.',
-          severity: 'error'
-        }
-      });
-      return;
-    }
+    // We need to get the validation result after the state update
+    // So we'll use a setTimeout to check the state in the next tick
+    setTimeout(() => {
+      // Get the current state
+      const currentIsValid = isValid;
 
-    dispatch(submitLeaveRequest({ formData, userId }))
-        .unwrap()
-        .then(() => {
-          // Refresh leave balances after successful submission
-          dispatch(fetchLeaveBalances(userId));
+      if (!currentIsValid) return;
+
+      if (!userId) {
+        dispatch({
+          type: 'leaveApplication/setNotification',
+          payload: {
+            open: true,
+            message: 'User ID not found. Please log in again.',
+            severity: 'error'
+          }
         });
+        return;
+      }
+
+      dispatch(submitLeaveRequest({ formData, userId }))
+          .unwrap()
+          .then(() => {
+            // Refresh leave balances after successful submission
+            dispatch(fetchLeaveBalances(userId));
+          });
+    }, 0);
   };
 
   // Handle notification close

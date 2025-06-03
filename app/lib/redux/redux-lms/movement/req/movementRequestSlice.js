@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Define the initial state for the form
 const initialState = {
     userId: '',
     formData: {
@@ -15,9 +14,12 @@ const initialState = {
         isHalfDay: false,
         unAuthorized: false,
         isLate: false,
-        isLateCover: false
+        isLateCover: false,
+        logTime: '',
+        intime: '',
+        outtime: ''
     },
-    status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+    status: 'idle',
     error: null,
     successMessage: ''
 };

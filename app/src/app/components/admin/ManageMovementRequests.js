@@ -191,7 +191,7 @@ const ManageMovementRequests = () => {
   // Get status chip for movement request
   const getStatusChip = (movement) => {
     if (!movement) return <Chip label="Unknown" color="default" size="small" />;
-
+    console.log(movement)
     if (movement.expired) {
       return <Chip label="Expired" color="error" size="small" />;
     } else if (movement.accepted) {
@@ -310,7 +310,7 @@ const ManageMovementRequests = () => {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  {request.employeeID?.substring(0, 8)}...
+                                  {request.employeeId?.substring(0, 8)}...
                                 </TableCell>
                                 <TableCell>{formatDateTime(request.reqDate)}</TableCell>
                                 <TableCell>{formatDate(request.happenDate)}</TableCell>

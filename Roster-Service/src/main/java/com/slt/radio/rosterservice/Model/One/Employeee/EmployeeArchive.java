@@ -31,4 +31,5 @@ public class EmployeeArchive {
 	private String gender;
 	private Integer highestRolePriority;
 	private Date joiningDate;
+	private Boolean roaster;
 }

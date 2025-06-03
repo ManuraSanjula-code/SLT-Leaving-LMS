@@ -70,8 +70,11 @@ public class ExcelProcessingService {
 
     // Extract month and year from the Excel sheet
     private MonthYearInfo extractMonthAndYear(Sheet sheet) {
-        int month = 12; // Default to December
-        int year = 2024; // Default to 2024
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        int month = Calendar.getInstance().get(Calendar.MONTH) + 1;
+
+        /*int month = 12;
+        int year = 2024;*/
 
         // Look for title rows near the top of the sheet
         for (int i = 0; i < 10; i++) {

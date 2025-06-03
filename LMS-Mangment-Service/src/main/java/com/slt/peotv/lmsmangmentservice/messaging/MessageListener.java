@@ -39,5 +39,6 @@ public class MessageListener {
         employeeEntity.setSltId(message.getSltId());
         employeeEntity.setJoin_date(message.getJoin_date());
         employeeEntity.setPublicId(message.getPublicId());
+        employeeEntity.setRoaster(message.getRoaster());
     }
 }

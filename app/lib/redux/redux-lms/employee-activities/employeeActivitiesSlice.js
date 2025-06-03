@@ -1,4 +1,4 @@
-import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
     activities: [],
@@ -31,7 +31,9 @@ const initialState = {
         active: true,
         nopay: false,
         viaMovement: false,
-        viaLeave: false
+        viaLeave: false,
+        manual: false,
+        terminalID: ''
     },
     isEditMode: false,
     editId: null,
@@ -42,13 +44,14 @@ const initialState = {
     searchTerm: "",
     filterType: "all",
     filterStatus: "all",
+    filterActive: "all",
     startDateFilter: "",
     endDateFilter: ""
 };
 
 export const fetchEmployeeActivities = createAsyncThunk(
     'employeeActivities/fetch',
-    async (userId, {rejectWithValue}) => {
+    async (userId, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
 
@@ -77,7 +80,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
 
 export const createEmployeeActivity = createAsyncThunk(
     'employeeActivities/create',
-    async (formData, {rejectWithValue}) => {
+    async (formData, { rejectWithValue }) => {
         try {
             const submissionData = prepareFormData(formData);
             const empId = sessionStorage.getItem('userId');
@@ -109,7 +112,7 @@ export const createEmployeeActivity = createAsyncThunk(
 
 export const updateEmployeeActivity = createAsyncThunk(
     'employeeActivities/update',
-    async ({id, formData}, {rejectWithValue}) => {
+    async ({ id, formData }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -140,7 +143,7 @@ export const updateEmployeeActivity = createAsyncThunk(
 
 export const deleteEmployeeActivity = createAsyncThunk(
     'employeeActivities/delete',
-    async (id, {rejectWithValue}) => {
+    async (id, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -165,9 +168,36 @@ export const deleteEmployeeActivity = createAsyncThunk(
     }
 );
 
+export const deleteEmployeeDeActivity = createAsyncThunk(
+    'employeeActivities/deleteDe',
+    async (id, { rejectWithValue }) => {
+        try {
+            const empId = sessionStorage.getItem('userId');
+            if (!empId) {
+                return rejectWithValue('Employee ID not found in session storage');
+            }
+            const response = await fetch(`http://localhost:8080/lms/attendance/de/${id}/${empId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error("ID not found. Please check your credentials.");
+                }
+                throw new Error(`Error deleting data: ${response.statusText}`);
+            }
+
+            return id;
+        } catch (err) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
 // Helper function to prepare form data for submission
 const prepareFormData = (formData) => {
-    const submissionData = {...formData};
+    const submissionData = { ...formData };
 
     // Convert time strings to proper SQL Time format
     if (submissionData.arrivalTime) {
@@ -237,6 +267,10 @@ const employeeActivitiesSlice = createSlice({
             state.filterStatus = action.payload;
             state.page = 0;
         },
+        setFilterActive: (state, action) => {
+            state.filterActive = action.payload;
+            state.page = 0;
+        },
         setStartDateFilter: (state, action) => {
             state.startDateFilter = action.payload;
             state.page = 0;
@@ -273,7 +307,7 @@ const employeeActivitiesSlice = createSlice({
             state.error = null;
         },
         handleFormChange: (state, action) => {
-            const {name, value, type, checked} = action.payload;
+            const { name, value, type, checked } = action.payload;
             state.formData = {
                 ...state.formData,
                 [name]: type === 'checkbox' ? checked : value
@@ -330,6 +364,10 @@ const employeeActivitiesSlice = createSlice({
                 state.loading = true;
                 state.error = null;
             })
+            .addCase(deleteEmployeeDeActivity.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
             .addCase(deleteEmployeeActivity.fulfilled, (state, action) => {
                 state.loading = false;
                 state.activities = state.activities.filter(activity => activity.publicId !== action.payload);
@@ -337,6 +375,18 @@ const employeeActivitiesSlice = createSlice({
                 state.idToDelete = null;
             })
             .addCase(deleteEmployeeActivity.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+                state.openDeleteDialog = false;
+                state.idToDelete = null;
+            })
+            .addCase(deleteEmployeeDeActivity.fulfilled, (state, action) => {
+                state.loading = false;
+                state.activities = state.activities.filter(activity => activity.publicId !== action.payload);
+                state.openDeleteDialog = false;
+                state.idToDelete = null;
+            })
+            .addCase(deleteEmployeeDeActivity.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
                 state.openDeleteDialog = false;
@@ -351,6 +401,7 @@ export const {
     setSearchTerm,
     setFilterType,
     setFilterStatus,
+    setFilterActive,
     setStartDateFilter,
     setEndDateFilter,
     setFormData,

@@ -28,6 +28,13 @@ public class RosterController {
     private final ExcelProcessingService excelProcessingService;
     private final AttendanceService attendanceService;
 
+    @GetMapping("/shift-roster/{year}/{month}")
+    public ResponseEntity<ShiftRoster> getShiftRosterByDay(@PathVariable int year, @PathVariable String month) {
+        return rosterServiceM.getRosterByMonthAndYear(month, year)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/upload/employee")
     public ResponseEntity<Roster> uploadEmployee(@RequestParam("file") MultipartFile file) {
         RosterDto processedRoster = excelProcessingService.processExcelFile(file);

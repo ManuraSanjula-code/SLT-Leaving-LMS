@@ -19,16 +19,22 @@ import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
 import com.slt.peotv.lmsmangmentservice.model.req.LeaveReq;
 import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
+import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
+import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.TextStyle;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class LMS_Service_impl implements LMS_Service {
@@ -62,7 +68,8 @@ public class LMS_Service_impl implements LMS_Service {
     private LeaveAdminsRepo leaveAdminsRepo;
     @Autowired
     private LeaveTypeRepo leaveTypeRepository;
-
+    @Autowired
+    private Helper helper;
     @Override
     public List<AbsenteeEntity> getAllAbsentee() {
         return absenteeRepo.findAll();
@@ -140,6 +147,72 @@ public class LMS_Service_impl implements LMS_Service {
             attendanceEntity.setActive(false);
             attendanceRepo.save(attendanceEntity);
         });
+    }
+
+    @Override
+    public DashBoardRes getDashBoard(String userId) {
+
+        List<AttendanceEntity> attedance = attendanceRepo.findByUserId(userId);
+        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
+
+        EmployeeEntity emp = employee.get();
+        if(employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
+        List<UserLeaveTypeRemainingEntity> remain = leaveTypeRemaiRepo.findByEmployeeID(emp.getEmployeeId());
+
+
+        if(remain.isEmpty() || attedance.isEmpty()) {
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        }
+
+        int totalRemainingLeaves = remain.stream()
+                .filter(leave -> leave.getRemainingLeaves() != null) // Handle null values
+                .mapToInt(UserLeaveTypeRemainingEntity::getRemainingLeaves)
+                .sum();
+        int totL = 215;
+        int total = attedance.stream().map(AttendanceEntity::getIsFullDay).toList().size();
+        String name = employee.get().getFirstName() + " " + employee.get().getLastName();
+
+        Map<String, Integer> remainLeaveDistribution = leaveTypeRemaiRepo.findByEmployeeID(employee.get().getEmployeeId())
+                .stream()
+                .collect(Collectors.toMap(
+                        leave -> leave.getLeaveType().getName(),
+                        UserLeaveTypeRemainingEntity::getRemainingLeaves,
+                        (existing, replacement) -> existing
+                ));
+
+        LocalDate yearStart = LocalDate.now().withDayOfYear(1);
+        LocalDate today = LocalDate.now();
+        Date yearStartDate = Date.from(yearStart.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date todayEndDate = Date.from(today.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant());
+
+        List<AttendanceEntity> attendanceThisYear = attendanceRepo.findByEmployeeIDAndDateBetween(employee.get().getSltId(), yearStartDate, todayEndDate);
+
+
+        Map<String, Integer> monthlyAttendanceDistribution = attendanceThisYear.stream()
+                .filter(attendance -> Boolean.TRUE.equals(attendance.getIsFullDay())) // Only full day attendance
+                .collect(Collectors.groupingBy(
+                        attendance -> {
+                            LocalDate date = attendance.getDate().toInstant() // Using 'date' field instead of 'arrivalDate'
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate();
+                            return date.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+                        },
+                        Collectors.collectingAndThen(
+                                Collectors.counting(),
+                                Math::toIntExact
+                        )
+                ));
+
+        DashBoardRes dashBoardRes = new DashBoardRes();
+
+        dashBoardRes.setTotalAttendance(total);
+        dashBoardRes.setRemainLeaveDistribution(remainLeaveDistribution);
+        dashBoardRes.setMonthlyAttendanceDistribution(monthlyAttendanceDistribution);
+        dashBoardRes.setName(name);
+        dashBoardRes.setTotalLeave(totL);
+        dashBoardRes.setLeaveBalance(totalRemainingLeaves);
+        return dashBoardRes;
     }
 
     @Override
@@ -388,13 +461,28 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void createMovements(MovementsEntity entity) {
-        movementsRepo.save(entity);
+        MovementsEntity movementsEntity = movementsRepo.save(entity);
+        System.out.println("MovementsEntity: " + movementsEntity);
     }
 
     @Override
     public void deleteAttendance(String publicId) {
         Optional<AttendanceEntity> entity = attendanceRepo.findByPublicId(publicId);
-        entity.ifPresent(attendanceEntity -> attendanceRepo.delete(attendanceEntity));
+        entity.ifPresent(attendanceEntity -> {
+            if(attendanceEntity.getIsManual())
+                attendanceRepo.delete(attendanceEntity);
+            else
+                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        });
+    }
+
+    @Override
+    public void deleteAttendanceV1(String publicId) {
+        Optional<AttendanceEntity> entity = attendanceRepo.findByPublicId(publicId);
+        entity.ifPresent(attendanceEntity -> {
+            attendanceEntity.setActive(false);
+            attendanceRepo.save(attendanceEntity);
+        });
     }
 
     @Override
@@ -406,32 +494,32 @@ public class LMS_Service_impl implements LMS_Service {
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         return allByUser.map(movementEntity -> {
-            Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(movementEntity.getEmployeeId());
+            List<MovementTra> movementAdminsDtoList = new ArrayList<>();
 
             MovementDTO movementDTO = new MovementDTO();
 
-            if (opE.isPresent()) {
+            movementEntity.getAdmins().forEach(movementAdminsEntity -> {
+                Optional<EmployeeEntity> opE = employeeRepo.findBySltId(movementAdminsEntity.getSltId());
+                if(opE.isEmpty()) return;
                 EmployeeEntity employeeEntity = opE.get();
-                List<MovementTra> movementAdminsDtoList = new ArrayList<>();
-                movementEntity.getAdmins().forEach(movementAdminsEntity -> {
-                    MovementTra movementAdmins = new MovementTra();
-                    movementAdmins.setId(movementAdminsEntity.getId());
-                    movementAdmins.setMovementId(movementAdminsEntity.getMovementId());
-                    movementAdmins.setUserId(movementAdminsEntity.getUserId());
-                    movementAdmins.setSltId(movementAdminsEntity.getSltId());
-                    movementAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
-                    movementAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
-                    movementAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
-                    movementAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    movementAdmins.setEmail(employeeEntity.getEmail());
-                    movementAdmins.setFirstName(employeeEntity.getFirstName());
-                    movementAdmins.setLastName(employeeEntity.getLastName());
+                MovementTra movementAdmins = new MovementTra();
+                movementAdmins.setId(movementAdminsEntity.getId());
+                movementAdmins.setMovementId(movementAdminsEntity.getMovementId());
+                movementAdmins.setUserId(movementAdminsEntity.getUserId());
+                movementAdmins.setSltId(movementAdminsEntity.getSltId());
+                movementAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
+                movementAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
+                movementAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
+                movementAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    movementAdminsDtoList.add(movementAdmins);
-                });
-                movementDTO.setAdminsTra(movementAdminsDtoList);
-            }
+                movementAdmins.setEmail(employeeEntity.getEmail());
+                movementAdmins.setFirstName(employeeEntity.getFirstName());
+                movementAdmins.setLastName(employeeEntity.getLastName());
+
+                movementAdminsDtoList.add(movementAdmins);
+            });
+            movementDTO.setAdminsTra(movementAdminsDtoList);
 
             movementDTO.setId(movementEntity.getId());
             movementDTO.setPublicId(movementEntity.getPublicId());
@@ -474,10 +562,10 @@ public class LMS_Service_impl implements LMS_Service {
             if (publicId.isPresent()) {
                 MovementDTO movementDTO = new MovementDTO();
                 MovementsEntity movementEntity = publicId.get();
-                Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(movementEntity.getEmployeeId());
+                Optional<EmployeeEntity> opE = employeeRepo.findBySltId(movementAdminsEntity.getSltId());
+                List<MovementTra> movementAdminsDtoList = new ArrayList<>();
 
                 if (opE.isPresent()) {
-                    List<MovementTra> movementAdminsDtoList = new ArrayList<>();
                     EmployeeEntity employeeEntity = opE.get();
 
                     MovementTra movementAdmins = new MovementTra();
@@ -495,9 +583,9 @@ public class LMS_Service_impl implements LMS_Service {
                     movementAdmins.setLastName(employeeEntity.getLastName());
 
                     movementAdminsDtoList.add(movementAdmins);
-                    movementDTO.setAdminsTra(movementAdminsDtoList);
                 }
 
+                movementDTO.setAdminsTra(movementAdminsDtoList);
                 movementDTO.setId(movementEntity.getId());
                 movementDTO.setPublicId(movementEntity.getPublicId());
                 movementDTO.setUserId(movementEntity.getEmployeeId());
@@ -537,33 +625,33 @@ public class LMS_Service_impl implements LMS_Service {
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         return allByUser.map(movementEntity -> {
+            List<MovementTra> movementAdminsDtoList = new ArrayList<>();
+
             MovementDTO movementDTO = new MovementDTO();
 
-            Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(movementEntity.getEmployeeId());
-
-            if (opE.isPresent()) {
-                List<MovementTra> movementAdminsDtoList = new ArrayList<>();
+            movementEntity.getAdmins().forEach(movementAdminsEntity -> {
+                Optional<EmployeeEntity> opE = employeeRepo.findBySltId(movementAdminsEntity.getSltId());
+                if(opE.isEmpty()) return;
                 EmployeeEntity employeeEntity = opE.get();
-                movementEntity.getAdmins().forEach(movementAdminsEntity -> {
-                    MovementTra movementAdmins = new MovementTra();
-                    movementAdmins.setId(movementAdminsEntity.getId());
-                    movementAdmins.setMovementId(movementAdminsEntity.getMovementId());
-                    movementAdmins.setUserId(movementAdminsEntity.getUserId());
-                    movementAdmins.setSltId(movementAdminsEntity.getSltId());
-                    movementAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
-                    movementAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
-                    movementAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
-                    movementAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    movementAdmins.setEmail(employeeEntity.getEmail());
-                    movementAdmins.setFirstName(employeeEntity.getFirstName());
-                    movementAdmins.setLastName(employeeEntity.getLastName());
+                MovementTra movementAdmins = new MovementTra();
+                movementAdmins.setId(movementAdminsEntity.getId());
+                movementAdmins.setMovementId(movementAdminsEntity.getMovementId());
+                movementAdmins.setUserId(movementAdminsEntity.getUserId());
+                movementAdmins.setSltId(movementAdminsEntity.getSltId());
+                movementAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
+                movementAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
+                movementAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
+                movementAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    movementAdminsDtoList.add(movementAdmins);
-                });
-                movementDTO.setAdminsTra(movementAdminsDtoList);
-            }
+                movementAdmins.setEmail(employeeEntity.getEmail());
+                movementAdmins.setFirstName(employeeEntity.getFirstName());
+                movementAdmins.setLastName(employeeEntity.getLastName());
 
+                movementAdminsDtoList.add(movementAdmins);
+            });
+
+            movementDTO.setAdminsTra(movementAdminsDtoList);
             movementDTO.setId(movementEntity.getId());
             movementDTO.setPublicId(movementEntity.getPublicId());
             movementDTO.setUserId(movementEntity.getEmployeeId());
@@ -790,31 +878,28 @@ public class LMS_Service_impl implements LMS_Service {
 
         return leaveEntityPage.map(leaveEntity -> {
             LeaveDTO leaveDTO = new LeaveDTO();
-
             List<LeaveTra> leaveAdminsDtoList = new ArrayList<>();
-            Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(leaveEntity.getEmployeeID());
-            if (opE.isPresent()) {
 
-                leaveEntity.getAdmins().forEach(movementAdminsEntity -> {
-                    EmployeeEntity employeeEntity = opE.get();
-                    LeaveTra leaveAdmins = new LeaveTra();
-                    leaveAdmins.setId(movementAdminsEntity.getId());
-                    leaveAdmins.setLeaveId(movementAdminsEntity.getLeaveId());
-                    leaveAdmins.setUserId(movementAdminsEntity.getUserId());
-                    leaveAdmins.setSltId(movementAdminsEntity.getSltId());
-                    leaveAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
-                    leaveAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
-                    leaveAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
-                    leaveAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
+            leaveEntity.getAdmins().forEach(movementAdminsEntity -> {
+                Optional<EmployeeEntity> opE = employeeRepo.findBySltId(movementAdminsEntity.getSltId());
+                if(opE.isEmpty()) return;
+                EmployeeEntity employeeEntity = opE.get();
+                LeaveTra leaveAdmins = new LeaveTra();
+                leaveAdmins.setId(movementAdminsEntity.getId());
+                leaveAdmins.setLeaveId(movementAdminsEntity.getLeaveId());
+                leaveAdmins.setUserId(movementAdminsEntity.getUserId());
+                leaveAdmins.setSltId(movementAdminsEntity.getSltId());
+                leaveAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
+                leaveAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
+                leaveAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
+                leaveAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    leaveAdmins.setEmail(employeeEntity.getEmail());
-                    leaveAdmins.setFirstName(employeeEntity.getFirstName());
-                    leaveAdmins.setLastName(employeeEntity.getLastName());
+                leaveAdmins.setEmail(employeeEntity.getEmail());
+                leaveAdmins.setFirstName(employeeEntity.getFirstName());
+                leaveAdmins.setLastName(employeeEntity.getLastName());
 
-                    leaveAdminsDtoList.add(leaveAdmins);
-                });
-
-            }
+                leaveAdminsDtoList.add(leaveAdmins);
+            });
 
             leaveDTO.setAdminsTra(leaveAdminsDtoList);
             leaveDTO.setPublicId(leaveEntity.getPublicId());
@@ -840,6 +925,8 @@ public class LMS_Service_impl implements LMS_Service {
             leaveDTO.setManualRequest(leaveEntity.getIsManualRequest());
             leaveDTO.setHappenDate(leaveEntity.getHappenDate());
             leaveDTO.setUserId(leaveDTO.getUserId());
+            leaveDTO.setReject(leaveEntity.getIsReject());
+            leaveDTO.setCanceled(leaveEntity.getIsCanceled());
 
             return leaveDTO;
         });
@@ -852,31 +939,28 @@ public class LMS_Service_impl implements LMS_Service {
 
         return leaveEntityPage.map(leaveEntity -> {
             LeaveDTO leaveDTO = new LeaveDTO();
-
             List<LeaveTra> leaveAdminsDtoList = new ArrayList<>();
-            Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(leaveEntity.getEmployeeID());
-            if (opE.isPresent()) {
 
-                leaveEntity.getAdmins().forEach(movementAdminsEntity -> {
-                    EmployeeEntity employeeEntity = opE.get();
-                    LeaveTra leaveAdmins = new LeaveTra();
-                    leaveAdmins.setId(movementAdminsEntity.getId());
-                    leaveAdmins.setLeaveId(movementAdminsEntity.getLeaveId());
-                    leaveAdmins.setUserId(movementAdminsEntity.getUserId());
-                    leaveAdmins.setSltId(movementAdminsEntity.getSltId());
-                    leaveAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
-                    leaveAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
-                    leaveAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
-                    leaveAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
+            leaveEntity.getAdmins().forEach(movementAdminsEntity -> {
+                Optional<EmployeeEntity> opE = employeeRepo.findBySltId(movementAdminsEntity.getSltId());
+                if(opE.isEmpty()) return;
+                EmployeeEntity employeeEntity = opE.get();
+                LeaveTra leaveAdmins = new LeaveTra();
+                leaveAdmins.setId(movementAdminsEntity.getId());
+                leaveAdmins.setLeaveId(movementAdminsEntity.getLeaveId());
+                leaveAdmins.setUserId(movementAdminsEntity.getUserId());
+                leaveAdmins.setSltId(movementAdminsEntity.getSltId());
+                leaveAdmins.setEmployeeId(movementAdminsEntity.getEmployeeId());
+                leaveAdmins.setApprovedDate(movementAdminsEntity.getApprovedDate());
+                leaveAdmins.setHighestRolePriority(movementAdminsEntity.getHighestRolePriority());
+                leaveAdmins.setAccepted(movementAdminsEntity.getIsAccepted());
 
-                    leaveAdmins.setEmail(employeeEntity.getEmail());
-                    leaveAdmins.setFirstName(employeeEntity.getFirstName());
-                    leaveAdmins.setLastName(employeeEntity.getLastName());
+                leaveAdmins.setEmail(employeeEntity.getEmail());
+                leaveAdmins.setFirstName(employeeEntity.getFirstName());
+                leaveAdmins.setLastName(employeeEntity.getLastName());
 
-                    leaveAdminsDtoList.add(leaveAdmins);
-                });
-
-            }
+                leaveAdminsDtoList.add(leaveAdmins);
+            });
 
             leaveDTO.setAdminsTra(leaveAdminsDtoList);
 
@@ -890,6 +974,7 @@ public class LMS_Service_impl implements LMS_Service {
             leaveDTO.setIsNoPay(leaveEntity.getIsNoPay());
             leaveDTO.setNumOfDays(leaveEntity.getNumOfDays());
             leaveDTO.setDescription(leaveEntity.getDescription());
+            leaveDTO.setReject(leaveEntity.getIsReject());
             leaveDTO.setHalfDay(leaveEntity.getIsHalfDay());
             leaveDTO.setFullDay(leaveEntity.getIsFullDay());
             leaveDTO.setUnSuccessful(leaveEntity.getUnSuccessful());
@@ -903,7 +988,7 @@ public class LMS_Service_impl implements LMS_Service {
             leaveDTO.setManualRequest(leaveEntity.getIsManualRequest());
             leaveDTO.setHappenDate(leaveEntity.getHappenDate());
             leaveDTO.setUserId(leaveDTO.getUserId());
-
+            leaveDTO.setCanceled(leaveEntity.getIsCanceled());
             return leaveDTO;
         });
     }
@@ -921,7 +1006,9 @@ public class LMS_Service_impl implements LMS_Service {
     public void deleteLeave(String publicId) {
         Optional<LeaveEntity> byPublicId = leaveRepo.findByPublicId(publicId);
         if (byPublicId.isPresent()) {
-            leaveRepo.delete(byPublicId.get());
+            LeaveEntity leaveEntity = byPublicId.get();
+            leaveEntity.setIsCanceled(true);
+            leaveRepo.save(leaveEntity);
         } else
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
     }
@@ -1207,29 +1294,26 @@ public class LMS_Service_impl implements LMS_Service {
                 LeaveDTO leaveDTO = new LeaveDTO();
 
                 List<LeaveTra> leaveAdminsDtoList = new ArrayList<>();
-                Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(leaveEntity.getEmployeeID());
-                if (opE.isPresent()) {
+                leaveEntity.getAdmins().forEach(adminsEntity -> {
+                    Optional<EmployeeEntity> opE = employeeRepo.findByEmployeeId(adminsEntity.getSltId());
+                    if(opE.isEmpty()) return;
+                    EmployeeEntity employeeEntity = opE.get();
+                    LeaveTra leaveAdmins = new LeaveTra();
+                    leaveAdmins.setId(adminsEntity.getId());
+                    leaveAdmins.setLeaveId(adminsEntity.getLeaveId());
+                    leaveAdmins.setUserId(adminsEntity.getUserId());
+                    leaveAdmins.setSltId(adminsEntity.getSltId());
+                    leaveAdmins.setEmployeeId(adminsEntity.getEmployeeId());
+                    leaveAdmins.setApprovedDate(adminsEntity.getApprovedDate());
+                    leaveAdmins.setHighestRolePriority(adminsEntity.getHighestRolePriority());
+                    leaveAdmins.setAccepted(adminsEntity.getIsAccepted());
 
-                    leaveEntity.getAdmins().forEach(adminsEntity -> {
-                        EmployeeEntity employeeEntity = opE.get();
-                        LeaveTra leaveAdmins = new LeaveTra();
-                        leaveAdmins.setId(adminsEntity.getId());
-                        leaveAdmins.setLeaveId(adminsEntity.getLeaveId());
-                        leaveAdmins.setUserId(adminsEntity.getUserId());
-                        leaveAdmins.setSltId(adminsEntity.getSltId());
-                        leaveAdmins.setEmployeeId(adminsEntity.getEmployeeId());
-                        leaveAdmins.setApprovedDate(adminsEntity.getApprovedDate());
-                        leaveAdmins.setHighestRolePriority(adminsEntity.getHighestRolePriority());
-                        leaveAdmins.setAccepted(adminsEntity.getIsAccepted());
+                    leaveAdmins.setEmail(employeeEntity.getEmail());
+                    leaveAdmins.setFirstName(employeeEntity.getFirstName());
+                    leaveAdmins.setLastName(employeeEntity.getLastName());
 
-                        leaveAdmins.setEmail(employeeEntity.getEmail());
-                        leaveAdmins.setFirstName(employeeEntity.getFirstName());
-                        leaveAdmins.setLastName(employeeEntity.getLastName());
-
-                        leaveAdminsDtoList.add(leaveAdmins);
-                    });
-
-                }
+                    leaveAdminsDtoList.add(leaveAdmins);
+                });
 
                 leaveDTO.setAdminsTra(leaveAdminsDtoList);
 
@@ -1256,6 +1340,7 @@ public class LMS_Service_impl implements LMS_Service {
                 leaveDTO.setManualRequest(leaveEntity.getIsManualRequest());
                 leaveDTO.setHappenDate(leaveEntity.getHappenDate());
                 leaveDTO.setUserId(leaveDTO.getUserId());
+                leaveDTO.setReject(leaveEntity.getIsReject());
 
                 return leaveDTO;
             } else
@@ -1564,7 +1649,9 @@ public class LMS_Service_impl implements LMS_Service {
         if (req.getViaLeave() != null) {
             entity.setViaLeave(req.getViaLeave());
         }
-
+        if(req.getTerminalID()!=null){
+            entity.setTerminalID(req.getTerminalID());
+        }
         return entity;
     }
 }
