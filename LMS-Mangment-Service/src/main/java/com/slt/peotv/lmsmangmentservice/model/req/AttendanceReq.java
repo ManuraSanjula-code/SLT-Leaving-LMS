@@ -1,5 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.model.req;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.sql.Time;
 import java.util.Date;
 
@@ -28,6 +30,24 @@ public class AttendanceReq {
     private Boolean active = true;
     private Boolean nopay = false;
     private String terminalID;
+    private String adminId;
+    private String adminComment;
+
+    public String getAdminId() {
+        return adminId;
+    }
+
+    public void setAdminId(String adminId) {
+        this.adminId = adminId;
+    }
+
+    public String getAdminComment() {
+        return adminComment;
+    }
+
+    public void setAdminComment(String adminComment) {
+        this.adminComment = adminComment;
+    }
 
     public String getTerminalID() {
         return terminalID;

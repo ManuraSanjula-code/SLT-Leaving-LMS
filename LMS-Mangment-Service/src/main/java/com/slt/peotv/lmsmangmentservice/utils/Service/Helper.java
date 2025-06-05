@@ -121,7 +121,7 @@ public class Helper {
             leaveEntity.setDescription("EMPLOYEE IS ABSENT ALSO HE/SHE MAKE REQUEST TO LEAVE NOT APPROVED HENCE THIS LEAVE STILL PENDING");
 
             /// SET FULL DAY IS TURE
-            check_Service.saveNoPayEntity(leaveEntity.getEmployeeID(), null, false, false, false, false, true, leaveEntity.getHappenDate());
+            check_Service.saveNoPayEntity(leaveEntity.getEmployeeID(), null,null, false, false, false, false, true, leaveEntity.getHappenDate());
 
         }
     }
@@ -161,11 +161,11 @@ public class Helper {
 
                 attendanceEntity.setIssueDescription("GOING HALF DAY BUT REMAINING HALF DAY IS 0 SO GOING NO-PAY");
 
-                check_Service.saveNoPayEntity(user, attendanceEntity, attendanceEntity.getIsHalfDay(),
+                check_Service.saveNoPayEntity(user,null ,attendanceEntity, attendanceEntity.getIsHalfDay(),
                         attendanceEntity.getIsUnSuccessful(), attendanceEntity.getIsLate(),
                         attendanceEntity.getLateCover(), attendanceEntity.getIsAbsent(), attendanceEntity.getDate());
 
-                check_Service.reportAttendance(attendanceEntity, false, true, false, false, false, true, true, false, false, true, true, attendanceEntity.getDate());
+                check_Service.reportAttendance_(attendanceEntity, false, true, false, false, false, true, true, false, false, true, true, attendanceEntity.getDate());
 
             } else {
 
@@ -182,7 +182,7 @@ public class Helper {
                 req.setComment("GOING HALF DAY WITH-OUT NOTIFYING");
 
                 check_Service.reportAbsent(req);
-                check_Service.reportAttendance(attendanceEntity, false, true, false, false, false, true, true, false, false, true, false, attendanceEntity.getDate());
+                check_Service.reportAttendance_(attendanceEntity, false, true, false, false, false, true, true, false, false, true, false, attendanceEntity.getDate());
             }
 
         } else {

@@ -1,22 +1,27 @@
 package com.slt.peotv.lmsmangmentservice.entity.Attendance;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import java.sql.Time;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+
 import lombok.*;
 
 @Entity
 @Table(name = "attendance")
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = {"inOuts", "editedBys"})
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString
+@ToString(exclude = {"inOuts", "editedBys"})
 public class AttendanceEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -102,4 +107,20 @@ public class AttendanceEntity {
 
     @Builder.Default
     private Boolean isHoliday = false;
+
+    @OneToMany(mappedBy = "attendance", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
+    private List<InOutEntity> inOuts = new ArrayList<>();
+
+    @OneToMany
+    @Builder.Default
+    private List<EditedBy> editedBys = new ArrayList<>();
+
+    @Builder.Default
+    private Date createDate = new Date();
+    private Date updateDate;
+
+    @Builder.Default
+    private Boolean isEdited = false;
+
 }

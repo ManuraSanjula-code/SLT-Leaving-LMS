@@ -1,12 +1,15 @@
 package com.slt.peotv.lmsmangmentservice.entity.Movement;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -94,6 +97,17 @@ public class MovementsEntity {
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<MovementAdminsEntity> admins;
 
+    @OneToMany
+    @Builder.Default
+    private List<EditedBy> editedBys = new ArrayList<>();
+
     @Builder.Default
     private Boolean isReject = false;
+
+    @Builder.Default
+    private Date createDate = new Date();
+    private Date updateDate;
+
+    @Builder.Default
+    private Boolean isEdited = false;
 }

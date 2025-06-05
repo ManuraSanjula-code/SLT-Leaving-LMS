@@ -102,7 +102,7 @@ public class ImplUtils {
         // Create a new RoleEntity (local variable, no shared state)
         RoleEntity roleEntity = new RoleEntity();
         roleEntity.setPublicId(idUtils.generateId(10));
-
+        roleEntity.setOt(req.getOt());
         // Use thread-safe collections for users and authorities
         List<UserEntity> userEntities = Collections.synchronizedList(new ArrayList<>());
         List<AuthorityEntity> authorityEntities = Collections.synchronizedList(new ArrayList<>());

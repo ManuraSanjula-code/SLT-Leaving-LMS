@@ -3,7 +3,7 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import java.util.Date;
 
-public class MovementAdminsDto {
+public class MovementAdminsDTO {
 
     private Integer id;
     private String movementId;

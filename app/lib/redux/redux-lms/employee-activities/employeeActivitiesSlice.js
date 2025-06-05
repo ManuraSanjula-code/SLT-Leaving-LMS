@@ -51,7 +51,7 @@ const initialState = {
 
 export const fetchEmployeeActivities = createAsyncThunk(
     'employeeActivities/fetch',
-    async (userId, { rejectWithValue }) => {
+    async ({userId, isAdmin, page, rowsPerPage}, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
 
@@ -59,7 +59,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}&isAdmin=${isAdmin}`, {
                 credentials: 'include',
             });
 
@@ -71,6 +71,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             return data.content || [];
         } catch (err) {
             return rejectWithValue(err.message);
@@ -119,7 +120,9 @@ export const updateEmployeeActivity = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const submissionData = prepareFormData(formData);
-
+            let userInput = prompt("Enter your comment:");
+            submissionData.adminId = empId;
+            submissionData.adminComment = userInput;
             const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'PUT',
                 headers: {

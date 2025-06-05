@@ -361,7 +361,12 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
 
     // Fetch data on component mount
     useEffect(() => {
-        dispatch(fetchEmployeeActivities(userId));
+        dispatch(fetchEmployeeActivities({
+            userId,
+            isAdmin,
+            page,
+            rowsPerPage,
+        }));
     }, [dispatch, userId]);
 
     // Handle form input changes
@@ -406,7 +411,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(setEditMode(true));
         dispatch(setShowModal(true));
     };
-
     const handleDeleteClick = (id) => {
         dispatch(setIdToDelete(id));
         dispatch(setOpenDeleteDialog(true));

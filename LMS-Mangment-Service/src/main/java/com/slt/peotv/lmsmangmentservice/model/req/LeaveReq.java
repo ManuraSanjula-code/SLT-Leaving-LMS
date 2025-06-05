@@ -19,7 +19,49 @@ public class LeaveReq {
     private Boolean isLateCover;
     private Boolean isLate;
     private Boolean unSuccessful;
-    
+    private String adminId;
+    private String adminComment;
+
+    public Boolean getFullDay() {
+        return isFullDay;
+    }
+
+    public void setFullDay(Boolean fullDay) {
+        isFullDay = fullDay;
+    }
+
+    public Boolean getLateCover() {
+        return isLateCover;
+    }
+
+    public void setLateCover(Boolean lateCover) {
+        isLateCover = lateCover;
+    }
+
+    public Boolean getLate() {
+        return isLate;
+    }
+
+    public void setLate(Boolean late) {
+        isLate = late;
+    }
+
+    public String getAdminId() {
+        return adminId;
+    }
+
+    public void setAdminId(String adminId) {
+        this.adminId = adminId;
+    }
+
+    public String getAdminComment() {
+        return adminComment;
+    }
+
+    public void setAdminComment(String adminComment) {
+        this.adminComment = adminComment;
+    }
+
     public Boolean getIsFullDay() {
 		return isFullDay;
 	}

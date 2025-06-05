@@ -7,6 +7,7 @@ import com.slt.radio.rosterservice.Model.One.Employeee.Employee;
 import com.slt.radio.rosterservice.Model.One.Obj.EmployeeShift;
 import com.slt.radio.rosterservice.Model.One.Roster;
 import com.slt.radio.rosterservice.Model.One.Teamm.TeamRoster;
+import com.slt.radio.rosterservice.Repo.EmployeeArchiveRepository;
 import com.slt.radio.rosterservice.Repo.EmployeeRepository;
 import com.slt.radio.rosterservice.Repo.RosterRepository;
 import com.slt.radio.rosterservice.Service.Employee.EmployeeShiftService;
@@ -27,6 +28,7 @@ public class RosterServiceE {
     private final RosterRepository rosterRepository;
     private final EmployeeShiftService employeeShiftService;
     private final EmployeeRepository employeeRepository;
+    private final EmployeeArchiveRepository employeeArchiveRepository;
     /**
      * Create a new roster
      * @param rosterDto the roster data

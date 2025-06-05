@@ -1,9 +1,13 @@
 package com.slt.peotv.lmsmangmentservice.entity.AccessLog;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "accesslog")
@@ -33,7 +37,7 @@ public class AccessLogEntity {
     @Column(name = "InOut", nullable = false)
     private String inOut;
 
-    @Column(name = "`read`", nullable = false)  // Escaping the column name with backticks
+    @Column(name = "`read`", nullable = false)
     private String readStatus;
 
     @Column(name = "processed", nullable = false)
@@ -41,4 +45,20 @@ public class AccessLogEntity {
 
     @Column(name = "etl_run_time", nullable = false)
     private Date etlRunTime;
+
+    @OneToOne(mappedBy = "accessLog", fetch = FetchType.EAGER)
+    private InOutEntity inOu;
+
+    @OneToMany
+    @Builder.Default
+    private List<EditedBy> editedBys = new ArrayList<>();
+
+    @Builder.Default
+    private Date createDate = new Date();
+    private Date updateDate;
+
+    @Builder.Default
+    private Boolean isEdited = false;
+    @Builder.Default
+    private Boolean isManual = false;
 }

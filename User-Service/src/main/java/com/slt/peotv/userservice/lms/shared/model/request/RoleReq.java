@@ -10,7 +10,16 @@ public class RoleReq {
     private List<String> addedAuthorities;
     private List<String> deletedAuthorities;
     private Integer priority;
+    private Integer ot;
     private String publicId;
+
+    public Integer getOt() {
+        return ot;
+    }
+
+    public void setOt(Integer ot) {
+        this.ot = ot;
+    }
 
     public String getPublicId() {
         return publicId;

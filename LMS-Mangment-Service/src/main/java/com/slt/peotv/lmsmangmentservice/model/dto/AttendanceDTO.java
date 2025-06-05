@@ -2,6 +2,7 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import java.sql.Time;
 import java.util.Date;
+import java.util.List;
 
 public class AttendanceDTO {
     private Long id;
@@ -32,6 +33,24 @@ public class AttendanceDTO {
     private Boolean isManual = false;
     private String userId;
     private String terminalID;
+    private List<InOutDTO> inOutDTOs;
+    private List<EditedByDTO> editedByDTOs;
+
+    public List<EditedByDTO> getEditedByDTOs() {
+        return editedByDTOs;
+    }
+
+    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
+        this.editedByDTOs = editedByDTOs;
+    }
+
+    public List<InOutDTO> getInOutDTOs() {
+        return inOutDTOs;
+    }
+
+    public void setInOutDTOs(List<InOutDTO> inOutDTOs) {
+        this.inOutDTOs = inOutDTOs;
+    }
 
     public String getTerminalID() {
         return terminalID;

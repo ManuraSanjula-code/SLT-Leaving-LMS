@@ -78,6 +78,8 @@ public class UpdateUtils {
         updateFieldIfNotNull(userDto.getSltId(), userEntity::setSltId);
         updateFieldIfNotNull(userDto.getEmployeeId(), userEntity::setEmployeeId);
         updateFieldIfNotNull(userDto.getActive(), userEntity::setActive);
+        updateFieldIfNotNull(userDto.getRoaster(), userEntity::setRoaster);
+
         updateFieldIfNotNull(bCryptPasswordEncoder.encode(userDto.getPassword()), userEntity::setEncryptedPassword);
         
         // Handle addresses
@@ -135,6 +137,7 @@ public class UpdateUtils {
         updateFieldIfNotNull(userReq.getActive(), userEntity::setActive);
         updateFieldIfNotNull(userReq.getJoiningDate(), userEntity::setJoin_date);
         updateFieldIfNotNull(bCryptPasswordEncoder.encode(userReq.getPassword()), userEntity::setEncryptedPassword);
+        updateFieldIfNotNull(userReq.getRoaster(), userEntity::setRoaster);
 
 
         // Handle addresses

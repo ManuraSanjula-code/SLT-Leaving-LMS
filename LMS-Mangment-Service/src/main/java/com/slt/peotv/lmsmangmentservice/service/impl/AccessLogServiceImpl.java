@@ -33,7 +33,6 @@ public class AccessLogServiceImpl implements AccessLogService {
     private final SimpleDateFormat inputDateFormat = new SimpleDateFormat("dd/MM/yyyy");
     private final SimpleDateFormat currentDateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
-
     @Autowired
     private AccessLogRepo accessLogRepository;
 
@@ -44,14 +43,16 @@ public class AccessLogServiceImpl implements AccessLogService {
     private Helper helper;
 
     @Override
+    @Transactional
     public void processLogEntry() throws ParseException {
-
         logger.info("Processing log entries from archive");
         List<AccessLogEntity> logs = accessLogRepository.findAll();
 
         for (AccessLogEntity log : logs) {
             try {
-                processAccessLog(log);
+                // Ensure we're working with a managed entity by refreshing it
+                AccessLogEntity managedLog = accessLogRepository.findById(log.getId()).orElse(log);
+                processAccessLog(managedLog);
             } catch (ParseException e) {
                 logger.error("Failed to process log entry with ID: {}", log.getEmployeeID(), e);
                 throw e;
@@ -67,7 +68,7 @@ public class AccessLogServiceImpl implements AccessLogService {
 
         logger.debug("Processing log - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
                 punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID(), log);
     }
 
     @Override
@@ -84,6 +85,7 @@ public class AccessLogServiceImpl implements AccessLogService {
     }
 
     @Override
+    @Transactional
     public void processLogEntry(AccessLogEntity log) throws ParseException {
         String logDate = log.getLogDate() != null ? log.getLogDate() : currentDateFormat.format(new Date());
         Date punchDate = parseDate(logDate);
@@ -91,7 +93,7 @@ public class AccessLogServiceImpl implements AccessLogService {
 
         logger.debug("Processing log entry - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
                 punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID(), log);
     }
 
     private Date parseDate(String dateString) throws ParseException {
@@ -112,7 +114,8 @@ public class AccessLogServiceImpl implements AccessLogService {
         }
     }
 
-    private void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout, String terminalId) throws ParseException {
+    @Transactional
+    protected void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout, String terminalId, AccessLogEntity log) throws ParseException {
         if (inout == null) {
             logger.error("Inout value is null for employee: {}", employeeID);
             throw new IllegalArgumentException("Inout value cannot be null");
@@ -126,11 +129,7 @@ public class AccessLogServiceImpl implements AccessLogService {
         try {
             // Parse the input date (format: "dd/MM/yyyy")
             Date date = inputDateFormat.parse(logDate);
-
-            // Combine date and time
-//            long combinedDateTime = date.getTime() + punchTime.getTime();
             long combinedDateTime = date.getTime();
-
             Timestamp punchTimestamp = new Timestamp(combinedDateTime);
 
             // Set employee ID
@@ -138,6 +137,7 @@ public class AccessLogServiceImpl implements AccessLogService {
             inOut.setDate(helper.getYesterdayDate());
             inOut.setEtlRunTime(new Date());
             String normalizedInout = inout.trim().toUpperCase();
+
             switch (normalizedInout) {
                 case "IN":
                     inOut.setInOut(1);
@@ -150,8 +150,7 @@ public class AccessLogServiceImpl implements AccessLogService {
                         inOut.setTimeEve(punchTime);
                         inOut.setIsEvening(true);
                     }
-
-                    logger.debug("Saved IN record for employee: {}, date: {}, time: {}",
+                    logger.debug("Prepared IN record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
                     break;
 
@@ -166,7 +165,7 @@ public class AccessLogServiceImpl implements AccessLogService {
                         inOut.setTimeEve(punchTime);
                         inOut.setIsEvening(true);
                     }
-                    logger.debug("Saved OUT record for employee: {}, date: {}, time: {}",
+                    logger.debug("Prepared OUT record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
                     break;
 
@@ -175,23 +174,60 @@ public class AccessLogServiceImpl implements AccessLogService {
                     throw new IllegalArgumentException("Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
             }
 
-
+            // Check for existing entries
             List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDate(
                     inOut.getEmployeeID(),
                     inOut.getDate());
 
-            if(existingEntries == null || existingEntries.isEmpty())  inOutRepository.save(inOut);
+            boolean shouldSave = true;
 
-            for (InOutEntity existing : existingEntries) {
-                if (!existing.equals(inOut)) {
-                    inOutRepository.save(inOut);
+            // If there are existing entries, check if this exact record already exists
+            if (existingEntries != null && !existingEntries.isEmpty()) {
+                for (InOutEntity existing : existingEntries) {
+                    if (existing.equals(inOut)) {
+                        shouldSave = false;
+                        logger.debug("Record already exists for employee: {}, skipping save", employeeID);
+                        break;
+                    }
                 }
+            }
+
+            // Only save if the record doesn't already exist
+            if (shouldSave) {
+                // Set additional fields before saving
+                inOut.setCreateDate(new Date());
+                inOut.setUpdateDate(new Date());
+
+                // Save the InOut record first
+                InOutEntity savedInOut = inOutRepository.save(inOut);
+                logger.debug("Successfully saved InOut record with ID: {} for employee: {}",
+                        savedInOut.getId(), employeeID);
+
+                // Now update the AccessLog with reference to the saved InOut
+                // CRITICAL FIX: Fetch the managed entity to avoid detached entity error
+                AccessLogEntity managedLog = accessLogRepository.findById(log.getId())
+                        .orElseThrow(() -> new RuntimeException("AccessLog not found with ID: " + log.getId()));
+
+                // Set the relationship and update the access log
+                savedInOut.setAccessLog(managedLog);
+                managedLog.setInOu(savedInOut);
+                managedLog.setUpdateDate(new Date());
+
+                // Save both entities to ensure the relationship is persisted
+                inOutRepository.save(savedInOut);
+                accessLogRepository.save(managedLog);
+
+                logger.debug("Successfully updated AccessLog with InOut reference for employee: {}", employeeID);
             }
 
         } catch (ParseException e) {
             logger.error("Failed to parse date while saving InOut record for employee {}: {}",
                     employeeID, logDate, e);
             throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error while saving InOut record for employee {}: {}",
+                    employeeID, e.getMessage(), e);
+            throw new RuntimeException("Failed to save InOut record", e);
         }
     }
 }

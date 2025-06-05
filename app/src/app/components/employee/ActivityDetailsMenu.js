@@ -18,7 +18,13 @@ import {
     ListItemText,
     ListItemIcon,
     Card,
-    CardContent
+    CardContent,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Paper
 } from '@mui/material';
 import {
     MoreVert as MoreVertIcon,
@@ -29,7 +35,11 @@ import {
     Description as DescriptionIcon,
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
-    Info as InfoIcon
+    Info as InfoIcon,
+    Login as LoginIcon,
+    Logout as LogoutIcon,
+    Edit as EditHistoryIcon,
+    Comment as CommentIcon
 } from '@mui/icons-material';
 import {EditIcon, TrashIcon} from "lucide-react";
 
@@ -98,7 +108,7 @@ const ActivityDetailsMenu = ({ activity, onEdit, onDelete, isAdmin }) => {
                     View Details
                 </MenuItem>
 
-                {isAdmin && activity.manual && (
+                {isAdmin && (
                     <MenuItem onClick={handleEdit}>
                         <ListItemIcon>
                             <EditIcon fontSize="small" />
@@ -107,7 +117,8 @@ const ActivityDetailsMenu = ({ activity, onEdit, onDelete, isAdmin }) => {
                     </MenuItem>
                 )}
 
-                {isAdmin && (
+
+                {isAdmin && activity.active && (
                     <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
                         <ListItemIcon>
                             <TrashIcon size={16} />
@@ -140,50 +151,69 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
         });
     };
 
+    const formatDateTime = (dateString) => {
+        if (!dateString) return "-";
+        return new Date(dateString).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
     const formatTime = (timeString) => {
         if (!timeString) return "-";
-        return timeString;
+        return timeString.trim();
     };
 
     const getActivityType = (activity) => {
-        if (activity.isAbsent) return "Absent";
-        if (activity.isFullLeave) return "Full Leave";
-        if (activity.isHalfDay) return "Half Day";
-        if (activity.isShortLeave) return "Short Leave";
-        if (activity.isLate) return "Late";
-        if (activity.isUnSuccessful) return "Swipe error";
-        if (activity.isUnAuthorized) return "Swipe error";
+        if (activity.absent) return "Absent";
+        if (activity.fullLeave) return "Full Leave";
+        if (activity.halfDay) return "Half Day";
+        if (activity.shortLeave) return "Short Leave";
+        if (activity.late) return "Late";
+        if (activity.unSuccessful) return "Swipe Error";
+        if (activity.unAuthorized) return "Unauthorized";
+        if (activity.fullDay) return "Full Day Present";
         return "Present";
     };
 
     const getActivityStatus = (activity) => {
-        if (activity.isUnAuthorized) return "Unauthorized";
-        if (activity.isUnSuccessful) return "Unauthorized";
-        if (activity.leaveSuccess) return "Approved";
-        if (activity.leaveReq) return "Pending";
-        if (activity.issues) return "Issue";
+        if (activity.unAuthorized) return "Unauthorized";
+        if (activity.unSuccessful) return "Unsuccessful";
+        if (activity.leaveSuccess) return "Leave Approved";
+        if (activity.leaveReq) return "Leave Pending";
+        if (activity.issues) return "Has Issues";
+        if (activity.resolve) return "Resolved";
         return "Normal";
     };
 
+    const getStatusColor = (activity) => {
+        if (activity.unAuthorized || activity.unSuccessful) return "error";
+        if (activity.leaveSuccess || activity.resolve) return "success";
+        if (activity.leaveReq || activity.issues) return "warning";
+        return "info";
+    };
+
     const booleanFields = [
-        { key: 'isFullDay', label: 'Full Day' },
-        { key: 'isLate', label: 'Late' },
+        { key: 'fullDay', label: 'Full Day' },
+        { key: 'late', label: 'Late' },
         { key: 'lateCover', label: 'Late Cover' },
-        { key: 'isHalfDay', label: 'Half Day' },
-        { key: 'isFullLeave', label: 'Full Leave' },
-        { key: 'isShortLeave', label: 'Short Leave' },
-        { key: 'isAbsent', label: 'Absent' },
-        { key: 'isUnSuccessful', label: 'Unsuccessful' },
-        { key: 'isNoPay', label: 'No Pay' },
+        { key: 'halfDay', label: 'Half Day' },
+        { key: 'fullLeave', label: 'Full Leave' },
+        { key: 'shortLeave', label: 'Short Leave' },
+        { key: 'absent', label: 'Absent' },
+        { key: 'unSuccessful', label: 'Unsuccessful' },
+        { key: 'noPay', label: 'No Pay' },
         { key: 'issues', label: 'Issues' },
-        { key: 'isUnAuthorized', label: 'Unauthorized' },
+        { key: 'unAuthorized', label: 'Unauthorized' },
         { key: 'resolve', label: 'Resolved' },
         { key: 'leaveSuccess', label: 'Leave Success' },
         { key: 'leaveReq', label: 'Leave Request' },
         { key: 'active', label: 'Active' },
-        { key: 'nopay', label: 'No Pay' },
-        { key: 'viaMovement', label: 'Via Movement' },
-        { key: 'viaLeave', label: 'Via Leave' },
+        { key: 'nopay', label: 'No Pay (alt)' },
         { key: 'manual', label: 'Manual Entry' }
     ];
 
@@ -192,11 +222,12 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
             open={open}
             onClose={onClose}
             fullWidth
-            maxWidth="md"
+            maxWidth="lg"
             PaperProps={{
                 sx: {
                     borderRadius: 2,
                     boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                    maxHeight: '90vh'
                 }
             }}
         >
@@ -209,7 +240,7 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                 gap: 1
             }}>
                 <InfoIcon />
-                Activity Details - {activity.employeeID}
+                Attendance Details - {activity.employeeID} - {formatDate(activity.date)}
             </DialogTitle>
 
             {/* Dialog Content */}
@@ -232,6 +263,12 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                     </ListItem>
                                     <ListItem>
                                         <ListItemText
+                                            primary="User ID"
+                                            secondary={activity.userId || "-"}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
                                             primary="Terminal ID"
                                             secondary={activity.terminalID || "-"}
                                         />
@@ -245,15 +282,17 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                     <ListItem>
                                         <ListItemText
                                             primary="Arrival Date"
-                                            secondary={formatDate(activity.arrivalDate)}
+                                            secondary={formatDateTime(activity.arrivalDate)}
                                         />
                                     </ListItem>
-                                    <ListItem>
-                                        <ListItemText
-                                            primary="Due Date (UA)"
-                                            secondary={formatDate(activity.dueDateForUA)}
-                                        />
-                                    </ListItem>
+                                    {activity.dueDateForUA && (
+                                        <ListItem>
+                                            <ListItemText
+                                                primary="Due Date (UA)"
+                                                secondary={formatDate(activity.dueDateForUA)}
+                                            />
+                                        </ListItem>
+                                    )}
                                 </List>
                             </CardContent>
                         </Card>
@@ -300,7 +339,7 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                                 <Chip
                                                     label={getActivityStatus(activity)}
                                                     size="small"
-                                                    color="secondary"
+                                                    color={getStatusColor(activity)}
                                                     variant="outlined"
                                                 />
                                             }
@@ -311,8 +350,156 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                         </Card>
                     </Grid>
 
+                    {/* In/Out Log Details */}
+                    {activity.inOutDTOs && activity.inOutDTOs.length > 0 && (
+                        <Grid item xs={12}>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                        <EventIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                        Access Log Details
+                                    </Typography>
+                                    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                                    <TableCell><strong>Type</strong></TableCell>
+                                                    <TableCell><strong>Time</strong></TableCell>
+                                                    <TableCell><strong>Terminal</strong></TableCell>
+                                                    <TableCell><strong>Log Date</strong></TableCell>
+                                                    <TableCell><strong>Status</strong></TableCell>
+                                                    <TableCell><strong>ETL Run</strong></TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {activity.inOutDTOs.map((inOut, index) => (
+                                                    <TableRow key={index} hover>
+                                                        <TableCell>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                {inOut.inOut === 1 ? (
+                                                                    <>
+                                                                        <LoginIcon color="success" fontSize="small" />
+                                                                        <Chip label="IN" size="small" color="success" />
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <LogoutIcon color="error" fontSize="small" />
+                                                                        <Chip label="OUT" size="small" color="error" />
+                                                                    </>
+                                                                )}
+                                                            </Box>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                                {formatTime(inOut.timeMoa || inOut.timeEve)}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                                                {inOut.terminalID?.trim() || "-"}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2">
+                                                                {inOut.accessLog?.logDate || "-"}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={inOut.accessLog?.processed ? "Processed" : "Pending"}
+                                                                size="small"
+                                                                color={inOut.accessLog?.processed ? "success" : "warning"}
+                                                                variant="outlined"
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                                                {formatDateTime(inOut.accessLog?.etlRunTime)}
+                                                            </Typography>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </Paper>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    )}
+
+                    {/* Edit History */}
+                    {activity.editedByDTOs && activity.editedByDTOs.length > 0 && (
+                        <Grid item xs={12}>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                        <EditHistoryIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                        Edit History
+                                    </Typography>
+                                    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                                                    <TableCell><strong>Editor</strong></TableCell>
+                                                    <TableCell><strong>SLT ID</strong></TableCell>
+                                                    <TableCell><strong>Employee ID</strong></TableCell>
+                                                    <TableCell><strong>Comment</strong></TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {activity.editedByDTOs.map((editor, index) => (
+                                                    <TableRow key={index} hover>
+                                                        <TableCell>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                {editor.profilePicture ? (
+                                                                    <img
+                                                                        src={editor.profilePicture}
+                                                                        alt={editor.name}
+                                                                        style={{
+                                                                            width: 24,
+                                                                            height: 24,
+                                                                            borderRadius: '50%',
+                                                                            objectFit: 'cover'
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <PersonIcon sx={{ fontSize: 24, color: 'grey.500' }} />
+                                                                )}
+                                                                <Typography variant="body2" fontWeight="medium">
+                                                                    {editor.name || "-"}
+                                                                </Typography>
+                                                            </Box>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                                {editor.sltId || "-"}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                                {editor.employeeId || "-"}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <CommentIcon sx={{ fontSize: 16, color: 'grey.600' }} />
+                                                                <Typography variant="body2">
+                                                                    {editor.comment || "No comment"}
+                                                                </Typography>
+                                                            </Box>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </Paper>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    )}
+
                     {/* Issue Description */}
-                    {activity.issueDescription && (
+                    {activity.issueDescription && activity.issueDescription.trim() !== "" && (
                         <Grid item xs={12}>
                             <Card variant="outlined">
                                 <CardContent>
@@ -343,6 +530,7 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                     {booleanFields.map((field) => {
                                         const isTrue = activity[field.key];
+                                        if (isTrue === undefined || isTrue === null) return null;
                                         return (
                                             <Chip
                                                 key={field.key}
@@ -373,23 +561,23 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                     System Information
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Public ID
                                         </Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                             {activity.publicId || "-"}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Internal ID
                                         </Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
                                             {activity.id || "-"}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={12} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Entry Type
                                         </Typography>
@@ -397,17 +585,6 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
                                             label={activity.manual ? "Manual" : "Automatic"}
                                             size="small"
                                             color={activity.manual ? "warning" : "info"}
-                                            variant="outlined"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6} md={3}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Record Status
-                                        </Typography>
-                                        <Chip
-                                            label={activity.active !== false ? "Active" : "Inactive"}
-                                            size="small"
-                                            color={activity.active !== false ? "success" : "error"}
                                             variant="outlined"
                                         />
                                     </Grid>
@@ -419,8 +596,8 @@ const ActivityDetailsDialog = ({ open, onClose, activity }) => {
             </DialogContent>
 
             {/* Dialog Actions */}
-            <DialogActions sx={{ p: 2 }}>
-                <Button onClick={onClose} variant="contained">
+            <DialogActions sx={{ p: 2, bgcolor: 'grey.50' }}>
+                <Button onClick={onClose} variant="contained" size="large">
                     Close
                 </Button>
             </DialogActions>

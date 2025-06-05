@@ -8,9 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
+import java.util.stream.Collectors;
 @SpringBootTest
-public class LmsMangmentServiceApplicationRosterTests {
+public class LmsMangmentServiceApplicationRosterTests2 {
 
     @Autowired
     private AccessLogRepo accessLogRepo;
@@ -22,6 +22,192 @@ public class LmsMangmentServiceApplicationRosterTests {
     private static final Random random = new Random();
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
+    // NEW: Specific employee test cases with exact time shifts
+    @Test
+    public void generateSpecificEmployeeShiftTestCases() {
+
+        List<AccessLogEntity> logs = new ArrayList<>();
+        String todayDate = dateFormat.format(helper.getYesterdayDate());
+
+        // Target specific employees
+        String[] TARGET_EMPLOYEES = {"A00062", "A00065", "A00048"};
+
+        // Define exact shift schedules
+        Map<String, ShiftSchedule> employeeShifts = new HashMap<>();
+        employeeShifts.put("A00062", new ShiftSchedule(0, 8));   // Night: 00:00 - 08:00
+        employeeShifts.put("A00065", new ShiftSchedule(8, 16));  // Day: 08:00 - 16:00
+        employeeShifts.put("A00048", new ShiftSchedule(16, 24)); // Evening: 16:00 - 24:00
+
+        // Generate logs for each specific employee
+        for (String empId : TARGET_EMPLOYEES) {
+            ShiftSchedule shift = employeeShifts.get(empId);
+            generateExactShiftLogs(logs, empId, todayDate, shift);
+        }
+
+        // Save all logs
+        accessLogRepo.saveAll(logs);
+
+        System.out.println("Generated " + logs.size() + " test case logs for employees: " +
+                String.join(", ", TARGET_EMPLOYEES) + " for date: " + todayDate);
+
+        // Print summary for verification
+        printTestCaseSummary(logs, employeeShifts);
+    }
+
+    private void generateExactShiftLogs(List<AccessLogEntity> logs, String empId, String todayDate, ShiftSchedule shift) {
+
+        // Case 1: Employee arrives BEFORE shift start (like 23:23 PM for 00:00-08:00 shift)
+        if (shift.startHour == 0) { // Night shift
+            // Arrive previous day around 23:00-23:59
+            String earlyArrival = generateTimeBeforeShift(23, 0, 59);
+            logs.add(createLog(empId, todayDate, earlyArrival, randomTerminal(), "IN        "));
+            System.out.println("Employee " + empId + " early arrival: " + earlyArrival + " (before " +
+                    String.format("%02d:00", shift.startHour) + " shift)");
+        } else {
+            // For day/evening shifts, arrive 30-60 minutes early
+            int earlyHour = shift.startHour - 1;
+            String earlyArrival = generateTimeBeforeShift(earlyHour, 0, 59);
+            logs.add(createLog(empId, todayDate, earlyArrival, randomTerminal(), "IN        "));
+            System.out.println("Employee " + empId + " early arrival: " + earlyArrival + " (before " +
+                    String.format("%02d:00", shift.startHour) + " shift)");
+        }
+
+        // Case 2: Official shift start entry
+        String shiftStartTime = String.format("%02d:%02d:%02d", shift.startHour,
+                random.nextInt(15), random.nextInt(60)); // Within first 15 minutes
+        logs.add(createLog(empId, todayDate, shiftStartTime, randomTerminal(), "IN        "));
+
+        // Case 3: Mid-shift break (OUT then IN)
+        int midShiftHour = shift.startHour + (shift.endHour - shift.startHour) / 2;
+        if (midShiftHour >= 24) midShiftHour = midShiftHour % 24;
+
+        String breakOutTime = String.format("%02d:%02d:%02d", midShiftHour,
+                random.nextInt(60), random.nextInt(60));
+        logs.add(createLog(empId, todayDate, breakOutTime, randomTerminal(), "OUT       "));
+
+        // Return from break (30-60 minutes later)
+        int returnMinute = (Integer.parseInt(breakOutTime.split(":")[1]) + 30 + random.nextInt(30)) % 60;
+        int returnHour = midShiftHour;
+        if (Integer.parseInt(breakOutTime.split(":")[1]) + 30 + random.nextInt(30) >= 60) {
+            returnHour = (returnHour + 1) % 24;
+        }
+
+        String breakInTime = String.format("%02d:%02d:%02d", returnHour, returnMinute, random.nextInt(60));
+        logs.add(createLog(empId, todayDate, breakInTime, randomTerminal(), "IN        "));
+
+        // Case 4: Shift end (exactly at scheduled time or slightly after)
+        int endHour = shift.endHour == 24 ? 23 : shift.endHour;
+        int endMinute = shift.endHour == 24 ? 45 + random.nextInt(15) : random.nextInt(30); // End within 30 min of scheduled
+
+        String shiftEndTime = String.format("%02d:%02d:%02d", endHour, endMinute, random.nextInt(60));
+        logs.add(createLog(empId, todayDate, shiftEndTime, randomTerminal(), "OUT       "));
+
+        // Case 5: Late departure (some employees stay longer)
+        if (random.nextDouble() < 0.3) { // 30% chance of overtime
+            int overtimeHour = (shift.endHour + 1) % 24;
+            String overtimeOut = String.format("%02d:%02d:%02d", overtimeHour,
+                    random.nextInt(60), random.nextInt(60));
+            logs.add(createLog(empId, todayDate, overtimeOut, randomTerminal(), "OUT       "));
+        }
+    }
+
+    private String generateTimeBeforeShift(int baseHour, int minMinute, int maxMinute) {
+        int minute = minMinute + random.nextInt(maxMinute - minMinute + 1);
+        int second = random.nextInt(60);
+        return String.format("%02d:%02d:%02d", baseHour, minute, second);
+    }
+
+    private void printTestCaseSummary(List<AccessLogEntity> logs, Map<String, ShiftSchedule> employeeShifts) {
+        System.out.println("\n=== TEST CASE SUMMARY ===");
+
+        Map<String, List<AccessLogEntity>> logsByEmployee = logs.stream()
+                .collect(Collectors.groupingBy(AccessLogEntity::getEmployeeID));
+
+        for (Map.Entry<String, List<AccessLogEntity>> entry : logsByEmployee.entrySet()) {
+            String empId = entry.getKey();
+            List<AccessLogEntity> empLogs = entry.getValue();
+            ShiftSchedule shift = employeeShifts.get(empId);
+
+            System.out.println("\nEmployee: " + empId + " | Shift: " +
+                    String.format("%02d:00 - %02d:00", shift.startHour, shift.endHour));
+
+            empLogs.sort((a, b) -> a.getLogTime().trim().compareTo(b.getLogTime().trim()));
+
+            for (AccessLogEntity log : empLogs) {
+                String time = log.getLogTime().trim();
+                String action = log.getInOut().trim();
+                String terminal = log.getTerminalID().trim();
+
+                String annotation = "";
+                int logHour = Integer.parseInt(time.split(":")[0]);
+
+                if (action.equals("IN") && logHour < shift.startHour && shift.startHour != 0) {
+                    annotation = " <- EARLY ARRIVAL";
+                } else if (action.equals("IN") && shift.startHour == 0 && logHour >= 23) {
+                    annotation = " <- EARLY ARRIVAL (NIGHT SHIFT)";
+                } else if (action.equals("IN") && logHour == shift.startHour) {
+                    annotation = " <- SHIFT START";
+                } else if (action.equals("OUT") && logHour >= shift.endHour) {
+                    annotation = " <- SHIFT END";
+                } else if (action.equals("OUT") && logHour > shift.startHour && logHour < shift.endHour) {
+                    annotation = " <- BREAK OUT";
+                } else if (action.equals("IN") && logHour > shift.startHour && logHour < shift.endHour) {
+                    annotation = " <- BREAK IN";
+                }
+
+                System.out.println("  " + time + " | " + action + " | " + terminal + annotation);
+            }
+        }
+    }
+
+    // Helper class for shift scheduling
+    private static class ShiftSchedule {
+        final int startHour;
+        final int endHour;
+
+        ShiftSchedule(int start, int end) {
+            this.startHour = start;
+            this.endHour = end;
+        }
+    }
+
+    // Alternative test method for even more specific scenarios
+    @Test
+    public void generateExtremeEdgeCaseTestData() {
+
+        List<AccessLogEntity> logs = new ArrayList<>();
+        String todayDate = dateFormat.format(helper.getYesterdayDate());
+
+        // Extreme Case 1: A00062 arrives at 23:23 PM for 00:00-08:00 shift
+        logs.add(createLog("A00062", todayDate, "23:23:45", "SLT-HQ01", "IN        "));
+        logs.add(createLog("A00062", todayDate, "00:05:12", "SLT-HQ01", "IN        ")); // Official start
+        logs.add(createLog("A00062", todayDate, "03:30:33", "SLT-HQ02", "OUT       ")); // Break
+        logs.add(createLog("A00062", todayDate, "04:15:22", "SLT-HQ02", "IN        ")); // Return
+        logs.add(createLog("A00062", todayDate, "08:10:55", "SLT-HQ01", "OUT       ")); // End
+
+        // Extreme Case 2: A00065 arrives at 07:45 AM for 08:00-16:00 shift
+        logs.add(createLog("A00065", todayDate, "07:45:30", "SLT-HQ03", "IN        "));
+        logs.add(createLog("A00065", todayDate, "08:00:00", "SLT-HQ03", "IN        ")); // Exact start
+        logs.add(createLog("A00065", todayDate, "12:00:15", "SLT-HQ01", "OUT       ")); // Lunch
+        logs.add(createLog("A00065", todayDate, "13:00:45", "SLT-HQ01", "IN        ")); // Return
+        logs.add(createLog("A00065", todayDate, "16:15:30", "SLT-HQ03", "OUT       ")); // End
+
+        // Extreme Case 3: A00048 arrives at 15:30 PM for 16:00-24:00 shift
+        logs.add(createLog("A00048", todayDate, "15:30:18", "SLT-HQ02", "IN        "));
+        logs.add(createLog("A00048", todayDate, "16:00:05", "SLT-HQ02", "IN        ")); // Official start
+        logs.add(createLog("A00048", todayDate, "20:30:44", "SLT-HQ03", "OUT       ")); // Dinner break
+        logs.add(createLog("A00048", todayDate, "21:30:12", "SLT-HQ03", "IN        ")); // Return
+        logs.add(createLog("A00048", todayDate, "23:55:59", "SLT-HQ02", "OUT       ")); // Late end
+
+        accessLogRepo.saveAll(logs);
+
+        System.out.println("Generated " + logs.size() + " extreme edge case test logs");
+        System.out.println("A00062: Night shift (00:00-08:00) with 23:23 early arrival");
+        System.out.println("A00065: Day shift (08:00-16:00) with 07:45 early arrival");
+        System.out.println("A00048: Evening shift (16:00-24:00) with 15:30 early arrival");
+    }
+
+    // ORIGINAL METHODS FROM YOUR CODE
     @Test
     public void generateFullyRandomShiftBasedAccessLogs() {
 
@@ -29,7 +215,7 @@ public class LmsMangmentServiceApplicationRosterTests {
         String todayDate = dateFormat.format(helper.getYesterdayDate());
 
         // Target employee IDs
-        String[] TARGET_EMPLOYEES = {"A00316", "A00516", "A0230", "A9098", "A0040","A1900", "A9099", "A1209", "A0230"};
+        String[] TARGET_EMPLOYEES = {"A00048", "A00046", "A00022", "A00065", "A00039","A00062"};
 
         // Shift types
         enum ShiftType {
@@ -336,6 +522,4 @@ public class LmsMangmentServiceApplicationRosterTests {
             return new Date();
         }
     }
-
-
 }

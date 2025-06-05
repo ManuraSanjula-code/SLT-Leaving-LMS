@@ -28,6 +28,7 @@ public class InOut {
     private String employeeID;
     private String terminalID;
     private Date date;
+    private Date etl_RunTime;
     private Date punchInMoa; // earliest morning time -- date
     private Date punchInEv; // earliest evening time -- date
 

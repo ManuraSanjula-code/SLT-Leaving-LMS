@@ -22,6 +22,7 @@ public class EmployeeEntity {
     @Column(unique = true)
     private String employeeId;
     private String publicId;
+    private String profilePic;
     @Column(unique = true)
     private String sltId;
     private String firstName;

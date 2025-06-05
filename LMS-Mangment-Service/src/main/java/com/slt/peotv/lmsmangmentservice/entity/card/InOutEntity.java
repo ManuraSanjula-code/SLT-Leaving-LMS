@@ -1,10 +1,15 @@
 package com.slt.peotv.lmsmangmentservice.entity.card;
 
+import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.sql.Time;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -17,22 +22,20 @@ import java.util.Objects;
 @Table(name = "InOut", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"employeeID", "date", "punchInMoa", "punchInEv", "timeMoa", "timeEve"})
 })
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = {"attendance", "accessLog", "editedBys"}) // Exclude lazy-loaded properties
 public class InOutEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private String employeeID;
     private Date date;
-    private Date punchInMoa; // earliest moaning time -- date
-    private Date punchInEv; // earliest eve time -- date
-
-    private Time timeMoa; // earliest moaning time -- time
-    private Time timeEve;// earliest eve time -- time
+    private Date punchInMoa;
+    private Date punchInEv;
+    private Time timeMoa;
+    private Time timeEve;
 
     @Builder.Default
     private Integer InOut = 0;
-
     @Builder.Default
     private Boolean isMoaning = false;
 
@@ -46,4 +49,24 @@ public class InOutEntity {
 
     private Date etlRunTime;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attendance_id")
+    private AttendanceEntity attendance;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "access_log_id")
+    private AccessLogEntity accessLog;
+
+    @OneToMany
+    @Builder.Default
+    private List<EditedBy> editedBys = new ArrayList<>();
+
+    @Builder.Default
+    private Date createDate = new Date();
+    private Date updateDate;
+
+    @Builder.Default
+    private Boolean isEdited = false;
+    @Builder.Default
+    private Boolean isManual = false;
 }

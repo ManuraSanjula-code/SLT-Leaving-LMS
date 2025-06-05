@@ -36,7 +36,7 @@ public interface Check_Service {
 
     public void reportAttendance(InOutEntity inOut,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day,Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active,  Boolean nopay, Date date);
     public void reportAttendance(InOutEntity moa, InOutEntity eve,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day,Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active,  Boolean nopay, Date date);
-    public <T> void reportAttendance(Object obj,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Date date);
+    public <T> void reportAttendance_(Object obj,Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,Boolean late, Boolean late_cover,Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Date date);
 
     public void reportAbsent(List<String > absentEmployeesToday);
     public void reportAbsent(AbsenteeReq req);
@@ -47,7 +47,7 @@ public interface Check_Service {
 
 
     public void getAllTheInOutRecordsFromSLT();
-    NoPayEntity saveNoPayEntity(String employeeID, AttendanceEntity attendanceEntity, Boolean isHalfDay, Boolean unSuccessful, Boolean isLate, Boolean isLateCover, Boolean isAbsent,
+    NoPayEntity saveNoPayEntity(String employeeID, InOutEntity inOut, AttendanceEntity attendanceEntity, Boolean isHalfDay, Boolean unSuccessful, Boolean isLate, Boolean isLateCover, Boolean isAbsent,
                                 Date accualDate);
     Page<InOutDTO> getAllInOut(String employeeID, int pageNumber, int pageSize);
     List<InOutDTO> getAllInOut(String employeeID, Date date);

@@ -236,8 +236,8 @@ public class LMSController {
     @GetMapping("/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<AttendanceDTO> getAttendanceByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                     @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllAttendanceByUserId(userId, page, size);
+                                                     @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllAttendanceByUserId(userId, page, size, isAdmin);
     }
 
     @GetMapping("/leave/{userId}/{empId}")
@@ -276,7 +276,7 @@ public class LMSController {
 
     @GetMapping("/leave-balance/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public UserLeaveDetailsDto getAllLeaveData(@PathVariable String userId, @PathVariable String empId) {
+    public UserLeaveDetailsDTO getAllLeaveData(@PathVariable String userId, @PathVariable String empId) {
         return lmsService.getAllLeaveDetails(userId);
     }
 
@@ -389,14 +389,14 @@ public class LMSController {
 
     @GetMapping("/absent/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Page<AbsenteeDto> getAllAbsenteeByUserId(@PathVariable String userId,@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
+    public Page<AbsenteeDTO> getAllAbsenteeByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllAbsenteeByUserId(userId, page, size);
     }
 
     @GetMapping("/absent/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Page<AbsenteeDto> getAllAbsentee(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
+    public Page<AbsenteeDTO> getAllAbsentee(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllAbsentee(page, size);
     }

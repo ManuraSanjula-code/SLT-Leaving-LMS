@@ -25,7 +25,7 @@ public class RoleEntity implements Serializable {
     private String name;
 
     private String publicId;
-
+    private Integer ot;
     @ManyToMany(mappedBy = "roles")
     @JsonBackReference
     @JsonIgnore

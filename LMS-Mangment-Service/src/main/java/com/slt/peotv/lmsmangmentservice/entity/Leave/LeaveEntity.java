@@ -1,11 +1,13 @@
 package com.slt.peotv.lmsmangmentservice.entity.Leave;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -98,6 +100,18 @@ public class LeaveEntity {
     @OneToOne
     @JoinColumn(name = "attendance_id")
     private AttendanceEntity attendance;
+
+    @OneToMany
+    @Builder.Default
+    private List<EditedBy> editedBys = new ArrayList<>();
+
     @Builder.Default
     private Boolean isReject = false;
+
+    @Builder.Default
+    private Date createDate = new Date();
+    private Date updateDate;
+
+    @Builder.Default
+    private Boolean isEdited = false;
 }

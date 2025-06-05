@@ -33,7 +33,7 @@ public class MovementDTO {
     private Boolean unAuthorized = false;
     private String attendance;
     @JsonIgnore
-    private List<MovementAdminsDto> movementAdmins = new ArrayList<>();
+    private List<MovementAdminsDTO> movementAdmins = new ArrayList<>();
     @Transient
     private List<MovementTra> adminsTra;
     private Boolean isReject = false;
@@ -53,11 +53,11 @@ public class MovementDTO {
         this.adminsTra = adminsTra;
     }
 
-    public List<MovementAdminsDto> getMovementAdmins() {
+    public List<MovementAdminsDTO> getMovementAdmins() {
         return movementAdmins;
     }
 
-    public void setMovementAdmins(List<MovementAdminsDto> movementAdmins) {
+    public void setMovementAdmins(List<MovementAdminsDTO> movementAdmins) {
         this.movementAdmins = movementAdmins;
     }
 

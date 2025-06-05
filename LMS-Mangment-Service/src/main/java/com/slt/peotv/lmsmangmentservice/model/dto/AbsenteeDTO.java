@@ -2,7 +2,7 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import java.util.Date;
 
-public class AbsenteeDto {
+public class AbsenteeDTO {
     private Long id;
     private String publicId;
     private Date date;
