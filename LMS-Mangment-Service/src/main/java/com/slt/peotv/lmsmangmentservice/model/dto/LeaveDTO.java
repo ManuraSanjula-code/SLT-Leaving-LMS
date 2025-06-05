@@ -1,6 +1,5 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveTra;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.Transient;
 
@@ -34,6 +33,15 @@ public class LeaveDTO {
     private String userId;
     @Transient
     private List<LeaveTra> adminsTra;
+    private List<EditedByDTO> editedByDTOs;
+
+    public List<EditedByDTO> getEditedByDTOs() {
+        return editedByDTOs;
+    }
+
+    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
+        this.editedByDTOs = editedByDTOs;
+    }
 
     public Boolean getReject() {
         return reject;

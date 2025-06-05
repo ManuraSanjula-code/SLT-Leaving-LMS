@@ -71,7 +71,6 @@ export const fetchEmployeeActivities = createAsyncThunk(
             }
 
             const data = await response.json();
-            console.log(data)
             return data.content || [];
         } catch (err) {
             return rejectWithValue(err.message);
@@ -121,6 +120,7 @@ export const updateEmployeeActivity = createAsyncThunk(
             }
             const submissionData = prepareFormData(formData);
             let userInput = prompt("Enter your comment:");
+            if(userInput == null) return rejectWithValue('Comment is Required');
             submissionData.adminId = empId;
             submissionData.adminComment = userInput;
             const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {

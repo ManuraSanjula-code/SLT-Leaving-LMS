@@ -6,8 +6,8 @@ import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveTra;
-import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementTra;
+import com.slt.peotv.lmsmangmentservice.model.dto.LeaveTra;
+import com.slt.peotv.lmsmangmentservice.model.dto.MovementTra;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
@@ -22,6 +22,7 @@ import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -204,7 +205,45 @@ public class LMSMapper {
             return dto;
         }).toList();
     }
+    public List<EditedByDTO> toEditedByDTO(Object entity) {
+        try {
+            Method getEditedBysMethod = entity.getClass().getMethod("getEditedBys");
+            @SuppressWarnings("unchecked")
+            List<Object> editedBys = (List<Object>) getEditedBysMethod.invoke(entity);
 
+            return editedBys.stream().map(en -> {
+                if(en == null) return null;
+
+                EditedByDTO dto = new EditedByDTO();
+                // Use reflection for each field access too
+                dto.setComment(getFieldValue(en, "getComment"));
+                dto.setName(getFieldValue(en, "getFirstName") + " " + getFieldValue(en, "getLastName"));
+                dto.setProfilePicture(getFieldValue(en, "getProfilePic"));
+                dto.setSltId(getFieldValue(en, "getSltId"));
+                dto.setEmployeeId(getFieldValue(en, "getEmployeeId"));
+                return dto;
+            }).toList();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process entity", e);
+        }
+    }
+
+    private String getFieldValue(Object obj, String methodName) {
+        try {
+            Method method = obj.getClass().getMethod(methodName);
+            return (String) method.invoke(obj);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public MovementDTO toMovementDTOAdmin(MovementsEntity entity){
+        if (entity == null) return null;
+        MovementDTO movementDTO = toMovementDTO(entity);
+        movementDTO.setEditedByDTOs(toEditedByDTO(entity));
+        return movementDTO;
+    }
 
     public MovementDTO toMovementDTO(MovementsEntity entity) {
         if (entity == null) return null;
@@ -231,7 +270,7 @@ public class LMSMapper {
                     adminTra.setEmail(employee.getEmail());
                     adminTra.setFirstName(employee.getFirstName());
                     adminTra.setLastName(employee.getLastName());
-
+                    adminTra.setProfilePic(employee.getProfilePic());
                     movementAdminsList.add(adminTra);
                 }
             });
@@ -320,7 +359,7 @@ public class LMSMapper {
                     adminTra.setEmail(employee.getEmail());
                     adminTra.setFirstName(employee.getFirstName());
                     adminTra.setLastName(employee.getLastName());
-
+                    adminTra.setProfilePic(employee.getProfilePic());
                     leaveAdminsList.add(adminTra);
                 }
             });
@@ -469,6 +508,7 @@ public class LMSMapper {
             editedBys.add(savedEditedBy);
             movementEntity.setIsEdited(true);
             movementEntity.setEditedBys(editedBys);
+            System.out.println("===============================");
         } else if (entity instanceof LeaveEntity) {
             LeaveEntity leaveEntity = (LeaveEntity) entity;
             List<EditedBy> editedBys = leaveEntity.getEditedBys();

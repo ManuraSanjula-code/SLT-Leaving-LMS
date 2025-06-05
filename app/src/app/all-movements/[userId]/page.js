@@ -15,7 +15,7 @@ export default function AllMovementsAdminPage() {
             <>
                 <NavBar/>
                 <div className="App">
-                    <ManageMovementRequests isAdmin={false} userId={userId} />
+                    <ManageMovementRequests isAdmin={true} userId={userId} />
                 </div>
             </>
         </Router>

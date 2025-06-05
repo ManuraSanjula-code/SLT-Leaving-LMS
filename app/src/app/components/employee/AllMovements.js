@@ -36,6 +36,8 @@ import {
     Grid,
     Card,
     CardContent,
+    FormControlLabel,
+    Switch, Avatar,
 } from "@mui/material";
 import {
     Delete as DeleteIcon,
@@ -82,9 +84,27 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [currentEdit, setCurrentEdit] = useState(null);
     const [editValues, setEditValues] = useState({
+        employeeId: "",
+        userId: "",
         happenDate: "",
+        reqDate: "",
         destination: "",
-        movementType: ""
+        movementType: "",
+        comment: "",
+        category: "",
+        inTime: "",
+        outTime: "",
+        logTime: "",
+        // Boolean fields
+        unAuthorized: false,
+        accepted: false,
+        pending: false,
+        reject: false,
+        halfDay: false,
+        absent: false,
+        // Additional fields
+        attSync: 0,
+        attendance: "",
     });
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteMovementId, setDeleteMovementId] = useState(null);
@@ -160,21 +180,68 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         }
     };
 
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return "";
+        try {
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            return "";
+        }
+    };
+
+    const formatTimeForInput = (timeString) => {
+        if (!timeString) return "";
+        // Handle both "HH:mm:ss" and full datetime formats
+        if (timeString.includes('T')) {
+            return new Date(timeString).toISOString().slice(11, 19);
+        }
+        return timeString;
+    };
+
+    const formatDateTimeForInput = (dateString) => {
+        if (!dateString) return "";
+        try {
+            const date = new Date(dateString);
+            return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm format
+        } catch (e) {
+            return "";
+        }
+    };
+
     const handleOpenEditDialog = (request) => {
         setCurrentEdit(request);
         setEditValues({
-            happenDate: request.happenDate ? new Date(request.happenDate).toISOString().split('T')[0] : "",
+            employeeId: request.employeeId || "",
+            userId: request.userId || "",
+            happenDate: formatDateForInput(request.happenDate),
+            reqDate: formatDateForInput(request.reqDate),
             destination: request.destination || "",
-            movementType: request.type || ""
+            movementType: request.movementType || request.type || "",
+            comment: request.comment || "",
+            category: request.category || "",
+            inTime: formatTimeForInput(request.inTime),
+            outTime: formatTimeForInput(request.outTime),
+            logTime: formatDateTimeForInput(request.logTime),
+            // Boolean fields
+            unAuthorized: request.unAuthorized || false,
+            accepted: request.accepted || false,
+            pending: request.pending || false,
+            reject: request.reject || false,
+            halfDay: request.halfDay || false,
+            absent: request.absent || false,
+            // Additional fields
+            attSync: request.attSync || 0,
+            attendance: request.attendance || "",
         });
         setEditDialogOpen(true);
     };
 
     const handleEditChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         setEditValues(prev => ({
             ...prev,
-            [name]: value
+            [name]: type === 'checkbox' ? checked : value
         }));
     };
 
@@ -188,14 +255,67 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 throw new Error("Cannot edit approved movement requests");
             }
 
+            // Compare current values with original values to send only changed fields
+            const originalValues = {
+                employeeId: currentEdit.employeeId || "",
+                userId: currentEdit.userId || "",
+                happenDate: formatDateForInput(currentEdit.happenDate),
+                reqDate: formatDateForInput(currentEdit.reqDate),
+                destination: currentEdit.destination || "",
+                movementType: currentEdit.movementType || currentEdit.type || "",
+                comment: currentEdit.comment || "",
+                category: currentEdit.category || "",
+                inTime: formatTimeForInput(currentEdit.inTime),
+                outTime: formatTimeForInput(currentEdit.outTime),
+                logTime: formatDateTimeForInput(currentEdit.logTime),
+                unAuthorized: currentEdit.unAuthorized || false,
+                accepted: currentEdit.accepted || false,
+                pending: currentEdit.pending || false,
+                reject: currentEdit.reject || false,
+                halfDay: currentEdit.halfDay || false,
+                absent: currentEdit.absent || false,
+                attSync: currentEdit.attSync || 0,
+                attendance: currentEdit.attendance || "",
+            };
+
+            // Build payload with only changed fields
+            const updatePayload = { publicId: currentEdit.publicId };
+
+            Object.keys(editValues).forEach(key => {
+                if (editValues[key] !== originalValues[key]) {
+                    updatePayload[key] = editValues[key];
+                }
+            });
+
+            // Always send dates in proper format
+            if (updatePayload.happenDate) {
+                updatePayload.happenDate = new Date(updatePayload.happenDate).toISOString();
+            }
+            if (updatePayload.reqDate) {
+                updatePayload.reqDate = new Date(updatePayload.reqDate).toISOString();
+            }
+            if (updatePayload.logTime) {
+                updatePayload.logTime = new Date(updatePayload.logTime).toISOString();
+            }
+
+            console.log("Sending update payload:", updatePayload);
             await dispatch(updateMovementRequest({
-                publicId: currentEdit.publicId,
-                happenDate: editValues.happenDate,
-                destination: editValues.destination,
-                movementType: editValues.movementType
+                updatePayload,
+                isAdmin
             })).unwrap();
 
             setEditDialogOpen(false);
+
+            // Refresh the data
+            if (userId == null) userId = sessionStorage.getItem('userId');
+            if (userId) {
+                dispatch(fetchMovementRequests({
+                    isAdmin,
+                    userId,
+                    page: pagination.currentPage,
+                    size: pagination.pageSize
+                }));
+            }
         } catch (err) {
             console.error("Error updating movement request:", err);
         }
@@ -252,7 +372,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
             setViewMovementData(request);
             setViewDialogOpen(true);
 
-            if (request.startDate && userId) {
+            if (request.startDate) {
                 dispatch(fetchInOutData({
                     userId: userId || sessionStorage.getItem('userId'),
                     happenDate: request.startDate
@@ -535,52 +655,294 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 )}
             </Box>
 
-            {/* Edit Dialog */}
-            <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
-                <DialogTitle>Edit Movement Request</DialogTitle>
+            {/* Complete Edit Dialog with All Fields */}
+            <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="lg" fullWidth>
+                <DialogTitle>Edit Movement Request - {currentEdit?.publicId}</DialogTitle>
                 <DialogContent>
-                    <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField
-                            name="happenDate"
-                            label="Date"
-                            type="date"
-                            value={editValues.happenDate}
-                            onChange={handleEditChange}
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                        />
+                    <Box sx={{ pt: 2 }}>
+                        <Grid container spacing={2}>
+                            {/* Basic Information */}
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom color="primary">
+                                    Basic Information
+                                </Typography>
+                                <Divider sx={{ mb: 2 }} />
+                            </Grid>
 
-                        <TextField
-                            name="destination"
-                            label="Destination"
-                            value={editValues.destination}
-                            onChange={handleEditChange}
-                            fullWidth
-                        />
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="employeeId"
+                                    label="Employee ID"
+                                    value={editValues.employeeId}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
 
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Movement Type</InputLabel>
-                            <Select
-                                name="movementType"
-                                value={editValues.movementType}
-                                onChange={handleEditChange}
-                                label="Movement Type"
-                            >
-                                <MenuItem value="ABSENT">Absent</MenuItem>
-                                <MenuItem value="LATEWORK">Late Work</MenuItem>
-                                <MenuItem value="UNSUCCESSFUL">Unsuccessful</MenuItem>
-                                <MenuItem value="UNAUTHORIZED">Unauthorized</MenuItem>
-                                <MenuItem value="REMOTEWORK">Remote Work</MenuItem>
-                            </Select>
-                        </FormControl>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="userId"
+                                    label="User ID"
+                                    value={editValues.userId}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth margin="normal">
+                                    <InputLabel>Movement Type</InputLabel>
+                                    <Select
+                                        name="movementType"
+                                        value={editValues.movementType}
+                                        onChange={handleEditChange}
+                                        label="Movement Type"
+                                    >
+                                        <MenuItem value="ABSENT">Absent</MenuItem>
+                                        <MenuItem value="LATEWORK">Late Work</MenuItem>
+                                        <MenuItem value="UNSUCCESSFUL">Unsuccessful</MenuItem>
+                                        <MenuItem value="UNAUTHORIZED">Unauthorized</MenuItem>
+                                        <MenuItem value="REMOTEWORK">Remote Work</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="category"
+                                    label="Category"
+                                    value={editValues.category}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <TextField
+                                    name="destination"
+                                    label="Destination"
+                                    value={editValues.destination}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            {/* Date and Time Information */}
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                                    Date & Time Information
+                                </Typography>
+                                <Divider sx={{ mb: 2 }} />
+                            </Grid>
+
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    name="happenDate"
+                                    label="Happen Date"
+                                    type="date"
+                                    value={editValues.happenDate}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    name="reqDate"
+                                    label="Request Date"
+                                    type="date"
+                                    value={editValues.reqDate}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={4}>
+                                <TextField
+                                    name="logTime"
+                                    label="Log Time"
+                                    type="datetime-local"
+                                    value={editValues.logTime}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="inTime"
+                                    label="In Time"
+                                    type="time"
+                                    value={editValues.inTime}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="outTime"
+                                    label="Out Time"
+                                    type="time"
+                                    value={editValues.outTime}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                            </Grid>
+
+                            {/* Status Flags */}
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                                    Status Flags
+                                </Typography>
+                                <Divider sx={{ mb: 2 }} />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="unAuthorized"
+                                            checked={editValues.unAuthorized}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Unauthorized"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="accepted"
+                                            checked={editValues.accepted}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Accepted"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="pending"
+                                            checked={editValues.pending}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Pending"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="reject"
+                                            checked={editValues.reject}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Rejected"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="halfDay"
+                                            checked={editValues.halfDay}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Half Day"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="absent"
+                                            checked={editValues.absent}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Absent"
+                                />
+                            </Grid>
+
+                            {/* Additional Fields */}
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                                    Additional Information
+                                </Typography>
+                                <Divider sx={{ mb: 2 }} />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="attSync"
+                                    label="Attendance Sync"
+                                    type="number"
+                                    value={editValues.attSync}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    name="attendance"
+                                    label="Attendance ID"
+                                    value={editValues.attendance}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <TextField
+                                    name="comment"
+                                    label="Comment"
+                                    value={editValues.comment}
+                                    onChange={handleEditChange}
+                                    fullWidth
+                                    margin="normal"
+                                    multiline
+                                    rows={3}
+                                    placeholder="Add any additional comments or notes..."
+                                />
+                            </Grid>
+                        </Grid>
                     </Box>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setEditDialogOpen(false)} startIcon={<CloseIcon />}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSaveEdit}  variant="contained" color="primary" startIcon={<SaveIcon />}>
-                        Save
+                    <Button onClick={handleSaveEdit} variant="contained" color="primary" startIcon={<SaveIcon />}>
+                        Save All Changes
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -744,14 +1106,15 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 </Alert>
                             )}
 
-                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 4 }}>
                                 Approval History
                             </Typography>
                             {viewMovementData.adminsTra && viewMovementData.adminsTra.length > 0 ? (
-                                <TableContainer component={Paper}>
+                                <TableContainer component={Paper} sx={{ mb: 4 }}>
                                     <Table>
                                         <TableHead>
                                             <TableRow>
+                                                <TableCell>Profile</TableCell>
                                                 <TableCell>Admin</TableCell>
                                                 <TableCell>Employee ID</TableCell>
                                                 <TableCell>SLT ID</TableCell>
@@ -763,6 +1126,15 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                         <TableBody>
                                             {viewMovementData.adminsTra.map((admin, index) => (
                                                 <TableRow key={admin.id || index}>
+                                                    <TableCell>
+                                                        <Avatar
+                                                            src={admin.profilePicture}
+                                                            alt={`${admin.firstName} ${admin.lastName}`}
+                                                            sx={{ width: 40, height: 40 }}
+                                                        >
+                                                            {!admin.profilePicture && `${admin.firstName?.charAt(0) || ''}${admin.lastName?.charAt(0) || ''}`}
+                                                        </Avatar>
+                                                    </TableCell>
                                                     <TableCell>{`${admin.firstName || ''} ${admin.lastName || ''}`}</TableCell>
                                                     <TableCell>{admin.employeeId}</TableCell>
                                                     <TableCell>{admin.sltId}</TableCell>
@@ -781,7 +1153,47 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                     </Table>
                                 </TableContainer>
                             ) : (
-                                <Alert severity="info">No approval history available.</Alert>
+                                <Alert severity="info" sx={{ mb: 4 }}>No approval history available.</Alert>
+                            )}
+
+                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 4 }}>
+                                Edited By
+                            </Typography>
+                            {viewMovementData.editedByDTOs && viewMovementData.editedByDTOs.length > 0 ? (
+                                <TableContainer component={Paper}>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Profile</TableCell>
+                                                <TableCell>Name</TableCell>
+                                                <TableCell>Comment</TableCell>
+                                                <TableCell>SLT ID</TableCell>
+                                                <TableCell>Employee ID</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {viewMovementData.editedByDTOs.map((admin, index) => (
+                                                <TableRow key={admin.id || index}>
+                                                    <TableCell>
+                                                        <Avatar
+                                                            src={admin.profilePicture}
+                                                            alt={admin.name}
+                                                            sx={{ width: 40, height: 40 }}
+                                                        >
+                                                            {!admin.profilePicture && admin.name?.charAt(0)}
+                                                        </Avatar>
+                                                    </TableCell>
+                                                    <TableCell>{admin.name || ''}</TableCell>
+                                                    <TableCell>{admin.comment}</TableCell>
+                                                    <TableCell>{admin.sltId}</TableCell>
+                                                    <TableCell>{admin.employeeId}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            ) : (
+                                <Alert severity="info">No approval Edit History available.</Alert>
                             )}
                         </Box>
                     )}

@@ -70,7 +70,7 @@ public class MovementsEntity {
     private Date happenDate; /// The Day situation happened to make a movement to resolve it
 
     @Builder.Default
-    private Boolean isPending = false;
+    private Boolean isPending = true;
     @Builder.Default
     private Boolean isAccepted = false;
     @Builder.Default

@@ -563,6 +563,7 @@ public class Check_Service_Impl implements Check_Service {
         entity.setHighestRolePriority(user.getHighestRolePriority());
         entity.setMovementId(movementId);
         entity.setIsAccepted(false);
+        entity.setProfilePic(user.getProfilePic());
         return entity;
     }
 
@@ -574,6 +575,7 @@ public class Check_Service_Impl implements Check_Service {
         entity.setHighestRolePriority(user.getHighestRolePriority());
         entity.setLeaveId(leaveId);
         entity.setIsAccepted(false);
+        entity.setProfilePic(user.getProfilePic());
         return entity;
     }
 
@@ -659,6 +661,7 @@ public class Check_Service_Impl implements Check_Service {
         return MovementsEntity.builder()
                 .publicId(movementId)
                 .reqDate(new Date())
+                .isPending(true)
                 .employeeId(movementReq.getEmployeeId())
                 .userId(movementReq.getUserId())
                 .movementType(movementReq.getMovementType())

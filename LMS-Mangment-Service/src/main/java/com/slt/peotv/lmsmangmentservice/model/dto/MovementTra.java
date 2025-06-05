@@ -1,20 +1,29 @@
-package com.slt.peotv.lmsmangmentservice.entity.Leave;
+package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import java.util.Date;
 
-public class LeaveTra {
+public class MovementTra {
 
     private Integer id;
     private String email;
     private String firstName;
     private String lastName;
-    private String leaveId;
+    private String movementId;
     private String userId;
     private String sltId;
     private String employeeId;
     private Date approvedDate;
     private Integer highestRolePriority;
     private Boolean isAccepted;
+    private String profilePic;
+
+    public String getProfilePic() {
+        return profilePic;
+    }
+
+    public void setProfilePic(String profilePic) {
+        this.profilePic = profilePic;
+    }
 
     public String getEmail() {
         return email;
@@ -48,12 +57,12 @@ public class LeaveTra {
         this.id = id;
     }
 
-    public String getLeaveId() {
-        return leaveId;
+    public String getMovementId() {
+        return movementId;
     }
 
-    public void setLeaveId(String leaveId) {
-        this.leaveId = leaveId;
+    public void setMovementId(String movementId) {
+        this.movementId = movementId;
     }
 
     public String getUserId() {

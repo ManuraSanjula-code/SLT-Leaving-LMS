@@ -44,11 +44,26 @@ const RequestMovement = () => {
   const showError = Boolean(error);
   const showSuccess = Boolean(successMessage);
 
+  // Default values for time fields
+  const DEFAULT_LOG_TIME = '1990-01-01T00:00';
+  const DEFAULT_TIME = '00:00:00';
+
   useEffect(() => {
     // Get userId from sessionStorage
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
       dispatch(setUserId(storedUserId));
+    }
+
+    // Initialize time fields with default values if they're empty
+    if (!formData.logTime) {
+      dispatch(updateFormField({ name: 'logTime', value: DEFAULT_LOG_TIME }));
+    }
+    if (!formData.intime) {
+      dispatch(updateFormField({ name: 'intime', value: DEFAULT_TIME }));
+    }
+    if (!formData.outtime) {
+      dispatch(updateFormField({ name: 'outtime', value: DEFAULT_TIME }));
     }
   }, [dispatch]);
 
@@ -62,7 +77,16 @@ const RequestMovement = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    dispatch(submitMovementRequest());
+
+    // Prepare data with ensured values for time fields
+    const submissionData = {
+      ...formData,
+      logTime: formData.logTime || DEFAULT_LOG_TIME,
+      intime: formData.intime || DEFAULT_TIME,
+      outtime: formData.outtime || DEFAULT_TIME
+    };
+
+    dispatch(submitMovementRequest(submissionData));
   };
 
   const handleCloseError = () => {
@@ -167,40 +191,46 @@ const RequestMovement = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
                     id="logTime"
                     label="Log Time"
                     name="logTime"
                     type="datetime-local"
-                    value={formData.logTime}
+                    value={formData.logTime || DEFAULT_LOG_TIME}
                     onChange={handleChange}
                     InputLabelProps={{ shrink: true }}
+                    helperText="Defaults to 1990-01-01 00:00 if not provided"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
                     id="intime"
                     label="In Time"
                     name="intime"
                     type="time"
-                    value={formData.intime}
+                    value={formData.intime || DEFAULT_TIME}
                     onChange={handleChange}
                     InputLabelProps={{ shrink: true }}
+                    helperText="Defaults to 00:00:00 if not provided"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
                     id="outtime"
                     label="Out Time"
                     name="outtime"
                     type="time"
-                    value={formData.outtime}
+                    value={formData.outtime || DEFAULT_TIME}
                     onChange={handleChange}
                     InputLabelProps={{ shrink: true }}
+                    helperText="Defaults to 00:00:00 if not provided"
                 />
               </Grid>
               <Grid item xs={12} sm={6}>

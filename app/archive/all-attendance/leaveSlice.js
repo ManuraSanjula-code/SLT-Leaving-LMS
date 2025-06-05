@@ -120,50 +120,6 @@ export const deleteLeaveRequest = createAsyncThunk(
     }
 );
 
-// Add update functionality similar to movement slice
-export const updateLeaveRequest = createAsyncThunk(
-    'leave/updateLeaveRequest',
-    async ({updatePayload, isAdmin}, {rejectWithValue}) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-
-            // Only include fields that have actually changed
-            const cleanPayload = Object.fromEntries(
-                Object.entries(updatePayload).filter(([key, value]) =>
-                    key !== 'publicId' && value !== undefined && value !== null && value !== ''
-                )
-            );
-
-            if (isAdmin) {
-                let userInput = prompt("Enter your comment:");
-                if (userInput == null) return rejectWithValue('Comment is Required');
-                cleanPayload.adminId = empId;
-                cleanPayload.adminComment = userInput;
-            }
-
-            const response = await fetch(`http://localhost:8080/lms/management/leave/${updatePayload.publicId}/${empId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify(cleanPayload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            return updatePayload;
-        } catch (err) {
-            return rejectWithValue(err.message);
-        }
-    }
-);
-
 const leaveSlice = createSlice({
     name: 'leaveNo',  // Use the correct slice name based on your Redux store structure
     initialState,
@@ -206,66 +162,33 @@ const leaveSlice = createSlice({
             .addCase(fetchInOutData.rejected, (state, action) => {
                 state.loadingInOutData = false;
                 state.error = action.payload;
-            })
-            .addCase(deleteLeaveRequest.fulfilled, (state, action) => {
-                state.data = state.data.filter(leave => leave.publicId !== action.payload);
-            })
-            .addCase(updateLeaveRequest.fulfilled, (state, action) => {
-                // Update the specific request in the state
-                const updatedRequest = action.payload;
-                const index = state.data.findIndex(leave => leave.publicId === updatedRequest.publicId);
-                if (index !== -1) {
-                    state.data[index] = {
-                        ...state.data[index],
-                        ...updatedRequest
-                    };
-                }
             });
     }
 });
 
-// Enhanced helper function to include more properties from leave data
+// Helper function from original component
 const transformLeaveItem = (item) => ({
     id: item.id,
     publicId: item.publicId,
     employeeId: item.employeeID,
-    employeeName: `Employee ${item.employeeID?.substring(0, 5) || 'Unknown'}`,
+    employeeName: `Employee ${item.employeeID.substring(0, 5)}`,
     type: getLeaveType(item),
     startDate: item.fromDate ? new Date(item.fromDate).toISOString().split('T')[0] : "",
     endDate: item.toDate ? new Date(item.toDate).toISOString().split('T')[0] : "",
     status: getLeaveStatus(item),
-    comment: item.description || "",
-    description: item.description || "",
+    comment: item.description,
     category: item.leaveType?.name || "",
     leaveTypeName: item.leaveType?.name || "",
-
-    // Date fields
-    fromDate: item.fromDate || "",
-    toDate: item.toDate || "",
-    submitDate: item.submitDate || "",
-
-    // Status flags
-    late: item.late || false,
+    late: item.late,
     absent: !item.late && !item.fullDay && !item.halfDay,
-    fullDay: item.fullDay || false,
-    halfDay: item.halfDay || false,
-    pending: item.pending || false,
-    accepted: item.accepted || false,
-    expired: item.expired || false,
+    fullDay: item.fullDay,
+    halfDay: item.halfDay,
+    pending: item.pending,
+    accepted: item.accepted,
+    expired: false,
     reject: item.reject || false,
-    canceled: item.canceled || false,
-    manualRequest: item.manualRequest || false,
-
-    // Additional fields
-    numOfDays: item.numOfDays || 0,
-    isNoPay: item.isNoPay || false,
-
-    // Admin and edit tracking
-    adminsTra: item.adminsTra || [],
-    editedByDTOs: item.editedByDTOs || [],
-
-    // Original item for reference
-    originalItem: item
+    canceled: item.canceled,
+    adminsTra: [...item.adminsTra]
 });
 
 const getLeaveType = (item) => {

@@ -13,6 +13,15 @@ public class MovementAdminsDTO {
     private Date approvedDate;
     private Integer highestRolePriority;
     private Boolean isAccepted;
+    private String profilePic;
+
+    public String getProfilePic() {
+        return profilePic;
+    }
+
+    public void setProfilePic(String profilePic) {
+        this.profilePic = profilePic;
+    }
 
     public Boolean getAccepted() {
         return isAccepted;

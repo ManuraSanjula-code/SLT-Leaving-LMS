@@ -39,9 +39,9 @@ public interface LMS_Service {
     public Page<AbsenteeDTO> getAllAbsenteeByUserId(String userId, int page, int size);
 
     public void createMovements(MovementsEntity entity);
-    public Page<MovementDTO> getAllMovementByUser(String employeeID, int page, int size);
-    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size);
-    public Page<MovementDTO> getAllMovements(int page, int size);
+    public Page<MovementDTO> getAllMovementByUser(String employeeID, int page, int size,Boolean isAdmin);
+    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size, Boolean isAdmin);
+    public Page<MovementDTO> getAllMovements(int page, int size, Boolean isAdmin);
     public MovementsEntity getMovement(String publicId);
     public void updateMovement(MovementsEntity entity, String publicId);
     public void updateMovement(MovementReq req, String publicId);

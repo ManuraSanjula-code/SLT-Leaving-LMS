@@ -24,4 +24,5 @@ public class MovementAdminsEntity {
     private Date approvedDate;
     private Integer highestRolePriority;
     private Boolean isAccepted;
+    private String profilePic;
 }

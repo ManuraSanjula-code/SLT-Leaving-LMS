@@ -1,7 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementTra;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 
@@ -39,6 +38,15 @@ public class MovementDTO {
     private Boolean isReject = false;
     public Boolean getReject() {
         return isReject;
+    }
+    private List<EditedByDTO> editedByDTOs;
+
+    public List<EditedByDTO> getEditedByDTOs() {
+        return editedByDTOs;
+    }
+
+    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
+        this.editedByDTOs = editedByDTOs;
     }
 
     public void setReject(Boolean reject) {

@@ -1,16 +1,16 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 
 export const fetchMovementRequests = createAsyncThunk(
     'movement/fetchMovementRequests',
-    async ({ isAdmin, userId, page, size }, { rejectWithValue }) => {
+    async ({isAdmin, userId, page, size}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const response = await fetch(
-                `http://localhost:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}`,
-                { credentials: 'include' }
+                `http://localhost:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}&isAdmin=${isAdmin}`,
+                {credentials: 'include'}
             );
 
             if (!response.ok) {
@@ -27,7 +27,7 @@ export const fetchMovementRequests = createAsyncThunk(
 
 export const deleteMovementRequest = createAsyncThunk(
     'movement/deleteMovementRequest',
-    async (publicId, { rejectWithValue }) => {
+    async (publicId, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -42,39 +42,51 @@ export const deleteMovementRequest = createAsyncThunk(
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
-            return { publicId };
+            return {publicId};
         } catch (err) {
             return rejectWithValue(err.message);
         }
     }
 );
 
+// Updated to send all movement fields
 export const updateMovementRequest = createAsyncThunk(
     'movement/updateMovementRequest',
-    async ({ publicId, happenDate, destination, movementType }, { rejectWithValue }) => {
+    async ({updatePayload, isAdmin}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://localhost:8080/lms/management/movement/${publicId}/${empId}`, {
+
+            // Only include fields that have actually changed
+            const cleanPayload = Object.fromEntries(
+                Object.entries(updatePayload).filter(([key, value]) =>
+                    key !== 'publicId' && value !== undefined && value !== null && value !== ''
+                )
+            );
+
+            if (isAdmin) {
+                let userInput = prompt("Enter your comment:");
+                if (userInput == null) return rejectWithValue('Comment is Required');
+                cleanPayload.adminId = empId;
+                cleanPayload.adminComment = userInput;
+            }
+
+            const response = await fetch(`http://localhost:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify({
-                    happenDate,
-                    destination,
-                    movementType
-                })
+                body: JSON.stringify(cleanPayload)
             });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
-            return await response.json();
+            return updatePayload;
         } catch (err) {
             return rejectWithValue(err.message);
         }
@@ -83,7 +95,7 @@ export const updateMovementRequest = createAsyncThunk(
 
 export const fetchInOutData = createAsyncThunk(
     'movement/fetchInOutData',
-    async ({ userId, happenDate }, { rejectWithValue }) => {
+    async ({userId, happenDate}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -186,27 +198,36 @@ const movementSlice = createSlice({
                         id: item.id || 0,
                         publicId: item.publicId || "",
                         employeeId: item.employeeId || "",
+                        userId: item.userId || "",
                         type: item.movementType || "Unknown",
                         startDate: item.happenDate ? new Date(item.happenDate).toISOString().split('T')[0] : "",
                         endDate: item.reqDate ? new Date(item.reqDate).toISOString().split('T')[0] : "",
                         status: getStatus(item),
-                        inTime: item.inTime || "",
-                        outTime: item.outTime || "",
+                        inTime: item.inTime || "00:00:00",
+                        outTime: item.outTime || "00:00:00",
+                        logTime: item.logTime ? new Date(item.logTime).toISOString() : "",
                         comment: item.comment || "",
                         destination: item.destination || "",
                         category: item.category || "",
-                        late: item.late || false,
-                        absent: item.absent || false,
-                        fullDay: item.fullDay || false,
-                        halfDay: item.halfDay || false,
-                        pending: item.pending || false,
+
+                        // Boolean fields
+                        unAuthorized: item.unAuthorized || false,
                         accepted: item.accepted || false,
-                        expired: item.expired || false,
+                        pending: item.pending || false,
+                        reject: item.reject || false,
+                        halfDay: item.halfDay || false,
+                        absent: item.absent || false,
+
+                        // Original dates for editing
                         happenDate: item.happenDate || "",
                         reqDate: item.reqDate || "",
                         movementType: item.movementType || "",
                         adminsTra: item.adminsTra || [],
-                        reject: item.reject || false
+                        editedByDTOs: item.editedByDTOs || [],
+                        // Additional fields
+                        attSync: item.attSync || 0,
+                        attendance: item.attendance || "",
+                        unSuccessfulAttdate: item.unSuccessfulAttdate || null
                     }));
 
                     state.pagination = {
@@ -229,6 +250,17 @@ const movementSlice = createSlice({
                     return request && request.publicId !== action.payload.publicId;
                 });
             })
+            .addCase(updateMovementRequest.fulfilled, (state, action) => {
+                // Update the specific request in the state
+                const updatedRequest = action.payload;
+                const index = state.requests.findIndex(req => req.publicId === updatedRequest.publicId);
+                if (index !== -1) {
+                    state.requests[index] = {
+                        ...state.requests[index],
+                        ...updatedRequest
+                    };
+                }
+            })
             .addCase(fetchInOutData.pending, (state) => {
                 state.loadingInOutData = true;
                 state.inOutData = null;
@@ -248,9 +280,10 @@ const movementSlice = createSlice({
 const getStatus = (item) => {
     if (item.pending) return "Pending";
     if (item.accepted) return "Approved";
-    if (item.expired) return "Expired";
-    if (item.late) return "Late";
+    if (item.reject) return "Rejected";
+    if (item.unAuthorized) return "Unauthorized";
     if (item.absent) return "Absent";
+    if (item.halfDay) return "Half Day";
     return "Unknown";
 };
 

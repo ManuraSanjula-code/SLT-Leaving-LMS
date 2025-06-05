@@ -27,9 +27,7 @@ public class MovementReq {
     private Date logTime;
     private String intime;
     private String outtime;
-    @JsonIgnore
     private String adminId;
-    @JsonIgnore
     private String adminComment;
 
     public String getEmployeeId() {

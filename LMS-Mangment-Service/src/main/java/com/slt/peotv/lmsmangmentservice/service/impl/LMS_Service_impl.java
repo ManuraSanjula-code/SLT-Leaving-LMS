@@ -274,34 +274,42 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
+    public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size, Boolean isAdmin) {
         Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAllByUserId(employeeId, pageable);
 
         if (allByUser.isEmpty())
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
-        return allByUser.map(lmsMapper::toMovementDTO);
+        if(isAdmin)
+            return allByUser.map(lmsMapper::toMovementDTOAdmin);
+        else
+            return allByUser.map(lmsMapper::toMovementDTO);
     }
 
     @Override
-    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size) {
+    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size, Boolean isAdmin) {
         Pageable pageable = PageRequest.of(page, size);
         return movementAdminsRepo.findByUserId(userId, pageable).map(movementAdminsEntity -> {
             Optional<MovementsEntity> publicId = movementsRepo.findByPublicId(movementAdminsEntity.getMovementId());
-            return publicId.map(lmsMapper::toMovementDTO).orElse(null);
+            if(isAdmin)
+                return publicId.map(lmsMapper::toMovementDTOAdmin).orElse(null);
+            else
+                return publicId.map(lmsMapper::toMovementDTO).orElse(null);
         });
     }
 
     @Override
-    public Page<MovementDTO> getAllMovements(int page, int size) {
+    public Page<MovementDTO> getAllMovements(int page, int size, Boolean isAdmin) {
         Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
 
         if (allByUser.isEmpty())
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        return allByUser.map(lmsMapper::toMovementDTO);
+        if(isAdmin)
+            return allByUser.map(lmsMapper::toMovementDTOAdmin);
+        else
+            return allByUser.map(lmsMapper::toMovementDTO);
     }
 
     @Override

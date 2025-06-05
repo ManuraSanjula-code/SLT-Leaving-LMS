@@ -308,8 +308,8 @@ public class LMSController {
     @GetMapping("/movement/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<MovementDTO> getAllMovementByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                    @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllMovementByUser(userId, page, size);
+                                                    @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllMovementByUser(userId, page, size, isAdmin);
     }
 
     /// ----------------- ADMIN-----------------------------
@@ -317,16 +317,16 @@ public class LMSController {
     @GetMapping("/movement/admin/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<MovementDTO> getAllMovementByAdmin(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                   @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllMovementByAdmin(userId, page, size);
+                                                   @RequestParam(defaultValue = "10") int size,@RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllMovementByAdmin(userId, page, size, isAdmin);
     }
     /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/movement/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<MovementDTO> getAllMovement(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                            @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllMovements(page, size);
+                                            @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllMovements(page, size, isAdmin);
     }
 
     @GetMapping("/no-pay/{userId}/{empId}")
