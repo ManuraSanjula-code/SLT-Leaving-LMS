@@ -33,18 +33,27 @@ import {
     Grid,
     Card,
     CardContent,
+    Avatar,
+    Tooltip,
 } from "@mui/material";
-import { Delete as DeleteIcon, Edit as EditIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
+import {
+    Delete as DeleteIcon,
+    Edit as EditIcon,
+    Visibility as VisibilityIcon,
+    AccessTime as AccessTimeIcon,
+    Save as SaveIcon,
+    Close as CloseIcon
+} from "@mui/icons-material";
 import {
     fetchLeaveData,
     fetchLeaveBalances,
     deleteLeaveRequest,
-    // updateLeaveRequest,
+    fetchInOutData,
+    // updateLeaveRequest, // Add this when you implement it
 } from "../../../../lib/redux/redux-lms/leave/leaveSlice";
 
 const PendingLeaves = ({ isAdmin = false, userId = null }) => {
     const dispatch = useDispatch();
-    const [viewDetailsId, setViewDetailsId] = useState(null);
 
     // Check both possible state locations based on your Redux configuration
     const leaveState = useSelector((state) => {
@@ -72,11 +81,20 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                 pageSize: 10
             },
             loading: false,
-            error: null
+            error: null,
+            inOutData: null,
+            loadingInOutData: false
         };
     });
 
-    const { data: leaveRequests, pagination, loading, error } = leaveState;
+    const {
+        data: leaveRequests,
+        pagination,
+        loading,
+        error,
+        inOutData,
+        loadingInOutData
+    } = leaveState;
 
     // Try both potential paths for balances
     const balanceState = useSelector((state) => {
@@ -111,7 +129,9 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [currentLeave, setCurrentLeave] = useState(null);
+    const [viewLeaveData, setViewLeaveData] = useState(null);
     const [editFormData, setEditFormData] = useState({
         startDate: "",
         endDate: "",
@@ -124,10 +144,6 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         const userIdToUse = userId || sessionStorage.getItem("userId");
         if (!userIdToUse) return;
 
-        // Get the loggedInUserId - the one making the request
-        const loggedInUserId = sessionStorage.getItem("userId");
-        if (!loggedInUserId) return;
-
         dispatch(
             fetchLeaveData({
                 isAdmin,
@@ -139,10 +155,6 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
 
         dispatch(fetchLeaveBalances(userIdToUse));
     }, [dispatch, isAdmin, userId, currentPage, pageSize]);
-
-    const toggleViewDetails = (id) => {
-        setViewDetailsId(viewDetailsId === id ? null : id);
-    };
 
     // Guard against undefined or null leaveRequests
     const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : [];
@@ -196,10 +208,8 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
     const handleSearchChange = (event) => setSearchQuery(event.target.value);
     const handleStatusFilterChange = (event) => setStatusFilter(event.target.value);
     const handleTypeFilterChange = (event) => setTypeFilter(event.target.value);
-    const handleStartDateFilterChange = (event) =>
-        setStartDateFilter(event.target.value);
-    const handleEndDateFilterChange = (event) =>
-        setEndDateFilter(event.target.value);
+    const handleStartDateFilterChange = (event) => setStartDateFilter(event.target.value);
+    const handleEndDateFilterChange = (event) => setEndDateFilter(event.target.value);
     const handlePageChange = (event, value) => setCurrentPage(value);
     const handlePageSizeChange = (event) => {
         setPageSize(Number(event.target.value));
@@ -236,10 +246,25 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         setEditDialogOpen(true);
     };
 
+    const handleOpenViewDialog = (leave) => {
+        setViewLeaveData(leave);
+        setViewDialogOpen(true);
+
+        // Fetch in-out data if start date is available
+        if (leave.startDate) {
+            dispatch(fetchInOutData({
+                userId: userId || sessionStorage.getItem('userId'),
+                happenDate: leave.startDate
+            }));
+        }
+    };
+
     const handleCloseDialogs = () => {
         setEditDialogOpen(false);
         setDeleteDialogOpen(false);
+        setViewDialogOpen(false);
         setCurrentLeave(null);
+        setViewLeaveData(null);
     };
 
     const handleEditFormChange = (e) => {
@@ -291,6 +316,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
     const handleSaveEditedLeave = async () => {
         if (!currentLeave) return;
 
+        /*
         const updatedLeave = {
             ...currentLeave,
             fromDate: editFormData.startDate,
@@ -299,11 +325,11 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
             leaveType: editFormData.type,
         };
 
-        /*try {
+        try {
             await dispatch(
                 updateLeaveRequest({
-                    id: currentLeave.publicId,
-                    data: updatedLeave,
+                    updatePayload: { publicId: currentLeave.publicId, ...updatedLeave },
+                    isAdmin
                 })
             ).unwrap();
             dispatch(
@@ -317,10 +343,21 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
             handleCloseDialogs();
         } catch (err) {
             console.error("Update failed:", err);
-        }*/
+        }
+        */
 
         // For now just close since updateLeaveRequest is commented out
         handleCloseDialogs();
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return "N/A";
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        } catch (e) {
+            return dateString;
+        }
     };
 
     // Safely extract unique values with fallbacks
@@ -399,9 +436,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                             sx={{ mb: 2 }}
                         />
 
-                        <Box
-                            sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}
-                        >
+                        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
                             <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                                 <InputLabel>Filter by Status</InputLabel>
                                 <Select
@@ -513,8 +548,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                                         selected.length < filteredLeaves.length
                                                     }
                                                     checked={
-                                                        selected.length ===
-                                                        filteredLeaves.length &&
+                                                        selected.length === filteredLeaves.length &&
                                                         filteredLeaves.length > 0
                                                     }
                                                     onChange={handleSelectAll}
@@ -526,109 +560,51 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                             <TableCell>End Date</TableCell>
                                             <TableCell>Status</TableCell>
                                             <TableCell>Actions</TableCell>
+                                            <TableCell>View</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {filteredLeaves.map((leave, index) => (
-                                            <React.Fragment key={leave.id || `leave-${index}`}>
-                                                <TableRow>
-                                                    <TableCell padding="checkbox">
-                                                        <Checkbox
-                                                            checked={selected.includes(leave.id)}
-                                                            onChange={() => handleSelect(leave.id)}
-                                                            disabled={leave.accepted || leave.reject ||  leave.canceled }
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>{leave.employeeId || 'N/A'}</TableCell>
-                                                    <TableCell>{leave.type || 'N/A'}</TableCell>
-                                                    <TableCell>
-                                                        {leave.startDate || "N/A"}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {leave.endDate || "N/A"}
-                                                    </TableCell>
-                                                    <TableCell>{leave.status || 'N/A'}</TableCell>
-                                                    <TableCell>
+                                            <TableRow key={leave.id || `leave-${index}`}>
+                                                <TableCell padding="checkbox">
+                                                    <Checkbox
+                                                        checked={selected.includes(leave.id)}
+                                                        onChange={() => handleSelect(leave.id)}
+                                                        disabled={leave.accepted || leave.reject || leave.canceled}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>{leave.employeeId || 'N/A'}</TableCell>
+                                                <TableCell>{leave.type || 'N/A'}</TableCell>
+                                                <TableCell>{leave.startDate || "N/A"}</TableCell>
+                                                <TableCell>{leave.endDate || "N/A"}</TableCell>
+                                                <TableCell>{leave.status || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <IconButton
+                                                        onClick={() => openEditDialog(leave)}
+                                                        disabled={leave.accepted || leave.reject || leave.canceled}
+                                                        color="primary"
+                                                    >
+                                                        <EditIcon />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() => openDeleteDialog(leave)}
+                                                        disabled={leave.accepted || leave.reject || leave.canceled}
+                                                        color="error"
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Tooltip title="View Details">
                                                         <IconButton
-                                                            onClick={() => openEditDialog(leave)}
-                                                            disabled={leave.accepted || leave.reject || leave.canceled ||false}
-                                                            color="primary"
-                                                        >
-                                                            <EditIcon />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            onClick={() => openDeleteDialog(leave)}
-                                                            disabled={leave.accepted || leave.reject || leave.canceled ||false}
-                                                            color="error"
-                                                        >
-                                                            <DeleteIcon />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            onClick={() => toggleViewDetails(leave.id)}
+                                                            onClick={() => handleOpenViewDialog(leave)}
                                                             color="info"
-                                                            disabled={leave.reject ||  leave.canceled || false}
                                                         >
                                                             <VisibilityIcon />
                                                         </IconButton>
-                                                    </TableCell>
-                                                </TableRow>
-                                                {viewDetailsId === leave.id && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={7}>
-                                                            <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-                                                                <Typography variant="subtitle1" gutterBottom>
-                                                                    Full Leave Details
-                                                                </Typography>
-                                                                <Grid container spacing={2}>
-                                                                    <Grid item xs={12} sm={6}>
-                                                                        <Typography><strong>Public ID:</strong> {leave.publicId || 'N/A'}</Typography>
-                                                                        <Typography><strong>Submit Date:</strong> {leave.submitDate || 'N/A'}</Typography>
-                                                                        <Typography><strong>Description:</strong> {leave.description || 'N/A'}</Typography>
-                                                                        <Typography><strong>Number of Days:</strong> {leave.numOfDays || 'N/A'}</Typography>
-                                                                        <Typography><strong>Is No Pay:</strong> {leave.isNoPay ? 'Yes' : 'No'}</Typography>
-                                                                    </Grid>
-                                                                    <Grid item xs={12} sm={6}>
-                                                                        <Typography><strong>Status Flags:</strong></Typography>
-                                                                        <Typography><strong>Pending:</strong> {leave.pending ? 'Yes' : 'No'}</Typography>
-                                                                        <Typography><strong>Accepted:</strong> {leave.accepted ? 'Yes' : 'No'}</Typography>
-                                                                        <Typography><strong>Canceled:</strong> {leave.canceled ? 'Yes' : 'No'}</Typography>
-                                                                        <Typography><strong>Manual Request:</strong> {leave.manualRequest ? 'Yes' : 'No'}</Typography>
-                                                                    </Grid>
-                                                                    {leave.adminsTra && leave.adminsTra.length > 0 && (
-                                                                        <Grid item xs={12}>
-                                                                            <Typography variant="subtitle2" gutterBottom>
-                                                                                Approval Chain:
-                                                                            </Typography>
-                                                                            <Table size="small">
-                                                                                <TableHead>
-                                                                                    <TableRow>
-                                                                                        <TableCell>Admin ID</TableCell>
-                                                                                        <TableCell>Name</TableCell>
-                                                                                        <TableCell>Email</TableCell>
-                                                                                        <TableCell>Priority</TableCell>
-                                                                                        <TableCell>Status</TableCell>
-                                                                                    </TableRow>
-                                                                                </TableHead>
-                                                                                <TableBody>
-                                                                                    {leave.adminsTra.map((admin, idx) => (
-                                                                                        <TableRow key={`admin-${idx}`}>
-                                                                                            <TableCell>{admin.employeeId || 'N/A'}</TableCell>
-                                                                                            <TableCell>{`${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'N/A'}</TableCell>
-                                                                                            <TableCell>{admin.email || 'N/A'}</TableCell>
-                                                                                            <TableCell>{admin.highestRolePriority || 'N/A'}</TableCell>
-                                                                                            <TableCell>{admin.accepted ? 'Approved' : 'Pending'}</TableCell>
-                                                                                        </TableRow>
-                                                                                    ))}
-                                                                                </TableBody>
-                                                                            </Table>
-                                                                        </Grid>
-                                                                    )}
-                                                                </Grid>
-                                                            </Box>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </React.Fragment>
+                                                    </Tooltip>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -646,6 +622,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                             />
                         </Box>
 
+                        {/* Edit Dialog */}
                         <Dialog
                             open={editDialogOpen}
                             onClose={handleCloseDialogs}
@@ -684,13 +661,9 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                             label="Leave Type"
                                         >
                                             <MenuItem value="Annual Leave">Annual Leave</MenuItem>
-                                            <MenuItem value="Medical Leave">
-                                                Medical Leave
-                                            </MenuItem>
+                                            <MenuItem value="Medical Leave">Medical Leave</MenuItem>
                                             <MenuItem value="Sick Leave">Sick Leave</MenuItem>
-                                            <MenuItem value="Casual Leave">
-                                                Casual Leave
-                                            </MenuItem>
+                                            <MenuItem value="Casual Leave">Casual Leave</MenuItem>
                                         </Select>
                                     </FormControl>
                                     <TextField
@@ -706,17 +679,19 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                 </Box>
                             </DialogContent>
                             <DialogActions>
-                                <Button onClick={handleCloseDialogs}>Cancel</Button>
+                                <Button onClick={handleCloseDialogs} startIcon={<CloseIcon />}>Cancel</Button>
                                 <Button
                                     onClick={handleSaveEditedLeave}
                                     variant="contained"
                                     color="primary"
+                                    startIcon={<SaveIcon />}
                                 >
                                     Save Changes
                                 </Button>
                             </DialogActions>
                         </Dialog>
 
+                        {/* Delete Dialog */}
                         <Dialog
                             open={deleteDialogOpen}
                             onClose={handleCloseDialogs}
@@ -736,6 +711,244 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                     autoFocus
                                 >
                                     Delete
+                                </Button>
+                            </DialogActions>
+                        </Dialog>
+
+                        {/* Enhanced View Details Dialog */}
+                        <Dialog
+                            open={viewDialogOpen}
+                            onClose={handleCloseDialogs}
+                            maxWidth="md"
+                            fullWidth
+                        >
+                            <DialogTitle>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <VisibilityIcon color="primary" />
+                                    <Typography variant="h6">Leave Request Details</Typography>
+                                </Box>
+                            </DialogTitle>
+                            <DialogContent>
+                                {viewLeaveData && (
+                                    <Box sx={{ pt: 2 }}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Basic Information
+                                        </Typography>
+                                        <TableContainer component={Paper} sx={{ mb: 3 }}>
+                                            <Table size="small">
+                                                <TableBody>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Request ID</TableCell>
+                                                        <TableCell>{viewLeaveData.publicId || 'N/A'}</TableCell>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Employee ID</TableCell>
+                                                        <TableCell>{viewLeaveData.employeeId || 'N/A'}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Leave Type</TableCell>
+                                                        <TableCell>{viewLeaveData.type || 'N/A'}</TableCell>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                                        <TableCell>{viewLeaveData.status || 'N/A'}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Start Date</TableCell>
+                                                        <TableCell>{viewLeaveData.startDate || "Not specified"}</TableCell>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>End Date</TableCell>
+                                                        <TableCell>{viewLeaveData.endDate || "Not specified"}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Comment</TableCell>
+                                                        <TableCell colSpan={3}>{viewLeaveData.comment || "No comment"}</TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+
+                                        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <AccessTimeIcon color="primary" />
+                                            Attendance Records
+                                        </Typography>
+
+                                        {loadingInOutData ? (
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                                <CircularProgress size={30} />
+                                            </Box>
+                                        ) : inOutData ? (
+                                            <Grid container spacing={3} sx={{ mb: 3 }}>
+                                                <Grid item xs={12} md={6}>
+                                                    <Card variant="outlined">
+                                                        <CardContent>
+                                                            <Typography variant="h6" color="primary" gutterBottom>
+                                                                Morning Record
+                                                            </Typography>
+                                                            <TableContainer>
+                                                                <Table size="small">
+                                                                    <TableBody>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Employee ID</TableCell>
+                                                                            <TableCell>{inOutData.morning?.employeeID || "N/A"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch In Time</TableCell>
+                                                                            <TableCell>{inOutData.morning?.timeMoa || "Not recorded"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch In (Server Time)</TableCell>
+                                                                            <TableCell>{inOutData.morning?.punchInMoa ? formatDate(inOutData.morning.punchInMoa) : "Not recorded"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                                                            <TableCell>
+                                                                                {inOutData.morning?.inOut === 1 ? (
+                                                                                    <Typography color="primary">Checked In</Typography>
+                                                                                ) : (
+                                                                                    <Typography color="error">Not Checked In</Typography>
+                                                                                )}
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    </TableBody>
+                                                                </Table>
+                                                            </TableContainer>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Grid>
+
+                                                <Grid item xs={12} md={6}>
+                                                    <Card variant="outlined">
+                                                        <CardContent>
+                                                            <Typography variant="h6" color="primary" gutterBottom>
+                                                                Evening Record
+                                                            </Typography>
+                                                            <TableContainer>
+                                                                <Table size="small">
+                                                                    <TableBody>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Employee ID</TableCell>
+                                                                            <TableCell>{inOutData.evening?.employeeID || "N/A"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch Out Time</TableCell>
+                                                                            <TableCell>{inOutData.evening?.timeEve || "Not recorded"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch Out (Server Time)</TableCell>
+                                                                            <TableCell>{inOutData.evening?.punchInEv ? formatDate(inOutData.evening.punchInEv) : "Not recorded"}</TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                                                            <TableCell>
+                                                                                {inOutData.evening?.inOut === 0 ? (
+                                                                                    <Typography color="primary">Checked Out</Typography>
+                                                                                ) : (
+                                                                                    <Typography color="warning.main">Not Checked Out</Typography>
+                                                                                )}
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    </TableBody>
+                                                                </Table>
+                                                            </TableContainer>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Grid>
+                                            </Grid>
+                                        ) : (
+                                            <Alert severity="info" sx={{ mb: 3 }}>
+                                                No attendance records found for this date.
+                                            </Alert>
+                                        )}
+
+                                        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                                            Approval History
+                                        </Typography>
+                                        {viewLeaveData.adminsTra && viewLeaveData.adminsTra.length > 0 ? (
+                                            <TableContainer component={Paper} sx={{ mb: 4 }}>
+                                                <Table>
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell>Profile</TableCell>
+                                                            <TableCell>Admin</TableCell>
+                                                            <TableCell>Employee ID</TableCell>
+                                                            <TableCell>Email</TableCell>
+                                                            <TableCell>Priority</TableCell>
+                                                            <TableCell>Status</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {viewLeaveData.adminsTra.map((admin, index) => (
+                                                            <TableRow key={admin.id || index}>
+                                                                <TableCell>
+                                                                    <Avatar
+                                                                        src={admin.profilePicture}
+                                                                        alt={`${admin.firstName} ${admin.lastName}`}
+                                                                        sx={{ width: 40, height: 40 }}
+                                                                    >
+                                                                        {!admin.profilePicture && `${admin.firstName?.charAt(0) || ''}${admin.lastName?.charAt(0) || ''}`}
+                                                                    </Avatar>
+                                                                </TableCell>
+                                                                <TableCell>{`${admin.firstName || ''} ${admin.lastName || ''}`.trim() || 'N/A'}</TableCell>
+                                                                <TableCell>{admin.employeeId || 'N/A'}</TableCell>
+                                                                <TableCell>{admin.email || 'N/A'}</TableCell>
+                                                                <TableCell>{admin.highestRolePriority || 'N/A'}</TableCell>
+                                                                <TableCell>
+                                                                    {admin.accepted ? (
+                                                                        <Typography color="primary">Approved</Typography>
+                                                                    ) : (
+                                                                        <Typography color="error">Pending</Typography>
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        ) : (
+                                            <Alert severity="info" sx={{ mb: 4 }}>No approval history available.</Alert>
+                                        )}
+
+                                        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                                            Edit History
+                                        </Typography>
+                                        {viewLeaveData.editedByDTOs && viewLeaveData.editedByDTOs.length > 0 ? (
+                                            <TableContainer component={Paper}>
+                                                <Table>
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell>Profile</TableCell>
+                                                            <TableCell>Name</TableCell>
+                                                            <TableCell>Employee ID</TableCell>
+                                                            <TableCell>Comment</TableCell>
+                                                            <TableCell>Edit Date</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {viewLeaveData.editedByDTOs.map((editor, index) => (
+                                                            <TableRow key={editor.id || index}>
+                                                                <TableCell>
+                                                                    <Avatar
+                                                                        src={editor.profilePicture}
+                                                                        alt={editor.name}
+                                                                        sx={{ width: 40, height: 40 }}
+                                                                    >
+                                                                        {!editor.profilePicture && editor.name?.charAt(0)}
+                                                                    </Avatar>
+                                                                </TableCell>
+                                                                <TableCell>{editor.name || 'N/A'}</TableCell>
+                                                                <TableCell>{editor.employeeId || 'N/A'}</TableCell>
+                                                                <TableCell>{editor.comment || 'No comment'}</TableCell>
+                                                                <TableCell>{formatDate(editor.editDate) || 'N/A'}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        ) : (
+                                            <Alert severity="info">No edit history available.</Alert>
+                                        )}
+                                    </Box>
+                                )}
+                            </DialogContent>
+                            <DialogActions>
+                                <Button onClick={handleCloseDialogs} color="primary">
+                                    Close
                                 </Button>
                             </DialogActions>
                         </Dialog>
