@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice.entity.Employee;
 
 import jakarta.persistence.*;
@@ -17,3 +18,4 @@ public class EditedBy {
     private String profilePic;
     private String comment;
 }
+*/

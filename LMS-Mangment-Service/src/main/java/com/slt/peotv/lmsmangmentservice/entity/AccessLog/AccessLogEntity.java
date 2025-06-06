@@ -1,10 +1,9 @@
 package com.slt.peotv.lmsmangmentservice.entity.AccessLog;
 
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;

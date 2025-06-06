@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice.entity.Movement;
 
 import jakarta.persistence.*;
@@ -26,3 +27,4 @@ public class MovementAdminsEntity {
     private Boolean isAccepted;
     private String profilePic;
 }
+*/

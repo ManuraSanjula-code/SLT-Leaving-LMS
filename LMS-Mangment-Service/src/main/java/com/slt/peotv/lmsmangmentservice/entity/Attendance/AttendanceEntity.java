@@ -1,6 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.entity.Attendance;
 
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;

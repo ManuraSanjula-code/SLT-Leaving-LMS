@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementAdminsEntity;
@@ -20,3 +21,4 @@ public interface MovementAdminsRepo extends JpaRepository<MovementAdminsEntity, 
 
 
 }
+*/

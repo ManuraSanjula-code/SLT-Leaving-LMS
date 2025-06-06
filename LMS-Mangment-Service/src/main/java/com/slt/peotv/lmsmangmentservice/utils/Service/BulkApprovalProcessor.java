@@ -1,9 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.repository.*;
@@ -34,10 +33,7 @@ public class BulkApprovalProcessor {
     private LeaveRepo leaveRepo;
 
     @Autowired
-    private MovementAdminsRepo movementAdminsRepo;
-
-    @Autowired
-    private LeaveAdminsRepo leaveAdminsRepo;
+    private ComponetAdminsRepo componetAdminsRepo;
 
     @Autowired
     private AttendanceRepo attendanceRepo;
@@ -300,7 +296,7 @@ public class BulkApprovalProcessor {
             }
 
             // Load admins separately to avoid lazy loading issues
-            List<MovementAdminsEntity> admins_ = movementAdminsRepo.findByMovementId(movement.getPublicId());
+            List<ComponetAdminsEntity> admins_ = componetAdminsRepo.findByComponetID(movement.getPublicId());
             if (admins_ == null || admins_.isEmpty()) {
                 logger.warn("No admins found for movement: {}", movement.getPublicId());
                 return;
@@ -308,9 +304,9 @@ public class BulkApprovalProcessor {
 
             boolean isAuthorizedAdmin = admins_.stream()
                     .anyMatch(admin ->
-                            userId.equals(admin.getUserId()) ||
-                                    userId.equals(admin.getSltId()) ||
-                                    userId.equals(admin.getEmployeeId())
+                            userId.equals(admin.getEmployee().getPublicId()) ||
+                                    userId.equals(admin.getEmployee().getSltId()) ||
+                                    userId.equals(admin.getEmployee().getEmployeeId())
                     );
 
             if (!isAuthorizedAdmin) {
@@ -319,16 +315,16 @@ public class BulkApprovalProcessor {
             }
 
             // Get admins sorted by priority (lowest priority first)
-            List<MovementAdminsEntity> admins = admins_.stream()
-                    .sorted(Comparator.comparingInt(MovementAdminsEntity::getHighestRolePriority).reversed())
+            List<ComponetAdminsEntity> admins = admins_.stream()
+                    .sorted(Comparator.comparingInt(ComponetAdminsEntity::getHighestRolePriority).reversed())
                     .collect(Collectors.toList());
 
             // Find the admin matching the current user
-            MovementAdminsEntity currentAdmin = admins.stream()
+            ComponetAdminsEntity currentAdmin = admins.stream()
                     .filter(admin ->
-                            userId.equals(admin.getUserId()) ||
-                                    userId.equals(admin.getSltId()) ||
-                                    userId.equals(admin.getEmployeeId()))
+                            userId.equals(admin.getEmployee().getPublicId()) ||
+                                    userId.equals(admin.getEmployee().getSltId()) ||
+                                    userId.equals(admin.getEmployee().getEmployeeId()))
                     .findFirst()
                     .orElse(null);
 
@@ -366,7 +362,7 @@ public class BulkApprovalProcessor {
                 System.out.println("Processing movement approval for ID: " + movement.getPublicId() + ", Employee: " + userId);
                 currentAdmin.setApprovedDate(new Date());
                 currentAdmin.setIsAccepted(true);
-                movementAdminsRepo.save(currentAdmin);
+                componetAdminsRepo.save(currentAdmin);
             }
 
             // Check if all admins have approved now
@@ -412,7 +408,7 @@ public class BulkApprovalProcessor {
             }
 
             // Load admins separately to avoid lazy loading issues
-            List<LeaveAdminsEntity> admins_ = leaveAdminsRepo.findByLeaveId(leave.getPublicId());
+            List<ComponetAdminsEntity> admins_ = componetAdminsRepo.findByComponetID(leave.getPublicId());
             if (admins_ == null || admins_.isEmpty()) {
                 logger.warn("No admins found for leave: {}", leave.getPublicId());
                 return;
@@ -420,9 +416,9 @@ public class BulkApprovalProcessor {
 
             boolean isAuthorizedAdmin = admins_.stream()
                     .anyMatch(admin ->
-                            userId.equals(admin.getUserId()) ||
-                                    userId.equals(admin.getSltId()) ||
-                                    userId.equals(admin.getEmployeeId())
+                            userId.equals(admin.getEmployee().getPublicId()) ||
+                                    userId.equals(admin.getEmployee().getSltId()) ||
+                                    userId.equals(admin.getEmployee().getEmployeeId())
                     );
 
             if (!isAuthorizedAdmin) {
@@ -431,16 +427,16 @@ public class BulkApprovalProcessor {
             }
 
             // Get admins sorted by priority (lowest priority first)
-            List<LeaveAdminsEntity> admins = admins_.stream()
-                    .sorted(Comparator.comparingInt(LeaveAdminsEntity::getHighestRolePriority).reversed())
+            List<ComponetAdminsEntity> admins = admins_.stream()
+                    .sorted(Comparator.comparingInt(ComponetAdminsEntity::getHighestRolePriority).reversed())
                     .collect(Collectors.toList());
 
             // Find the admin matching the current user
-            LeaveAdminsEntity currentAdmin = admins.stream()
+            ComponetAdminsEntity currentAdmin = admins.stream()
                     .filter(admin ->
-                            userId.equals(admin.getUserId()) ||
-                                    userId.equals(admin.getSltId()) ||
-                                    userId.equals(admin.getEmployeeId()))
+                            userId.equals(admin.getEmployee().getPublicId()) ||
+                                    userId.equals(admin.getEmployee().getSltId()) ||
+                                    userId.equals(admin.getEmployee().getEmployeeId()))
                     .findFirst()
                     .orElse(null);
 
@@ -477,7 +473,7 @@ public class BulkApprovalProcessor {
             if (currentAdmin.getApprovedDate() == null) {
                 currentAdmin.setApprovedDate(new Date());
                 currentAdmin.setIsAccepted(true);
-                leaveAdminsRepo.save(currentAdmin);
+                componetAdminsRepo.save(currentAdmin);
             }
 
             // Check if all admins have approved now

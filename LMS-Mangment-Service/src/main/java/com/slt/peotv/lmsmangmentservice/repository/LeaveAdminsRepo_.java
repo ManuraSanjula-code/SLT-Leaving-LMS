@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveAdminsEntity;
@@ -18,3 +19,4 @@ public interface LeaveAdminsRepo extends JpaRepository<LeaveAdminsEntity, Intege
 
     List<LeaveAdminsEntity> findByLeaveId(String leaveId);
 }
+*/

@@ -2,15 +2,13 @@ package com.slt.peotv.lmsmangmentservice.entity.card;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Setter

@@ -3,7 +3,7 @@ package com.slt.peotv.lmsmangmentservice.mapper;
 import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.model.dto.LeaveTra;
@@ -192,20 +192,19 @@ public class LMSMapper {
         dto.setEditedByDTOs(toEditedByDTO(entity));
         return dto;
     }
-
-    public List<EditedByDTO> toEditedByDTO(AttendanceEntity entity){
+    /*    public List<EditedByDTO> toEditedByDTO(AttendanceEntity entity){
         return entity.getEditedBys().stream().map(en->{
             if(en == null) return null;
             EditedByDTO dto = new EditedByDTO();
             dto.setComment(en.getComment());
-            dto.setName(en.getFirstName() + " " + en.getLastName());
-            dto.setProfilePicture(en.getProfilePic());
-            dto.setSltId(en.getSltId());
-            dto.setEmployeeId(en.getEmployeeId());
+            dto.setName(en.getEmployee().getFirstName() + " " + en.getEmployee().getLastName());
+            dto.setProfilePicture(en.getEmployee().getProfilePic());
+            dto.setSltId(en.getEmployee().getSltId());
+            dto.setEmployeeId(en.getEmployee().getEmployeeId());
             return dto;
         }).toList();
-    }
-    public List<EditedByDTO> toEditedByDTO(Object entity) {
+    }*/
+    /*public List<EditedByDTO> toEditedByDTO(Object entity) {
         try {
             Method getEditedBysMethod = entity.getClass().getMethod("getEditedBys");
             @SuppressWarnings("unchecked")
@@ -227,16 +226,80 @@ public class LMSMapper {
         } catch (Exception e) {
             throw new RuntimeException("Failed to process entity", e);
         }
+    }*/
+
+    public List<EditedByDTO> toEditedByDTO(Object entity) {
+        try {
+            Method getEditedBysMethod = entity.getClass().getMethod("getEditedBys");
+            @SuppressWarnings("unchecked")
+            List<Object> editedBys = (List<Object>) getEditedBysMethod.invoke(entity);
+
+            return editedBys.stream().map(editedByObj -> {
+                if(editedByObj == null) return null;
+
+                EditedByDTO dto = new EditedByDTO();
+
+                // Get the comment directly from EditedBy entity
+                dto.setComment(getFieldValue(editedByObj, "getComment"));
+
+                // Get the employee object first, then access its properties
+                Object employee = getEmployeeObject(editedByObj, "getEmployee");
+                if (employee != null) {
+                    String firstName = getFieldValue(employee, "getFirstName");
+                    String lastName = getFieldValue(employee, "getLastName");
+                    dto.setName((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : ""));
+                    dto.setProfilePicture(getFieldValue(employee, "getProfilePic"));
+                    dto.setSltId(getFieldValue(employee, "getSltId"));
+                    dto.setEmployeeId(getFieldValue(employee, "getEmployeeId"));
+                }
+
+                return dto;
+            }).toList();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process entity", e);
+        }
     }
 
     private String getFieldValue(Object obj, String methodName) {
+        try {
+            if (obj == null) return null;
+            Method method = obj.getClass().getMethod(methodName);
+            Object result = method.invoke(obj);
+            return result != null ? result.toString() : null;
+        } catch (Exception e) {
+            // Log the error but don't fail the entire operation
+            System.err.println("Failed to get field value using method: " + methodName + " on " + obj.getClass().getSimpleName() + " - " + e.getMessage());
+            return null;
+        }
+    }
+
+    private Object getEmployeeObject(Object editedByObj, String methodName) {
+        try {
+            if (editedByObj == null) return null;
+            Method method = editedByObj.getClass().getMethod(methodName);
+            Object result = method.invoke(editedByObj);
+
+            // Check if result is a String (employee ID) instead of EmployeeEntity
+            if (result instanceof String) {
+                System.err.println("Warning: getEmployee() returned String instead of EmployeeEntity. This suggests a mapping issue.");
+                return null;
+            }
+
+            return result;
+        } catch (Exception e) {
+            System.err.println("Failed to get employee object using method: " + methodName + " - " + e.getMessage());
+            return null;
+        }
+    }
+    /*private String getFieldValue(Object obj, String methodName) {
         try {
             Method method = obj.getClass().getMethod(methodName);
             return (String) method.invoke(obj);
         } catch (Exception e) {
             return null;
         }
-    }
+    }*/
 
     public MovementDTO toMovementDTOAdmin(MovementsEntity entity){
         if (entity == null) return null;
@@ -254,16 +317,16 @@ public class LMSMapper {
         // Convert admin entities to MovementTra DTOs
         if (entity.getAdmins() != null) {
             entity.getAdmins().forEach(adminEntity -> {
-                Optional<EmployeeEntity> empOpt = employeeRepo.findBySltId(adminEntity.getSltId());
+                Optional<EmployeeEntity> empOpt = employeeRepo.findBySltId(adminEntity.getEmployee().getSltId());
                 if (empOpt.isPresent()) {
                     EmployeeEntity employee = empOpt.get();
                     MovementTra adminTra = new MovementTra();
 
                     adminTra.setId(adminEntity.getId());
-                    adminTra.setMovementId(adminEntity.getMovementId());
-                    adminTra.setUserId(adminEntity.getUserId());
-                    adminTra.setSltId(adminEntity.getSltId());
-                    adminTra.setEmployeeId(adminEntity.getEmployeeId());
+                    adminTra.setMovementId(adminEntity.getComponetID());
+                    adminTra.setUserId(adminEntity.getEmployee().getPublicId());
+                    adminTra.setSltId(adminEntity.getEmployee().getSltId());
+                    adminTra.setEmployeeId(adminEntity.getEmployee().getEmployeeId());
                     adminTra.setApprovedDate(adminEntity.getApprovedDate());
                     adminTra.setHighestRolePriority(adminEntity.getHighestRolePriority());
                     adminTra.setAccepted(adminEntity.getIsAccepted());
@@ -339,9 +402,9 @@ public class LMSMapper {
         // Convert admin entities to LeaveTra DTOs
         if (entity.getAdmins() != null) {
             entity.getAdmins().forEach(adminEntity -> {
-                Optional<EmployeeEntity> empOpt = employeeRepo.findBySltId(adminEntity.getSltId());
+                Optional<EmployeeEntity> empOpt = employeeRepo.findBySltId(adminEntity.getEmployee().getSltId());
                 if (empOpt.isEmpty()) {
-                    empOpt = employeeRepo.findByEmployeeId(adminEntity.getSltId());
+                    empOpt = employeeRepo.findByEmployeeId(adminEntity.getEmployee().getSltId());
                 }
 
                 if (empOpt.isPresent()) {
@@ -349,10 +412,10 @@ public class LMSMapper {
                     LeaveTra adminTra = new LeaveTra();
 
                     adminTra.setId(adminEntity.getId());
-                    adminTra.setLeaveId(adminEntity.getLeaveId());
-                    adminTra.setUserId(adminEntity.getUserId());
-                    adminTra.setSltId(adminEntity.getSltId());
-                    adminTra.setEmployeeId(adminEntity.getEmployeeId());
+                    adminTra.setLeaveId(adminEntity.getComponetID());
+                    adminTra.setUserId(adminEntity.getEmployee().getPublicId());
+                    adminTra.setSltId(adminEntity.getEmployee().getSltId());
+                    adminTra.setEmployeeId(adminEntity.getEmployee().getEmployeeId());
                     adminTra.setApprovedDate(adminEntity.getApprovedDate());
                     adminTra.setHighestRolePriority(adminEntity.getHighestRolePriority());
                     adminTra.setAccepted(adminEntity.getIsAccepted());
@@ -485,11 +548,12 @@ public class LMSMapper {
 
         EditedBy editedBy = new EditedBy();
         editedBy.setComment(adminComment);
-        editedBy.setFirstName(employee.getFirstName());
+        /*editedBy.setFirstName(employee.getFirstName());
         editedBy.setLastName(employee.getLastName());
         editedBy.setProfilePic(employee.getProfilePic());
         editedBy.setSltId(employee.getSltId());
-        editedBy.setEmployeeId(employee.getEmployeeId());
+        editedBy.setEmployeeId(employee.getEmployeeId());*/
+        editedBy.setEmployee(employee);
         EditedBy savedEditedBy = editedByRepo.save(editedBy);
 
 
@@ -508,7 +572,6 @@ public class LMSMapper {
             editedBys.add(savedEditedBy);
             movementEntity.setIsEdited(true);
             movementEntity.setEditedBys(editedBys);
-            System.out.println("===============================");
         } else if (entity instanceof LeaveEntity) {
             LeaveEntity leaveEntity = (LeaveEntity) entity;
             List<EditedBy> editedBys = leaveEntity.getEditedBys();

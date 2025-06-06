@@ -14,6 +14,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import org.springframework.data.domain.Page;
 
+import java.util.Date;
 import java.util.List;
 
 public interface LMS_Service {
@@ -22,6 +23,8 @@ public interface LMS_Service {
     public AbsenteeEntity getOneAbsentee(String publicId, String employeeId);
     public void saveAbsentee(String employeeId, Boolean isHalfDay, Boolean swipeErr);
     public void deleteAbsentee(String publicId);
+
+    List<InOutDTO> getAllInOuts(String id, boolean swap);
 
     public Page<AttendanceDTO> getAllAttendance(int page, int size);
     public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size, Boolean admin);

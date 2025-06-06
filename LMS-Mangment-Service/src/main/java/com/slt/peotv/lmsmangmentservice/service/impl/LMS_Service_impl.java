@@ -24,6 +24,7 @@ import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class LMS_Service_impl implements LMS_Service {
     @Autowired
     private NoPayRepo noPayRepo;
     @Autowired
-    private MovementAdminsRepo movementAdminsRepo;
+    private ComponetAdminsRepo componetAdminsRepo;
     @Autowired
     private Utils utils;
     @Autowired
@@ -65,13 +66,16 @@ public class LMS_Service_impl implements LMS_Service {
     @Autowired
     private EmployeeRepo employeeRepo;
     @Autowired
-    private LeaveAdminsRepo leaveAdminsRepo;
-    @Autowired
     private LeaveTypeRepo leaveTypeRepository;
     @Autowired
     private AccessLogRepo accessLogRepo;
     @Autowired
     private InOutRepo inOutRepo;
+
+    @Override
+    public List<InOutDTO> getAllInOuts(String id, boolean swap) {
+        return List.of();
+    }
 
     @Override
     public List<AbsenteeEntity> getAllAbsentee() {
@@ -290,13 +294,17 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size, Boolean isAdmin) {
         Pageable pageable = PageRequest.of(page, size);
-        return movementAdminsRepo.findByUserId(userId, pageable).map(movementAdminsEntity -> {
-            Optional<MovementsEntity> publicId = movementsRepo.findByPublicId(movementAdminsEntity.getMovementId());
-            if(isAdmin)
+        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId)
+                .or(() -> employeeRepo.findBySltId(userId))
+                .or(() -> employeeRepo.findByEmployeeId(userId));
+
+        return employee.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(coAdminsEntity -> {
+            Optional<MovementsEntity> publicId = movementsRepo.findByPublicId(coAdminsEntity.getComponetID());
+            if (isAdmin)
                 return publicId.map(lmsMapper::toMovementDTOAdmin).orElse(null);
             else
                 return publicId.map(lmsMapper::toMovementDTO).orElse(null);
-        });
+        })).orElseGet(() -> new PageImpl<>(Collections.emptyList()));
     }
 
     @Override
@@ -766,11 +774,14 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return leaveAdminsRepo.findByUserId(userId, pageable).map(leaveAdminsEntity -> {
-            Optional<LeaveEntity> publicId = leaveRepo.findByPublicId(leaveAdminsEntity.getLeaveId());
+        Optional<EmployeeEntity> em = employeeRepo.findByPublicId(userId);
+        return em.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(componetAdmins -> {
+            Optional<LeaveEntity> publicId = leaveRepo.findByPublicId(componetAdmins.getComponetID());
             return publicId.map(lmsMapper::toLeaveDTO).orElse(null);
-        });
+        })).orElseGet(Page::empty);
     }
+
+
 
     @Override
     public AttendanceDTO createAttendance(AttendanceReq req) {

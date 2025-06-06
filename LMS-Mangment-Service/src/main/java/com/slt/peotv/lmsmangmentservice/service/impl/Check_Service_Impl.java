@@ -2,12 +2,11 @@ package com.slt.peotv.lmsmangmentservice.service.impl;
 
 import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
@@ -79,11 +78,10 @@ public class Check_Service_Impl implements Check_Service {
     @Autowired
     private EmployeeRepo employeeRepo;
     @Autowired
-    private MovementAdminsRepo movementAdminsRepo;
+    private ComponetAdminsRepo componetAdminsRepo;
     @Autowired
     private LeaveTypeRepo leaveTypeRepository;
-    @Autowired
-    private LeaveAdminsRepo leaveAdminsRepo;
+
     @Autowired
     private AccessLogRepo accessLogRepo;
     @Autowired
@@ -525,11 +523,11 @@ public class Check_Service_Impl implements Check_Service {
             }
 
             movementsEntity.setAttendance(attendance);
-            List<MovementAdminsEntity> adminEntities = new ArrayList<>();
+            List<ComponetAdminsEntity> adminEntities = new ArrayList<>();
 
             userMap.entrySet().forEach(entry -> {
                 UserRest value = entry.getValue();
-                MovementAdminsEntity admin = createMovementAdminEntity(value, movementId);
+                ComponetAdminsEntity admin = createAdminEntity(value, movementId);
                 adminEntities.add(admin);
             });
 
@@ -555,8 +553,8 @@ public class Check_Service_Impl implements Check_Service {
         }
     }
 
-    private MovementAdminsEntity createMovementAdminEntity(UserRest user, String movementId) {
-        MovementAdminsEntity entity = new MovementAdminsEntity();
+    /*private ComponetAdminsEntity createMovementAdminEntity(UserRest user, String movementId) {
+        ComponetAdminsEntity entity = new ComponetAdminsEntity();
         entity.setSltId(user.getSltId());
         entity.setUserId(user.getUserId());
         entity.setEmployeeId(user.getEmployeeId());
@@ -567,13 +565,26 @@ public class Check_Service_Impl implements Check_Service {
         return entity;
     }
 
-    private LeaveAdminsEntity createLeaveAdminEntity(UserRest user, String leaveId) {
-        LeaveAdminsEntity entity = new LeaveAdminsEntity();
+    private ComponetAdminsEntity createLeaveAdminEntity(UserRest user, String leaveId) {
+        ComponetAdminsEntity entity = new ComponetAdminsEntity();
         entity.setSltId(user.getSltId());
         entity.setUserId(user.getUserId());
         entity.setEmployeeId(user.getEmployeeId());
         entity.setHighestRolePriority(user.getHighestRolePriority());
         entity.setLeaveId(leaveId);
+        entity.setIsAccepted(false);
+        entity.setProfilePic(user.getProfilePic());
+        return entity;
+    }*/
+
+    private ComponetAdminsEntity createAdminEntity(UserRest user_, String movementId) {
+        Optional<EmployeeEntity> employee = employeeRepo.findByEmployeeId(user_.getEmployeeId());
+        if(employee.isEmpty()) return null;
+        EmployeeEntity user = employee.get();
+        ComponetAdminsEntity entity = new ComponetAdminsEntity();
+        entity.setEmployee(user);
+        entity.setHighestRolePriority(user_.getHighestRolePriority());
+        entity.setComponetID(movementId);
         entity.setIsAccepted(false);
         entity.setProfilePic(user.getProfilePic());
         return entity;
@@ -692,26 +703,26 @@ public class Check_Service_Impl implements Check_Service {
             return;
         }
 
-        List<MovementAdminsEntity> admins_ = movement.getAdmins();
+        List<ComponetAdminsEntity> admins_ = movement.getAdmins();
         boolean isAuthorizedAdmin = admins_.stream()
                 .anyMatch(admin ->
-                        userId.equals(admin.getUserId()) ||
-                                userId.equals(admin.getSltId()) ||
-                                userId.equals(admin.getEmployeeId())
+                        userId.equals(admin.getEmployee().getPublicId()) ||
+                                userId.equals(admin.getEmployee().getEmployeeId()) ||
+                                userId.equals(admin.getEmployee().getSltId())
                 );
         if (!isAuthorizedAdmin) return;
 
         // Get admins sorted by priority (lowest priority first)
-        List<MovementAdminsEntity> admins = movement.getAdmins().stream()
-                .sorted(Comparator.comparingInt(MovementAdminsEntity::getHighestRolePriority).reversed())
+        List<ComponetAdminsEntity> admins = movement.getAdmins().stream()
+                .sorted(Comparator.comparingInt(ComponetAdminsEntity::getHighestRolePriority).reversed())
                 .collect(Collectors.toList());
 
         // Find the admin matching the current user
-        MovementAdminsEntity currentAdmin = admins.stream()
+        ComponetAdminsEntity currentAdmin = admins.stream()
                 .filter(admin ->
-                        userId.equals(admin.getUserId()) ||
-                                userId.equals(admin.getSltId()) ||
-                                userId.equals(admin.getEmployeeId()))
+                        userId.equals(admin.getEmployee().getPublicId()) ||
+                                userId.equals(admin.getEmployee().getEmployeeId()) ||
+                                userId.equals(admin.getEmployee().getSltId()))
                 .findFirst()
                 .orElse(null);
 
@@ -741,7 +752,7 @@ public class Check_Service_Impl implements Check_Service {
         if (currentAdmin.getApprovedDate() == null) {
             currentAdmin.setApprovedDate(new Date());
             currentAdmin.setIsAccepted(true);
-            movementAdminsRepo.save(currentAdmin);
+            componetAdminsRepo.save(currentAdmin);
         }
 
         // Check if all admins have approved now
@@ -769,26 +780,26 @@ public class Check_Service_Impl implements Check_Service {
         if (!leave.getIsManualRequest() && attendance == null) {
             return;
         }
-        List<LeaveAdminsEntity> admins_ = leave.getAdmins();
+        List<ComponetAdminsEntity> admins_ = leave.getAdmins();
         boolean isAuthorizedAdmin = admins_.stream()
                 .anyMatch(admin ->
-                        userId.equals(admin.getUserId()) ||
-                                userId.equals(admin.getSltId()) ||
-                                userId.equals(admin.getEmployeeId())
+                        userId.equals(admin.getEmployee().getPublicId()) ||
+                                userId.equals(admin.getEmployee().getEmployeeId()) ||
+                                userId.equals(admin.getEmployee().getSltId())
                 );
         if (!isAuthorizedAdmin) return;
 
         // Get admins sorted by priority (lowest priority first)
-        List<LeaveAdminsEntity> admins = leave.getAdmins().stream()
-                .sorted(Comparator.comparingInt(LeaveAdminsEntity::getHighestRolePriority).reversed())
+        List<ComponetAdminsEntity> admins = leave.getAdmins().stream()
+                .sorted(Comparator.comparingInt(ComponetAdminsEntity::getHighestRolePriority).reversed())
                 .collect(Collectors.toList());
 
         // Find the admin matching the current user
-        LeaveAdminsEntity currentAdmin = admins.stream()
+        ComponetAdminsEntity currentAdmin = admins.stream()
                 .filter(admin ->
-                        userId.equals(admin.getUserId()) ||
-                                userId.equals(admin.getSltId()) ||
-                                userId.equals(admin.getEmployeeId()))
+                        userId.equals(admin.getEmployee().getPublicId()) ||
+                                userId.equals(admin.getEmployee().getEmployeeId()) ||
+                                userId.equals(admin.getEmployee().getSltId()))
                 .findFirst()
                 .orElse(null);
 
@@ -819,7 +830,7 @@ public class Check_Service_Impl implements Check_Service {
         if (currentAdmin.getApprovedDate() == null) {
             currentAdmin.setApprovedDate(new Date());
             currentAdmin.setIsAccepted(true);
-            leaveAdminsRepo.save(currentAdmin);
+            componetAdminsRepo.save(currentAdmin);
         }
 
         // Check if all admins have approved now
@@ -1757,6 +1768,9 @@ public class Check_Service_Impl implements Check_Service {
         String employeeID = (inOutEntity != null) ? inOutEntity.getEmployeeID() :
                 (attendance != null) ? attendance.getEmployeeID() : "";
 
+        if (obj instanceof String) {
+            employeeID = (String) obj;
+        }
         // Validation checks
         if (employeeID == null || employeeID.isEmpty()) {
             logger.warn("Employee ID is null or empty. Cannot proceed with attendance reporting.");
@@ -2024,13 +2038,13 @@ public class Check_Service_Impl implements Check_Service {
 
             Map<String, UserRest> userMap = createUserMap(admins);
 
-            final List<LeaveAdminsEntity> adminEntities = Collections.synchronizedList(new ArrayList<>());
+            final List<ComponetAdminsEntity> adminEntities = Collections.synchronizedList(new ArrayList<>());
 
-            synchronized (leaveAdminsRepo) { // Use the correct repository for synchronization
+            synchronized (componetAdminsRepo) { // Use the correct repository for synchronization
                 for (Map.Entry<String, UserRest> entry : userMap.entrySet()) {
                     UserRest value = entry.getValue();
-                    LeaveAdminsEntity admin = createLeaveAdminEntity(value, leaveId);
-                    LeaveAdminsEntity savedAdmin = leaveAdminsRepo.save(admin);
+                    ComponetAdminsEntity admin = createAdminEntity(value, leaveId);
+                    ComponetAdminsEntity savedAdmin = componetAdminsRepo.save(admin);
                     adminEntities.add(savedAdmin);
                 }
             }

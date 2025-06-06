@@ -1,7 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.entity.Movement;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -95,7 +96,7 @@ public class MovementsEntity {
     private AttendanceEntity attendance;
 
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<MovementAdminsEntity> admins;
+    private List<ComponetAdminsEntity> admins;
 
     @OneToMany
     @Builder.Default

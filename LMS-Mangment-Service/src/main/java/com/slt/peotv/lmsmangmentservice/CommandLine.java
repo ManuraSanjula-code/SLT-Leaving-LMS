@@ -44,7 +44,7 @@ public class CommandLine implements CommandLineRunner {
         if(employeeEntities == null) employeeEntities = new ArrayList<>();
 
         if(!employeeEntities.isEmpty()){
-           /* accessLogService.main();
+            /*accessLogService.main();
             checkService.main();*/
         }
         List<EmployeeEntity> employeeRepoAll = (List<EmployeeEntity>) employeeRepo.findAll();

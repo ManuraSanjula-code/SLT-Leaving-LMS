@@ -1,8 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.entity.Leave;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Employee.EditedBy;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -95,7 +95,7 @@ public class LeaveEntity {
     private String userId;
     
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<LeaveAdminsEntity> admins;
+    private List<ComponetAdminsEntity> admins;
     
     @OneToOne
     @JoinColumn(name = "attendance_id")
