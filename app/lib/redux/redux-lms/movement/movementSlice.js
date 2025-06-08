@@ -49,7 +49,7 @@ export const deleteMovementRequest = createAsyncThunk(
     }
 );
 
-// Updated to send all movement fields
+// Updated to send all movement fields with proper boolean handling
 export const updateMovementRequest = createAsyncThunk(
     'movement/updateMovementRequest',
     async ({updatePayload, isAdmin}, {rejectWithValue}) => {
@@ -59,12 +59,32 @@ export const updateMovementRequest = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            // Only include fields that have actually changed
-            const cleanPayload = Object.fromEntries(
-                Object.entries(updatePayload).filter(([key, value]) =>
-                    key !== 'publicId' && value !== undefined && value !== null && value !== ''
-                )
-            );
+            // Clean payload and ensure boolean values are properly handled
+            const cleanPayload = {};
+
+            // Handle each field appropriately
+            Object.entries(updatePayload).forEach(([key, value]) => {
+                if (key !== 'publicId' && value !== undefined && value !== null) {
+                    // For boolean fields, ensure they are actual booleans
+                    if (typeof value === 'boolean' ||
+                        ['unAuthorized', 'accepted', 'pending', 'reject', 'halfDay', 'absent',
+                            'isAbsent', 'isUnSuccessfulAttdate', 'isHalfDay', 'isLate', 'isLateCover'].includes(key)) {
+                        cleanPayload[key] = Boolean(value);
+                    }
+                    // For string fields, don't include empty strings unless they're meaningful
+                    else if (typeof value === 'string' && value.trim() !== '') {
+                        cleanPayload[key] = value;
+                    }
+                    // For numbers
+                    else if (typeof value === 'number') {
+                        cleanPayload[key] = value;
+                    }
+                    // For dates (should already be ISO strings at this point)
+                    else if (value instanceof Date || (typeof value === 'string' && value.includes('T'))) {
+                        cleanPayload[key] = value;
+                    }
+                }
+            });
 
             if (isAdmin) {
                 let userInput = prompt("Enter your comment:");
@@ -72,6 +92,8 @@ export const updateMovementRequest = createAsyncThunk(
                 cleanPayload.adminId = empId;
                 cleanPayload.adminComment = userInput;
             }
+
+            console.log("Clean payload being sent:", cleanPayload);
 
             const response = await fetch(`http://localhost:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
                 method: 'PUT',
@@ -83,7 +105,8 @@ export const updateMovementRequest = createAsyncThunk(
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
             }
 
             return updatePayload;
@@ -119,6 +142,14 @@ export const fetchInOutData = createAsyncThunk(
         }
     }
 );
+
+// Helper function to safely convert to boolean
+const safeBooleanConvert = (value) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    if (typeof value === 'number') return value === 1;
+    return Boolean(value);
+};
 
 const movementSlice = createSlice({
     name: 'movement',
@@ -210,13 +241,20 @@ const movementSlice = createSlice({
                         destination: item.destination || "",
                         category: item.category || "",
 
-                        // Boolean fields
-                        unAuthorized: item.unAuthorized || false,
-                        accepted: item.accepted || false,
-                        pending: item.pending || false,
-                        reject: item.reject || false,
-                        halfDay: item.halfDay || false,
-                        absent: item.absent || false,
+                        // Boolean fields - properly converted
+                        unAuthorized: safeBooleanConvert(item.unAuthorized),
+                        accepted: safeBooleanConvert(item.accepted),
+                        pending: safeBooleanConvert(item.pending),
+                        reject: safeBooleanConvert(item.reject),
+                        halfDay: safeBooleanConvert(item.halfDay),
+                        absent: safeBooleanConvert(item.absent),
+
+                        // Additional boolean fields from MovementReq
+                        isAbsent: safeBooleanConvert(item.isAbsent),
+                        isUnSuccessfulAttdate: safeBooleanConvert(item.unSuccessfulAttdate || item.isUnSuccessfulAttdate),
+                        isHalfDay: safeBooleanConvert(item.isHalfDay),
+                        isLate: safeBooleanConvert(item.isLate),
+                        isLateCover: safeBooleanConvert(item.isLateCover),
 
                         // Original dates for editing
                         happenDate: item.happenDate || "",
@@ -224,10 +262,11 @@ const movementSlice = createSlice({
                         movementType: item.movementType || "",
                         adminsTra: item.adminsTra || [],
                         editedByDTOs: item.editedByDTOs || [],
+
                         // Additional fields
                         attSync: item.attSync || 0,
                         attendance: item.attendance || "",
-                        unSuccessfulAttdate: item.unSuccessfulAttdate || null
+                        unSuccessfulAttdate: safeBooleanConvert(item.unSuccessfulAttdate)
                     }));
 
                     state.pagination = {
@@ -250,16 +289,17 @@ const movementSlice = createSlice({
                     return request && request.publicId !== action.payload.publicId;
                 });
             })
+            .addCase(updateMovementRequest.pending, (state) => {
+                state.loading = true;
+            })
             .addCase(updateMovementRequest.fulfilled, (state, action) => {
-                // Update the specific request in the state
-                const updatedRequest = action.payload;
-                const index = state.requests.findIndex(req => req.publicId === updatedRequest.publicId);
-                if (index !== -1) {
-                    state.requests[index] = {
-                        ...state.requests[index],
-                        ...updatedRequest
-                    };
-                }
+                state.loading = false;
+                // The data will be refreshed by the component, so we don't need to update here
+                // This prevents stale data issues
+            })
+            .addCase(updateMovementRequest.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             })
             .addCase(fetchInOutData.pending, (state) => {
                 state.loadingInOutData = true;
@@ -276,14 +316,14 @@ const movementSlice = createSlice({
     }
 });
 
-// Helper function to determine status
+// Helper function to determine status with proper boolean checking
 const getStatus = (item) => {
-    if (item.pending) return "Pending";
-    if (item.accepted) return "Approved";
-    if (item.reject) return "Rejected";
-    if (item.unAuthorized) return "Unauthorized";
-    if (item.absent) return "Absent";
-    if (item.halfDay) return "Half Day";
+    if (safeBooleanConvert(item.pending)) return "Pending";
+    if (safeBooleanConvert(item.accepted)) return "Approved";
+    if (safeBooleanConvert(item.reject)) return "Rejected";
+    if (safeBooleanConvert(item.unAuthorized)) return "Unauthorized";
+    if (safeBooleanConvert(item.absent) || safeBooleanConvert(item.isAbsent)) return "Absent";
+    if (safeBooleanConvert(item.halfDay) || safeBooleanConvert(item.isHalfDay)) return "Half Day";
     return "Unknown";
 };
 

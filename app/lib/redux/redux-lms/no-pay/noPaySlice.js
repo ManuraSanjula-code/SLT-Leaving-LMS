@@ -8,7 +8,7 @@ export const fetchNoPayRecords = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            // Set the base URL based on admin status
+            // Set the base URL based on -admin status
             let baseUrl = isAdmin
                 ? "http://localhost:8080/lms/no-pay/" + empId
                 : `http://localhost:8080/lms/no-pay/user/${userId}/${empId}`;
@@ -19,7 +19,7 @@ export const fetchNoPayRecords = createAsyncThunk(
                 size: size.toString()
             });
 
-            // Add additional query params if in admin mode and filtering by user ID
+            // Add additional query params if in -admin mode and filtering by user ID
             if (isAdmin && userIdFilter) {
                 queryParams.append('userId', userIdFilter);
             }

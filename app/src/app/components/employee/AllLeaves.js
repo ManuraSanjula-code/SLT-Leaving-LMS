@@ -49,10 +49,10 @@ import {
     fetchLeaveBalances,
     deleteLeaveRequest,
     fetchInOutData,
-    // updateLeaveRequest, // Add this when you implement it
+    updateLeaveRequest,
 } from "../../../../lib/redux/redux-lms/leave/leaveSlice";
 
-const PendingLeaves = ({ isAdmin = false, userId = null }) => {
+const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) => {
     const dispatch = useDispatch();
 
     // Check both possible state locations based on your Redux configuration
@@ -137,6 +137,22 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         endDate: "",
         type: "",
         comment: "",
+        isHalfDay: false,
+        isFullDay: false,
+        // Fields everyone can update
+        isUnauthorized: false,
+        isManualRequest: false,
+        isAbsent: false,
+        isLateCover: false,
+        isLate: false,
+        isShort_Leave: false,
+        notUsed: false,
+        // Admin-only fields
+        isEdited: false,
+        isReject: false,
+        isCanceled: false,
+        isAccepted: false,
+        isPending: false,
     });
 
     useEffect(() => {
@@ -147,6 +163,7 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         dispatch(
             fetchLeaveData({
                 isAdmin,
+                userAdmin,
                 userId: userIdToUse,
                 page: currentPage - 1,
                 size: pageSize,
@@ -235,14 +252,38 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         setDeleteDialogOpen(true);
     };
 
+    // Updated openEditDialog function to properly load all data
     const openEditDialog = (leave) => {
+        console.log('Opening edit dialog for leave:', leave);
+
         setCurrentLeave(leave);
         setEditFormData({
             startDate: leave.startDate || "",
             endDate: leave.endDate || "",
-            type: leave.leaveTypeName || "",
+            type: leave.leaveTypeName || leave.type || "",
             comment: leave.comment || "",
+
+            // Day type flags
+            isHalfDay: Boolean(leave.halfDay),
+            isFullDay: Boolean(leave.fullDay),
+
+            // Regular user fields - load from originalItem to get all backend fields
+            isUnauthorized: Boolean(leave.originalItem?.unauthorized),
+            isManualRequest: Boolean(leave.manualRequest),
+            isAbsent: Boolean(leave.absent),
+            isLateCover: Boolean(leave.originalItem?.lateCover),
+            isLate: Boolean(leave.late),
+            isShort_Leave: Boolean(leave.originalItem?.short_Leave),
+            notUsed: Boolean(leave.originalItem?.notUsed),
+
+            // Admin-only fields
+            isEdited: Boolean(leave.originalItem?.edited),
+            isReject: Boolean(leave.reject),
+            isCanceled: Boolean(leave.canceled),
+            isAccepted: Boolean(leave.accepted),
+            isPending: Boolean(leave.pending),
         });
+
         setEditDialogOpen(true);
     };
 
@@ -268,8 +309,43 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
     };
 
     const handleEditFormChange = (e) => {
-        const { name, value } = e.target;
-        setEditFormData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, checked, type } = e.target;
+
+        if (type === 'checkbox') {
+            // Handle checkbox logic for half-day and full-day (mutually exclusive)
+            if (name === 'isHalfDay' && checked) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    [name]: checked,
+                    isFullDay: false // Uncheck full day if half day is selected
+                }));
+            } else if (name === 'isFullDay' && checked) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    [name]: checked,
+                    isHalfDay: false // Uncheck half day if full day is selected
+                }));
+            }
+            // Handle admin-only status checkboxes (mutually exclusive)
+            else if (['isAccepted', 'isReject', 'isPending', 'isCanceled'].includes(name) && checked) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    // Reset all status fields
+                    isAccepted: false,
+                    isReject: false,
+                    isPending: false,
+                    isCanceled: false,
+                    // Set the selected one
+                    [name]: checked
+                }));
+            }
+            // Handle other checkboxes (can be multiple or independent)
+            else {
+                setEditFormData((prev) => ({ ...prev, [name]: checked }));
+            }
+        } else {
+            setEditFormData((prev) => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleDeleteLeaveRequest = async () => {
@@ -313,25 +389,62 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
         }
     };
 
+    // Updated handleSaveEditedLeave function with proper field mapping
     const handleSaveEditedLeave = async () => {
         if (!currentLeave) return;
 
-        /*
-        const updatedLeave = {
-            ...currentLeave,
+        // Calculate number of days based on date range
+        const startDate = new Date(editFormData.startDate);
+        const endDate = new Date(editFormData.endDate);
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+
+        // Create the update payload with proper field mapping to match backend LeaveReq
+        const updatePayload = {
+            publicId: currentLeave.publicId,
+
+            // Basic fields
             fromDate: editFormData.startDate,
             toDate: editFormData.endDate,
-            description: editFormData.comment,
             leaveType: editFormData.type,
+            description: editFormData.comment,
+            numOfDays: editFormData.isHalfDay ? 0.5 : daysDiff,
+            happenDate: editFormData.startDate,
+            userId: currentLeave.originalItem?.userId || currentLeave.userId,
+            employeeID: currentLeave.employeeId,
+            isNoPay: currentLeave.originalItem?.isNoPay || 0,
+
+            // Boolean fields - using exact backend field names (without 'is' prefix)
+            halfDay: editFormData.isHalfDay,
+            fullDay: editFormData.isFullDay,
+            unauthorized: editFormData.isUnauthorized,
+            manualRequest: editFormData.isManualRequest,
+            absent: editFormData.isAbsent,
+            lateCover: editFormData.isLateCover,
+            late: editFormData.isLate,
+            short_Leave: editFormData.isShort_Leave,
+            notUsed: editFormData.notUsed,
+            unSuccessful: currentLeave.originalItem?.unSuccessful || false,
         };
+
+        // Admin-only fields (only include if user is admin)
+        if (isAdmin) {
+            updatePayload.edited = editFormData.isEdited;
+            updatePayload.reject = editFormData.isReject;
+            updatePayload.canceled = editFormData.isCanceled;
+            updatePayload.accepted = editFormData.isAccepted;
+            updatePayload.pending = editFormData.isPending;
+        }
 
         try {
             await dispatch(
                 updateLeaveRequest({
-                    updatePayload: { publicId: currentLeave.publicId, ...updatedLeave },
-                    isAdmin
+                    updatePayload: updatePayload,
+                    isAdmin: isAdmin
                 })
             ).unwrap();
+
+            // Refresh the data
             dispatch(
                 fetchLeaveData({
                     isAdmin,
@@ -343,11 +456,9 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
             handleCloseDialogs();
         } catch (err) {
             console.error("Update failed:", err);
+            // Show error message to user
+            alert(`Update failed: ${err.message || err}`);
         }
-        */
-
-        // For now just close since updateLeaveRequest is commented out
-        handleCloseDialogs();
     };
 
     const formatDate = (dateString) => {
@@ -622,14 +733,16 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                             />
                         </Box>
 
-                        {/* Edit Dialog */}
+                        {/* Enhanced Edit Dialog */}
                         <Dialog
                             open={editDialogOpen}
                             onClose={handleCloseDialogs}
                             maxWidth="sm"
                             fullWidth
                         >
-                            <DialogTitle>Edit Leave Request</DialogTitle>
+                            <DialogTitle>
+                                {isAdmin ? "Edit Leave Request (Admin)" : "Edit Leave Request"}
+                            </DialogTitle>
                             <DialogContent>
                                 <Box sx={{ mt: 2 }}>
                                     <TextField
@@ -666,6 +779,157 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                             <MenuItem value="Casual Leave">Casual Leave</MenuItem>
                                         </Select>
                                     </FormControl>
+
+                                    {/* Day Type Selection */}
+                                    <Box sx={{ mt: 2, mb: 2 }}>
+                                        <Typography variant="subtitle2" gutterBottom>
+                                            Leave Duration
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isHalfDay"
+                                                    checked={editFormData.isHalfDay}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Half Day</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isFullDay"
+                                                    checked={editFormData.isFullDay}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Full Day</Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+
+                                    {/* Leave Type Controls - Available to all users */}
+                                    <Box sx={{ mt: 2, mb: 2 }}>
+                                        <Typography variant="subtitle2" gutterBottom>
+                                            Leave Type Controls
+                                        </Typography>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isAbsent"
+                                                    checked={editFormData.isAbsent}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Absent</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isLate"
+                                                    checked={editFormData.isLate}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Late</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isLateCover"
+                                                    checked={editFormData.isLateCover}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Late Cover</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isShort_Leave"
+                                                    checked={editFormData.isShort_Leave}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Short Leave</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isUnauthorized"
+                                                    checked={editFormData.isUnauthorized}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Unauthorized</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="isManualRequest"
+                                                    checked={editFormData.isManualRequest}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Manual Request</Typography>
+                                            </Box>
+                                        </Box>
+                                        <Box sx={{ mt: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Checkbox
+                                                    name="notUsed"
+                                                    checked={editFormData.notUsed}
+                                                    onChange={handleEditFormChange}
+                                                />
+                                                <Typography variant="body2">Not Used</Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+
+                                    {/* Admin-only fields */}
+                                    {isAdmin && (
+                                        <>
+                                            <Typography variant="subtitle2" gutterBottom sx={{ mt: 3, color: 'primary.main' }}>
+                                                Admin-Only Controls
+                                            </Typography>
+
+                                            {/* Status Controls - Admin Only */}
+                                            <Box sx={{ mt: 2, mb: 2 }}>
+                                                <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                                    Status Controls (Admin Only)
+                                                </Typography>
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Checkbox
+                                                            name="isAccepted"
+                                                            checked={editFormData.isAccepted}
+                                                            onChange={handleEditFormChange}
+                                                        />
+                                                        <Typography variant="body2">Accepted</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Checkbox
+                                                            name="isReject"
+                                                            checked={editFormData.isReject}
+                                                            onChange={handleEditFormChange}
+                                                        />
+                                                        <Typography variant="body2">Rejected</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Checkbox
+                                                            name="isPending"
+                                                            checked={editFormData.isPending}
+                                                            onChange={handleEditFormChange}
+                                                        />
+                                                        <Typography variant="body2">Pending</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Checkbox
+                                                            name="isCanceled"
+                                                            checked={editFormData.isCanceled}
+                                                            onChange={handleEditFormChange}
+                                                        />
+                                                        <Typography variant="body2">Canceled</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Checkbox
+                                                            name="isEdited"
+                                                            checked={editFormData.isEdited}
+                                                            onChange={handleEditFormChange}
+                                                        />
+                                                        <Typography variant="body2">Edited</Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </>
+                                    )}
+
                                     <TextField
                                         label="Comment"
                                         name="comment"
@@ -676,6 +940,12 @@ const PendingLeaves = ({ isAdmin = false, userId = null }) => {
                                         multiline
                                         rows={3}
                                     />
+
+                                    {isAdmin && (
+                                        <Alert severity="info" sx={{ mt: 2 }}>
+                                            As an admin, you will be prompted to enter a comment when saving changes.
+                                        </Alert>
+                                    )}
                                 </Box>
                             </DialogContent>
                             <DialogActions>

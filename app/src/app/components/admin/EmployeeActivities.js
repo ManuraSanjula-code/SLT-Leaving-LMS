@@ -160,6 +160,12 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                     </ListItem>
                                     <ListItem>
                                         <ListItemText
+                                            primary="Public ID"
+                                            secondary={activity.publicId || "-"}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
                                             primary="Date"
                                             secondary={formatDate(activity.date)}
                                         />
@@ -287,6 +293,211 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                         </Card>
                     </Grid>
 
+                    {/* In-Out Records */}
+                    {activity.inOutDTOs && activity.inOutDTOs.length > 0 && (
+                        <Grid item xs={12}>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                        <EventIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                        In-Out Records
+                                    </Typography>
+                                    {activity.inOutDTOs.map((inOut, index) => (
+                                        <Box key={index} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Employee ID
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {inOut.employeeID || "-"}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Type
+                                                    </Typography>
+                                                    <Chip
+                                                        label={inOut.moaning ? "Morning IN" : inOut.evening ? "Evening OUT" : "Unknown"}
+                                                        size="small"
+                                                        color={inOut.moaning ? "success" : inOut.evening ? "error" : "default"}
+                                                        variant="outlined"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Time
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {inOut.timeMoa || inOut.timeEve || "-"}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Terminal
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '0.8rem',
+                                                        bgcolor: 'grey.100',
+                                                        p: 0.5,
+                                                        borderRadius: 0.5,
+                                                        display: 'inline-block'
+                                                    }}>
+                                                        {inOut.terminalID ? inOut.terminalID.trim() : "-"}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        In/Out Status
+                                                    </Typography>
+                                                    <Chip
+                                                        label={inOut.inOut === 1 ? "IN" : "OUT"}
+                                                        size="small"
+                                                        color={inOut.inOut === 1 ? "success" : "error"}
+                                                        variant="filled"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Date
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {formatDate(inOut.date)}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Punch In Morning
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {formatDate(inOut.punchInMoa)}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Punch In Evening
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        {formatDate(inOut.punchInEv)}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={6} md={3}>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Past Status
+                                                    </Typography>
+                                                    <Chip
+                                                        label={inOut.past ? "Past" : "Current"}
+                                                        size="small"
+                                                        color={inOut.past ? "warning" : "info"}
+                                                        variant="outlined"
+                                                    />
+                                                </Grid>
+
+                                                {/* Access Log Details */}
+                                                {inOut.accessLog && (
+                                                    <Grid item xs={12}>
+                                                        <Divider sx={{ my: 1 }} />
+                                                        <Typography variant="subtitle2" color="primary" gutterBottom>
+                                                            Access Log Details
+                                                        </Typography>
+                                                        <Grid container spacing={2}>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    Log Date
+                                                                </Typography>
+                                                                <Typography variant="body2">
+                                                                    {inOut.accessLog.logDate || "-"}
+                                                                </Typography>
+                                                            </Grid>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    Log Time
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                                    {inOut.accessLog.logTime ? inOut.accessLog.logTime.trim() : "-"}
+                                                                </Typography>
+                                                            </Grid>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    Terminal ID
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{
+                                                                    fontFamily: 'monospace',
+                                                                    fontSize: '0.75rem'
+                                                                }}>
+                                                                    {inOut.accessLog.terminalID ? inOut.accessLog.terminalID.trim() : "-"}
+                                                                </Typography>
+                                                            </Grid>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    In/Out
+                                                                </Typography>
+                                                                <Typography variant="body2">
+                                                                    {inOut.accessLog.inOut ? inOut.accessLog.inOut.trim() : "-"}
+                                                                </Typography>
+                                                            </Grid>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    Read Status
+                                                                </Typography>
+                                                                <Typography variant="body2">
+                                                                    {inOut.accessLog.readStatus || "-"}
+                                                                </Typography>
+                                                            </Grid>
+                                                            <Grid item xs={6} md={3}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    Processed
+                                                                </Typography>
+                                                                <Chip
+                                                                    label={inOut.accessLog.processed ? "Yes" : "No"}
+                                                                    size="small"
+                                                                    color={inOut.accessLog.processed ? "success" : "error"}
+                                                                    variant="outlined"
+                                                                />
+                                                            </Grid>
+                                                            <Grid item xs={12} md={6}>
+                                                                <Typography variant="body2" color="textSecondary">
+                                                                    ETL Run Time
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                                                    {formatDate(inOut.accessLog.etlRunTime)}
+                                                                </Typography>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Grid>
+                                                )}
+                                            </Grid>
+                                        </Box>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    )}
+
+                    {/* Edited By Information */}
+                    {activity.editedByDTOs && activity.editedByDTOs.length > 0 && (
+                        <Grid item xs={12}>
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                        Edit History
+                                    </Typography>
+                                    {activity.editedByDTOs.map((edit, index) => (
+                                        <Box key={index} sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                            <Typography variant="body2">
+                                                Edited by: {edit.editorName || edit.editorId || "Unknown"}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Date: {formatDate(edit.editDate)}
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    )}
+
                     {/* System Information */}
                     <Grid item xs={12}>
                         <Card variant="outlined">
@@ -295,7 +506,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                     System Information
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={12} md={3}>
+                                    <Grid item xs={12} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Terminal ID
                                         </Typography>
@@ -304,20 +515,13 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                             fontSize: '0.8rem',
                                             bgcolor: 'grey.100',
                                             p: 0.5,
-                                            borderRadius: 0.5
+                                            borderRadius: 0.5,
+                                            wordBreak: 'break-all'
                                         }}>
                                             {activity.terminalID ? activity.terminalID.trim() : "-"}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Public ID
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                            {activity.publicId || "-"}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={6} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Record ID
                                         </Typography>
@@ -325,7 +529,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                             {activity.id || "-"}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={6} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Entry Type
                                         </Typography>
@@ -336,7 +540,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                             variant="outlined"
                                         />
                                     </Grid>
-                                    <Grid item xs={6} md={3}>
+                                    <Grid item xs={6} md={4}>
                                         <Typography variant="body2" color="textSecondary">
                                             Record Status
                                         </Typography>
@@ -344,6 +548,28 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                             label={activity.active !== false ? "Active" : "Inactive"}
                                             size="small"
                                             color={activity.active !== false ? "success" : "error"}
+                                            variant="outlined"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={6} md={4}>
+                                        <Typography variant="body2" color="textSecondary">
+                                            Late Cover
+                                        </Typography>
+                                        <Chip
+                                            label={activity.lateCover ? "Yes" : "No"}
+                                            size="small"
+                                            color={activity.lateCover ? "warning" : "default"}
+                                            variant="outlined"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={6} md={4}>
+                                        <Typography variant="body2" color="textSecondary">
+                                            Leave Request
+                                        </Typography>
+                                        <Chip
+                                            label={activity.leaveReq ? "Yes" : "No"}
+                                            size="small"
+                                            color={activity.leaveReq ? "info" : "default"}
                                             variant="outlined"
                                         />
                                     </Grid>
@@ -440,7 +666,7 @@ const EmployeeActivities = () => {
     // Menu handlers
     const handleMenuClick = useCallback((event, activity) => {
         setAnchorEl(event.currentTarget);
-        setSelectedEmployeeId(activity.userId); // Changed from userId to employeeID
+        setSelectedEmployeeId(activity.userId);
         setSelectedActivity(activity);
     }, []);
 
@@ -487,15 +713,37 @@ const EmployeeActivities = () => {
         return "Normal";
     };
 
-    // Get activity type
+    // Get activity type - simplified for -admin view
     const getActivityType = (activity) => {
-        if (activity.fullDay) return "Full Day";
-        if (activity.halfDay) return "Half Day";
+        if (activity.absent) return "Absent";
         if (activity.fullLeave) return "Full Leave";
         if (activity.shortLeave) return "Short Leave";
-        if (activity.absent) return "Absent";
+        if (activity.halfDay) return "Half Day";
+        if (activity.late && activity.fullDay) return "Late (Full Day)";
         if (activity.late) return "Late";
-        return "Unknown";
+        if (activity.fullDay) return "Present";
+        return "Present";
+    };
+
+    // Get attendance status for -admin view
+    const getAttendanceStatus = (activity) => {
+        if (activity.unAuthorized) return "Unauthorized";
+        if (activity.absent) return "Absent";
+        if (activity.unSuccessful) return "Unsuccessful";
+        if (activity.issues && !activity.resolve) return "Has Issues";
+        if (activity.leaveSuccess) return "Leave Approved";
+        if (activity.fullLeave || activity.shortLeave) return "On Leave";
+        if (activity.late) return "Late";
+        return "Present";
+    };
+
+    // Get status color for attendance
+    const getAttendanceStatusColor = (activity) => {
+        if (activity.unAuthorized || activity.absent || activity.unSuccessful) return "error";
+        if (activity.issues && !activity.resolve) return "warning";
+        if (activity.leaveSuccess || activity.fullLeave || activity.shortLeave) return "info";
+        if (activity.late) return "warning";
+        return "success";
     };
 
     if (loading) {
@@ -580,19 +828,19 @@ const EmployeeActivities = () => {
                     />
 
                     <FormControl variant="outlined" sx={{ minWidth: 150 }}>
-                        <InputLabel>Activity Type</InputLabel>
+                        <InputLabel>Attendance Type</InputLabel>
                         <Select
                             value={filterType}
                             onChange={handleFilterTypeChange}
-                            label="Activity Type"
+                            label="Attendance Type"
                         >
                             <MenuItem value="all">All Types</MenuItem>
-                            <MenuItem value="fullDay">Full Day</MenuItem>
+                            <MenuItem value="fullDay">Present</MenuItem>
+                            <MenuItem value="late">Late</MenuItem>
                             <MenuItem value="halfDay">Half Day</MenuItem>
+                            <MenuItem value="absent">Absent</MenuItem>
                             <MenuItem value="fullLeave">Full Leave</MenuItem>
                             <MenuItem value="shortLeave">Short Leave</MenuItem>
-                            <MenuItem value="absent">Absent</MenuItem>
-                            <MenuItem value="late">Late</MenuItem>
                         </Select>
                     </FormControl>
 
@@ -604,9 +852,9 @@ const EmployeeActivities = () => {
                             label="Status"
                         >
                             <MenuItem value="all">All Statuses</MenuItem>
-                            <MenuItem value="Approved">Approved</MenuItem>
+                            <MenuItem value="Approved">Leave Approved</MenuItem>
                             <MenuItem value="Pending">Pending</MenuItem>
-                            <MenuItem value="Not Approved">Not Approved</MenuItem>
+                            <MenuItem value="Not Approved">Issues/Unauthorized</MenuItem>
                         </Select>
                     </FormControl>
 
@@ -634,70 +882,87 @@ const EmployeeActivities = () => {
                     )}
                 </Box>
 
-                {/* Table of Employee Activities */}
+                {/* Table of Employee Activities - Clean Admin View */}
                 <TableContainer component={Paper}>
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>SLT ID</TableCell>
-                                <TableCell>Terminal ID</TableCell>
-                                <TableCell>Type</TableCell>
-                                <TableCell>Date</TableCell>
-                                <TableCell>Arrival Time</TableCell>
-                                <TableCell>Left Time</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Issue</TableCell>
-                                <TableCell>Actions</TableCell>
+                                <TableCell><strong>Employee ID</strong></TableCell>
+                                <TableCell><strong>Date</strong></TableCell>
+                                <TableCell><strong>In Time</strong></TableCell>
+                                <TableCell><strong>Out Time</strong></TableCell>
+                                <TableCell><strong>Attendance</strong></TableCell>
+                                <TableCell><strong>Status</strong></TableCell>
+                                <TableCell align="center"><strong>Actions</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {filteredActivities.map((activity) => (
-                                <TableRow key={activity.id}>
-                                    <TableCell>{activity.employeeID}</TableCell>
+                                <TableRow key={activity.id} hover>
+                                    <TableCell>
+                                        <Typography variant="body1" fontWeight="medium">
+                                            {activity.employeeID}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {new Date(activity.arrivalDate).toLocaleDateString('en-US', {
+                                                weekday: 'short',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </Typography>
+                                    </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" sx={{
                                             fontFamily: 'monospace',
-                                            fontSize: '0.75rem',
-                                            bgcolor: 'grey.100',
-                                            px: 1,
-                                            py: 0.5,
-                                            borderRadius: 0.5,
-                                            display: 'inline-block'
+                                            color: activity.arrivalTime ? 'text.primary' : 'text.secondary'
                                         }}>
-                                            {activity.terminalID ? activity.terminalID.trim() : '-'}
+                                            {activity.arrivalTime || 'Not Recorded'}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell>{getActivityType(activity)}</TableCell>
-                                    <TableCell>{new Date(activity.arrivalDate).toLocaleDateString()}</TableCell>
-                                    <TableCell>{activity.arrivalTime || '-'}</TableCell>
-                                    <TableCell>{activity.leftTime || '-'}</TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{
+                                            fontFamily: 'monospace',
+                                            color: activity.leftTime ? 'text.primary' : 'text.secondary'
+                                        }}>
+                                            {activity.leftTime || 'Not Recorded'}
+                                        </Typography>
+                                    </TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={getStatusText(activity)}
-                                            color={getStatusColor(activity)}
+                                            label={getActivityType(activity)}
                                             size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                minWidth: '80px',
+                                                fontWeight: 'medium'
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        {activity.issues ? (
-                                            <Chip
-                                                label="Yes"
-                                                color="error"
-                                                size="small"
-                                                title={activity.issueDescription}
-                                            />
-                                        ) : (
-                                            <Chip
-                                                label="No"
-                                                color="success"
-                                                size="small"
-                                            />
-                                        )}
+                                        <Chip
+                                            label={getAttendanceStatus(activity)}
+                                            color={getAttendanceStatusColor(activity)}
+                                            size="small"
+                                            sx={{
+                                                minWidth: '90px',
+                                                fontWeight: 'medium'
+                                            }}
+                                        />
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell align="center">
                                         <IconButton
                                             onClick={(event) => handleMenuClick(event, activity)}
                                             aria-label="more actions"
+                                            size="small"
+                                            sx={{
+                                                bgcolor: 'action.hover',
+                                                '&:hover': {
+                                                    bgcolor: 'primary.light',
+                                                    color: 'white'
+                                                }
+                                            }}
                                         >
                                             <MoreHorizIcon />
                                         </IconButton>

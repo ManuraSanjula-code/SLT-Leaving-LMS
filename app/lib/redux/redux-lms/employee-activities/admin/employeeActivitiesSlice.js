@@ -1,7 +1,5 @@
-// src/redux/slices/activityRecordsSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Async thunk for fetching employee activity records
 export const fetchActivityRecords = createAsyncThunk(
     'activityRecords/fetchActivityRecords',
     async ({ page, rowsPerPage }, { rejectWithValue }) => {

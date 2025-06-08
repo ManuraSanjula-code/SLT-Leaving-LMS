@@ -83,8 +83,8 @@ public class ApprovalProcessor {
                 MovementsEntity movementEntity = movementsEntity.get();
 
                 // Add validation
-                if (!movementEntity.getUserId().equals(userId) &&
-                        !movementEntity.getEmployeeId().equals(userId)) {
+                if (!movementEntity.getEmployee().getPublicId().equals(userId) &&
+                        !movementEntity.getEmployee().getEmployeeId().equals(userId)) {
                     logger.warn("User {} not authorized to approve movement {}", userId, moveId);
                     return;
                 }
@@ -115,8 +115,8 @@ public class ApprovalProcessor {
                 LeaveEntity leaveEntity = leaveEntityOp.get();
 
                 // Add validation
-                if (!leaveEntity.getUserId().equals(userId) &&
-                        !leaveEntity.getEmployeeID().equals(userId)) {
+                if (!leaveEntity.getEmployee().getPublicId().equals(userId) &&
+                        !leaveEntity.getEmployee().getEmployeeId().equals(userId)) {
                     logger.warn("User {} not authorized to approve leave {}", userId, leaveId);
                     return;
                 }
@@ -146,7 +146,7 @@ public class ApprovalProcessor {
                 Optional<MovementsEntity> movementsOpt = movementsRepo.findByPublicId(id);
                 if (movementsOpt.isPresent()) {
                     MovementsEntity movementsEntity = movementsOpt.get();
-                    if (!movementsEntity.getUserId().equals(userId)) {
+                    if (!movementsEntity.getEmployee().getPublicId().equals(userId)) {
                         logger.warn("User {} not authorized to reject movement {}", userId, id);
                         return;
                     }
@@ -160,7 +160,7 @@ public class ApprovalProcessor {
                 Optional<LeaveEntity> leaveEntityOpt = leaveRepo.findByPublicId(id);
                 if (leaveEntityOpt.isPresent()) {
                     LeaveEntity leaveEntity = leaveEntityOpt.get();
-                    if (!leaveEntity.getUserId().equals(userId)) {
+                    if (!leaveEntity.getEmployee().getPublicId().equals(userId)) {
                         logger.warn("User {} not authorized to reject leave {}", userId, id);
                         return;
                     }

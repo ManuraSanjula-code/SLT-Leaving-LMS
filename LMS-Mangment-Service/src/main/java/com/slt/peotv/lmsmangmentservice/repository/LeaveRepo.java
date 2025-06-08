@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,29 +14,17 @@ import java.util.Optional;
 @Repository
 public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
     Page<LeaveEntity> findAll(Pageable pageable);
-    Page<LeaveEntity> findByUserId(Pageable pageable, String userId);
-
-    Page<LeaveEntity> findByEmployeeID(String employeeID, Pageable pageable);
-    List<LeaveEntity> findByEmployeeID(String employeeID);
-    Optional<LeaveEntity> findByEmployeeIDAndSubmitDate(String employeeID, Date submitDate);
-    Page<LeaveEntity> findByUserId(String userId, Pageable pageable);
-    List<LeaveEntity> findByUserId(String userId);
-
+    Page<LeaveEntity> findByEmployee(EmployeeEntity employee, Pageable pageable);
+    List<LeaveEntity> findByEmployee(EmployeeEntity employee);
+    Optional<LeaveEntity> findByEmployeeAndSubmitDate(EmployeeEntity employeeID, Date submitDate);
     Optional<LeaveEntity> findByPublicId(String publicId);
     List<LeaveEntity> findByFromDate(Date fromDate);
-    List<LeaveEntity> findByEmployeeIDAndFromDateLessThanEqualAndToDateGreaterThanEqual(String employeeID, Date currentDate1, Date currentDate2);
-    List<LeaveEntity> findByEmployeeIDAndIsManualRequest(String employeeID, Boolean isManualRequest);
-    /*List<LeaveEntity> findByUserAndFromDateLessThanEqualAndToDateGreaterThanEqual(UserEntity user, Date currentDate);
-    @Query("SELECT l FROM LeaveEntity l WHERE l.user.id = :userId AND l.fromDate <= :date AND l.toDate >= :date AND (l.isSupervisedApproved = true AND l.isHODApproved = true)")
-    List<LeaveEntity> findActiveLeaveByUserAndDate(@Param("userId") Long userId, @Param("date") Date date);
+    List<LeaveEntity> findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(EmployeeEntity employee, Date currentDate1, Date currentDate2);
+    List<LeaveEntity> findByEmployeeAndIsManualRequest(EmployeeEntity employee, Boolean isManualRequest);
+    List<LeaveEntity> findApprovedLeavesByEmployeeAndFromDateAndToDate(EmployeeEntity employee, Date fromDate, Date toDate);
 
-    @Query("SELECT e FROM LeaveEntity e WHERE e.dueDate < :currentDate")
-    List<LeaveEntity> findOverdueEntities(@Param("currentDate") Date currentDate);*/
-
-    List<LeaveEntity> findApprovedLeavesByEmployeeIDAndFromDateAndToDate(String employeeID, Date fromDate, Date toDate);
-
-    List<LeaveEntity> findByEmployeeIDAndSubmitDateBetween(
-            String employeeID,
+    List<LeaveEntity> findByEmployeeAndSubmitDateBetween(
+            EmployeeEntity employee,
             Date startDate,
             Date endDate
     );

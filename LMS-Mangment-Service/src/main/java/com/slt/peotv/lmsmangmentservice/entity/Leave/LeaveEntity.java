@@ -3,6 +3,7 @@ package com.slt.peotv.lmsmangmentservice.entity.Leave;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,7 +28,6 @@ public class LeaveEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    private String employeeID;
 
     @Column(name = "submit_date", nullable = false)
     private Date submitDate;
@@ -37,6 +37,9 @@ public class LeaveEntity {
 
     @Column(name = "to_date", nullable = false)
     private Date toDate;
+
+    @ManyToOne
+    private EmployeeEntity employee;
 
     @ManyToOne
     @JoinColumn(name = "leave_type_id", foreignKey = @ForeignKey(name = "FK_leave_type"))
@@ -90,10 +93,7 @@ public class LeaveEntity {
     private Boolean isManualRequest = false;
     
     private Date happenDate;
-    
-    @Column(name = "user_id")
-    private String userId;
-    
+
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<ComponetAdminsEntity> admins;
     

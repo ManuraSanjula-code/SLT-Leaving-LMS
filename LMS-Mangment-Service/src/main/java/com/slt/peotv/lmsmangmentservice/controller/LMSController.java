@@ -245,8 +245,8 @@ public class LMSController {
     public Page<LeaveDTO> getAllLeaveByUserId(@PathVariable String userId,
                                               @PathVariable String empId,
                                               @RequestParam(defaultValue = "0") int page,
-                                              @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllLeaveByUserByUserId(userId, page, size);
+                                              @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllLeaveByUserByUserId(userId, page, size, isAdmin);
     }
 
     /// ----------------- ADMIN-----------------------------
@@ -256,16 +256,16 @@ public class LMSController {
     public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(@PathVariable String userId,
                                                          @PathVariable String empId,
                                                          @RequestParam(defaultValue = "0") int page,
-                                                         @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size);
+                                                         @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size, isAdmin);
     }
     /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/leave/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<LeaveDTO> getAllLeave(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                      @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllLeaves(page, size);
+                                      @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
+        return lmsService.getAllLeaves(page, size,isAdmin);
     }
 
     @DeleteMapping("/leave/{leaveId}/{empId}")
@@ -389,15 +389,15 @@ public class LMSController {
 
     @GetMapping("/absent/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Page<AbsenteeDTO> getAllAbsenteeByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
+    public Page<AttendanceDTO> getAllAbsenteeByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllAbsenteeByUserId(userId, page, size);
+        return lmsService.getAllAbsentByUser(page, size ,userId);
     }
 
     @GetMapping("/absent/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Page<AbsenteeDTO> getAllAbsentee(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
+    public Page<AttendanceDTO> getAllAbsentee(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllAbsentee(page, size);
+        return lmsService.getAllAbsent(page, size);
     }
 }

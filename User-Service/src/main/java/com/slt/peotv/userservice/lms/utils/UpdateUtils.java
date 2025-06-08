@@ -58,7 +58,7 @@ public class UpdateUtils {
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    @Deprecated
+    /*@Deprecated
     public UserDto updateUser(String userId, UserDto userDto) {
         // Find the user entity by userId
         UserEntity userEntity = userRepository.findByUserId(userId);
@@ -113,7 +113,7 @@ public class UpdateUtils {
 
         // Return the updated user as a DTO
         return UserMapper.mapToUserDto(updatedUserEntity);
-    }
+    }*/
 
     @Transactional
     public UserDto updateUser(String userId, UserReq userReq) {

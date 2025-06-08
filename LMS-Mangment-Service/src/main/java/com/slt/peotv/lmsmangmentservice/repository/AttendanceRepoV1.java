@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
@@ -51,3 +52,4 @@ public interface AttendanceRepoV1 extends CrudRepository<AttendanceEntity, Long>
     List<AttendanceEntity> findByEmployeeIDAndDateAndTerminalID(String employeeID, Date date, String terminalID);
     long countByEmployeeIDAndDate(String employeeID, Date date);
 }
+*/

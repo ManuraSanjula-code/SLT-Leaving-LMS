@@ -1,176 +1,123 @@
 package com.slt.peotv.lmsmangmentservice.model.req;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
-
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import lombok.ToString;
-
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.Objects;
 
+@Data
 @ToString
 public class MovementReq {
+
+    @NotBlank(message = "Employee ID is required")
     private String employeeId;
+
+    @NotBlank(message = "User ID is required")
     private String userId;
+
+    @NotNull(message = "Movement type is required")
     private MovementType movementType;
+
     private String comment;
+
+    @NotBlank(message = "Destination is required")
     private String destination;
+
     private String category;
+
+    @NotNull(message = "Happen date is required")
     private Date happenDate;
-    private Boolean isAbsent;
-    private Boolean isUnSuccessfulAttdate;
-    private Boolean isHalfDay;
-    private Boolean unAuthorized;
+
+    private Boolean isAbsent = false;
+    private Boolean isUnSuccessfulAttdate = false;
+    private Boolean isHalfDay = false;
+    private Boolean unAuthorized = false;
     private Boolean isLate = false;
     private Boolean isLateCover = false;
+
+    @NotNull(message = "Log time is required")
+
     private Date logTime;
-    private String intime;
-    private String outtime;
+
+    @NotBlank(message = "In time is required")
+    private String intime = "00:00";
+
+    @NotBlank(message = "Out time is required")
+    private String outtime = "00:00";
+
     private String adminId;
     private String adminComment;
 
-    public String getEmployeeId() {
-        return employeeId;
+    public boolean validateMovementReq() {
+        // Basic null and empty checks
+        if (Objects.isNull(this.employeeId) || this.employeeId.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.userId) || this.userId.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.movementType)) {
+            return false;
+        }
+
+        if (Objects.isNull(this.destination) || this.destination.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.happenDate)) {
+            return false;
+        }
+
+        if (Objects.isNull(this.logTime)) {
+            return false;
+        }
+
+        if (Objects.isNull(this.intime) || this.intime.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.outtime) || this.outtime.trim().isEmpty()) {
+            return false;
+        }
+        // Additional business logic validations
+        if (this.happenDate != null && this.logTime != null) {
+            // Ensure happenDate is not in the future
+            if (this.happenDate.after(new Date())) {
+                return false;
+            }
+        }
+        // Validate time format if needed (assuming HH:mm format)
+        /*if (!isValidTimeFormat(this.intime) || !isValidTimeFormat(this.outtime)) {
+            return false;
+        }*/
+
+        return true;
     }
 
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
+    private boolean isValidTimeFormat(String time) {
+        if (time == null || time.trim().isEmpty()) {
+            return false;
+        }
+
+        // Simple regex for HH:mm format
+        String timePattern = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$";
+        return time.matches(timePattern);
     }
 
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public MovementType getMovementType() {
-        return movementType;
-    }
-
-    public void setMovementType(MovementType movementType) {
-        this.movementType = movementType;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public String getDestination() {
-        return destination;
-    }
-
-    public void setDestination(String destination) {
-        this.destination = destination;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public Date getHappenDate() {
-        return happenDate;
-    }
-
-    public void setHappenDate(Date happenDate) {
-        this.happenDate = happenDate;
-    }
-
-    public Boolean getAbsent() {
-        return isAbsent;
-    }
-
-    public void setAbsent(Boolean absent) {
-        isAbsent = absent;
-    }
-
-    public Boolean getUnSuccessfulAttdate() {
-        return isUnSuccessfulAttdate;
-    }
-
-    public void setUnSuccessfulAttdate(Boolean unSuccessfulAttdate) {
-        isUnSuccessfulAttdate = unSuccessfulAttdate;
-    }
-
-    public Boolean getHalfDay() {
-        return isHalfDay;
-    }
-
-    public void setHalfDay(Boolean halfDay) {
-        isHalfDay = halfDay;
-    }
-
-    public Boolean getUnAuthorized() {
-        return unAuthorized;
-    }
-
-    public void setUnAuthorized(Boolean unAuthorized) {
-        this.unAuthorized = unAuthorized;
-    }
-
-    public Boolean getLate() {
-        return isLate;
-    }
-
-    public void setLate(Boolean late) {
-        isLate = late;
-    }
-
-    public Boolean getLateCover() {
-        return isLateCover;
-    }
-
-    public void setLateCover(Boolean lateCover) {
-        isLateCover = lateCover;
-    }
-
-    public Date getLogTime() {
-        return logTime;
-    }
-
-    public void setLogTime(Date logTime) {
-        this.logTime = logTime;
-    }
-
-    public String getIntime() {
-        return intime;
-    }
-
-    public void setIntime(String intime) {
-        this.intime = intime;
-    }
-
-    public String getOuttime() {
-        return outtime;
-    }
-
-    public void setOuttime(String outtime) {
-        this.outtime = outtime;
-    }
-
-    public String getAdminId() {
-        return adminId;
-    }
-
-    public void setAdminId(String adminId) {
-        this.adminId = adminId;
-    }
-
-    public String getAdminComment() {
-        return adminComment;
-    }
-
-    public void setAdminComment(String adminComment) {
-        this.adminComment = adminComment;
+    // Utility method to check if any required field is missing
+    public boolean hasRequiredFields() {
+        return Objects.nonNull(this.employeeId) && !this.employeeId.trim().isEmpty() &&
+                Objects.nonNull(this.userId) && !this.userId.trim().isEmpty() &&
+                Objects.nonNull(this.movementType) &&
+                Objects.nonNull(this.destination) && !this.destination.trim().isEmpty() &&
+                Objects.nonNull(this.happenDate) &&
+                Objects.nonNull(this.logTime) &&
+                Objects.nonNull(this.intime) && !this.intime.trim().isEmpty() &&
+                Objects.nonNull(this.outtime) && !this.outtime.trim().isEmpty();
     }
 }

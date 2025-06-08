@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jdbc.repository.query.Query;
@@ -16,22 +17,26 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     Page<AttendanceEntity> findAll(Pageable pageable);
-    Page<AttendanceEntity> findByUserId(String userId, Pageable pageable);
-    List<AttendanceEntity> findByEmployeeID(String employeeID);
-    List<AttendanceEntity> findByUserId(String userId);
-    Page<AttendanceEntity> findByEmployeeID(String employeeID, Pageable pageable);
-    List<AttendanceEntity> findByDateAndEmployeeID(Date date, String employeeID);
-    List<AttendanceEntity> findByEmployeeIDAndDateBetween(String employeeID, Date startDate, Date endDate);
+    Page<AttendanceEntity> findByIsAbsent(Boolean isAbsent, Pageable pageable);
+    Page<AttendanceEntity> findByEmployeeAndIsAbsent(EmployeeEntity employee, Boolean isAbsent,Pageable pageable);
+    Page<AttendanceEntity> findByEmployee(EmployeeEntity employee, Pageable pageable);
+    List<AttendanceEntity> findByEmployee(EmployeeEntity employee);
+    List<AttendanceEntity> findByDateAndEmployee(Date date, EmployeeEntity employee);
+    List<AttendanceEntity> findByEmployeeAndDateBetween(EmployeeEntity employee, Date startDate, Date endDate);
     Optional<AttendanceEntity> findByPublicId(String publicId);
-    boolean existsByEmployeeIDAndDate(String EmployeeID, Date date);
+    boolean existsByEmployeeAndDate(EmployeeEntity Employee, Date date);
+/*
     Optional<AttendanceEntity> findByEmployeeIDAndDate(String EmployeeID, Date date);
-    Optional<AttendanceEntity> findByEmployeeIDAndArrivalDate(String employeeID, Date arrivalDate);
+*/
+    Optional<AttendanceEntity> findByEmployeeAndDate(EmployeeEntity employee, Date date);
+
+    Optional<AttendanceEntity> findByEmployeeAndArrivalDate(EmployeeEntity employee, Date arrivalDate);
     Page<AttendanceEntity> findByIsAbsentTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsHalfDayTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnSuccessfulTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnAuthorizedTrue(Pageable pageable);
-    Page<AttendanceEntity> findByIsUnSuccessfulTrueAndUserId(String employeeId, Pageable pageable);
-    Page<AttendanceEntity> findByIsUnAuthorizedTrueAndUserId(String employeeId, Pageable pageable);
+    Page<AttendanceEntity> findByIsUnSuccessfulTrueAndEmployee(EmployeeEntity employeeId, Pageable pageable);
+    Page<AttendanceEntity> findByIsUnAuthorizedTrueAndEmployee(EmployeeEntity employee, Pageable pageable);
     Page<AttendanceEntity> findByIsFullDayTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsLateTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsLateTrueAndLateCoverFalse(Pageable pageable);
@@ -43,18 +48,12 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     @Query("SELECT e FROM AttendanceEntity e WHERE e.dueDateForUA < :currentDate")
     List<AttendanceEntity> findByDueDateForUA(@Param("currentDate") Date currentDate);
 
-    List<AttendanceEntity> findByEmployeeIDAndArrivalDateBetween(
-            String employeeID,
+    List<AttendanceEntity> findByEmployeeAndArrivalDateBetween(
+            EmployeeEntity employee,
             Date startDate,
             Date endDate
     );
 
-    List<AttendanceEntity> findByUserIdAndArrivalDateBetween(
-            String userId,
-            Date startDate,
-            Date endDate
-    );
-
-    List<AttendanceEntity> findByEmployeeIDAndDateAndTerminalID(String employeeID, Date date, String terminalID);
-    long countByEmployeeIDAndDate(String employeeID, Date date);
+    List<AttendanceEntity> findByEmployeeAndDateAndTerminalID(EmployeeEntity employee, Date date, String terminalID);
+    long countByEmployeeAndDate(EmployeeEntity employee, Date date);
 }

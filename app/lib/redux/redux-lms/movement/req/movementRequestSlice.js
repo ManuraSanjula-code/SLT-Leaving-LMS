@@ -53,6 +53,9 @@ export const submitMovementRequest = createAsyncThunk(
         const requestData = {
             ...formData,
             userId: userId,
+            logTime: formData.logTime ? new Date(formData.logTime) : new Date(1990, 0, 1),
+            intime: formData.intime ? formData.intime : '01:00',
+            outtime: formData.outtime ? formData.outtime : '12:00',
             happenDate: formData.happenDate ? new Date(formData.happenDate) : null
         };
 

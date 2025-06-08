@@ -1,11 +1,11 @@
 package com.slt.peotv.lmsmangmentservice.mapper;
 
-import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.model.dto.LeaveTra;
 import com.slt.peotv.lmsmangmentservice.model.dto.MovementTra;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
@@ -19,14 +19,12 @@ import com.slt.peotv.lmsmangmentservice.repository.EditedByRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveTypeRepo;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
+import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +41,9 @@ public class LMSMapper {
 
     @Autowired
     private LeaveTypeRepo leaveTypeRepository;
+
+    @Autowired
+    private Helper helper;
 
     public AccessLogDTO toDTO(AccessLogEntity entity) {
         if (entity == null) {
@@ -135,19 +136,6 @@ public class LMSMapper {
                 .map(this::toEntity)
                 .collect(Collectors.toList());
     }
-    public AbsenteeDTO toAbsenteeDto(AbsenteeEntity entity) {
-        if (entity == null) return null;
-
-        AbsenteeDTO dto = new AbsenteeDTO();
-        dto.setId(entity.getId());
-        dto.setPublicId(entity.getPublicId());
-        dto.setDate(entity.getDate());
-        dto.setEmployeeID(entity.getEmployeeID());
-        dto.setUserId(entity.getUserId());
-        dto.setAudited(entity.getAudited());
-        dto.setIsNoPay(entity.getIsNoPay());
-        return dto;
-    }
 
 
     public AttendanceDTO toAttendanceDTO(AttendanceEntity entity) {
@@ -157,7 +145,7 @@ public class LMSMapper {
         dto.setId(entity.getId());
         dto.setPublicId(entity.getPublicId());
         dto.setDate(entity.getDate());
-        dto.setEmployeeID(entity.getEmployeeID());
+        dto.setEmployeeID(entity.getEmployee().getEmployeeId());
         dto.setFullDay(entity.getIsFullDay());
         dto.setArrivalDate(entity.getArrivalDate());
         dto.setArrivalTime(entity.getArrivalTime());
@@ -180,9 +168,11 @@ public class LMSMapper {
         dto.setActive(entity.getActive());
         dto.setNopay(entity.getNopay());
         dto.setManual(entity.getIsManual());
-        dto.setUserId(entity.getUserId());
+        dto.setUserId(entity.getEmployee().getPublicId());
         dto.setTerminalID(entity.getTerminalID());
         dto.setInOutDTOs(toDTOList(entity.getInOuts()));
+        dto.setViaLeave(entity.getViaLeave());
+        dto.setViaMovement(entity.getViaMovement());
         return dto;
     }
 
@@ -342,14 +332,14 @@ public class LMSMapper {
         dto.setAdminsTra(movementAdminsList);
         dto.setId(entity.getId());
         dto.setPublicId(entity.getPublicId());
-        dto.setUserId(entity.getEmployeeId());
+        dto.setUserId(entity.getEmployee().getPublicId());
         dto.setInTime(entity.getInTime());
         dto.setOutTime(entity.getOutTime());
         dto.setComment(entity.getComment());
         dto.setLogTime(entity.getLogTime());
         dto.setCategory(entity.getCategory());
         dto.setDestination(entity.getDestination());
-        dto.setEmployeeId(entity.getEmployeeId());
+        dto.setEmployeeId(entity.getEmployee().getEmployeeId());
         dto.setReqDate(entity.getReqDate());
         dto.setMovementType(entity.getMovementType());
         dto.setAttSync(entity.getAttSync());
@@ -375,7 +365,7 @@ public class LMSMapper {
         NopayDTO dto = new NopayDTO();
         dto.setId(entity.getId());
         dto.setPublicId(entity.publicId);
-        dto.setEmployeeID(entity.getEmployeeID());
+        dto.setEmployeeID(entity.getEmployee().getEmployeeId());
         dto.setSubmissionDate(entity.getSubmissionDate());
         dto.setAcctualDate(entity.getAcctualDate());
         dto.setHalfDay(entity.getIsHalfDay());
@@ -393,6 +383,12 @@ public class LMSMapper {
         return dto;
     }
 
+    public LeaveDTO toLeaveDTOAdmin(LeaveEntity entity){
+        if (entity == null) return null;
+        LeaveDTO leaveDTO = toLeaveDTO(entity);
+        leaveDTO.setEditedByDTOs(toEditedByDTO(entity));
+        return leaveDTO;
+    }
     public LeaveDTO toLeaveDTO(LeaveEntity entity) {
         if (entity == null) return null;
 
@@ -428,10 +424,24 @@ public class LMSMapper {
             });
         }
 
+        // Convert EditedBy entities to EditedByDTO (if needed)
+        List<EditedByDTO> editedByDTOList = new ArrayList<>();
+        if (entity.getEditedBys() != null) {
+            entity.getEditedBys().forEach(editedBy -> {
+                // Convert EditedBy to EditedByDTO
+                // Implementation depends on your EditedByDTO structure
+                EditedByDTO editedByDTO = new EditedByDTO();
+                // Map fields from editedBy to editedByDTO
+                editedByDTOList.add(editedByDTO);
+            });
+        }
+
+        // Map all fields from entity to DTO
         dto.setAdminsTra(leaveAdminsList);
+        dto.setEditedByDTOs(editedByDTOList);
         dto.setPublicId(entity.getPublicId());
         dto.setId(entity.getId());
-        dto.setEmployeeID(entity.getEmployeeID());
+        dto.setEmployeeID(entity.getEmployee() != null ? entity.getEmployee().getEmployeeId() : null);
         dto.setSubmitDate(entity.getSubmitDate());
         dto.setFromDate(entity.getFromDate());
         dto.setToDate(entity.getToDate());
@@ -439,20 +449,31 @@ public class LMSMapper {
         dto.setIsNoPay(entity.getIsNoPay());
         dto.setNumOfDays(entity.getNumOfDays());
         dto.setDescription(entity.getDescription());
+
+        // Map boolean fields with consistent naming
         dto.setHalfDay(entity.getIsHalfDay());
         dto.setFullDay(entity.getIsFullDay());
         dto.setUnSuccessful(entity.getUnSuccessful());
+        dto.setUnauthorized(entity.getIsUnauthorized()); // Added missing field
         dto.setLate(entity.getIsLate());
         dto.setLateCover(entity.getIsLateCover());
         dto.setShort_Leave(entity.getIsShort_Leave());
         dto.setPending(entity.getIsPending());
         dto.setAccepted(entity.getIsAccepted());
+        dto.setAbsent(entity.getIsAbsent()); // Added missing field
         dto.setNotUsed(entity.getNotUsed());
         dto.setCanceled(entity.getIsCanceled());
         dto.setManualRequest(entity.getIsManualRequest());
-        dto.setHappenDate(entity.getHappenDate());
-        dto.setUserId(entity.getUserId()); // Fixed: was getting from dto instead of entity
         dto.setReject(entity.getIsReject());
+        dto.setEdited(entity.getIsEdited()); // Added missing field
+
+        // Map date fields
+        dto.setHappenDate(entity.getHappenDate());
+        dto.setCreateDate(entity.getCreateDate()); // Added missing field
+        dto.setUpdateDate(entity.getUpdateDate()); // Added missing field
+
+        // Map user ID
+        dto.setUserId(entity.getEmployee() != null ? entity.getEmployee().getPublicId() : null);
 
         return dto;
     }
@@ -472,27 +493,26 @@ public class LMSMapper {
 
         AttendanceEntity entity = new AttendanceEntity();
         entity.setIsManual(true);
+        entity.setEmployee(employeeEntity);
         entity.setPublicId(utils.generateId(10));
-        entity.setUserId(employeeEntity.getPublicId());
         entity.setEtl_run_time(new Date());
-        entity.setDate(req.getDate());
-        entity.setEmployeeID(req.getEmployeeID());
-        entity.setArrivalDate(req.getArrivalDate());
+        entity.setDate(helper.removeTimeFromDate(req.getDate()));
+        entity.setArrivalDate(helper.removeTimeFromDate(req.getArrivalDate()));
         entity.setArrivalTime(req.getArrivalTime());
         entity.setLeftTime(req.getLeftTime());
         entity.setIssueDescription(req.getIssueDescription());
         entity.setDueDateForUA(req.getDueDateForUA());
-        entity.setIsFullDay(req.getFullDay());
-        entity.setIsLate(req.getLate());
+        entity.setIsFullDay(req.getIsFullDay());
+        entity.setIsLate(req.getIsLate());
         entity.setLateCover(req.getLateCover());
-        entity.setIsHalfDay(req.getHalfDay());
-        entity.setIsFullLeave(req.getFullLeave());
-        entity.setIsShortLeave(req.getShortLeave());
-        entity.setIsAbsent(req.getAbsent());
-        entity.setIsUnSuccessful(req.getUnSuccessful());
-        entity.setIsNoPay(req.getNoPay());
+        entity.setIsHalfDay(req.getIsHalfDay());
+        entity.setIsFullLeave(req.getIsFullLeave());
+        entity.setIsShortLeave(req.getIsShortLeave());
+        entity.setIsAbsent(req.getIsAbsent());
+        entity.setIsUnSuccessful(req.getIsUnSuccessful());
+        entity.setIsNoPay(req.getIsNoPay());
         entity.setIssues(req.getIssues());
-        entity.setIsUnAuthorized(req.getUnAuthorized());
+        entity.setIsUnAuthorized(req.getIsUnAuthorized());
         entity.setResolve(req.getResolve());
         entity.setLeaveSuccess(req.getLeaveSuccess());
         entity.setLeaveReq(req.getLeaveReq());
@@ -510,30 +530,36 @@ public class LMSMapper {
     public void updateAttendanceEntityFromReq(AttendanceEntity entity, AttendanceReq req) {
         if (entity == null || req == null) return;
 
-        if (req.getEmployeeID() != null) entity.setEmployeeID(req.getEmployeeID());
+        if(req.getEmployeeID() == null) return;
+        EmployeeEntity employee = employeeRepo.findByEmployeeId(req.getEmployeeID())
+                .or(() -> employeeRepo.findBySltId(req.getEmployeeID()))
+                .or(() -> employeeRepo.findByPublicId(req.getEmployeeID()))
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+
+        if (req.getEmployeeID() != null) entity.setEmployee(employee);
         if (req.getArrivalDate() != null) entity.setArrivalDate(req.getArrivalDate());
         if (req.getArrivalTime() != null) entity.setArrivalTime(req.getArrivalTime());
         if (req.getLeftTime() != null) entity.setLeftTime(req.getLeftTime());
         if (req.getIssueDescription() != null) entity.setIssueDescription(req.getIssueDescription());
         if (req.getDueDateForUA() != null) entity.setDueDateForUA(req.getDueDateForUA());
-        if (req.getFullDay() != null) entity.setIsFullDay(req.getFullDay());
-        if (req.getLate() != null) entity.setIsLate(req.getLate());
+        if (req.getIsFullDay() != null) entity.setIsFullDay(req.getIsFullDay());
+        if (req.getIsLate() != null) entity.setIsLate(req.getIsLate());
         if (req.getLateCover() != null) entity.setLateCover(req.getLateCover());
-        if (req.getHalfDay() != null) entity.setIsHalfDay(req.getHalfDay());
-        if (req.getFullLeave() != null) entity.setIsFullLeave(req.getFullLeave());
-        if (req.getShortLeave() != null) entity.setIsShortLeave(req.getShortLeave());
-        if (req.getAbsent() != null) entity.setIsAbsent(req.getAbsent());
-        if (req.getUnSuccessful() != null) entity.setIsUnSuccessful(req.getUnSuccessful());
-        if (req.getNoPay() != null) entity.setIsNoPay(req.getNoPay());
+        if (req.getIsHalfDay() != null) entity.setIsHalfDay(req.getIsHalfDay());
+        if (req.getIsFullLeave() != null) entity.setIsFullLeave(req.getIsFullLeave());
+        if (req.getIsShortLeave() != null) entity.setIsShortLeave(req.getIsShortLeave());
+        if (req.getIsAbsent() != null) entity.setIsAbsent(req.getIsAbsent());
+        if (req.getIsUnSuccessful() != null) entity.setIsUnSuccessful(req.getIsUnSuccessful());
+        if (req.getIsNoPay() != null) entity.setIsNoPay(req.getIsNoPay());
         if (req.getIssues() != null) entity.setIssues(req.getIssues());
-        if (req.getUnAuthorized() != null) entity.setIsUnAuthorized(req.getUnAuthorized());
+        if (req.getIsUnAuthorized() != null) entity.setIsUnAuthorized(req.getIsUnAuthorized());
         if (req.getResolve() != null) entity.setResolve(req.getResolve());
         if (req.getLeaveSuccess() != null) entity.setLeaveSuccess(req.getLeaveSuccess());
         if (req.getLeaveReq() != null) entity.setLeaveReq(req.getLeaveReq());
         if (req.getActive() != null) entity.setActive(req.getActive());
         if (req.getNopay() != null) entity.setNopay(req.getNopay());
-        if (req.getViaMovement() != null) entity.setViaMovement(req.getViaMovement());
-        if (req.getViaLeave() != null) entity.setViaLeave(req.getViaLeave());
+       /* if (req.getV() != null) entity.setViaMovement(req.getIsViaMovement());
+        if (req.getViaLeave() != null) entity.setViaLeave(req.getViaLeave());*/
 
         entity.setUpdateDate(new Date());
     }
@@ -548,11 +574,6 @@ public class LMSMapper {
 
         EditedBy editedBy = new EditedBy();
         editedBy.setComment(adminComment);
-        /*editedBy.setFirstName(employee.getFirstName());
-        editedBy.setLastName(employee.getLastName());
-        editedBy.setProfilePic(employee.getProfilePic());
-        editedBy.setSltId(employee.getSltId());
-        editedBy.setEmployeeId(employee.getEmployeeId());*/
         editedBy.setEmployee(employee);
         EditedBy savedEditedBy = editedByRepo.save(editedBy);
 

@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.entity.NoPay;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import jakarta.persistence.*;
 import java.util.Date;
 import lombok.*;
@@ -21,7 +22,8 @@ public class NoPayEntity {
 
     public String publicId;
 
-    private String employeeID;
+    @ManyToOne
+    private EmployeeEntity employee;
 
     @Column(name = "submission_date")
     private Date submissionDate;
@@ -51,7 +53,4 @@ public class NoPayEntity {
     private String comment;
 
     private Date happenDate;
-
-    @Column(name = "user_id")
-    private String userId;
 }

@@ -1,5 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
+import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.Transient;
 
@@ -7,7 +9,7 @@ import java.util.Date;
 import java.util.List;
 
 public class LeaveDTO {
-    public String publicId;
+    private String publicId;
     private Long id;
     private String employeeID;
     private Date submitDate;
@@ -20,53 +22,28 @@ public class LeaveDTO {
     private Boolean isHalfDay;
     private Boolean isFullDay = false;
     private Boolean unSuccessful = false;
+    private Boolean isUnauthorized = false;
     private Boolean isLate = false;
     private Boolean isLateCover = false;
     private Boolean isShort_Leave = false;
     private Boolean isPending = false;
     private Boolean isAccepted = false;
+    private Boolean isAbsent = false;
     private Boolean notUsed = false;
     private Boolean isCanceled = false;
     private Boolean isManualRequest = false;
     private Boolean reject = false;
+    private Boolean isEdited = false;
     private Date happenDate;
+    private Date createDate;
+    private Date updateDate;
     private String userId;
+
     @Transient
     private List<LeaveTra> adminsTra;
     private List<EditedByDTO> editedByDTOs;
 
-    public List<EditedByDTO> getEditedByDTOs() {
-        return editedByDTOs;
-    }
-
-    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
-        this.editedByDTOs = editedByDTOs;
-    }
-
-    public Boolean getReject() {
-        return reject;
-    }
-
-    public void setReject(Boolean reject) {
-        this.reject = reject;
-    }
-
-    public List<LeaveTra> getAdminsTra() {
-        return adminsTra;
-    }
-
-    public void setAdminsTra(List<LeaveTra> adminsTra) {
-        this.adminsTra = adminsTra;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
+    // Getters and Setters
     public String getPublicId() {
         return publicId;
     }
@@ -114,6 +91,7 @@ public class LeaveDTO {
     public void setToDate(Date toDate) {
         this.toDate = toDate;
     }
+
     public LeaveTypeEntity getLeaveType() {
         return leaveType;
     }
@@ -170,6 +148,14 @@ public class LeaveDTO {
         this.unSuccessful = unSuccessful;
     }
 
+    public Boolean getUnauthorized() {
+        return isUnauthorized;
+    }
+
+    public void setUnauthorized(Boolean unauthorized) {
+        isUnauthorized = unauthorized;
+    }
+
     public Boolean getLate() {
         return isLate;
     }
@@ -210,6 +196,14 @@ public class LeaveDTO {
         isAccepted = accepted;
     }
 
+    public Boolean getAbsent() {
+        return isAbsent;
+    }
+
+    public void setAbsent(Boolean absent) {
+        isAbsent = absent;
+    }
+
     public Boolean getNotUsed() {
         return notUsed;
     }
@@ -234,11 +228,67 @@ public class LeaveDTO {
         isManualRequest = manualRequest;
     }
 
+    public Boolean getReject() {
+        return reject;
+    }
+
+    public void setReject(Boolean reject) {
+        this.reject = reject;
+    }
+
+    public Boolean getEdited() {
+        return isEdited;
+    }
+
+    public void setEdited(Boolean edited) {
+        isEdited = edited;
+    }
+
     public Date getHappenDate() {
         return happenDate;
     }
 
     public void setHappenDate(Date happenDate) {
         this.happenDate = happenDate;
+    }
+
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public List<LeaveTra> getAdminsTra() {
+        return adminsTra;
+    }
+
+    public void setAdminsTra(List<LeaveTra> adminsTra) {
+        this.adminsTra = adminsTra;
+    }
+
+    public List<EditedByDTO> getEditedByDTOs() {
+        return editedByDTOs;
+    }
+
+    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
+        this.editedByDTOs = editedByDTOs;
     }
 }

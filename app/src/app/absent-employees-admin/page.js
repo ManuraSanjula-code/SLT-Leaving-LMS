@@ -11,7 +11,7 @@ function App() {
             <>
                 <NavBar />
                 <div className="App">
-                    <AbsentEmployees  isAdmin={false}/>
+                    <AbsentEmployees isAdmin={true} />
                 </div>
             </>
         </Router>

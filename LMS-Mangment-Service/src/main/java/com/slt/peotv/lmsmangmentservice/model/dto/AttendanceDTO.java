@@ -35,6 +35,24 @@ public class AttendanceDTO {
     private String terminalID;
     private List<InOutDTO> inOutDTOs;
     private List<EditedByDTO> editedByDTOs;
+    private Boolean viaMovement;
+    private Boolean viaLeave;
+
+    public Boolean getViaMovement() {
+        return viaMovement;
+    }
+
+    public void setViaMovement(Boolean viaMovement) {
+        this.viaMovement = viaMovement;
+    }
+
+    public Boolean getViaLeave() {
+        return viaLeave;
+    }
+
+    public void setViaLeave(Boolean viaLeave) {
+        this.viaLeave = viaLeave;
+    }
 
     public List<EditedByDTO> getEditedByDTOs() {
         return editedByDTOs;

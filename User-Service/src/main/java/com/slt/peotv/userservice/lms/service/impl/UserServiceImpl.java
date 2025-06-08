@@ -1273,7 +1273,6 @@ public class UserServiceImpl implements UserService {
                     throw new UsernameNotFoundException("User not found with ID: " + user_id);
                 }
 
-                System.out.println("Found user: " + userEntity.getUserId());
                 return new UserPrincipal(userEntity);
             }
         } catch (Exception e) {

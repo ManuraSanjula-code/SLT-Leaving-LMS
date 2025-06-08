@@ -1,4 +1,3 @@
-// components/management/RoleForm.js
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -359,8 +358,8 @@ const RoleForm = ({ onSubmit }) => {
                                     <ListItem key={authority.id}>
                                         <ListItemIcon>
                                             <Checkbox
-                                                checked={selectedAuthorities.includes(authority.id)}
-                                                onChange={() => handleAuthoritySelection(authority.id)}
+                                                checked={selectedAuthorities.includes(parseInt(authority.id))}
+                                                onChange={() => handleAuthoritySelection(parseInt(authority.id))}
                                             />
                                         </ListItemIcon>
                                         <ListItemText primary={authority.name} />

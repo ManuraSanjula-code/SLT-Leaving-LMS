@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,8 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface NoPayRepo extends CrudRepository<NoPayEntity, Long> {
-    Page<NoPayEntity> findByEmployeeID(String employeeID, Pageable pageable);
-    Page<NoPayEntity> findByUserId(String userId, Pageable pageable);
+    Page<NoPayEntity> findByEmployee(EmployeeEntity employee, Pageable pageable);
     Page<NoPayEntity> findAll(Pageable pageable);
     Optional<NoPayEntity> findByPublicId(String publicId);
 }

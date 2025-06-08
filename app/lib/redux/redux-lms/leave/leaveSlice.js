@@ -21,17 +21,16 @@ const initialState = {
 
 export const fetchLeaveData = createAsyncThunk(
     'leave/fetchData',
-    async ({isAdmin, userId, page, size}, {rejectWithValue}) => {
+    async ({isAdmin, userId, userAdmin, page, size}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const url = `http://localhost:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
+            const url = `http://localhost:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}&isAdmin=${userAdmin}`;
             const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
-            console.log(data)
             return {
                 data: data.content.map(transformLeaveItem),
                 pagination: {
@@ -120,7 +119,7 @@ export const deleteLeaveRequest = createAsyncThunk(
     }
 );
 
-// Add update functionality similar to movement slice
+// Updated updateLeaveRequest thunk with proper field mapping
 export const updateLeaveRequest = createAsyncThunk(
     'leave/updateLeaveRequest',
     async ({updatePayload, isAdmin}, {rejectWithValue}) => {
@@ -130,35 +129,90 @@ export const updateLeaveRequest = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            // Only include fields that have actually changed
-            const cleanPayload = Object.fromEntries(
-                Object.entries(updatePayload).filter(([key, value]) =>
-                    key !== 'publicId' && value !== undefined && value !== null && value !== ''
-                )
-            );
+            // Create a clean payload by removing undefined/null values and mapping fields correctly
+            const cleanPayload = {};
 
-            if (isAdmin) {
-                let userInput = prompt("Enter your comment:");
-                if (userInput == null) return rejectWithValue('Comment is Required');
-                cleanPayload.adminId = empId;
-                cleanPayload.adminComment = userInput;
-            }
+            // Map the fields correctly to match backend LeaveReq class
+            const fieldMapping = {
+                // Basic fields
+                fromDate: updatePayload.fromDate,
+                toDate: updatePayload.toDate,
+                leaveType: updatePayload.leaveType,
+                description: updatePayload.description,
+                numOfDays: updatePayload.numOfDays,
+                happenDate: updatePayload.happenDate,
+                userId: updatePayload.userId,
+                employeeID: updatePayload.employeeID,
+                isNoPay: updatePayload.isNoPay,
 
-            const response = await fetch(`http://localhost:8080/lms/management/leave/${updatePayload.publicId}/${empId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify(cleanPayload)
+                // Boolean fields - map frontend names to backend names
+                halfDay: updatePayload.halfDay,                    // isHalfDay -> halfDay
+                fullDay: updatePayload.fullDay,                    // isFullDay -> fullDay
+                unauthorized: updatePayload.unauthorized,           // isUnauthorized -> unauthorized
+                manualRequest: updatePayload.manualRequest,        // isManualRequest -> manualRequest
+                absent: updatePayload.absent,                      // isAbsent -> absent
+                lateCover: updatePayload.lateCover,               // isLateCover -> lateCover
+                late: updatePayload.late,                         // isLate -> late
+                short_Leave: updatePayload.short_Leave,           // isShort_Leave -> short_Leave
+                notUsed: updatePayload.notUsed,                   // notUsed -> notUsed
+                unSuccessful: updatePayload.unSuccessful,         // unSuccessful -> unSuccessful
+
+                // Admin-only fields
+                edited: updatePayload.edited,                     // isEdited -> edited
+                reject: updatePayload.reject,                     // isReject -> reject
+                canceled: updatePayload.canceled,                 // isCanceled -> canceled
+                accepted: updatePayload.accepted,                 // isAccepted -> accepted
+                pending: updatePayload.pending                    // isPending -> pending
+            };
+
+            // Only include fields that have actual values
+            Object.entries(fieldMapping).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    // Handle boolean fields properly
+                    if (typeof value === 'boolean') {
+                        cleanPayload[key] = value;
+                    } else if (typeof value === 'string' && value.trim() !== '') {
+                        cleanPayload[key] = value.trim();
+                    } else if (typeof value === 'number') {
+                        cleanPayload[key] = value;
+                    } else if (value instanceof Date) {
+                        cleanPayload[key] = value.toISOString();
+                    }
+                }
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+            // Handle admin-specific logic
+            if (isAdmin) {
+                let userInput = prompt("Enter your comment:");
+                if (userInput == null || userInput.trim() === '') {
+                    return rejectWithValue('Comment is Required');
+                }
+                cleanPayload.adminId = empId;
+                cleanPayload.adminComment = userInput.trim();
             }
 
+
+            const response = await fetch(
+                `http://localhost:8080/lms/management/leave/${updatePayload.publicId}/${empId}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(cleanPayload)
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+            }
+
+            // Return the original payload for state update
             return updatePayload;
         } catch (err) {
+            console.error('Update request failed:', err);
             return rejectWithValue(err.message);
         }
     }
@@ -210,7 +264,12 @@ const leaveSlice = createSlice({
             .addCase(deleteLeaveRequest.fulfilled, (state, action) => {
                 state.data = state.data.filter(leave => leave.publicId !== action.payload);
             })
+            .addCase(updateLeaveRequest.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
             .addCase(updateLeaveRequest.fulfilled, (state, action) => {
+                state.loading = false;
                 // Update the specific request in the state
                 const updatedRequest = action.payload;
                 const index = state.data.findIndex(leave => leave.publicId === updatedRequest.publicId);
@@ -220,6 +279,10 @@ const leaveSlice = createSlice({
                         ...updatedRequest
                     };
                 }
+            })
+            .addCase(updateLeaveRequest.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     }
 });
@@ -244,28 +307,38 @@ const transformLeaveItem = (item) => ({
     toDate: item.toDate || "",
     submitDate: item.submitDate || "",
 
-    // Status flags
-    late: item.late || false,
-    absent: !item.late && !item.fullDay && !item.halfDay,
-    fullDay: item.fullDay || false,
-    halfDay: item.halfDay || false,
-    pending: item.pending || false,
-    accepted: item.accepted || false,
-    expired: item.expired || false,
-    reject: item.reject || false,
-    canceled: item.canceled || false,
-    manualRequest: item.manualRequest || false,
+    // Status flags - ensure proper boolean conversion
+    late: Boolean(item.late),
+    absent: Boolean(item.absent),
+    fullDay: Boolean(item.fullDay),
+    halfDay: Boolean(item.halfDay),
+    pending: Boolean(item.pending),
+    accepted: Boolean(item.accepted),
+    expired: Boolean(item.expired),
+    reject: Boolean(item.reject),
+    canceled: Boolean(item.canceled),
+    manualRequest: Boolean(item.manualRequest),
 
     // Additional fields
     numOfDays: item.numOfDays || 0,
-    isNoPay: item.isNoPay || false,
+    isNoPay: item.isNoPay || 0,
 
     // Admin and edit tracking
     adminsTra: item.adminsTra || [],
     editedByDTOs: item.editedByDTOs || [],
 
-    // Original item for reference
-    originalItem: item
+    // Keep original item for reference with all fields properly mapped
+    originalItem: {
+        ...item,
+        // Ensure all boolean fields are properly set
+        unauthorized: Boolean(item.unauthorized),
+        lateCover: Boolean(item.lateCover),
+        short_Leave: Boolean(item.short_Leave),
+        notUsed: Boolean(item.notUsed),
+        edited: Boolean(item.edited),
+        unSuccessful: Boolean(item.unSuccessful),
+        isNoPay: item.isNoPay || 0
+    }
 });
 
 const getLeaveType = (item) => {

@@ -23,7 +23,7 @@ export const priorityRouteAccess = {
         "/in-outs",
         "/other",
         "/shift-roster-table",
-        "/charana-tv"
+        "/charana-tv",
     ],
 
     // 30-49 (HR Roles)
@@ -37,7 +37,7 @@ export const priorityRouteAccess = {
         "/in-outs",
         "/other",
         "/shift-roster-table",
-        "/charana-tv"
+        "/charana-tv",
     ],
 
     // Priority 50-99 (Managerial Roles)
@@ -50,7 +50,7 @@ export const priorityRouteAccess = {
         "/in-outs",
         "/other",
         "/shift-roster-table",
-        "/charana-tv"
+        "/charana-tv",
     ],
 
     // Priority 100-199 (Standard Users)
@@ -67,7 +67,8 @@ export const priorityRouteAccess = {
         "/no-pay-leaves",
         "/absent-employee",
         "/",
-        "/in-outs"
+        "/in-outs",
+        "/absent-employees"
     ]
 };
 

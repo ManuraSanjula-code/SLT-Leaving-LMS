@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.repository;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import org.apache.zookeeper.Op;
 import org.springframework.data.domain.Page;
@@ -14,21 +15,14 @@ import java.util.Optional;
 @Repository
 public interface MovementsRepo extends CrudRepository<MovementsEntity, Long> {
     Page<MovementsEntity> findAll(Pageable pageable);
-    Page<MovementsEntity> findAllByEmployeeId(String employeeID, Pageable pageable);
-    List<MovementsEntity> findAllByEmployeeId(String employeeID);
-    /*List<MovementsEntity> findAllByEmployeeIdAndReqDate(String employeeId, Date reqDate);*/
-    Optional<MovementsEntity> findAllByEmployeeIdAndReqDate(String employeeId, Date reqDate);
-
-    Page<MovementsEntity> findAllByUserId(String userId, Pageable pageable);
-    List<MovementsEntity> findAllByUserId(String userId);
+    Page<MovementsEntity> findAllByEmployee(EmployeeEntity employee, Pageable pageable);
+    List<MovementsEntity> findAllByEmployee(EmployeeEntity employee);
+    Optional<MovementsEntity> findAllByEmployeeAndReqDate(EmployeeEntity employeeI, Date reqDate);
     Optional<MovementsEntity> findByPublicId(String publicId);
-    /*List<MovementsEntity> findByDueDateBefore(Date currentDate);
-    List<MovementsEntity> findByDueDate(Date dueDate);*/
     List<MovementsEntity> findByHappenDate(Date happenDate);
-    List<MovementsEntity> findByIsPendingAndEmployeeId(Boolean isPending, String employeeID);
-
-    List<MovementsEntity> findByEmployeeIdAndReqDateBetween(
-            String employeeId,
+    List<MovementsEntity> findByIsPendingAndEmployee(Boolean isPending, EmployeeEntity employee);
+    List<MovementsEntity> findByEmployeeAndReqDateBetween(
+            EmployeeEntity employee,
             Date startDate,
             Date endDate
     );

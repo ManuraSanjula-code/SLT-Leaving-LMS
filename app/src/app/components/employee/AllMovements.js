@@ -95,13 +95,19 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         inTime: "",
         outTime: "",
         logTime: "",
-        // Boolean fields
+        // Boolean fields - properly initialized
         unAuthorized: false,
         accepted: false,
         pending: false,
         reject: false,
         halfDay: false,
         absent: false,
+        // Additional boolean fields from MovementReq
+        isAbsent: false,
+        isUnSuccessfulAttdate: false,
+        isHalfDay: false,
+        isLate: false,
+        isLateCover: false,
         // Additional fields
         attSync: 0,
         attendance: "",
@@ -209,6 +215,13 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         }
     };
 
+    // Helper function to safely get boolean value
+    const getBooleanValue = (value) => {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') return value.toLowerCase() === 'true';
+        return Boolean(value);
+    };
+
     const handleOpenEditDialog = (request) => {
         setCurrentEdit(request);
         setEditValues({
@@ -223,13 +236,19 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
             inTime: formatTimeForInput(request.inTime),
             outTime: formatTimeForInput(request.outTime),
             logTime: formatDateTimeForInput(request.logTime),
-            // Boolean fields
-            unAuthorized: request.unAuthorized || false,
-            accepted: request.accepted || false,
-            pending: request.pending || false,
-            reject: request.reject || false,
-            halfDay: request.halfDay || false,
-            absent: request.absent || false,
+            // Boolean fields - properly handle existing values
+            unAuthorized: getBooleanValue(request.unAuthorized),
+            accepted: getBooleanValue(request.accepted),
+            pending: getBooleanValue(request.pending),
+            reject: getBooleanValue(request.reject),
+            halfDay: getBooleanValue(request.halfDay),
+            absent: getBooleanValue(request.absent),
+            // Additional boolean fields from MovementReq
+            isAbsent: getBooleanValue(request.isAbsent || request.absent),
+            isUnSuccessfulAttdate: getBooleanValue(request.isUnSuccessfulAttdate || request.unSuccessfulAttdate),
+            isHalfDay: getBooleanValue(request.isHalfDay || request.halfDay),
+            isLate: getBooleanValue(request.isLate),
+            isLateCover: getBooleanValue(request.isLateCover),
             // Additional fields
             attSync: request.attSync || 0,
             attendance: request.attendance || "",
@@ -255,50 +274,51 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 throw new Error("Cannot edit approved movement requests");
             }
 
-            // Compare current values with original values to send only changed fields
-            const originalValues = {
-                employeeId: currentEdit.employeeId || "",
-                userId: currentEdit.userId || "",
-                happenDate: formatDateForInput(currentEdit.happenDate),
-                reqDate: formatDateForInput(currentEdit.reqDate),
-                destination: currentEdit.destination || "",
-                movementType: currentEdit.movementType || currentEdit.type || "",
-                comment: currentEdit.comment || "",
-                category: currentEdit.category || "",
-                inTime: formatTimeForInput(currentEdit.inTime),
-                outTime: formatTimeForInput(currentEdit.outTime),
-                logTime: formatDateTimeForInput(currentEdit.logTime),
-                unAuthorized: currentEdit.unAuthorized || false,
-                accepted: currentEdit.accepted || false,
-                pending: currentEdit.pending || false,
-                reject: currentEdit.reject || false,
-                halfDay: currentEdit.halfDay || false,
-                absent: currentEdit.absent || false,
-                attSync: currentEdit.attSync || 0,
-                attendance: currentEdit.attendance || "",
+            // Build the complete payload with proper field mapping
+            const updatePayload = {
+                publicId: currentEdit.publicId,
+                employeeId: editValues.employeeId,
+                userId: editValues.userId,
+                destination: editValues.destination,
+                movementType: editValues.movementType,
+                comment: editValues.comment,
+                category: editValues.category,
+                // Map time fields properly
+                intime: editValues.inTime, // Note: backend expects 'intime', not 'inTime'
+                outtime: editValues.outTime, // Note: backend expects 'outtime', not 'outTime'
+                // Boolean fields - ensure they are properly mapped
+                unAuthorized: editValues.unAuthorized,
+                isAbsent: editValues.isAbsent || editValues.absent, // Map both fields
+                isUnSuccessfulAttdate: editValues.isUnSuccessfulAttdate,
+                isHalfDay: editValues.isHalfDay || editValues.halfDay, // Map both fields
+                isLate: editValues.isLate,
+                isLateCover: editValues.isLateCover,
+                // Additional fields
+                attSync: editValues.attSync,
+                attendance: editValues.attendance,
             };
 
-            // Build payload with only changed fields
-            const updatePayload = { publicId: currentEdit.publicId };
-
-            Object.keys(editValues).forEach(key => {
-                if (editValues[key] !== originalValues[key]) {
-                    updatePayload[key] = editValues[key];
-                }
-            });
-
-            // Always send dates in proper format
-            if (updatePayload.happenDate) {
-                updatePayload.happenDate = new Date(updatePayload.happenDate).toISOString();
+            // Only include admin-specific boolean fields if user is admin
+            if (isAdmin) {
+                updatePayload.accepted = editValues.accepted;
+                updatePayload.pending = editValues.pending;
+                updatePayload.reject = editValues.reject;
             }
-            if (updatePayload.reqDate) {
-                updatePayload.reqDate = new Date(updatePayload.reqDate).toISOString();
+
+            // Handle date fields - convert to proper format
+            if (editValues.happenDate) {
+                updatePayload.happenDate = new Date(editValues.happenDate).toISOString();
             }
-            if (updatePayload.logTime) {
-                updatePayload.logTime = new Date(updatePayload.logTime).toISOString();
+            if (editValues.reqDate) {
+                // Map reqDate to the backend field name
+                updatePayload.reqDate = new Date(editValues.reqDate).toISOString();
+            }
+            if (editValues.logTime) {
+                updatePayload.logTime = new Date(editValues.logTime).toISOString();
             }
 
             console.log("Sending update payload:", updatePayload);
+
             await dispatch(updateMovementRequest({
                 updatePayload,
                 isAdmin
@@ -318,6 +338,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
             }
         } catch (err) {
             console.error("Error updating movement request:", err);
+            // You might want to show an error message to the user here
         }
     };
 
@@ -804,7 +825,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
-                            {/* Status Flags */}
+                            {/* Boolean Status Flags */}
                             <Grid item xs={12}>
                                 <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                                     Status Flags
@@ -829,12 +850,12 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
-                                            name="accepted"
-                                            checked={editValues.accepted}
+                                            name="isAbsent"
+                                            checked={editValues.isAbsent}
                                             onChange={handleEditChange}
                                         />
                                     }
-                                    label="Accepted"
+                                    label="Absent"
                                 />
                             </Grid>
 
@@ -842,34 +863,8 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
-                                            name="pending"
-                                            checked={editValues.pending}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Pending"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="reject"
-                                            checked={editValues.reject}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Rejected"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="halfDay"
-                                            checked={editValues.halfDay}
+                                            name="isHalfDay"
+                                            checked={editValues.isHalfDay}
                                             onChange={handleEditChange}
                                         />
                                     }
@@ -881,14 +876,91 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
-                                            name="absent"
-                                            checked={editValues.absent}
+                                            name="isUnSuccessfulAttdate"
+                                            checked={editValues.isUnSuccessfulAttdate}
                                             onChange={handleEditChange}
                                         />
                                     }
-                                    label="Absent"
+                                    label="Unsuccessful Attendance"
                                 />
                             </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="isLate"
+                                            checked={editValues.isLate}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Late"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6} md={4}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="isLateCover"
+                                            checked={editValues.isLateCover}
+                                            onChange={handleEditChange}
+                                        />
+                                    }
+                                    label="Late Cover"
+                                />
+                            </Grid>
+
+                            {isAdmin && (
+                                <>
+                                    {/* Admin-only Status Flags */}
+                                    <Grid item xs={12}>
+                                        <Typography variant="h6" gutterBottom color="secondary" sx={{ mt: 2 }}>
+                                            Admin Status Controls
+                                        </Typography>
+                                        <Divider sx={{ mb: 2 }} />
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6} md={4}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    name="accepted"
+                                                    checked={editValues.accepted}
+                                                    onChange={handleEditChange}
+                                                />
+                                            }
+                                            label="Accepted"
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6} md={4}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    name="pending"
+                                                    checked={editValues.pending}
+                                                    onChange={handleEditChange}
+                                                />
+                                            }
+                                            label="Pending"
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6} md={4}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    name="reject"
+                                                    checked={editValues.reject}
+                                                    onChange={handleEditChange}
+                                                />
+                                            }
+                                            label="Rejected"
+                                        />
+                                    </Grid>
+                                </>
+                            )}
 
                             {/* Additional Fields */}
                             <Grid item xs={12}>

@@ -48,7 +48,7 @@ export const authMiddleware = store => next => action => {
         'activityRecords/fetchActivityRecords',
     ];
 
-    const adminActions = ['admin/updateSettings'];
+    const adminActions = ['-admin/updateSettings'];
     const paymentActions = ['payment/process'];
 
     if (restrictedActions.includes(action.type)) {
@@ -83,7 +83,7 @@ export const authMiddleware = store => next => action => {
             console.error('Error checking token expiration:', error);
         }*/
 
-        // Check for admin permissions
+        // Check for -admin permissions
         /* if (adminActions.includes(action.type)) {
              const hasAdminRole = userDetails?.roles?.some(role =>
                  role === 'ROLE_ADMIN' || role === 'ADMIN'

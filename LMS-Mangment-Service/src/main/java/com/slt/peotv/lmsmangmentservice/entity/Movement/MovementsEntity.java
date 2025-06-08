@@ -3,6 +3,7 @@ package com.slt.peotv.lmsmangmentservice.entity.Movement;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -51,11 +52,8 @@ public class MovementsEntity {
     @Column(name = "Destination", length = 45)
     private String destination;
 
-    @Column(name = "Employee_ID", length = 45)
-    private String employeeId;
-
-    @Column(name = "User_ID", length = 45)
-    private String userId;
+    @ManyToOne
+    private EmployeeEntity employee;
 
     @Column(name = "REQ_TIME", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     @Temporal(TemporalType.TIMESTAMP)

@@ -37,10 +37,29 @@ const RosterDisplay = () => {
     };
 
     return (
-        <>
-            <Container maxWidth="lg">
-                <Box my={4}>
-                    <Typography variant="h4" component="h1" gutterBottom>
+        <div style={{
+            backgroundColor: '#ffffff',
+            minHeight: '100vh',
+            width: '100%',
+            position: 'relative'
+        }}>
+            <Container
+                maxWidth="lg"
+                sx={{
+                    backgroundColor: '#ffffff !important',
+                    minHeight: '100vh',
+                    color: '#000000 !important',
+                    paddingTop: 2,
+                    paddingBottom: 2
+                }}
+            >
+                <Box my={4} sx={{ backgroundColor: '#ffffff' }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        gutterBottom
+                        sx={{ color: '#000000 !important' }}
+                    >
                         Team Attendance Roster
                     </Typography>
 
@@ -62,15 +81,25 @@ const RosterDisplay = () => {
                     </Box>
 
                     {loading ? (
-                        <Box display="flex" justifyContent="center" my={4}>
+                        <Box
+                            display="flex"
+                            justifyContent="center"
+                            my={4}
+                            sx={{ backgroundColor: '#ffffff' }}
+                        >
                             <CircularProgress />
                         </Box>
                     ) : error ? (
-                        <Paper style={{ padding: '16px', backgroundColor: '#ffebee' }}>
-                            <Typography color="error">{error}</Typography>
+                        <Paper sx={{
+                            padding: 2,
+                            backgroundColor: '#ffebee !important',
+                            color: '#d32f2f !important',
+                            border: '1px solid #ffcdd2'
+                        }}>
+                            <Typography sx={{ color: '#d32f2f !important' }}>{error}</Typography>
                         </Paper>
                     ) : rosterData ? (
-                        <Box>
+                        <Box sx={{ backgroundColor: '#ffffff' }}>
                             <TeamSummary
                                 teamAttendanceSummary={rosterData.teamAttendanceSummary}
                                 selectedDate={selectedDate}
@@ -81,13 +110,24 @@ const RosterDisplay = () => {
                             />
                         </Box>
                     ) : (
-                        <Paper style={{ padding: '24px', textAlign: 'center' }}>
-                            <Typography variant="body1">No roster data available</Typography>
+                        <Paper sx={{
+                            padding: 3,
+                            textAlign: 'center',
+                            backgroundColor: '#ffffff !important',
+                            color: '#000000 !important',
+                            border: '1px solid #e0e0e0'
+                        }}>
+                            <Typography
+                                variant="body1"
+                                sx={{ color: '#000000 !important' }}
+                            >
+                                No roster data available
+                            </Typography>
                         </Paper>
                     )}
                 </Box>
             </Container>
-        </>
+        </div>
     );
 };
 

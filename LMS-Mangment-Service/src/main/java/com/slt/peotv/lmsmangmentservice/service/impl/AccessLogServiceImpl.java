@@ -175,9 +175,13 @@ public class AccessLogServiceImpl implements AccessLogService {
             }
 
             // Check for existing entries
-            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDate(
+            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDateAndPunchInMoaAndPunchInEvAndTimeMoaAndTimeEve(
                     inOut.getEmployeeID(),
-                    inOut.getDate());
+                    inOut.getDate(),
+                    inOut.getPunchInMoa(),
+                    inOut.getPunchInEv(),
+                    inOut.getTimeMoa(),
+                    inOut.getTimeEve());
 
             boolean shouldSave = true;
 

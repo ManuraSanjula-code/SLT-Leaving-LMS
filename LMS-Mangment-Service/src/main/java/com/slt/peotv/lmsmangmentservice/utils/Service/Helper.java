@@ -1,13 +1,11 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
-import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.model.AbsenteeReq;
-import com.slt.peotv.lmsmangmentservice.repository.AbsenteeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
@@ -37,8 +35,6 @@ public class Helper {
     private LMS_Service lmsService;
     @Autowired
     private Utils utils;
-    @Autowired
-    private AbsenteeRepo absenteeRepo;
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired
@@ -99,56 +95,20 @@ public class Helper {
         return legacyDate;
     }
 
-    public void handleAbsenteeReq(String employee, LeaveEntity leaveEntity) {
-        List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(leaveEntity.getEmployeeID());
-        boolean allMatch = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
-
-        if (employee == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        AbsenteeEntity absenteeEntity = new AbsenteeEntity();
-        absenteeEntity.setPublicId(utils.generateId(10));
-        absenteeEntity.setEmployeeID(employee);
-        absenteeEntity.setDate(new Date());
-        absenteeEntity.setAudited(0);
-        absenteeEntity.setIsNoPay(0);
-        absenteeRepo.save(absenteeEntity);
-
-
-        if (allMatch) { /// NO REMAINING LEAVES
-
-            /// GOING NO PAY -- SET DESCRIPTION IN NO-PAY, FULL DAY IS TURE
-            leaveEntity.setIsPending(true);
-            leaveEntity.setDescription("EMPLOYEE IS ABSENT ALSO HE/SHE MAKE REQUEST TO LEAVE NOT APPROVED HENCE THIS LEAVE STILL PENDING");
-
-            /// SET FULL DAY IS TURE
-            check_Service.saveNoPayEntity(leaveEntity.getEmployeeID(), null,null, false, false, false, false, true, leaveEntity.getHappenDate());
-
-        }
-    }
-
-    public void handleAbsenteeReq(String employee, Boolean isHalfDay, Boolean isFullDay) {
-        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(employee);
-        if(employeeEntity.isEmpty()) return;
-        AbsenteeEntity absenteeEntity = new AbsenteeEntity();
-        absenteeEntity.setPublicId(utils.generateId(10));
-        absenteeEntity.setEmployeeID(employee);
-        absenteeEntity.setDate(new Date());
-        absenteeEntity.setAudited(0);
-        absenteeEntity.setIsNoPay(0);
-        absenteeEntity.setUserId(employeeEntity.get().getPublicId());
-
-        absenteeRepo.save(absenteeEntity);
-    }
-
     public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity) {
+
+        EmployeeEntity employee = employeeRepo.findByEmployeeId(user)
+                .or(() -> employeeRepo.findBySltId(user))
+                .or(() -> employeeRepo.findByPublicId(user))
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
         if (attendanceEntity != null)
             return;
 
         attendanceEntity.setIsUnSuccessful(true);
 
-        UserLeaveTypeRemainingEntity remaining_short_Leaves = serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", attendanceEntity.getEmployeeID());
-        UserLeaveTypeRemainingEntity remaining_half_Day = serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", attendanceEntity.getEmployeeID());
+        UserLeaveTypeRemainingEntity remaining_short_Leaves = serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", employee.getEmployeeId());
+        UserLeaveTypeRemainingEntity remaining_half_Day = serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", employee.getEmployeeId());
 
         if (remaining_short_Leaves.getRemainingLeaves() < 1) { /// check are there any short leaves
            /// No short leaves
@@ -161,28 +121,17 @@ public class Helper {
 
                 attendanceEntity.setIssueDescription("GOING HALF DAY BUT REMAINING HALF DAY IS 0 SO GOING NO-PAY");
 
-                check_Service.saveNoPayEntity(user,null ,attendanceEntity, attendanceEntity.getIsHalfDay(),
+                check_Service.saveNoPayEntity(employee,null ,attendanceEntity, attendanceEntity.getIsHalfDay(),
                         attendanceEntity.getIsUnSuccessful(), attendanceEntity.getIsLate(),
                         attendanceEntity.getLateCover(), attendanceEntity.getIsAbsent(), attendanceEntity.getDate());
 
-                check_Service.reportAttendance_(attendanceEntity, false, true, false, false, false, true, true, false, false, true, true, attendanceEntity.getDate());
 
             } else {
 
                 attendanceEntity.setIssueDescription("GOING HALF DAY BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
                 attendanceEntity.setDueDateForUA(getDueDate());
-
-                /// there are half days
-                /// there are half days consider as UnSuccessful Leave ======================
-
-                AbsenteeReq req = new AbsenteeReq();
-                req.setEmployeeId(user);
-                req.setIsHalfDay(true);
-                req.setHappenDate(attendanceEntity.getDate());
-                req.setComment("GOING HALF DAY WITH-OUT NOTIFYING");
-
-                check_Service.reportAbsent(req);
-                check_Service.reportAttendance_(attendanceEntity, false, true, false, false, false, true, true, false, false, true, false, attendanceEntity.getDate());
+                attendanceEntity.setIsHalfDay(true);
+                attendanceEntity.setIsAbsent(true);
             }
 
         } else {

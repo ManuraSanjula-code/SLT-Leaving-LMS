@@ -1,6 +1,5 @@
 package com.slt.peotv.lmsmangmentservice.service;
 
-import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.types.AttendanceTypeEntity;
@@ -19,13 +18,9 @@ import java.util.List;
 
 public interface LMS_Service {
 
-    public List<AbsenteeEntity> getAllAbsentee();
-    public AbsenteeEntity getOneAbsentee(String publicId, String employeeId);
-    public void saveAbsentee(String employeeId, Boolean isHalfDay, Boolean swipeErr);
-    public void deleteAbsentee(String publicId);
-
     List<InOutDTO> getAllInOuts(String id, boolean swap);
-
+    public Page<AttendanceDTO> getAllAbsent(int page, int size);
+    public Page<AttendanceDTO> getAllAbsentByUser(int page, int size, String user);
     public Page<AttendanceDTO> getAllAttendance(int page, int size);
     public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size, Boolean admin);
     public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size);
@@ -37,16 +32,11 @@ public interface LMS_Service {
     public void deleteAttendance(String publicId);
     public void deleteAttendanceV1(String publicId);
     public void makeInAttendanceActive(String publicId);
-
-    public Page<AbsenteeDTO> getAllAbsentee(int page, int size);
-    public Page<AbsenteeDTO> getAllAbsenteeByUserId(String userId, int page, int size);
-
     public void createMovements(MovementsEntity entity);
     public Page<MovementDTO> getAllMovementByUser(String employeeID, int page, int size,Boolean isAdmin);
     public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size, Boolean isAdmin);
     public Page<MovementDTO> getAllMovements(int page, int size, Boolean isAdmin);
     public MovementsEntity getMovement(String publicId);
-    public void updateMovement(MovementsEntity entity, String publicId);
     public void updateMovement(MovementReq req, String publicId);
     public void deleteMovements(String publicId);
 
@@ -57,9 +47,9 @@ public interface LMS_Service {
     public void deleteNoPay(String publicId);
 
     public void saveLeave(LeaveEntity entity);
-    public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size);
-    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size);
-    public Page<LeaveDTO> getAllLeaves(int page, int size);
+    public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size,Boolean isAdmin);
+    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size,Boolean isAdmin);
+    public Page<LeaveDTO> getAllLeaves(int page, int size,Boolean isAdmin);
     public LeaveEntity getOneLeave(String publicId);
     public void deleteLeave(String publicId);
 

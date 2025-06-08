@@ -1,6 +1,5 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
-import com.slt.peotv.lmsmangmentservice.entity.Absentee.AbsenteeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
@@ -36,9 +35,6 @@ public class ExelUtils {
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
 
-    @Autowired
-    private AbsenteeRepo absenteeRepo;
-
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -53,11 +49,10 @@ public class ExelUtils {
 
         EmployeeEntity employee = employeeEntity.get();
 
-        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeID(employee.getSltId());
-        List<LeaveEntity> leaves = leaveRepo.findByEmployeeID(employee.getEmployeeId());
-        List<MovementsEntity> movements = movementsRepo.findAllByUserId(employee.getPublicId());
+        List<AttendanceEntity> attendance = attendanceRepo.findByEmployee(employee);
+        List<LeaveEntity> leaves = leaveRepo.findByEmployee(employee);
+        List<MovementsEntity> movements = movementsRepo.findAllByEmployee(employee);
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployeeID(employee.getEmployeeId());
-        List<AbsenteeEntity> absences = absenteeRepo.findByUserId(employee.getSltId());
 
         // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -77,8 +72,6 @@ public class ExelUtils {
             createRemainingLeavesSheet(workbook, remainingLeaves);
 
             // Create absences sheet
-            createAbsencesSheet(workbook, absences);
-
             // Write to byte array
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
@@ -98,15 +91,14 @@ public class ExelUtils {
         EmployeeEntity employee = employeeEntity.get();
 
 
-        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeIDAndArrivalDateBetween(employee.getSltId(), date, date);
+        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, date, date);
 
-        List<LeaveEntity> leaves = leaveRepo.findByEmployeeIDAndSubmitDateBetween(employee.getEmployeeId(), date,date);
+        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, date,date);
 
-        List<MovementsEntity> movements = movementsRepo.findByEmployeeIdAndReqDateBetween(employee.getEmployeeId(), date,date);
+        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, date,date);
 
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployeeID(employee.getEmployeeId());
 
-        List<AbsenteeEntity> absences = absenteeRepo.findByEmployeeID(employee.getSltId());
 
         // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -124,9 +116,6 @@ public class ExelUtils {
 
             // Create remaining leaves sheet
             createRemainingLeavesSheet(workbook, remainingLeaves);
-
-            // Create absences sheet
-            createAbsencesSheet(workbook, absences);
 
             // Write to byte array
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -232,7 +221,7 @@ public class ExelUtils {
                 createCell(row, colNum++, attendance.getDate() != null ? dateFormat.format(attendance.getDate()) : "");
 
                 // Employee ID
-                createCell(row, colNum++, attendance.getEmployeeID() != null ? attendance.getEmployeeID() : "");
+                createCell(row, colNum++, attendance.getEmployee() != null ? attendance.getEmployee().getEmployeeId() : "");
 
                 // Arrival Date
                 createCell(row, colNum++, attendance.getArrivalDate() != null ? dateFormat.format(attendance.getArrivalDate()) : "");
@@ -270,7 +259,7 @@ public class ExelUtils {
                 createCell(row, colNum++, attendance.getNopay() != null ? (attendance.getNopay() ? "Yes" : "No") : "No");
 
                 // User ID
-                createCell(row, colNum++, attendance.getUserId() != null ? attendance.getUserId() : "");
+                createCell(row, colNum++, attendance.getEmployee().getPublicId() != null ? attendance.getEmployee().getPublicId() : "");
 
                 // More Boolean fields
                 createCell(row, colNum++, attendance.getViaMovement() != null ? (attendance.getViaMovement() ? "Yes" : "No") : "No");
@@ -330,7 +319,7 @@ public class ExelUtils {
                 createCell(row, colNum++, leave.getPublicId() != null ? leave.getPublicId() : "");
 
                 // Employee ID
-                createCell(row, colNum++, leave.getEmployeeID() != null ? leave.getEmployeeID() : "");
+                createCell(row, colNum++, leave.getEmployee().getEmployeeId() != null ? leave.getEmployee().getEmployeeId() : "");
 
                 // Submit Date
                 createCell(row, colNum++, leave.getSubmitDate() != null ? dateFormat.format(leave.getSubmitDate()) : "");
@@ -372,7 +361,7 @@ public class ExelUtils {
                 createCell(row, colNum++, leave.getHappenDate() != null ? dateFormat.format(leave.getHappenDate()) : "");
 
                 // User ID
-                createCell(row, colNum++, leave.getUserId() != null ? leave.getUserId() : "");
+                createCell(row, colNum++, leave.getEmployee().getPublicId() != null ? leave.getEmployee().getPublicId() : "");
             }
         }
 
@@ -444,10 +433,10 @@ public class ExelUtils {
                 createCell(row, colNum++, movement.getDestination() != null ? movement.getDestination() : "");
 
                 // Employee ID
-                createCell(row, colNum++, movement.getEmployeeId() != null ? movement.getEmployeeId() : "");
+                createCell(row, colNum++, movement.getEmployee().getEmployeeId() != null ? movement.getEmployee().getEmployeeId() : "");
 
                 // User ID
-                createCell(row, colNum++, movement.getUserId() != null ? movement.getUserId() : "");
+                createCell(row, colNum++, movement.getEmployee().getPublicId() != null ? movement.getEmployee().getPublicId() : "");
 
                 // Request Date
                 createCell(row, colNum++, movement.getReqDate() != null ? dateTimeFormat.format(movement.getReqDate()) : "");
@@ -537,7 +526,7 @@ public class ExelUtils {
         }
     }
 
-    private void createAbsencesSheet(Workbook workbook, List<AbsenteeEntity> absencesList) {
+    /*private void createAbsencesSheet(Workbook workbook, List<AbsenteeEntity> absencesList) {
         Sheet sheet = workbook.createSheet("Absences");
 
         // Create header style
@@ -598,7 +587,7 @@ public class ExelUtils {
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
         }
-    }
+    }*/
 
     private CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();

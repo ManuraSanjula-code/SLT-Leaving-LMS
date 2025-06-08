@@ -30,8 +30,8 @@ import leaveReducerNo from './redux-lms/leave/leaveSlice';
 import rosterReducer from './redux-roster/rosterSlice';
 import attendanceRosterReducer from './redux-roster/attendanceSlice';
 import rosterManagementReducer from './redux-roster/rosterManagementSlice';
+import absentEmployeesReducer from './redux-lms/absent/absentEmployeesSlice'
 
-// Import middleware
 import { authMiddleware, apiErrorMiddleware } from "./middleware/middleware";
 import { encryptionMiddleware } from './middleware/encryptionMiddleware';
 import { encryptionTransform } from './persistTransforms';
@@ -192,6 +192,7 @@ const rootReducer = combineReducers({
     unauthorizedLeaves: unauthorizedLeavesSlice,
     employeeActivities: employeeActivitiesReducer,
     activityRecords: activityRecordsReducer,
+    absentEmployees: absentEmployeesReducer,
     noPay: noPay,
     movement: movementReducer,
     movementRequest: movementRequestReducer,

@@ -1,27 +1,27 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepoV1;
-import com.slt.peotv.lmsmangmentservice.service.impl.Check_Service_Impl;
+import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AttendanceUtils {
 
     @Autowired
-    private AttendanceRepoV1 attendanceRepo;
+    private AttendanceRepo attendanceRepo;
     private static final Logger log = LoggerFactory.getLogger(AttendanceUtils.class);
 
     public boolean isDuplicateAttendance(AttendanceEntity newAttendance) {
         try {
             // STEP 1: Quick check - if no records for this employee+date, definitely not duplicate
-            long count = attendanceRepo.countByEmployeeIDAndDate(
-                    newAttendance.getEmployeeID(),
+            long count = attendanceRepo.countByEmployeeAndDate(
+                    newAttendance.getEmployee(),
                     newAttendance.getDate()
             );
 
@@ -30,10 +30,14 @@ public class AttendanceUtils {
             }
 
             // STEP 2: Get only potential duplicates (much smaller dataset)
-            List<AttendanceEntity> potentialDuplicates = attendanceRepo.findByEmployeeIDAndDate(
-                    newAttendance.getEmployeeID(),
-                    newAttendance.getDate()
-            );
+
+            List<AttendanceEntity> potentialDuplicates = attendanceRepo.findByEmployee(
+                            newAttendance.getEmployee()
+                    ).stream()
+                    .filter(attendance -> attendance.getDate() != null &&
+                            attendance.getDate().equals(newAttendance.getDate()))
+                    .collect(Collectors.toList());
+
             // STEP 3: Check each potential duplicate
             return potentialDuplicates.stream()
                     .anyMatch(existing -> areAttendanceRecordsEqual(existing, newAttendance));
@@ -49,7 +53,7 @@ public class AttendanceUtils {
         // Compare all fields with null-safe comparison
         return safeEquals(existing.getPublicId(), newRecord.getPublicId()) &&
                 safeEquals(existing.getDate(), newRecord.getDate()) &&
-                safeEquals(existing.getEmployeeID(), newRecord.getEmployeeID()) &&
+                safeEquals(existing.getEmployee(), newRecord.getEmployee()) &&
                 safeEquals(existing.getIsFullDay(), newRecord.getIsFullDay()) &&
                 safeEquals(existing.getArrivalDate(), newRecord.getArrivalDate()) &&
                 safeEquals(existing.getArrivalTime(), newRecord.getArrivalTime()) &&
@@ -71,7 +75,6 @@ public class AttendanceUtils {
                 safeEquals(existing.getDueDateForUA(), newRecord.getDueDateForUA()) &&
                 safeEquals(existing.getActive(), newRecord.getActive()) &&
                 safeEquals(existing.getNopay(), newRecord.getNopay()) &&
-                safeEquals(existing.getUserId(), newRecord.getUserId()) &&
                 safeEquals(existing.getViaMovement(), newRecord.getViaMovement()) &&
                 safeEquals(existing.getViaLeave(), newRecord.getViaLeave()) &&
                 safeEquals(existing.getIsManual(), newRecord.getIsManual()) &&
@@ -97,7 +100,7 @@ public class AttendanceUtils {
         // Create a hash string from all field values
         sb.append(attendance.getPublicId() != null ? attendance.getPublicId() : "NULL").append("|");
         sb.append(attendance.getDate() != null ? attendance.getDate().toString() : "NULL").append("|");
-        sb.append(attendance.getEmployeeID() != null ? attendance.getEmployeeID() : "NULL").append("|");
+        sb.append(attendance.getEmployee() != null ? attendance.getEmployee().getId().toString() : "NULL").append("|");
         sb.append(attendance.getIsFullDay() != null ? attendance.getIsFullDay().toString() : "NULL").append("|");
         sb.append(attendance.getArrivalDate() != null ? attendance.getArrivalDate().toString() : "NULL").append("|");
         sb.append(attendance.getArrivalTime() != null ? attendance.getArrivalTime().toString() : "NULL").append("|");
@@ -119,7 +122,6 @@ public class AttendanceUtils {
         sb.append(attendance.getDueDateForUA() != null ? attendance.getDueDateForUA().toString() : "NULL").append("|");
         sb.append(attendance.getActive() != null ? attendance.getActive().toString() : "NULL").append("|");
         sb.append(attendance.getNopay() != null ? attendance.getNopay().toString() : "NULL").append("|");
-        sb.append(attendance.getUserId() != null ? attendance.getUserId() : "NULL").append("|");
         sb.append(attendance.getViaMovement() != null ? attendance.getViaMovement().toString() : "NULL").append("|");
         sb.append(attendance.getViaLeave() != null ? attendance.getViaLeave().toString() : "NULL").append("|");
         sb.append(attendance.getIsManual() != null ? attendance.getIsManual().toString() : "NULL").append("|");
@@ -132,11 +134,15 @@ public class AttendanceUtils {
     // Super fast hash-based duplicate check
     public boolean isDuplicateAttendanceByHash(AttendanceEntity newAttendance) {
         try {
+
             // Get potential duplicates (small dataset)
-            List<AttendanceEntity> potentialDuplicates = attendanceRepo.findByEmployeeIDAndDate(
-                    newAttendance.getEmployeeID(),
-                    newAttendance.getDate()
-            );
+
+            List<AttendanceEntity> potentialDuplicates = attendanceRepo.findByEmployee(
+                            newAttendance.getEmployee()
+                    ).stream()
+                    .filter(attendance -> attendance.getDate() != null &&
+                            attendance.getDate().equals(newAttendance.getDate()))
+                    .collect(Collectors.toList());
 
             if (potentialDuplicates.isEmpty()) {
                 return false;

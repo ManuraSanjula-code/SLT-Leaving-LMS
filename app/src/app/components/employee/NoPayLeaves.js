@@ -96,7 +96,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
     dispatch(setPageSize(newSize));
   };
 
-  // Handle admin mode toggle
+  // Handle -admin mode toggle
   const handleAdminModeToggle = (event) => {
     setAdminMode(event.target.checked);
     dispatch(setCurrentPage(0));
@@ -117,7 +117,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
     dispatch(setEndDateFilter(event.target.value));
   };
 
-  // Handle user ID filter change (admin only)
+  // Handle user ID filter change (-admin only)
   const handleUserIdFilterChange = (event) => {
     dispatch(setUserIdFilter(event.target.value));
   };
@@ -176,7 +176,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
     return "Unknown";
   };
 
-  // Check if user has admin role
+  // Check if user has -admin role
   const checkIsAdminRole = () => {
     const userRole = typeof window !== 'undefined' ? sessionStorage.getItem('userRole') : null;
     return userRole && userRole.includes("ADMIN");
@@ -190,7 +190,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
             No Pay Records
           </Typography>
 
-          {/* Admin toggle (only shown if user has admin role) */}
+          {/* Admin toggle (only shown if user has -admin role) */}
           {checkIsAdminRole() && (
               <FormControlLabel
                   control={

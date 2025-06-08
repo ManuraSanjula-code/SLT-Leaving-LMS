@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.entity.Attendance;
 
 import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
@@ -34,7 +35,9 @@ public class AttendanceEntity {
     private Date date;
     private Date etl_run_time;
 
-    private String employeeID;
+    @ManyToOne
+    private EmployeeEntity employee;
+
     @Builder.Default
     private Boolean isFullDay = false;
     private Date arrivalDate;
@@ -91,8 +94,6 @@ public class AttendanceEntity {
     @Builder.Default
     private Boolean nopay = false;
 
-    private String userId;
-    
     @Builder.Default
     private Boolean viaMovement = false;
     

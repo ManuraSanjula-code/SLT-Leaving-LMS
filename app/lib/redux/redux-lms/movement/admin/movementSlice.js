@@ -15,7 +15,7 @@ export const fetchMovementRequests = createAsyncThunk(
             }
 
             // Use the URL with the userId from session storage
-            const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
+            const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}&isAdmin=${true}`, {
                 method: 'GET',
                 credentials: 'include', // This will send cookies with the request
                 headers: {

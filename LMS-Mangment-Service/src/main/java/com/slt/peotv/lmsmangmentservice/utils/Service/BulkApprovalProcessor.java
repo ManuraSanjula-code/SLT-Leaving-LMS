@@ -176,7 +176,7 @@ public class BulkApprovalProcessor {
             MovementsEntity movement = movementOpt.get();
 
             // Validate employee matches
-            if (!movement.getEmployeeId().equals(userId)) {
+            if (!movement.getEmployee().getEmployeeId().equals(userId)) {
                 logger.warn("Employee ID mismatch for movement: {}", movementId);
                 return;
             }
@@ -205,7 +205,7 @@ public class BulkApprovalProcessor {
 
             LeaveEntity leave = leaveOpt.get();
             // Validate employee matches
-            if (!leave.getEmployeeID().equals(userId)) {
+            if (!leave.getEmployee().getEmployeeId().equals(userId)) {
                 logger.warn("Employee ID mismatch for leave: {}", leaveId);
                 return;
             }
