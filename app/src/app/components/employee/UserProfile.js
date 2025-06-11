@@ -35,11 +35,10 @@ import throttle from 'lodash/throttle';
 import SuccessDialog from '../SuccessDialog';
 import ErrorDialog from '../ErrorDialog';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const DEBOUNCE_DELAY = 300;
 const THROTTLE_DELAY = 1000;
 
-// Memoized components to prevent unnecessary re-renders
 const MemoizedAvatar = React.memo(Avatar);
 const MemoizedTextField = React.memo(TextField);
 const MemoizedButton = React.memo(Button);
@@ -51,7 +50,6 @@ const UserProfile = () => {
   const { userDetails, loading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  // Initialize profile state with deep comparison
   const initialProfileState = useMemo(() => ({
     firstName: userDetails?.firstName || '',
     lastName: userDetails?.lastName || '',
@@ -60,7 +58,6 @@ const UserProfile = () => {
     gender: userDetails?.gender || '',
     profilePic: userDetails?.profilePic || '',
     addresses: userDetails?.addresses ? [...userDetails.addresses] : [],
-    // Add the new fields
     employeeId: userDetails?.employeeId || '',
     sltId: userDetails?.sltId || '',
   }), [userDetails]);
@@ -82,7 +79,6 @@ const UserProfile = () => {
   const formRef = useRef(null);
   const userId = useMemo(() => userDetails?.id || sessionStorage.getItem('userId'), [userDetails]);
 
-  // Sync local state when Redux data changes
   useEffect(() => {
     if (userDetails && !isEqual(initialProfileState, profile)) {
       setProfile(initialProfileState);
@@ -90,11 +86,9 @@ const UserProfile = () => {
     }
   }, [userDetails, initialProfileState, profile]);
 
-  // Track if form is dirty (changed from original data)
   useEffect(() => {
   }, [profile, originalProfile]);
 
-  // Clean up object URLs on unmount
   useEffect(() => {
     const preview = previewImage;
     return () => {
@@ -104,7 +98,6 @@ const UserProfile = () => {
     };
   }, [previewImage]);
 
-  // Dialog handlers
   const handleSuccessOpen = useCallback(() => setSuccessOpen(true), []);
   const handleSuccessClose = useCallback(() => setSuccessOpen(false), []);
   const handleErrorOpen = useCallback(() => setErrorOpen(true), []);
@@ -113,7 +106,6 @@ const UserProfile = () => {
     setErrors({});
   }, []);
 
-  // Optimized field change handlers
   const debouncedHandleChange = useMemo(() =>
           debounce((e) => {
             const { name, value } = e.target;
@@ -128,7 +120,6 @@ const UserProfile = () => {
   }, [debouncedHandleChange]);
 
 
-  // Address management with throttling for rapid clicks
   const throttledAddAddress = useMemo(() =>
           throttle(() => {
             setSelectedAddress({
@@ -194,7 +185,6 @@ const UserProfile = () => {
   const handleSaveAddress = useCallback(() => {
     if (!selectedAddress) return;
 
-    // Validate address fields
     const addressErrors = {};
     if (!selectedAddress.streetName?.trim()) addressErrors.streetName = 'Street name is required';
     if (!selectedAddress.city?.trim()) addressErrors.city = 'City is required';
@@ -208,7 +198,6 @@ const UserProfile = () => {
 
     setProfile((prev) => {
       if (selectedAddress.addressId) {
-        // Update existing address
         return {
           ...prev,
           addresses: prev.addresses.map((addr) =>
@@ -216,7 +205,6 @@ const UserProfile = () => {
           ),
         };
       } else {
-        // Add new address with unique ID
         const newAddress = {
           ...selectedAddress,
           addressId: Date.now().toString(),
@@ -233,7 +221,6 @@ const UserProfile = () => {
     setErrors({});
   }, [selectedAddress]);
 
-  // Dialog promise helpers
   const showSuccessDialog = useCallback(() => {
     return new Promise((resolve) => {
       resolveRef.current = resolve;
@@ -250,7 +237,6 @@ const UserProfile = () => {
 
   const handleOpen = useCallback(() => {
     setOpen(true);
-    // Reset file input when dialog opens
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -267,7 +253,6 @@ const UserProfile = () => {
   const handleFileChange = useCallback((event) => {
     const file = event.target.files[0];
     if (file) {
-      // Validate file type and size
       if (!file.type.match('image.*')) {
         setErrors(prev => ({ ...prev, profilePic: 'Please select an image file' }));
         return;
@@ -294,11 +279,9 @@ const UserProfile = () => {
           selectedFile
       );
 
-      // Update Redux with new profile picture
       const newProfilePic = URL.createObjectURL(selectedFile);
       dispatch(setUserDetails({ ...userDetails, profilePic: newProfilePic }));
 
-      // Update local state
       setProfile(prev => ({ ...prev, profilePic: newProfilePic }));
       setOriginalProfile(prev => ({ ...prev, profilePic: newProfilePic }));
 
@@ -315,7 +298,6 @@ const UserProfile = () => {
     }
   }, [selectedFile, userId, userDetails, dispatch, handleClose, showSuccessDialog, showErrorDialog]);
 
-  // Show loading spinner during initialization
   if (loading && !userDetails) {
     return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -324,7 +306,6 @@ const UserProfile = () => {
     );
   }
 
-  // Memoized address list to prevent unnecessary re-renders
   const addressList = useMemo(() => (
       profile.addresses.length > 0 ? (
           profile.addresses.map((address) => (
@@ -355,7 +336,6 @@ const UserProfile = () => {
       )
   ), [profile.addresses, handleSetDefaultAddress, handleEditAddress, handleDeleteAddress, isSubmitting]);
 
-  // Memoized form sections to optimize rendering
   const personalInfoSection = useMemo(() => (
       <MemoizedCard sx={{ mb: 4 }}>
         <CardContent>
@@ -437,7 +417,6 @@ const UserProfile = () => {
       </MemoizedCard>
   ), [profile, errors, handleChange, isSubmitting]);
 
-  // New section for Employee Identifiers
   const employeeIdentifiersSection = useMemo(() => (
       <MemoizedCard sx={{ mb: 4 }}>
         <CardContent>
@@ -648,16 +627,14 @@ const UserProfile = () => {
               </MemoizedDialog>
             </Box>
 
-            {/* Form Sections */}
             {personalInfoSection}
-            {employeeIdentifiersSection} {/* Add the new section here */}
+            {employeeIdentifiersSection}
             {rolesSection}
             {sectionsProfilesSection}
             {employmentStatusSection}
             {addressesSection}
 
 
-            {/* Address Dialog */}
             <MemoizedDialog open={openDialog} onClose={() => setOpenDialog(false)}>
               <DialogTitle>{selectedAddress?.addressId ? 'Edit Address' : 'Add Address'}</DialogTitle>
               <DialogContent>
@@ -737,7 +714,6 @@ const UserProfile = () => {
               </DialogActions>
             </MemoizedDialog>
 
-            {/* Global Loading Indicator */}
             {loading && (
                 <Box
                     sx={{

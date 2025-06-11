@@ -36,8 +36,7 @@ import {
     Grid,
     Card,
     CardContent,
-    FormControlLabel,
-    Switch, Avatar,
+    Avatar,
 } from "@mui/material";
 import {
     Delete as DeleteIcon,
@@ -63,7 +62,40 @@ import {
     setCurrentPage,
 } from "../../../../lib/redux/redux-lms/movement/movementSlice";
 
-const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
+const MOVEMENT_TYPES = {
+    ABSENT: 'Absent',
+    UNSUCCESSFUL: 'Unsuccessful',
+    REMOTEWORK: 'Remote Work',
+    UNAUTHORIZED: 'Unauthorized'
+};
+
+const COMPONENT_BEHAVIORS = {
+    HALF_DAY: 'Half Day',
+    FULL_DAY: 'Full Day',
+    UNSUCCESSFUL: 'Unsuccessful',
+    UNAUTHORIZED: 'Unauthorized',
+    ABSENT: 'Absent'
+};
+
+const REQUEST_STATUSES = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted',
+    PENDING_APPROVAL: 'Pending Approval',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    CANCELLED: 'Cancelled',
+    EXPIRED: 'Expired'
+};
+const ADMIN_SELECTABLE_STATUSES = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted',
+    PENDING_APPROVAL: 'Pending Approval',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    CANCELLED: 'Cancelled'
+};
+
+const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = null }) => {
     const dispatch = useDispatch();
     const {
         requests: movementRequests,
@@ -80,7 +112,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         loadingInOutData
     } = useSelector(state => state.movementNo);
 
-    // Local UI state
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [currentEdit, setCurrentEdit] = useState(null);
     const [editValues, setEditValues] = useState({
@@ -95,20 +126,8 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         inTime: "",
         outTime: "",
         logTime: "",
-        // Boolean fields - properly initialized
-        unAuthorized: false,
-        accepted: false,
-        pending: false,
-        reject: false,
-        halfDay: false,
-        absent: false,
-        // Additional boolean fields from MovementReq
-        isAbsent: false,
-        isUnSuccessfulAttdate: false,
-        isHalfDay: false,
-        isLate: false,
-        isLateCover: false,
-        // Additional fields
+        componentBehavior: "FULL_DAY",
+        requestStatus: "DRAFT",
         attSync: 0,
         attendance: "",
     });
@@ -117,7 +136,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [viewMovementData, setViewMovementData] = useState(null);
 
-    // Fetch movement data
     useEffect(() => {
         if (userId == null) userId = sessionStorage.getItem('userId');
         console.log(userId)
@@ -125,6 +143,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
             dispatch(fetchMovementRequests({
                 isAdmin,
                 userId,
+                useAdmin,
                 page: pagination.currentPage,
                 size: pagination.pageSize
             }));
@@ -132,12 +151,77 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
     }, [dispatch, isAdmin, userId, pagination.currentPage, pagination.pageSize]);
 
     const isApproved = (request) => {
-        return request.status === "Approved" || request.accepted === true;
+        return request.status === "Approved" || request.accepted === true || request.requestStatus === "APPROVED";
     };
+
+    const isRejected = (request) => {
+        return request.status === "Rejected" || request.reject === true || request.requestStatus === "REJECTED";
+    };
+
+    const isCancelled = (request) => {
+        return request.status === "Cancelled" || request.canceled === true || request.requestStatus === "CANCELLED";
+    };
+
+    const isExpired = (request) => {
+        return request.status === "Expired" || request.requestStatus === "EXPIRED";
+    };
+
+    const isMovementEditable = (request) => {
+        return !(isApproved(request) || isRejected(request) || isCancelled(request) || isExpired(request));
+    };
+
+    const getFinalStateInfo = (request) => {
+        if (isExpired(request)) return { type: 'expired', color: 'error', icon: '⏰', message: 'expired and cannot be modified' };
+        if (isApproved(request)) return { type: 'approved', color: 'success', icon: '✅', message: 'approved and cannot be modified' };
+        if (isRejected(request)) return { type: 'rejected', color: 'error', icon: '❌', message: 'rejected and cannot be modified' };
+        if (isCancelled(request)) return { type: 'cancelled', color: 'warning', icon: '🚫', message: 'cancelled and cannot be modified' };
+        return null;
+    };
+
+    const filteredMovementRequests = movementRequests.filter((request) => {
+        const unwantedBehaviors = ['LATE', 'LATE_COVER', 'SHORT_LEAVE'];
+        if (unwantedBehaviors.includes(request.componentBehavior)) {
+            return false;
+        }
+
+        const employeeIdLower = (request.employeeId || "").toLowerCase();
+        const typeLower = (request.type || "").toLowerCase();
+        const destinationLower = (request.destination || "").toLowerCase();
+        const searchQueryLower = searchQuery.toLowerCase();
+
+        const matchesSearchQuery =
+            employeeIdLower.includes(searchQueryLower) ||
+            typeLower.includes(searchQueryLower) ||
+            destinationLower.includes(searchQueryLower);
+
+        const matchesStatusFilter =
+            statusFilter === "All" || request.status === statusFilter;
+
+        const matchesTypeFilter =
+            typeFilter === "All" || request.type === typeFilter;
+
+        const matchesStartDateFilter =
+            !startDateFilter || request.startDate >= startDateFilter;
+
+        const matchesEndDateFilter =
+            !endDateFilter || request.endDate <= endDateFilter;
+
+        return (
+            matchesSearchQuery &&
+            matchesStatusFilter &&
+            matchesTypeFilter &&
+            matchesStartDateFilter &&
+            matchesEndDateFilter
+        );
+    });
+
+    const hasNonEditableRequests = filteredMovementRequests.some(request =>
+        !isMovementEditable(request)
+    );
 
     const handleSelect = (id) => {
         const request = movementRequests.find(req => req.id === id);
-        if (request && isApproved(request)) return;
+        if (request && !isMovementEditable(request)) return;
 
         if (selected.includes(id)) {
             dispatch(setSelected(selected.filter(item => item !== id)));
@@ -147,7 +231,9 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
     };
 
     const handleSelectAll = () => {
-        const selectableRequests = filteredMovementRequests.filter(request => !isApproved(request));
+        const selectableRequests = filteredMovementRequests.filter(request =>
+            isMovementEditable(request)
+        );
 
         if (selected.length === selectableRequests.length && selectableRequests.length > 0) {
             dispatch(setSelected([]));
@@ -160,7 +246,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         try {
             for (const id of selected) {
                 const request = movementRequests.find(req => req.id === id);
-                if (request && request.publicId && !isApproved(request)) {
+                if (request && request.publicId && isMovementEditable(request)) {
                     await dispatch(deleteMovementRequest(request.publicId)).unwrap();
                 }
             }
@@ -198,7 +284,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
 
     const formatTimeForInput = (timeString) => {
         if (!timeString) return "";
-        // Handle both "HH:mm:ss" and full datetime formats
         if (timeString.includes('T')) {
             return new Date(timeString).toISOString().slice(11, 19);
         }
@@ -209,47 +294,41 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         if (!dateString) return "";
         try {
             const date = new Date(dateString);
-            return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm format
+            return date.toISOString().slice(0, 16);
         } catch (e) {
             return "";
         }
     };
 
-    // Helper function to safely get boolean value
-    const getBooleanValue = (value) => {
-        if (typeof value === 'boolean') return value;
-        if (typeof value === 'string') return value.toLowerCase() === 'true';
-        return Boolean(value);
-    };
-
     const handleOpenEditDialog = (request) => {
         setCurrentEdit(request);
+
+        const validComponentBehavior = Object.keys(COMPONENT_BEHAVIORS).includes(request.componentBehavior)
+            ? request.componentBehavior
+            : "FULL_DAY";
+
+        const validRequestStatus = Object.keys(ADMIN_SELECTABLE_STATUSES).includes(request.requestStatus)
+            ? request.requestStatus
+            : "DRAFT";
+
+        const validMovementType = Object.keys(MOVEMENT_TYPES).includes(request.movementType)
+            ? request.movementType
+            : Object.keys(MOVEMENT_TYPES)[0];
+
         setEditValues({
             employeeId: request.employeeId || "",
             userId: request.userId || "",
             happenDate: formatDateForInput(request.happenDate),
             reqDate: formatDateForInput(request.reqDate),
             destination: request.destination || "",
-            movementType: request.movementType || request.type || "",
+            movementType: validMovementType,
             comment: request.comment || "",
             category: request.category || "",
             inTime: formatTimeForInput(request.inTime),
             outTime: formatTimeForInput(request.outTime),
             logTime: formatDateTimeForInput(request.logTime),
-            // Boolean fields - properly handle existing values
-            unAuthorized: getBooleanValue(request.unAuthorized),
-            accepted: getBooleanValue(request.accepted),
-            pending: getBooleanValue(request.pending),
-            reject: getBooleanValue(request.reject),
-            halfDay: getBooleanValue(request.halfDay),
-            absent: getBooleanValue(request.absent),
-            // Additional boolean fields from MovementReq
-            isAbsent: getBooleanValue(request.isAbsent || request.absent),
-            isUnSuccessfulAttdate: getBooleanValue(request.isUnSuccessfulAttdate || request.unSuccessfulAttdate),
-            isHalfDay: getBooleanValue(request.isHalfDay || request.halfDay),
-            isLate: getBooleanValue(request.isLate),
-            isLateCover: getBooleanValue(request.isLateCover),
-            // Additional fields
+            componentBehavior: validComponentBehavior,
+            requestStatus: validRequestStatus,
             attSync: request.attSync || 0,
             attendance: request.attendance || "",
         });
@@ -270,11 +349,11 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 throw new Error("Invalid movement request data");
             }
 
-            if (isApproved(currentEdit)) {
-                throw new Error("Cannot edit approved movement requests");
+            if (!isMovementEditable(currentEdit)) {
+                throw new Error("Cannot edit this movement request");
             }
 
-            // Build the complete payload with proper field mapping
+            // Build the complete payload with enum structure
             const updatePayload = {
                 publicId: currentEdit.publicId,
                 employeeId: editValues.employeeId,
@@ -283,34 +362,18 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 movementType: editValues.movementType,
                 comment: editValues.comment,
                 category: editValues.category,
-                // Map time fields properly
-                intime: editValues.inTime, // Note: backend expects 'intime', not 'inTime'
-                outtime: editValues.outTime, // Note: backend expects 'outtime', not 'outTime'
-                // Boolean fields - ensure they are properly mapped
-                unAuthorized: editValues.unAuthorized,
-                isAbsent: editValues.isAbsent || editValues.absent, // Map both fields
-                isUnSuccessfulAttdate: editValues.isUnSuccessfulAttdate,
-                isHalfDay: editValues.isHalfDay || editValues.halfDay, // Map both fields
-                isLate: editValues.isLate,
-                isLateCover: editValues.isLateCover,
-                // Additional fields
+                inTime: editValues.inTime,
+                outTime: editValues.outTime,
+                componentBehavior: editValues.componentBehavior,
+                requestStatus: editValues.requestStatus,
                 attSync: editValues.attSync,
                 attendance: editValues.attendance,
             };
 
-            // Only include admin-specific boolean fields if user is admin
-            if (isAdmin) {
-                updatePayload.accepted = editValues.accepted;
-                updatePayload.pending = editValues.pending;
-                updatePayload.reject = editValues.reject;
-            }
-
-            // Handle date fields - convert to proper format
             if (editValues.happenDate) {
                 updatePayload.happenDate = new Date(editValues.happenDate).toISOString();
             }
             if (editValues.reqDate) {
-                // Map reqDate to the backend field name
                 updatePayload.reqDate = new Date(editValues.reqDate).toISOString();
             }
             if (editValues.logTime) {
@@ -321,24 +384,25 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
 
             await dispatch(updateMovementRequest({
                 updatePayload,
-                isAdmin
+                isAdmin,
+                useAdmin
             })).unwrap();
 
             setEditDialogOpen(false);
 
-            // Refresh the data
             if (userId == null) userId = sessionStorage.getItem('userId');
             if (userId) {
                 dispatch(fetchMovementRequests({
                     isAdmin,
                     userId,
+                    useAdmin,
                     page: pagination.currentPage,
                     size: pagination.pageSize
                 }));
             }
         } catch (err) {
             console.error("Error updating movement request:", err);
-            // You might want to show an error message to the user here
+            alert(`Update failed: ${err.message || err}`);
         }
     };
 
@@ -381,6 +445,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
             dispatch(fetchMovementRequests({
                 isAdmin,
                 userId,
+                useAdmin,
                 page: 0,
                 size: pagination.pageSize
             }));
@@ -416,38 +481,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
         if (!timeString) return "N/A";
         return timeString;
     };
-
-    const filteredMovementRequests = movementRequests.filter((request) => {
-        const employeeIdLower = (request.employeeId || "").toLowerCase();
-        const typeLower = (request.type || "").toLowerCase();
-        const destinationLower = (request.destination || "").toLowerCase();
-        const searchQueryLower = searchQuery.toLowerCase();
-
-        const matchesSearchQuery =
-            employeeIdLower.includes(searchQueryLower) ||
-            typeLower.includes(searchQueryLower) ||
-            destinationLower.includes(searchQueryLower);
-
-        const matchesStatusFilter =
-            statusFilter === "All" || request.status === statusFilter;
-
-        const matchesTypeFilter =
-            typeFilter === "All" || request.type === typeFilter;
-
-        const matchesStartDateFilter =
-            !startDateFilter || request.startDate >= startDateFilter;
-
-        const matchesEndDateFilter =
-            !endDateFilter || request.endDate <= endDateFilter;
-
-        return (
-            matchesSearchQuery &&
-            matchesStatusFilter &&
-            matchesTypeFilter &&
-            matchesStartDateFilter &&
-            matchesEndDateFilter
-        );
-    });
 
     const movementTypes = [...new Set(movementRequests.map(req => req.type).filter(Boolean))];
     const statuses = [...new Set(movementRequests.map(req => req.status).filter(Boolean))];
@@ -563,9 +596,17 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 variant="contained"
                                 color="error"
                                 onClick={handleBulkDelete}
-                                disabled={selected.length === 0}
+                                disabled={
+                                    selected.length === 0 ||
+                                    hasNonEditableRequests ||
+                                    selected.some((id) => {
+                                        const request = movementRequests.find((req) => req.id === id);
+                                        return !isMovementEditable(request);
+                                    })
+                                }
                             >
                                 Delete Selected ({selected.length})
+                                {hasNonEditableRequests && " - Some items cannot be deleted"}
                             </Button>
                         </Box>
 
@@ -580,13 +621,14 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                                 <Checkbox
                                                     indeterminate={
                                                         selected.length > 0 &&
-                                                        selected.length < filteredMovementRequests.filter(req => !isApproved(req)).length
+                                                        selected.length < filteredMovementRequests.filter(req => isMovementEditable(req)).length
                                                     }
                                                     checked={
-                                                        selected.length === filteredMovementRequests.filter(req => !isApproved(req)).length &&
-                                                        filteredMovementRequests.filter(req => !isApproved(req)).length > 0
+                                                        selected.length === filteredMovementRequests.filter(req => isMovementEditable(req)).length &&
+                                                        filteredMovementRequests.filter(req => isMovementEditable(req)).length > 0
                                                     }
                                                     onChange={handleSelectAll}
+                                                    disabled={hasNonEditableRequests}
                                                 />
                                             </TableCell>
                                             <TableCell>Employee ID</TableCell>
@@ -595,66 +637,110 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                             <TableCell>Date</TableCell>
                                             <TableCell>Request Date</TableCell>
                                             <TableCell>Status</TableCell>
+                                            <TableCell>Component Behavior</TableCell>
                                             <TableCell>Actions</TableCell>
                                             <TableCell>View</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredMovementRequests.map((request) => (
-                                            <TableRow key={request.id}>
-                                                <TableCell padding="checkbox">
-                                                    <Tooltip
-                                                        title={isApproved(request) ? "Approved movements cannot be selected" : ""}>
-                            <span>
-                              <Checkbox
-                                  checked={selected.includes(request.id)}
-                                  onChange={() => handleSelect(request.id)}
-                                  disabled={isApproved(request) || request.reject}
-                              />
-                            </span>
-                                                    </Tooltip>
-                                                </TableCell>
-                                                <TableCell>{request.employeeId || ""}</TableCell>
-                                                <TableCell>{request.type || "Unknown"}</TableCell>
-                                                <TableCell>{request.destination || "Not specified"}</TableCell>
-                                                <TableCell>{request.startDate || "Not specified"}</TableCell>
-                                                <TableCell>{request.endDate || "Not specified"}</TableCell>
-                                                <TableCell>{request.status || "Unknown"}</TableCell>
-                                                <TableCell>
-                                                    <Tooltip
-                                                        title={isApproved(request) ? "Approved movements cannot be edited" : "Edit"}>
-                            <span>
-                              <IconButton
-                                  onClick={() => !isApproved(request) && handleOpenEditDialog(request)}
-                                  color="primary"
-                                  disabled={isApproved(request) || request.reject}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </span>
-                                                    </Tooltip>
-                                                    <Tooltip
-                                                        title={isApproved(request) ? "Approved movements cannot be deleted" : "Delete"}>
-                            <span>
-                              <IconButton
-                                  onClick={() => !isApproved(request) && handleOpenDeleteDialog(request.publicId)}
-                                  color="error"
-                                  disabled={isApproved(request) || request.reject}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </span>
-                                                    </Tooltip>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Tooltip title="View Details">
-                                                        <IconButton onClick={() => handleOpenDialog(request.publicId)}>
-                                                            <VisibilityIcon />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {filteredMovementRequests.map((request) => {
+                                            const isEditable = isMovementEditable(request);
+                                            const finalStateInfo = getFinalStateInfo(request);
+
+                                            return (
+                                                <TableRow
+                                                    key={request.id}
+                                                    sx={{
+                                                        backgroundColor: finalStateInfo ? (
+                                                            finalStateInfo.type === 'expired' ? '#ffebee' :
+                                                                finalStateInfo.type === 'approved' ? '#e8f5e8' :
+                                                                    finalStateInfo.type === 'rejected' ? '#ffebee' :
+                                                                        finalStateInfo.type === 'cancelled' ? '#fff3e0' :
+                                                                            'inherit'
+                                                        ) : 'inherit',
+                                                        opacity: finalStateInfo ? 0.7 : 1 // Slightly faded for final states
+                                                    }}
+                                                >
+                                                    <TableCell padding="checkbox">
+                                                        <Tooltip
+                                                            title={!isEditable ? `This movement request is ${finalStateInfo?.message || 'not editable'}` : ""}>
+                                                            <span>
+                                                                <Checkbox
+                                                                    checked={selected.includes(request.id)}
+                                                                    onChange={() => handleSelect(request.id)}
+                                                                    disabled={!isEditable}
+                                                                />
+                                                            </span>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                    <TableCell>{request.employeeId || ""}</TableCell>
+                                                    <TableCell>{request.type || "Unknown"}</TableCell>
+                                                    <TableCell>{request.destination || "Not specified"}</TableCell>
+                                                    <TableCell>{request.startDate || "Not specified"}</TableCell>
+                                                    <TableCell>{request.endDate || "Not specified"}</TableCell>
+                                                    <TableCell>
+                                                        <Typography
+                                                            color={finalStateInfo ? finalStateInfo.color : 'inherit'}
+                                                            sx={{
+                                                                fontWeight: finalStateInfo ? 'bold' : 'normal',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 1
+                                                            }}
+                                                        >
+                                                            {request.status || "Unknown"}
+                                                            {finalStateInfo && (
+                                                                <Tooltip title={`This movement request is ${finalStateInfo.message}`}>
+                                                                    <span>{finalStateInfo.icon}</span>
+                                                                </Tooltip>
+                                                            )}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {COMPONENT_BEHAVIORS[request.componentBehavior] || request.componentBehavior || 'N/A'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Tooltip
+                                                            title={!isEditable ? `This movement request is ${finalStateInfo?.message || 'not editable'}` : "Edit"}>
+                                                            <span>
+                                                                <IconButton
+                                                                    onClick={() => isEditable && handleOpenEditDialog(request)}
+                                                                    color="primary"
+                                                                    disabled={!isEditable}
+                                                                    sx={{
+                                                                        opacity: !isEditable ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    <EditIcon />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip
+                                                            title={!isEditable ? `This movement request is ${finalStateInfo?.message || 'not editable'}` : "Delete"}>
+                                                            <span>
+                                                                <IconButton
+                                                                    onClick={() => isEditable && handleOpenDeleteDialog(request.publicId)}
+                                                                    color="error"
+                                                                    disabled={!isEditable}
+                                                                    sx={{
+                                                                        opacity: !isEditable ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Tooltip title="View Details">
+                                                            <IconButton onClick={() => handleOpenDialog(request.publicId)}>
+                                                                <VisibilityIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
@@ -676,7 +762,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 )}
             </Box>
 
-            {/* Complete Edit Dialog with All Fields */}
             <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="lg" fullWidth>
                 <DialogTitle>Edit Movement Request - {currentEdit?.publicId}</DialogTitle>
                 <DialogContent>
@@ -697,6 +782,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                     value={editValues.employeeId}
                                     onChange={handleEditChange}
                                     fullWidth
+                                    disabled={true}
                                     margin="normal"
                                 />
                             </Grid>
@@ -706,6 +792,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                     name="userId"
                                     label="User ID"
                                     value={editValues.userId}
+                                    disabled={true}
                                     onChange={handleEditChange}
                                     fullWidth
                                     margin="normal"
@@ -721,14 +808,52 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                         onChange={handleEditChange}
                                         label="Movement Type"
                                     >
-                                        <MenuItem value="ABSENT">Absent</MenuItem>
-                                        <MenuItem value="LATEWORK">Late Work</MenuItem>
-                                        <MenuItem value="UNSUCCESSFUL">Unsuccessful</MenuItem>
-                                        <MenuItem value="UNAUTHORIZED">Unauthorized</MenuItem>
-                                        <MenuItem value="REMOTEWORK">Remote Work</MenuItem>
+                                        {Object.entries(MOVEMENT_TYPES).map(([key, value]) => (
+                                            <MenuItem key={key} value={key}>
+                                                {value}
+                                            </MenuItem>
+                                        ))}
                                     </Select>
                                 </FormControl>
                             </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth margin="normal">
+                                    <InputLabel>Component Behavior</InputLabel>
+                                    <Select
+                                        name="componentBehavior"
+                                        value={editValues.componentBehavior}
+                                        onChange={handleEditChange}
+                                        label="Component Behavior"
+                                    >
+                                        {Object.entries(COMPONENT_BEHAVIORS).map(([key, value]) => (
+                                            <MenuItem key={key} value={key}>
+                                                {value}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {(isAdmin || useAdmin) && (
+                                <Grid item xs={12} sm={6}>
+                                    <FormControl fullWidth margin="normal">
+                                        <InputLabel>Request Status</InputLabel>
+                                        <Select
+                                            name="requestStatus"
+                                            value={editValues.requestStatus}
+                                            onChange={handleEditChange}
+                                            label="Request Status"
+                                        >
+                                            {Object.entries(REQUEST_STATUSES).map(([key, value]) => (
+                                                <MenuItem key={key} value={key}>
+                                                    {value}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            )}
 
                             <Grid item xs={12} sm={6}>
                                 <TextField
@@ -752,7 +877,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
-                            {/* Date and Time Information */}
                             <Grid item xs={12}>
                                 <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                                     Date & Time Information
@@ -825,144 +949,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
-                            {/* Boolean Status Flags */}
-                            <Grid item xs={12}>
-                                <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
-                                    Status Flags
-                                </Typography>
-                                <Divider sx={{ mb: 2 }} />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="unAuthorized"
-                                            checked={editValues.unAuthorized}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Unauthorized"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="isAbsent"
-                                            checked={editValues.isAbsent}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Absent"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="isHalfDay"
-                                            checked={editValues.isHalfDay}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Half Day"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="isUnSuccessfulAttdate"
-                                            checked={editValues.isUnSuccessfulAttdate}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Unsuccessful Attendance"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="isLate"
-                                            checked={editValues.isLate}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Late"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            name="isLateCover"
-                                            checked={editValues.isLateCover}
-                                            onChange={handleEditChange}
-                                        />
-                                    }
-                                    label="Late Cover"
-                                />
-                            </Grid>
-
-                            {isAdmin && (
-                                <>
-                                    {/* Admin-only Status Flags */}
-                                    <Grid item xs={12}>
-                                        <Typography variant="h6" gutterBottom color="secondary" sx={{ mt: 2 }}>
-                                            Admin Status Controls
-                                        </Typography>
-                                        <Divider sx={{ mb: 2 }} />
-                                    </Grid>
-
-                                    <Grid item xs={12} sm={6} md={4}>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    name="accepted"
-                                                    checked={editValues.accepted}
-                                                    onChange={handleEditChange}
-                                                />
-                                            }
-                                            label="Accepted"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={12} sm={6} md={4}>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    name="pending"
-                                                    checked={editValues.pending}
-                                                    onChange={handleEditChange}
-                                                />
-                                            }
-                                            label="Pending"
-                                        />
-                                    </Grid>
-
-                                    <Grid item xs={12} sm={6} md={4}>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    name="reject"
-                                                    checked={editValues.reject}
-                                                    onChange={handleEditChange}
-                                                />
-                                            }
-                                            label="Rejected"
-                                        />
-                                    </Grid>
-                                </>
-                            )}
-
-                            {/* Additional Fields */}
                             <Grid item xs={12}>
                                 <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                                     Additional Information
@@ -1006,6 +992,23 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                     placeholder="Add any additional comments or notes..."
                                 />
                             </Grid>
+
+                            {/* Enum Information Display */}
+                            <Grid item xs={12}>
+                                <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                    <Typography variant="body2" color="textSecondary">
+                                        <strong>Selected Movement Type:</strong> {MOVEMENT_TYPES[editValues.movementType] || 'None'}
+                                    </Typography>
+                                    <Typography variant="body2" color="textSecondary">
+                                        <strong>Selected Component Behavior:</strong> {COMPONENT_BEHAVIORS[editValues.componentBehavior] || 'None'}
+                                    </Typography>
+                                    {(isAdmin || useAdmin) && (
+                                        <Typography variant="body2" color="textSecondary">
+                                            <strong>Request Status:</strong> {REQUEST_STATUSES[editValues.requestStatus] || 'None'}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Grid>
                         </Grid>
                     </Box>
                 </DialogContent>
@@ -1019,7 +1022,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
                 <DialogTitle>Confirm Delete</DialogTitle>
                 <DialogContent>
@@ -1035,7 +1037,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                 </DialogActions>
             </Dialog>
 
-            {/* View Details Dialog */}
             <Dialog
                 open={viewDialogOpen}
                 onClose={() => setViewDialogOpen(false)}
@@ -1078,8 +1079,18 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                         <TableRow>
                                             <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                             <TableCell>{viewMovementData.status}</TableCell>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Component Behavior</TableCell>
+                                            <TableCell>{COMPONENT_BEHAVIORS[viewMovementData.componentBehavior] || 'N/A'}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Request Status</TableCell>
+                                            <TableCell>{REQUEST_STATUSES[viewMovementData.requestStatus] || 'N/A'}</TableCell>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Edited</TableCell>
+                                            <TableCell>{viewMovementData.isEdited ? 'Yes' : 'No'}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
                                             <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Comment</TableCell>
-                                            <TableCell>{viewMovementData.comment || "No comment"}</TableCell>
+                                            <TableCell colSpan={3}>{viewMovementData.comment || "No comment"}</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -1216,7 +1227,7 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                                         {admin.accepted ? (
                                                             <Typography color="primary">Approved</Typography>
                                                         ) : (
-                                                            <Typography color="error">Rejected</Typography>
+                                                            <Typography color="error">Pending</Typography>
                                                         )}
                                                     </TableCell>
                                                 </TableRow>
@@ -1226,46 +1237,6 @@ const ManageMovementRequests = ({ isAdmin = false, userId = null }) => {
                                 </TableContainer>
                             ) : (
                                 <Alert severity="info" sx={{ mb: 4 }}>No approval history available.</Alert>
-                            )}
-
-                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 4 }}>
-                                Edited By
-                            </Typography>
-                            {viewMovementData.editedByDTOs && viewMovementData.editedByDTOs.length > 0 ? (
-                                <TableContainer component={Paper}>
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell>Profile</TableCell>
-                                                <TableCell>Name</TableCell>
-                                                <TableCell>Comment</TableCell>
-                                                <TableCell>SLT ID</TableCell>
-                                                <TableCell>Employee ID</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {viewMovementData.editedByDTOs.map((admin, index) => (
-                                                <TableRow key={admin.id || index}>
-                                                    <TableCell>
-                                                        <Avatar
-                                                            src={admin.profilePicture}
-                                                            alt={admin.name}
-                                                            sx={{ width: 40, height: 40 }}
-                                                        >
-                                                            {!admin.profilePicture && admin.name?.charAt(0)}
-                                                        </Avatar>
-                                                    </TableCell>
-                                                    <TableCell>{admin.name || ''}</TableCell>
-                                                    <TableCell>{admin.comment}</TableCell>
-                                                    <TableCell>{admin.sltId}</TableCell>
-                                                    <TableCell>{admin.employeeId}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            ) : (
-                                <Alert severity="info">No approval Edit History available.</Alert>
                             )}
                         </Box>
                     )}

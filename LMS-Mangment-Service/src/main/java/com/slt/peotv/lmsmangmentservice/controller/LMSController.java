@@ -76,7 +76,7 @@ public class LMSController {
     }
 
     @PostMapping("/bulk/approved/movement/{empId}")
-    public ResponseEntity<Void> bulkApprovedM(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
+    public ResponseEntity<Void> bulkApprovedM(@RequestBody BulkApprovedReq req, @PathVariable(required = false) String empId) {
         threadSafeBulkApprovalService.allApproved(req, empId, true);
         return ResponseEntity.ok().build();
     }
@@ -236,8 +236,8 @@ public class LMSController {
     @GetMapping("/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<AttendanceDTO> getAttendanceByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                     @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllAttendanceByUserId(userId, page, size, isAdmin);
+                                                     @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAttendanceByUserId(userId, page, size);
     }
 
     @GetMapping("/leave/{userId}/{empId}")
@@ -245,8 +245,8 @@ public class LMSController {
     public Page<LeaveDTO> getAllLeaveByUserId(@PathVariable String userId,
                                               @PathVariable String empId,
                                               @RequestParam(defaultValue = "0") int page,
-                                              @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllLeaveByUserByUserId(userId, page, size, isAdmin);
+                                              @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllLeaveByUserByUserId(userId, page, size);
     }
 
     /// ----------------- ADMIN-----------------------------
@@ -257,15 +257,15 @@ public class LMSController {
                                                          @PathVariable String empId,
                                                          @RequestParam(defaultValue = "0") int page,
                                                          @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size, isAdmin);
+        return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size);
     }
     /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/leave/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<LeaveDTO> getAllLeave(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                      @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllLeaves(page, size,isAdmin);
+                                      @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllLeaves(page, size);
     }
 
     @DeleteMapping("/leave/{leaveId}/{empId}")
@@ -308,8 +308,8 @@ public class LMSController {
     @GetMapping("/movement/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<MovementDTO> getAllMovementByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                    @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllMovementByUser(userId, page, size, isAdmin);
+                                                    @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllMovementByUser(userId, page, size);
     }
 
     /// ----------------- ADMIN-----------------------------
@@ -317,16 +317,16 @@ public class LMSController {
     @GetMapping("/movement/admin/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<MovementDTO> getAllMovementByAdmin(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                   @RequestParam(defaultValue = "10") int size,@RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllMovementByAdmin(userId, page, size, isAdmin);
+                                                   @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllMovementByAdmin(userId, page, size);
     }
     /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/movement/all/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<MovementDTO> getAllMovement(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                            @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
-        return lmsService.getAllMovements(page, size, isAdmin);
+                                            @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllMovements(page, size);
     }
 
     @GetMapping("/no-pay/{userId}/{empId}")

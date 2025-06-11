@@ -60,7 +60,8 @@ export const resolveUnauthorizedLeave = createAsyncThunk(
                 throw new Error('Failed to resolve leave');
             }
 
-            return id;
+            const data = await response.json();
+            return { id, resolveType: data?.resolveType || 'VIA_MOVEMENT' };
         } catch (err) {
             return rejectWithValue(err.message);
         }
@@ -102,18 +103,28 @@ export const bulkResolveUnauthorizedLeaves = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            await Promise.all(
-                ids.map(id =>
-                    fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
-                )
+            const promises = ids.map(id =>
+                fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
             );
-            return ids;
+
+            const responses = await Promise.all(promises);
+            const resolvedItems = await Promise.all(
+                responses.map(async (response, index) => {
+                    const data = await response.json();
+                    return {
+                        id: ids[index],
+                        resolveType: data?.resolveType || 'VIA_MOVEMENT'
+                    };
+                })
+            );
+
+            return resolvedItems;
         } catch (err) {
             return rejectWithValue("Failed to resolve selected leaves. Please try again.");
         }
@@ -157,7 +168,7 @@ const unauthorizedLeavesSlice = createSlice({
         },
         setPageSize: (state, action) => {
             state.pageSize = action.payload;
-            state.page = 0; // Reset to first page when changing page size
+            state.page = 0;
         },
         clearError: (state) => {
             state.error = null;
@@ -181,17 +192,15 @@ const unauthorizedLeavesSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(resolveUnauthorizedLeave.fulfilled, (state, action) => {
-                // Update the resolved leave in the state
-                const resolvedId = action.payload;
+                const { id, resolveType } = action.payload;
                 state.leaves.content = state.leaves.content.map(leave =>
-                    leave.id === resolvedId ? { ...leave, resolve: true } : leave
+                    leave.id === id ? { ...leave, resolve: resolveType, isResolved: true } : leave
                 );
             })
             .addCase(resolveUnauthorizedLeave.rejected, (state, action) => {
                 state.error = action.payload;
             })
             .addCase(approveUnauthorizedLeave.fulfilled, (state, action) => {
-                // Remove the approved leave from the state
                 const approvedId = action.payload;
                 state.leaves.content = state.leaves.content.filter(leave => leave.id !== approvedId);
                 state.leaves.totalElements -= 1;
@@ -200,17 +209,16 @@ const unauthorizedLeavesSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(bulkResolveUnauthorizedLeaves.fulfilled, (state, action) => {
-                // Update all resolved leaves in the state
-                const resolvedIds = action.payload;
-                state.leaves.content = state.leaves.content.map(leave =>
-                    resolvedIds.includes(leave.id) ? { ...leave, resolve: true } : leave
-                );
+                const resolvedItems = action.payload;
+                state.leaves.content = state.leaves.content.map(leave => {
+                    const resolvedItem = resolvedItems.find(item => item.id === leave.id);
+                    return resolvedItem ? { ...leave, resolve: resolvedItem.resolveType, isResolved: true } : leave;
+                });
             })
             .addCase(bulkResolveUnauthorizedLeaves.rejected, (state, action) => {
                 state.error = action.payload;
             })
             .addCase(deleteMultipleUnauthorizedLeaves.fulfilled, (state, action) => {
-                // Remove deleted leaves from the state
                 const deletedIds = action.payload;
                 state.leaves.content = state.leaves.content.filter(leave => !deletedIds.includes(leave.id));
                 state.leaves.totalElements -= deletedIds.length;

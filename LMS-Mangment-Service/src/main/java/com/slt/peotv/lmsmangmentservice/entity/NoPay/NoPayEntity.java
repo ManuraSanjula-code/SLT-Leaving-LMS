@@ -3,54 +3,50 @@ package com.slt.peotv.lmsmangmentservice.entity.NoPay;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import jakarta.persistence.*;
-import java.util.Date;
 import lombok.*;
 
+import java.util.Date;
+
 @Entity
-@Table(name = "nopay")
-@Setter
+@Table(name = "no_pay")
 @Getter
-@EqualsAndHashCode
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString
 public class NoPayEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    public String publicId;
+    @Column(name = "public_id", unique = true, nullable = false)
+    private String publicId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
     private EmployeeEntity employee;
 
-    @Column(name = "submission_date")
-    private Date submissionDate;
-
-    @Column(name = "actual_date")
-    private Date acctualDate;
-
-    @Builder.Default
-    private Boolean isHalfDay = false; ///  To indicate half-day ---- because user is half-day he/she can make absent or leave or make movement
-
-    @Builder.Default
-    private Boolean unSuccessful = false; /// To indicate unSuccessful ---- because user is unSuccessful he/she can make absent or leave or make movement
-
-    @Builder.Default
-    private Boolean isLate = false; /// To indicate isLate ---- because user is isLate he/she can make absent or leave or make movement
-
-    @Builder.Default
-    private Boolean isLateCover = false; /// To indicate latecover---- because user is latecover he/she can make absent or leave or make movement
-
-    @Builder.Default
-    private Boolean isAbsent = false; /// To indicate isAbsent ---- because user is isAbsent he/she can make absent or leave or make movement
-
-    @OneToOne
-    @JoinColumn(name = "attendance_id")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attendance_id", nullable = false)
     private AttendanceEntity attendance;
 
+    @Column(name = "submission_date", nullable = false)
+    private Date submissionDate;
+
+    @Column(name = "actual_date", nullable = false)
+    private Date date;
+
+    @Column(length = 1000)
     private String comment;
 
-    private Date happenDate;
+    @Builder.Default
+    @Column(name = "created_date")
+    private Date createdDate = new Date();
+
+    @Column(name = "updated_date")
+    private Date updatedDate;
+
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 }

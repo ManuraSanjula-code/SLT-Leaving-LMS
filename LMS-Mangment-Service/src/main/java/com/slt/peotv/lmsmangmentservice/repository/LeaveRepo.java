@@ -17,6 +17,8 @@ public interface LeaveRepo extends JpaRepository<LeaveEntity, Long> {
     Page<LeaveEntity> findByEmployee(EmployeeEntity employee, Pageable pageable);
     List<LeaveEntity> findByEmployee(EmployeeEntity employee);
     Optional<LeaveEntity> findByEmployeeAndSubmitDate(EmployeeEntity employeeID, Date submitDate);
+    Optional<LeaveEntity> findByEmployeeAndHappenDate(EmployeeEntity employee, Date happenDate);
+    Optional<LeaveEntity> findByEmployeeAndFromDate(EmployeeEntity employee, Date fromDate);
     Optional<LeaveEntity> findByPublicId(String publicId);
     List<LeaveEntity> findByFromDate(Date fromDate);
     List<LeaveEntity> findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(EmployeeEntity employee, Date currentDate1, Date currentDate2);

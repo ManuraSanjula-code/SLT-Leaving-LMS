@@ -14,8 +14,8 @@ const DynamicDialog = ({ open, onClose, title, items }) => {
       onClose={onClose}
       sx={{
         '& .MuiDialog-paper': {
-          width: '80%', // Set custom width (e.g., 80% of the screen width)
-          maxWidth: 'none', // Override the default maxWidth
+          width: '80%',
+          maxWidth: 'none',
         },
       }}
     >

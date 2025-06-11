@@ -62,12 +62,10 @@ const RosterManagement = () => {
         dispatch(fetchRosterData({ month: currentMonth, year: currentYear }));
     }, [dispatch, currentMonth, currentYear]);
 
-    // Fetch roster data when month or year changes
     useEffect(() => {
         dispatch(fetchRosterData({ month: currentMonth, year: currentYear }));
     }, [dispatch, currentMonth, currentYear]);
 
-    // Loading state for initial load
     if (loading && !roster) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -76,7 +74,6 @@ const RosterManagement = () => {
         );
     }
 
-    // Error state
     if (error && !roster) {
         return (
             <ErrorState
@@ -92,7 +89,6 @@ const RosterManagement = () => {
         );
     }
 
-    // Empty state
     if (!roster?.teams?.length) {
         return (
             <EmptyState
@@ -153,7 +149,6 @@ const RosterManagement = () => {
                 </Alert>
             </Snackbar>
 
-            {/* Header with Month/Year navigation */}
             <RosterHeader
                 currentMonth={currentMonth}
                 currentYear={currentYear}
@@ -166,7 +161,6 @@ const RosterManagement = () => {
                 getMonthName={getMonthName}
             />
 
-            {/* Content */}
             {loading && roster ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
                     <Typography variant="h5">Loading updated data...</Typography>

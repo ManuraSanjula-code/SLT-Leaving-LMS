@@ -121,7 +121,7 @@ public class LmsMangmentServiceApplicationRosterTests2 {
         System.out.println("\n=== TEST CASE SUMMARY ===");
 
         Map<String, List<AccessLogEntity>> logsByEmployee = logs.stream()
-                .collect(Collectors.groupingBy(AccessLogEntity::getEmployeeID));
+                .collect(Collectors.groupingBy(AccessLogEntity::getEmployeeId));
 
         for (Map.Entry<String, List<AccessLogEntity>> entry : logsByEmployee.entrySet()) {
             String empId = entry.getKey();
@@ -136,7 +136,7 @@ public class LmsMangmentServiceApplicationRosterTests2 {
             for (AccessLogEntity log : empLogs) {
                 String time = log.getLogTime().trim();
                 String action = log.getInOut().trim();
-                String terminal = log.getTerminalID().trim();
+                String terminal = log.getTerminalId().trim();
 
                 String annotation = "";
                 int logHour = Integer.parseInt(time.split(":")[0]);
@@ -387,10 +387,10 @@ public class LmsMangmentServiceApplicationRosterTests2 {
         int processed = random.nextDouble() < 0.9 ? 1 : 0;
 
         return AccessLogEntity.builder()
-                .employeeID(empId)
+                .employeeId(empId)
                 .logDate(date)
                 .logTime(paddedTime)
-                .terminalID(paddedTerminal)
+                .terminalId(paddedTerminal)
                 .inOut(inOut)
                 .readStatus(readStatus)
                 .processed(processed)
@@ -472,10 +472,10 @@ public class LmsMangmentServiceApplicationRosterTests2 {
         String paddedTerminal = String.format("%-20s", terminal);
 
         return AccessLogEntity.builder()
-                .employeeID(empId)
+                .employeeId(empId)
                 .logDate(date)
                 .logTime(String.format("%-10s", time)) // Pad time to 10 chars
-                .terminalID(paddedTerminal)
+                .terminalId(paddedTerminal)
                 .inOut(inOut)
                 .readStatus("0")
                 .processed(1)

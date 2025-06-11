@@ -26,7 +26,6 @@ import {
     Pagination,
     Alert
 } from "@mui/material";
-import { Check as CheckIcon, Close as CloseIcon } from "@mui/icons-material";
 import { useSelector, useDispatch } from "react-redux";
 import {
     fetchUnsuccessfulLeaves,
@@ -47,16 +46,16 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         pageSize
     } = useSelector((state) => state.unsuccessfulLeaves);
 
-    // Local state for filters and selection
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All");
+    const [attendanceTypeFilter, setAttendanceTypeFilter] = useState("All");
+    const [leaveStatusFilter, setLeaveStatusFilter] = useState("All");
+    const [payStatusFilter, setPayStatusFilter] = useState("All");
     const [resolveFilter, setResolveFilter] = useState("All");
     const [startDateFilter, setStartDateFilter] = useState("");
     const [endDateFilter, setEndDateFilter] = useState("");
     const [selected, setSelected] = useState([]);
     const reduxUser = useSelector((state) => state.auth);
 
-    // Fetch data when page or page size changes
     useEffect(() => {
         const userId = sessionStorage.getItem('userId');
         if (userId) {
@@ -64,53 +63,64 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         }
     }, [currentPage, pageSize, dispatch, isAdmin]);
 
-    // Handle page change
     const handlePageChange = (event, value) => {
-        dispatch(setCurrentPage(value - 1)); // API uses 0-based indexing
+        dispatch(setCurrentPage(value - 1));
     };
 
-    // Handle page size change
     const handlePageSizeChange = (event) => {
         dispatch(setPageSize(event.target.value));
     };
 
-    // Handle search input change
     const handleSearchChange = (event) => {
         setSearchQuery(event.target.value);
     };
 
-    // Handle status filter change
-    const handleStatusFilterChange = (event) => {
-        setStatusFilter(event.target.value);
+    const handleAttendanceTypeFilterChange = (event) => {
+        setAttendanceTypeFilter(event.target.value);
     };
 
-    // Handle resolve filter change
+    const handleLeaveStatusFilterChange = (event) => {
+        setLeaveStatusFilter(event.target.value);
+    };
+
+    const handlePayStatusFilterChange = (event) => {
+        setPayStatusFilter(event.target.value);
+    };
+
     const handleResolveFilterChange = (event) => {
         setResolveFilter(event.target.value);
     };
 
-    // Handle resolving a leave
     const handleResolveLeave = (id) => {
         dispatch(resolveLeave(id));
     };
 
-    // Filter leaves based on search query and filters
     const filteredLeaves = leaves.content?.filter((leave) => {
         const matchesSearchQuery =
-            leave.employeeID?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leave.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             leave.publicId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            leave.issueDescription?.toLowerCase().includes(searchQuery.toLowerCase());
+            leave.issueDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leave.userId?.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesStatusFilter =
-            statusFilter === "All" ||
-            (statusFilter === "Half Day" && leave.halfDay) ||
-            (statusFilter === "Full Day" && leave.fullDay) ||
-            (statusFilter === "No Pay" && leave.noPay);
+        const matchesAttendanceTypeFilter =
+            attendanceTypeFilter === "All" ||
+            (attendanceTypeFilter === "FULL_DAY" && leave.attendanceType === "FULL_DAY") ||
+            (attendanceTypeFilter === "HALF_DAY" && leave.attendanceType === "HALF_DAY") ||
+            (attendanceTypeFilter === "ABSENT" && leave.attendanceType === "ABSENT");
+
+        const matchesLeaveStatusFilter =
+            leaveStatusFilter === "All" ||
+            leave.leaveStatus === leaveStatusFilter;
+
+        const matchesPayStatusFilter =
+            payStatusFilter === "All" ||
+            (payStatusFilter === "NO_PAY" && leave.payStatus === "NO_PAY") ||
+            (payStatusFilter === "PAID" && leave.payStatus !== "NO_PAY");
 
         const matchesResolveFilter =
             resolveFilter === "All" ||
-            (resolveFilter === "Resolved" && leave.resolve) ||
-            (resolveFilter === "Unresolved" && !leave.resolve);
+            (resolveFilter === "Resolved" && leave.resolve !== null) ||
+            (resolveFilter === "Unresolved" && leave.resolve === null);
 
         const matchesStartDateFilter =
             !startDateFilter || new Date(leave.date) >= new Date(startDateFilter);
@@ -120,14 +130,15 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
 
         return (
             matchesSearchQuery &&
-            matchesStatusFilter &&
+            matchesAttendanceTypeFilter &&
+            matchesLeaveStatusFilter &&
+            matchesPayStatusFilter &&
             matchesResolveFilter &&
             matchesStartDateFilter &&
             matchesEndDateFilter
         );
     }) || [];
 
-    // Handle individual row selection
     const handleSelect = (id) => {
         if (selected.includes(id)) {
             setSelected((prev) => prev.filter((item) => item !== id));
@@ -136,7 +147,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         }
     };
 
-    // Handle "Select All" functionality
     const handleSelectAll = () => {
         if (selected.length === filteredLeaves.length) {
             setSelected([]);
@@ -145,20 +155,75 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         }
     };
 
-    // Handle bulk resolution
     const handleBulkResolve = () => {
         dispatch(bulkResolveLeaves(selected));
         setSelected([]);
     };
 
-    // Format date for display
     const formatDate = (dateString) => {
         if (!dateString) return "-";
         const date = new Date(dateString);
         return date.toLocaleDateString();
     };
 
-    // Clear error when component unmounts or when alert is closed
+    const formatTime = (timeString) => {
+        if (!timeString) return "-";
+        return timeString;
+    };
+
+    const getAttendanceTypeChip = (attendanceType) => {
+        switch (attendanceType) {
+            case "FULL_DAY":
+                return <Chip label="Full Day" color="success" size="small" />;
+            case "HALF_DAY":
+                return <Chip label="Half Day" color="warning" size="small" />;
+            case "ABSENT":
+                return <Chip label="Absent" color="error" size="small" />;
+            default:
+                return <Chip label="Not Set" color="default" size="small" />;
+        }
+    };
+
+    const getLeaveStatusChip = (leaveStatus) => {
+        switch (leaveStatus) {
+            case "NO_LEAVE":
+                return <Chip label="No Leave" color="default" size="small" />;
+            case "FULL_LEAVE":
+                return <Chip label="Full Leave" color="info" size="small" />;
+            case "SHORT_LEAVE":
+                return <Chip label="Short Leave" color="warning" size="small" />;
+            case "LEAVE_REQUESTED":
+                return <Chip label="Leave Requested" color="secondary" size="small" />;
+            case "LEAVE_APPROVED":
+                return <Chip label="Leave Approved" color="success" size="small" />;
+            default:
+                return null;
+        }
+    };
+
+    const getPayStatusChip = (payStatus) => {
+        if (payStatus === "NO_PAY") {
+            return <Chip label="No Pay" color="error" size="small" />;
+        }
+        return null;
+    };
+
+    const getResolveStatusChip = (resolve) => {
+        if (resolve === null) {
+            return <Chip label="Unresolved" color="default" size="small" />;
+        }
+        switch (resolve) {
+            case "VIA_MOVEMENT":
+                return <Chip label="Via Movement" color="success" size="small" />;
+            case "VIA_LEAVE":
+                return <Chip label="Via Leave" color="success" size="small" />;
+            case "EXPIRED":
+                return <Chip label="Expired" color="error" size="small" />;
+            default:
+                return <Chip label="Resolved" color="success" size="small" />;
+        }
+    };
+
     useEffect(() => {
         return () => {
             dispatch(clearError());
@@ -176,7 +241,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
             <CssBaseline />
             <Container maxWidth="lg">
                 <Box sx={{ mt: 4, mb: 4 }}>
-                    {/* Header with Title and Rows per Page Select */}
                     <Box sx={{
                         display: "flex",
                         justifyContent: "space-between",
@@ -187,7 +251,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                             UnSuccessful Leave
                         </Typography>
 
-                        {/* Moved Rows per Page selector to top right */}
                         <FormControl variant="outlined" sx={{ minWidth: 150 }}>
                             <InputLabel id="rows-per-page-label">Rows per page</InputLabel>
                             <Select
@@ -206,16 +269,14 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                         </FormControl>
                     </Box>
 
-                    {/* Error Alert */}
                     {error && (
                         <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
                             {error}
                         </Alert>
                     )}
 
-                    {/* Search Bar */}
                     <TextField
-                        label="Search by Employee ID or Issue Description"
+                        label="Search by Employee ID, User ID or Issue Description"
                         variant="outlined"
                         fullWidth
                         value={searchQuery}
@@ -223,19 +284,47 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                         sx={{ mb: 2 }}
                     />
 
-                    {/* Filters */}
                     <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
                         <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-                            <InputLabel>Status</InputLabel>
+                            <InputLabel>Attendance Type</InputLabel>
                             <Select
-                                value={statusFilter}
-                                onChange={handleStatusFilterChange}
-                                label="Status"
+                                value={attendanceTypeFilter}
+                                onChange={handleAttendanceTypeFilterChange}
+                                label="Attendance Type"
                             >
                                 <MenuItem value="All">All</MenuItem>
-                                <MenuItem value="Half Day">Half Day</MenuItem>
-                                <MenuItem value="Full Day">Full Day</MenuItem>
-                                <MenuItem value="No Pay">No Pay</MenuItem>
+                                <MenuItem value="FULL_DAY">Full Day</MenuItem>
+                                <MenuItem value="HALF_DAY">Half Day</MenuItem>
+                                <MenuItem value="ABSENT">Absent</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+                            <InputLabel>Leave Status</InputLabel>
+                            <Select
+                                value={leaveStatusFilter}
+                                onChange={handleLeaveStatusFilterChange}
+                                label="Leave Status"
+                            >
+                                <MenuItem value="All">All</MenuItem>
+                                <MenuItem value="NO_LEAVE">No Leave</MenuItem>
+                                <MenuItem value="FULL_LEAVE">Full Leave</MenuItem>
+                                <MenuItem value="SHORT_LEAVE">Short Leave</MenuItem>
+                                <MenuItem value="LEAVE_REQUESTED">Leave Requested</MenuItem>
+                                <MenuItem value="LEAVE_APPROVED">Leave Approved</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+                            <InputLabel>Pay Status</InputLabel>
+                            <Select
+                                value={payStatusFilter}
+                                onChange={handlePayStatusFilterChange}
+                                label="Pay Status"
+                            >
+                                <MenuItem value="All">All</MenuItem>
+                                <MenuItem value="NO_PAY">No Pay</MenuItem>
+                                <MenuItem value="PAID">Paid</MenuItem>
                             </Select>
                         </FormControl>
 
@@ -271,7 +360,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                         />
                     </Box>
 
-                    {/* Bulk Actions - Only show for admins */}
                     {!isAdmin && selected.length > 0 && (
                         <Button
                             variant="contained"
@@ -283,14 +371,12 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                         </Button>
                     )}
 
-                    {/* Loading Indicator */}
                     {loading ? (
                         <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                             <CircularProgress />
                         </Box>
                     ) : (
                         <>
-                            {/* Table */}
                             <TableContainer component={Paper}>
                                 <Table>
                                     <TableHead>
@@ -308,18 +394,19 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                             )}
                                             <TableCell>ID</TableCell>
                                             <TableCell>Employee ID</TableCell>
+                                            <TableCell>User ID</TableCell>
                                             <TableCell>Date</TableCell>
+                                            <TableCell>Arrival Time</TableCell>
                                             <TableCell>Left Time</TableCell>
                                             <TableCell>Status</TableCell>
                                             <TableCell>Due Date</TableCell>
                                             <TableCell>Issue Description</TableCell>
-                                            {(isAdmin || !isAdmin) && <TableCell>Actions</TableCell>}
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {filteredLeaves.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={isAdmin ? 9 : 8} align="center">
+                                                <TableCell colSpan={isAdmin ? 10 : 9} align="center">
                                                     No un-successful leaves found
                                                 </TableCell>
                                             </TableRow>
@@ -331,41 +418,29 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                                             <Checkbox
                                                                 checked={selected.includes(leave.id)}
                                                                 onChange={() => handleSelect(leave.id)}
-                                                                disabled={leave.resolve}
+                                                                disabled={leave.resolve !== null}
                                                             />
                                                         </TableCell>
                                                     )}
                                                     <TableCell>{leave.publicId}</TableCell>
-                                                    <TableCell>{leave.employeeID}</TableCell>
+                                                    <TableCell>{leave.employeeId}</TableCell>
+                                                    <TableCell>{leave.userId}</TableCell>
                                                     <TableCell>{formatDate(leave.date)}</TableCell>
-                                                    <TableCell>{leave.leftTime || "-"}</TableCell>
+                                                    <TableCell>{formatTime(leave.arrivalTime)}</TableCell>
+                                                    <TableCell>{formatTime(leave.leftTime)}</TableCell>
                                                     <TableCell>
-                                                        {leave.halfDay && <Chip label="Half Day" color="warning" size="small" sx={{ mr: 0.5 }} />}
-                                                        {leave.fullDay && <Chip label="Full Day" color="error" size="small" sx={{ mr: 0.5 }} />}
-                                                        {leave.noPay && <Chip label="No Pay" color="default" size="small" sx={{ mr: 0.5 }} />}
-                                                        {leave.resolve ? (
-                                                            <Chip label="Resolved" color="success" size="small" />
-                                                        ) : (
-                                                            <Chip label="Unresolved" color="default" size="small" />
-                                                        )}
+                                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                            {getAttendanceTypeChip(leave.attendanceType)}
+                                                            {getLeaveStatusChip(leave.leaveStatus)}
+                                                            {getPayStatusChip(leave.payStatus)}
+                                                            {getResolveStatusChip(leave.resolve)}
+                                                        </Box>
                                                     </TableCell>
                                                     <TableCell>{formatDate(leave.dueDateForUA)}</TableCell>
                                                     <TableCell sx={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
                                                         {leave.issueDescription}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        {/* Show resolve button based on conditions */}
-                                                        {(!leave.resolve && !isAdmin) || (!leave.resolve && !isAdmin) ? (
-                                                            <Button
-                                                                variant="contained"
-                                                                color="primary"
-                                                                size="small"
-                                                                onClick={() => handleResolveLeave(leave.id)}
-                                                            >
-                                                                Resolve
-                                                            </Button>
-                                                        ) : null}
-                                                    </TableCell>
+
                                                 </TableRow>
                                             ))
                                         )}
@@ -373,7 +448,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                 </Table>
                             </TableContainer>
 
-                            {/* Pagination controls without rows per page selector */}
                             <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mt: 2 }}>
                                 <Typography variant="body2" sx={{ mr: 2 }}>
                                     {leaves.totalElements > 0 ?

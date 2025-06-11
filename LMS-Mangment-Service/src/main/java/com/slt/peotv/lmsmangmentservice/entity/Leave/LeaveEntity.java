@@ -2,8 +2,9 @@ package com.slt.peotv.lmsmangmentservice.entity.Leave;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
-import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,50 +46,23 @@ public class LeaveEntity {
     @JoinColumn(name = "leave_type_id", foreignKey = @ForeignKey(name = "FK_leave_type"))
     private LeaveTypeEntity leaveType;
 
-    @Column(name = "is_nopay", columnDefinition = "int(10) unsigned default '0'")
-    private Integer isNoPay = 0;
-
     @Column(name = "num_of_days")
     private Long numOfDays;
 
     @Column(name = "description")
     private String description;
 
-    @Column(name = "is_halfday")
-    private Boolean isHalfDay;
-    @Builder.Default
-    private Boolean isFullDay = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "component_behavior")
+    private ComponentBehavior componentBehavior;
 
-    @Builder.Default
-    private Boolean unSuccessful = false;
-    
-    @Builder.Default
-    private Boolean isUnauthorized = false;
-
-    @Builder.Default
-    private Boolean isLate = false;
-    
-    @Builder.Default
-    private Boolean isLateCover = false;
-    
-    @Builder.Default
-    private Boolean isShort_Leave = false;
-    
-    @Builder.Default
-    private Boolean isPending = false;
-    
-    @Builder.Default
-    private Boolean isAccepted = false;
-    
-    @Builder.Default
-    private Boolean isAbsent = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_status")
+    private RequestStatus requestStatus;
     
     @Builder.Default
     private Boolean notUsed = false;
-    
-    @Builder.Default
-    private Boolean isCanceled = false;
-    
+
     @Builder.Default
     private Boolean isManualRequest = false;
     
@@ -100,13 +74,6 @@ public class LeaveEntity {
     @OneToOne
     @JoinColumn(name = "attendance_id")
     private AttendanceEntity attendance;
-
-    @OneToMany
-    @Builder.Default
-    private List<EditedBy> editedBys = new ArrayList<>();
-
-    @Builder.Default
-    private Boolean isReject = false;
 
     @Builder.Default
     private Date createDate = new Date();

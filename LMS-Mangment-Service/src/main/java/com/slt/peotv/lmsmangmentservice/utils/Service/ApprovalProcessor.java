@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
@@ -150,7 +151,7 @@ public class ApprovalProcessor {
                         logger.warn("User {} not authorized to reject movement {}", userId, id);
                         return;
                     }
-                    movementsEntity.setIsReject(true);
+                    movementsEntity.setRequestStatus(RequestStatus.REJECTED);
                     movementsRepo.save(movementsEntity);
                     logger.info("Successfully rejected movement: {}", id);
                 } else {
@@ -164,7 +165,7 @@ public class ApprovalProcessor {
                         logger.warn("User {} not authorized to reject leave {}", userId, id);
                         return;
                     }
-                    leaveEntity.setIsReject(true);
+                    leaveEntity.setRequestStatus(RequestStatus.REJECTED);
                     leaveRepo.save(leaveEntity);
                     logger.info("Successfully rejected leave: {}", id);
                 } else {

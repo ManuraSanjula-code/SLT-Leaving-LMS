@@ -10,14 +10,11 @@ import com.slt.peotv.userservice.lms.redis.RedisService;
 import com.slt.peotv.userservice.lms.repository.*;
 import com.slt.peotv.userservice.lms.security.UserPrincipal;
 import com.slt.peotv.userservice.lms.service.UserService;
-import com.slt.peotv.userservice.lms.utils.IdUtils;
+import com.slt.peotv.userservice.lms.utils.*;
 import com.slt.peotv.userservice.lms.shared.dto.*;
 import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
 import com.slt.peotv.userservice.lms.shared.model.response.UserRest;
-import com.slt.peotv.userservice.lms.utils.ImplUtils;
-import com.slt.peotv.userservice.lms.utils.RoleService;
-import com.slt.peotv.userservice.lms.utils.UserMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -78,6 +75,8 @@ public class UserServiceImpl implements UserService {
     private AddressRepository addressRepository;
     @Autowired
     private RoleService roleService;
+    @Autowired
+    private UpdateUtils updateUtils;
 
     private <T> void updateFieldIfNotNull(T value, java.util.function.Consumer<T> setter) {
         if (value != null) {
@@ -153,12 +152,12 @@ public class UserServiceImpl implements UserService {
         userEntity.setRoles(roleEntities);
         userEntity.setSections(sectionEntities);
         userEntity.setProfiles(profilesEntities);
-
         // Save the user entity first
         UserEntity storedUserDetails = userRepository.save(userEntity);
         if (storedUserDetails == null) {
             throw new Exception(ErrorMessages.INTERNAL_SERVER_ERROR.getErrorMessage());
         }
+        updateUtils.handleAdminUpdates(storedUserDetails, user);
 
         if (!storedUserDetails.getSections().isEmpty()) {
             storedUserDetails.getSections().forEach(sec -> {

@@ -2,6 +2,8 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -20,54 +22,25 @@ public class MovementDTO {
     private String destination;
     private String employeeId;
     private Date reqDate;
+
     @Enumerated(EnumType.STRING)
     private MovementType movementType;
+
     private Integer attSync = 0;
     private Date happenDate;
-    private Boolean isPending = false;
-    private Boolean isAccepted = false;
-    private Boolean isHalfDay = false;
-    private Boolean isAbsent = false;
-    private Boolean isUnSuccessfulAttdate = false;
-    private Boolean unAuthorized = false;
-    private String attendance;
+    private ComponentBehavior componentBehavior;
+    private RequestStatus requestStatus;
+    private Date createDate;
+    private Date updateDate;
+    private Boolean isEdited = false;
+
+    private String attendance; // attendance public ID
+
     @JsonIgnore
     private List<MovementAdminsDTO> movementAdmins = new ArrayList<>();
+
     @Transient
     private List<MovementTra> adminsTra;
-    private Boolean isReject = false;
-    public Boolean getReject() {
-        return isReject;
-    }
-    private List<EditedByDTO> editedByDTOs;
-
-    public List<EditedByDTO> getEditedByDTOs() {
-        return editedByDTOs;
-    }
-
-    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
-        this.editedByDTOs = editedByDTOs;
-    }
-
-    public void setReject(Boolean reject) {
-        isReject = reject;
-    }
-
-    public List<MovementTra> getAdminsTra() {
-        return adminsTra;
-    }
-
-    public void setAdminsTra(List<MovementTra> adminsTra) {
-        this.adminsTra = adminsTra;
-    }
-
-    public List<MovementAdminsDTO> getMovementAdmins() {
-        return movementAdmins;
-    }
-
-    public void setMovementAdmins(List<MovementAdminsDTO> movementAdmins) {
-        this.movementAdmins = movementAdmins;
-    }
 
     public Long getId() {
         return id;
@@ -181,52 +154,44 @@ public class MovementDTO {
         this.happenDate = happenDate;
     }
 
-    public Boolean getPending() {
-        return isPending;
+    public ComponentBehavior getComponentBehavior() {
+        return componentBehavior;
     }
 
-    public void setPending(Boolean pending) {
-        isPending = pending;
+    public void setComponentBehavior(ComponentBehavior componentBehavior) {
+        this.componentBehavior = componentBehavior;
     }
 
-    public Boolean getAccepted() {
-        return isAccepted;
+    public RequestStatus getRequestStatus() {
+        return requestStatus;
     }
 
-    public void setAccepted(Boolean accepted) {
-        isAccepted = accepted;
+    public void setRequestStatus(RequestStatus requestStatus) {
+        this.requestStatus = requestStatus;
     }
 
-    public Boolean getHalfDay() {
-        return isHalfDay;
+    public Date getCreateDate() {
+        return createDate;
     }
 
-    public void setHalfDay(Boolean halfDay) {
-        isHalfDay = halfDay;
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
     }
 
-    public Boolean getAbsent() {
-        return isAbsent;
+    public Date getUpdateDate() {
+        return updateDate;
     }
 
-    public void setAbsent(Boolean absent) {
-        isAbsent = absent;
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
     }
 
-    public Boolean getUnSuccessfulAttdate() {
-        return isUnSuccessfulAttdate;
+    public Boolean getIsEdited() {
+        return isEdited;
     }
 
-    public void setUnSuccessfulAttdate(Boolean unSuccessfulAttdate) {
-        isUnSuccessfulAttdate = unSuccessfulAttdate;
-    }
-
-    public Boolean getUnAuthorized() {
-        return unAuthorized;
-    }
-
-    public void setUnAuthorized(Boolean unAuthorized) {
-        this.unAuthorized = unAuthorized;
+    public void setIsEdited(Boolean isEdited) {
+        this.isEdited = isEdited;
     }
 
     public String getAttendance() {
@@ -235,5 +200,185 @@ public class MovementDTO {
 
     public void setAttendance(String attendance) {
         this.attendance = attendance;
+    }
+
+    public List<MovementAdminsDTO> getMovementAdmins() {
+        return movementAdmins;
+    }
+
+    public void setMovementAdmins(List<MovementAdminsDTO> movementAdmins) {
+        this.movementAdmins = movementAdmins;
+    }
+
+    public List<MovementTra> getAdminsTra() {
+        return adminsTra;
+    }
+
+    public void setAdminsTra(List<MovementTra> adminsTra) {
+        this.adminsTra = adminsTra;
+    }
+
+    public Boolean getPending() {
+        return requestStatus == RequestStatus.PENDING_APPROVAL || requestStatus == RequestStatus.SUBMITTED;
+    }
+
+    public void setPending(Boolean pending) {
+        if (Boolean.TRUE.equals(pending)) {
+            this.requestStatus = RequestStatus.PENDING_APPROVAL;
+        }
+    }
+
+
+    public Boolean getAccepted() {
+        return requestStatus == RequestStatus.APPROVED;
+    }
+
+
+    public void setAccepted(Boolean accepted) {
+        if (Boolean.TRUE.equals(accepted)) {
+            this.requestStatus = RequestStatus.APPROVED;
+        }
+    }
+
+
+    public Boolean getReject() {
+        return requestStatus == RequestStatus.REJECTED;
+    }
+
+
+    public void setReject(Boolean reject) {
+        if (Boolean.TRUE.equals(reject)) {
+            this.requestStatus = RequestStatus.REJECTED;
+        }
+    }
+
+
+    public Boolean getHalfDay() {
+        return componentBehavior == ComponentBehavior.HALF_DAY;
+    }
+
+
+    public void setHalfDay(Boolean halfDay) {
+        if (Boolean.TRUE.equals(halfDay)) {
+            this.componentBehavior = ComponentBehavior.HALF_DAY;
+        }
+    }
+
+
+    public Boolean getAbsent() {
+        return componentBehavior == ComponentBehavior.ABSENT;
+    }
+
+    public void setAbsent(Boolean absent) {
+        if (Boolean.TRUE.equals(absent)) {
+            this.componentBehavior = ComponentBehavior.ABSENT;
+        }
+    }
+
+
+    public Boolean getUnSuccessfulAttdate() {
+        return componentBehavior == ComponentBehavior.UNSUCCESSFUL;
+    }
+
+
+    public void setUnSuccessfulAttdate(Boolean unSuccessfulAttdate) {
+        if (Boolean.TRUE.equals(unSuccessfulAttdate)) {
+            this.componentBehavior = ComponentBehavior.UNSUCCESSFUL;
+        }
+    }
+
+
+    public Boolean getUnAuthorized() {
+        return componentBehavior == ComponentBehavior.UNAUTHORIZED;
+    }
+
+    public void setUnAuthorized(Boolean unAuthorized) {
+        if (Boolean.TRUE.equals(unAuthorized)) {
+            this.componentBehavior = ComponentBehavior.UNAUTHORIZED;
+        }
+    }
+
+
+    public Boolean getLate() {
+        return componentBehavior == ComponentBehavior.LATE;
+    }
+
+
+    public Boolean getLateCover() {
+        return componentBehavior == ComponentBehavior.LATE_COVER;
+    }
+
+
+    public String getMovementStatusString() {
+        if (requestStatus != null) {
+            return requestStatus.getDescription();
+        }
+        return "Unknown";
+    }
+
+    public String getComponentBehaviorString() {
+        if (componentBehavior != null) {
+            return componentBehavior.getDisplayName();
+        }
+        return "Unknown";
+    }
+
+
+    public int getMovementDurationMinutes() {
+        if (this.inTime != null && this.outTime != null) {
+            try {
+                int inMinutes = timeToMinutes(this.inTime);
+                int outMinutes = timeToMinutes(this.outTime);
+
+                if (inMinutes != -1 && outMinutes != -1) {
+                    return Math.max(0, outMinutes - inMinutes);
+                }
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+
+    private int timeToMinutes(String time) {
+        if (time == null || time.trim().isEmpty()) {
+            return -1;
+        }
+
+        try {
+            String[] parts = time.split(":");
+            if (parts.length != 2) {
+                return -1;
+            }
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            return hours * 60 + minutes;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    public boolean isSameDayMovement() {
+        if (this.inTime != null && this.outTime != null) {
+            int inMinutes = timeToMinutes(this.inTime);
+            int outMinutes = timeToMinutes(this.outTime);
+            return outMinutes > inMinutes;
+        }
+        return true;
+    }
+
+
+    public boolean canBeEdited() {
+        return this.requestStatus != RequestStatus.APPROVED &&
+                this.requestStatus != RequestStatus.REJECTED &&
+                this.requestStatus != RequestStatus.CANCELLED &&
+                this.requestStatus != RequestStatus.EXPIRED;
+    }
+
+
+    public boolean canBeDeleted() {
+        return this.requestStatus == RequestStatus.DRAFT ||
+                this.requestStatus == RequestStatus.SUBMITTED;
     }
 }

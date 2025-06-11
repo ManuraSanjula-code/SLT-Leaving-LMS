@@ -1,38 +1,321 @@
 package com.slt.peotv.lmsmangmentservice.model.req;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
 import lombok.Data;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.sql.Time;
 import java.util.Date;
+import java.util.Objects;
 
 @Data
 public class AttendanceReq {
-    private Date date;
+
+    private String publicId;
+    private Long id;
+
+    @NotBlank(message = "Employee ID is required")
+    @JsonProperty("employeeId")
     private String employeeID;
-    private Boolean isFullDay = false;
+
+    @NotNull(message = "Date is required")
+    private Date date;
+
     private Date arrivalDate;
     private Time arrivalTime;
     private Time leftTime;
+
+    @NotBlank(message = "Terminal ID is required")
+    @JsonProperty("terminalId")
+    private String terminalID;
+
+    @NotNull(message = "Attendance type is required")
+    private AttendanceType attendanceType;
+
+    private LeaveStatus leaveStatus;
+    private PayStatus payStatus;
+    private ResolveType resolve;
+
     private Boolean isLate = false;
-    private Boolean lateCover = false;
-    private Boolean isHalfDay = false;
-    private Boolean isFullLeave = false;
-    private Boolean isShortLeave = false;
-    private Boolean isAbsent = false;
+    private Boolean isLateCovered = false;
+    private Boolean isUnauthorized = false;
     private Boolean isUnSuccessful = false;
-    private Boolean isNoPay = false;
-    private Boolean issues = false;
-    private Boolean isUnAuthorized = false;
-    private Boolean resolve = false;
-    private Boolean leaveSuccess = false;
-    private Boolean leaveReq = false;
+    private Boolean isHoliday = false;
+    private Boolean isResolved = false;
+    private Boolean hasIssues = false;
+    private Boolean isManual = false;
+
     private String issueDescription;
     private Date dueDateForUA;
-    private Boolean active = true;
-    private Boolean nopay = false;
-    private String terminalID;
-    private String adminId;
-    private String adminComment;
-    private Boolean viaMovement;
-    private Boolean viaLeave;
+    private Date etlRunTime;
+    private Date createdDate;
+    private Date updatedDate;
+    private Boolean isActive = true;
+    private Boolean viaMovement = false;
+    private Boolean viaLeave = false;
+
+    public boolean validateAttendanceReq() {
+        if (Objects.isNull(this.employeeID) || this.employeeID.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.date)) {
+            return false;
+        }
+
+        if (Objects.isNull(this.terminalID) || this.terminalID.trim().isEmpty()) {
+            return false;
+        }
+
+        if (Objects.isNull(this.attendanceType)) {
+            return false;
+        }
+
+        if (!validateDateLogic()) {
+            return false;
+        }
+
+        if (!validateTimeLogic()) {
+            return false;
+        }
+
+        if (!validateAttendanceTypeConsistency()) {
+            return false;
+        }
+
+        if (!validateStatusConsistency()) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    private boolean validateDateLogic() {
+        Date today = new Date();
+        if (this.date != null && this.date.after(today)) {
+            return false;
+        }
+
+        if (this.arrivalDate != null && this.date != null) {
+            long diffInDays = Math.abs(this.arrivalDate.getTime() - this.date.getTime()) / (24 * 60 * 60 * 1000);
+            return diffInDays <= 1;
+        }
+
+        return true;
+    }
+
+    private boolean validateTimeLogic() {
+        // If both arrival and left times are provided, left time should be after arrival time
+        if (this.arrivalTime != null && this.leftTime != null) {
+            return this.leftTime.after(this.arrivalTime);
+        }
+
+        if (this.attendanceType == AttendanceType.FULL_DAY) {
+            return this.arrivalTime != null && this.leftTime != null;
+        }
+
+        if (this.attendanceType == AttendanceType.HALF_DAY) {
+            return this.arrivalTime != null;
+        }
+
+        return true;
+    }
+
+
+    private boolean validateAttendanceTypeConsistency() {
+        if (this.attendanceType == null) {
+            return false;
+        }
+
+        switch (this.attendanceType) {
+            case ABSENT:
+                return this.arrivalTime == null && this.leftTime == null;
+
+            case FULL_DAY:
+                return true;
+
+            case HALF_DAY:
+                return this.arrivalTime != null;
+
+            default:
+                return true;
+        }
+    }
+
+
+    private boolean validateStatusConsistency() {
+        if (Boolean.TRUE.equals(this.hasIssues)) {
+            return this.issueDescription != null && !this.issueDescription.trim().isEmpty();
+        }
+
+        if (Boolean.TRUE.equals(this.isUnauthorized)) {
+            return this.dueDateForUA != null;
+        }
+
+        if (Boolean.TRUE.equals(this.isResolved)) {
+            return this.resolve != null;
+        }
+
+        if (this.payStatus == PayStatus.NO_PAY) {
+            return this.attendanceType == AttendanceType.ABSENT ||
+                    Boolean.TRUE.equals(this.isUnauthorized);
+        }
+
+        return true;
+    }
+
+
+    public boolean hasRequiredFields() {
+        return Objects.nonNull(this.employeeID) && !this.employeeID.trim().isEmpty() &&
+                Objects.nonNull(this.date) &&
+                Objects.nonNull(this.terminalID) && !this.terminalID.trim().isEmpty() &&
+                Objects.nonNull(this.attendanceType);
+    }
+
+    public boolean isFullDayAttendance() {
+        return this.attendanceType == AttendanceType.FULL_DAY;
+    }
+
+
+    public boolean isHalfDayAttendance() {
+        return this.attendanceType == AttendanceType.HALF_DAY;
+    }
+
+    public boolean isAbsentRecord() {
+        return this.attendanceType == AttendanceType.ABSENT;
+    }
+
+    public boolean hasAttendanceIssues() {
+        return Boolean.TRUE.equals(this.hasIssues) ||
+                Boolean.TRUE.equals(this.isUnauthorized) ||
+                Boolean.TRUE.equals(this.isUnSuccessful);
+    }
+
+    public String getAttendanceStatusString() {
+        if (this.attendanceType != null) {
+            return this.attendanceType.getDescription();
+        }
+        return "Unknown";
+    }
+
+    public String getLeaveStatusString() {
+        if (this.leaveStatus != null) {
+            return this.leaveStatus.getDescription();
+        }
+        return "No Leave";
+    }
+
+    public double getWorkingHours() {
+        if (this.arrivalTime != null && this.leftTime != null) {
+            long diffInMillis = this.leftTime.getTime() - this.arrivalTime.getTime();
+            return diffInMillis / (1000.0 * 60 * 60); // Convert to hours
+        }
+        return 0.0;
+    }
+
+    public boolean canBeEdited() {
+        return Boolean.TRUE.equals(this.isActive) &&
+                !Boolean.TRUE.equals(this.isResolved);
+    }
+
+    public boolean validateBusinessRules() {
+        // Working hours should be reasonable (not more than 24 hours)
+        double workingHours = getWorkingHours();
+        if (workingHours > 24) {
+            return false;
+        }
+
+        if (this.issueDescription != null && this.issueDescription.length() > 1000) {
+            return false;
+        }
+
+        if (this.dueDateForUA != null) {
+            Date today = new Date();
+            return !this.dueDateForUA.before(today);
+        }
+
+        return true;
+    }
+
+
+
+    public Boolean getIsFullDay() {
+        return attendanceType == AttendanceType.FULL_DAY;
+    }
+
+
+    public void setIsFullDay(Boolean isFullDay) {
+        if (Boolean.TRUE.equals(isFullDay)) {
+            this.attendanceType = AttendanceType.FULL_DAY;
+        }
+    }
+
+
+    public Boolean getIsHalfDay() {
+        return attendanceType == AttendanceType.HALF_DAY;
+    }
+
+
+    public void setIsHalfDay(Boolean isHalfDay) {
+        if (Boolean.TRUE.equals(isHalfDay)) {
+            this.attendanceType = AttendanceType.HALF_DAY;
+        }
+    }
+
+
+    public Boolean getIsAbsent() {
+        return attendanceType == AttendanceType.ABSENT;
+    }
+
+
+    public void setIsAbsent(Boolean isAbsent) {
+        if (Boolean.TRUE.equals(isAbsent)) {
+            this.attendanceType = AttendanceType.ABSENT;
+        }
+    }
+
+
+    public Boolean getIsNoPay() {
+        return payStatus == PayStatus.NO_PAY;
+    }
+
+    public void setIsNoPay(Boolean isNoPay) {
+        if (Boolean.TRUE.equals(isNoPay)) {
+            this.payStatus = PayStatus.NO_PAY;
+        } else {
+            this.payStatus = null;
+        }
+    }
+
+    public Boolean getLateCover() {
+        return this.isLateCovered;
+    }
+    public void setLateCover(Boolean lateCover) {
+        this.isLateCovered = lateCover;
+    }
+    public Boolean getIssues() {
+        return this.hasIssues;
+    }
+
+    public void setIssues(Boolean issues) {
+        this.hasIssues = issues;
+    }
+    public Boolean getActive() {
+        return this.isActive;
+    }
+    public void setActive(Boolean active) {
+        this.isActive = active;
+    }
+    public Boolean getIsUnAuthorized() {
+        return this.isUnauthorized;
+    }
+    public void setIsUnAuthorized(Boolean isUnAuthorized) {
+        this.isUnauthorized = isUnAuthorized;
+    }
 }

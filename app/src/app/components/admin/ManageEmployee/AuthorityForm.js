@@ -44,7 +44,7 @@ const AuthorityForm = () => {
     const handleOpenDialog = (authority = null) => {
         setCurrentAuthority(authority);
         setFormData(authority || {name: '', weight: ''});
-        setFormErrors({name: '', weight: ''}); // Reset errors when opening the dialog
+        setFormErrors({name: '', weight: ''});
         setOpenDialog(true);
     };
 
@@ -52,13 +52,12 @@ const AuthorityForm = () => {
         setOpenDialog(false);
         setCurrentAuthority(null);
         setFormData({name: '', weight: ''});
-        setFormErrors({name: '', weight: ''}); // Reset errors when closing the dialog
+        setFormErrors({name: '', weight: ''});
     };
 
     const handleChange = (e) => {
         const {name, value} = e.target;
         setFormData({...formData, [name]: value});
-        // Clear the error when the user starts typing
         setFormErrors({...formErrors, [name]: ''});
     };
 
@@ -83,7 +82,7 @@ const AuthorityForm = () => {
 
     const handleSubmit = () => {
         if (!validateForm()) {
-            return; // Prevent submission if validation fails
+            return;
         }
 
         if (currentAuthority) {

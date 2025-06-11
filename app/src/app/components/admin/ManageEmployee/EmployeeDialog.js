@@ -27,7 +27,6 @@ const EmployeeSelectionDialog = dynamic(() => import('./EmployeeSelectionDialog'
     ssr: false,
 });
 
-// Helper function for deep comparison
 const deepEqual = (a, b) => {
     if (a === b) return true;
     if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
@@ -45,7 +44,6 @@ const deepEqual = (a, b) => {
     return true;
 };
 
-// Initial form state
 const INITIAL_FORM_DATA = {
     firstName: '',
     lastName: '',
@@ -109,7 +107,6 @@ const EmployeeDialog = React.memo(({
         dispatch(setCurrentAdminPage(newPage));
     }, [dispatch]);
 
-    // Initialize form with employee data only once when dialog opens or employee changes
     useEffect(() => {
         if (!open) {
             setIsInitialized(false);
@@ -135,10 +132,7 @@ const EmployeeDialog = React.memo(({
                 selectedProfiles: memoizedEmployee.profiles || [],
                 addresses: (() => {
                     const addresses = memoizedEmployee.addresses || [];
-                    // Count how many addresses are marked as default
                     const defaultCount = addresses.filter(addr => addr.isDefault).length;
-
-                    // If multiple defaults or no defaults, reset all to false
                     const shouldResetDefaults = defaultCount !== 1;
 
                     return addresses.map((addr, index) => ({
@@ -165,7 +159,6 @@ const EmployeeDialog = React.memo(({
         }
     }, [open, memoizedEmployee, isInitialized]);
 
-    // Optimized form handlers with debouncing for rapid changes
     const handleChange = useCallback((field, value) => {
         setFormData(prev => {
             if (prev[field] === value) return prev;
@@ -178,11 +171,9 @@ const EmployeeDialog = React.memo(({
         setFormData(prev => {
             const previousSelection = prev[field] || [];
 
-            // Calculate net changes (what was truly added/removed)
             const netAdded = newValue.filter(item => !previousSelection.includes(item));
             const netRemoved = previousSelection.filter(item => !newValue.includes(item));
 
-            // If no real change, reset additional data
             if (prev[field] === newValue) {
                 return {
                     ...prev,
@@ -194,7 +185,6 @@ const EmployeeDialog = React.memo(({
                 };
             }
 
-            // Update the field and track changes in additional data
             return {
                 ...prev,
                 [field]: newValue,
@@ -208,7 +198,6 @@ const EmployeeDialog = React.memo(({
         setIsFormDirty(true);
     }, []);
 
-    // Helper function to capitalize first letter (e.g., "roles" → "Roles")
     const capitalizeFirstLetter = (str) => {
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
@@ -240,17 +229,16 @@ const EmployeeDialog = React.memo(({
         setIsFormDirty(true);
     }, []);
 
-    // Address handlers with optimization
     const handleAddAddress = useCallback(() => {
         setFormData(prev => {
             const newAddress = {
-                id: Date.now(), // Using timestamp for unique IDs
+                id: Date.now(),
                 streetName: '',
                 city: '',
                 state: '',
                 postalCode: '',
                 country: 'LK',
-                isDefault: false, // Set as default only if it's the first address
+                isDefault: false,
             };
             return {...prev, addresses: [...prev.addresses, newAddress]};
         });
@@ -297,7 +285,6 @@ const EmployeeDialog = React.memo(({
                 isDefault: false
             }));
 
-            // Then find and set the selected address as default
             const addressIndex = resetAddresses.findIndex(addr => addr.id === id);
             if (addressIndex >= 0) {
                 resetAddresses[addressIndex] = {
@@ -329,7 +316,6 @@ const EmployeeDialog = React.memo(({
         setIsFormDirty(true);
     }, [generateTemporaryPassword]);
 
-    // Check if form has changes with deep comparison
     const hasChanges = useMemo(() => {
         if (!isFormDirty) return false;
         if (!memoizedEmployee) return true;
@@ -389,7 +375,6 @@ const EmployeeDialog = React.memo(({
 
     // Form submission with enhanced validation
     const handleSave = useCallback(async () => {
-        // Early return if no changes
         if (!hasChanges) {
             onClose();
             return;
@@ -402,15 +387,12 @@ const EmployeeDialog = React.memo(({
             return;
         }
 
-        // Check exactly one default address
         const defaultCount = formData.addresses.filter(addr => addr.isDefault).length;
         if (defaultCount !== 1) {
             setErrors({...errors, addresses: "Exactly one address must be set as default"});
             return;
         }
 
-
-        // Validation
         if (!formData.firstName.trim()) newErrors.firstName = "First Name is required.";
         if (!formData.lastName.trim()) newErrors.lastName = "Last Name is required.";
         if (!formData.email.trim()) {
@@ -511,7 +493,6 @@ const EmployeeDialog = React.memo(({
         });
     });
 
-    // Memoized form sections to prevent unnecessary re-renders
     const renderBasicInfoSection = useMemo(() => (
         <>
             <Grid item xs={12} sm={6}>

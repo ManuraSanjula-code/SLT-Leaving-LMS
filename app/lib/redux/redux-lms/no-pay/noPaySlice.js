@@ -8,23 +8,19 @@ export const fetchNoPayRecords = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            // Set the base URL based on -admin status
             let baseUrl = isAdmin
                 ? "http://localhost:8080/lms/no-pay/" + empId
                 : `http://localhost:8080/lms/no-pay/user/${userId}/${empId}`;
 
-            // Add query parameters
             const queryParams = new URLSearchParams({
                 page: page.toString(),
                 size: size.toString()
             });
 
-            // Add additional query params if in -admin mode and filtering by user ID
             if (isAdmin && userIdFilter) {
                 queryParams.append('userId', userIdFilter);
             }
 
-            // Make API call to fetch no pay data with pagination
             const response = await fetch(`${baseUrl}?${queryParams.toString()}`, {
                 credentials: 'include'
             });
@@ -41,7 +37,6 @@ export const fetchNoPayRecords = createAsyncThunk(
     }
 );
 
-// Redux slice with reducers
 const noPaySlice = createSlice({
     name: 'noPay',
     initialState: {
@@ -81,7 +76,7 @@ const noPaySlice = createSlice({
         },
         setPageSize: (state, action) => {
             state.pagination.pageSize = action.payload;
-            state.pagination.currentPage = 0; // Reset to first page when changing page size
+            state.pagination.currentPage = 0;
         }
     },
     extraReducers: (builder) => {
@@ -98,7 +93,6 @@ const noPaySlice = createSlice({
                     state.pagination.totalPages = 0;
                     state.pagination.totalElements = 0;
                 } else {
-                    // Transform the data to match our component structure
                     const transformedData = action.payload.content.map(item => ({
                         id: item.id || 0,
                         publicId: item.publicId || "",

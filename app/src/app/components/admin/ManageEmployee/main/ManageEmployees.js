@@ -76,7 +76,6 @@ const ManageEmployees = React.memo(() => {
         deleteSuccess
     } = useSelector(state => state.management);
 
-    // Local state
     const [openDialog, setOpenDialog] = useState(false);
     const [currentEmployee, setCurrentEmployee] = useState(null);
     const [selectedRoles, setSelectedRoles] = useState([]);
@@ -105,12 +104,10 @@ const ManageEmployees = React.memo(() => {
         setAnchorEl(null);
     }, []);
 
-    // Initialize data
     useEffect(() => {
         dispatch(fetchManagementData({ page: 0, limit: 0 }));
     }, [dispatch]);
 
-    // Handle pagination
     useEffect(() => {
         dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
     }, [currentPage, pageSize, dispatch]);
@@ -118,7 +115,7 @@ const ManageEmployees = React.memo(() => {
     useEffect(() => {
         dispatch(fetchPaginatedAdmins({ minPriority: 10, maxPriority: 99, page: currentAdminPage, limit: adminPageSize }));
     }, [currentAdminPage, adminPageSize, dispatch]);
-    // Handle save/delete status
+
     useEffect(() => {
         if (saveSuccess || deleteSuccess) {
             setSuccessOpen(true);
@@ -133,7 +130,6 @@ const ManageEmployees = React.memo(() => {
         }
     }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize]);
 
-    // Memoized filtered employees
     const filteredEmployees = useMemo(() => {
         if (!paginatedUsers?.content) return [];
 
@@ -157,11 +153,10 @@ const ManageEmployees = React.memo(() => {
         });
     }, [paginatedUsers, selectedRoles, selectedSections, selectedProfiles, searchQuery]);
 
-    // Debounced search
     const debouncedSearch = useMemo(
         () => debounce((query) => {
             setSearchQuery(query);
-            dispatch(setCurrentPage(0)); // Reset to first page on search
+            dispatch(setCurrentPage(0));
         }, 300),
         [dispatch]
     );
@@ -170,14 +165,12 @@ const ManageEmployees = React.memo(() => {
         debouncedSearch(e.target.value);
     };
 
-    // Clean up debounce on unmount
     useEffect(() => {
         return () => {
             debouncedSearch.cancel();
         };
     }, [debouncedSearch]);
 
-    // Dialog handlers
     const handleOpenDialog_ = useCallback((type) => {
         setDialogType(type);
         setOpenDialog_(true);
@@ -186,8 +179,6 @@ const ManageEmployees = React.memo(() => {
     const handleCloseDialog_ = useCallback(() => {
         setOpenDialog_(false);
     }, []);
-
-
 
     const handleSubmit = useCallback((data) => {
         handleCloseDialog_();
@@ -211,7 +202,6 @@ const ManageEmployees = React.memo(() => {
         }
     }, [dialogType, handleSubmit]);
 
-    // Employee dialog handlers
     const handleOpenDialog = useCallback((employee = null) => {
         setCurrentEmployee(employee);
         setInitialFormData(employee ? { ...employee } : null);
@@ -225,7 +215,6 @@ const ManageEmployees = React.memo(() => {
     }, []);
 
     const handleSaveEmployee = useCallback((employee) => {
-        // Check if data has actually changed
         if (initialFormData && isEqual(initialFormData, employee)) {
             handleCloseDialog();
             return;

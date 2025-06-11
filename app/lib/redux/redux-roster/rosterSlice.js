@@ -27,7 +27,6 @@ const initialState = {
     loading: false,
     error: null,
     selectedDate: (() => {
-        // Set default date to today but format as string "YYYY-MM-DD"
         const today = new Date();
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');

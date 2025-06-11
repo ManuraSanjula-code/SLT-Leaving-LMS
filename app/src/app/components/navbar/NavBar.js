@@ -33,11 +33,9 @@ const NavBar = () => {
   const [employeeCollapseOpen, setEmployeeCollapseOpen] = useState(false);
   const [adminCollapseOpen, setAdminCollapseOpen] = useState(false);
 
-  // Get user from Redux
   const reduxUser = useSelector((state) => state.auth);
   const userPriority = reduxUser.userDetails?.highestRolePriority || 200;
 
-  // Memoize all route data
   const { allNavItems, employeeItems, adminItems } = useMemo(() => {
     const allowedRoutes = getAccessibleRoutes(userPriority);
 
@@ -81,18 +79,14 @@ const NavBar = () => {
     return { allNavItems: allItems, employeeItems: empItems, adminItems: admItems };
   }, [userPriority]);
 
-  // Memoize handlers
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
   const handleEmployeeCollapseToggle = useCallback(() => setEmployeeCollapseOpen(prev => !prev), []);
   const handleAdminCollapseToggle = useCallback(() => setAdminCollapseOpen(prev => !prev), []);
 
-  // Optimized navigation handler
   const handleNavigation = useCallback((path) => {
-    // Close drawer immediately for better perceived performance
     setSidebarOpen(false);
 
-    // Check if we're already on this page
     if (pathname !== path) {
       router.push(path);
     }
@@ -147,7 +141,6 @@ const NavBar = () => {
         >
           <Box sx={{ width: 400, paddingTop: 2 }}>
             <List>
-              {/* Only show main navigation items in drawer on mobile */}
               {isMobile && allNavItems.map((item) => (
                   <ListItem
                       button
@@ -164,7 +157,6 @@ const NavBar = () => {
                   </ListItem>
               ))}
 
-              {/* Employee section - always in drawer regardless of screen size */}
               {employeeItems.length > 0 && (
                   <>
                     <ListItem
@@ -197,7 +189,6 @@ const NavBar = () => {
                   </>
               )}
 
-              {/* Admin section - always in drawer regardless of screen size */}
               {adminItems.length > 0 && (
                   <>
                     <ListItem

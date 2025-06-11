@@ -31,27 +31,22 @@ const EmployeeList = () => {
     const [roleFilter, setRoleFilter] = useState("All");
     const [selected, setSelected] = useState([]);
 
-    // Handle search input change
     const handleSearchChange = (event) => {
         setSearchQuery(event.target.value);
     };
 
-    // Handle profile filter change
     const handleProfileFilterChange = (event) => {
         setProfileFilter(event.target.value);
     };
 
-    // Handle section filter change
     const handleSectionFilterChange = (event) => {
         setSectionFilter(event.target.value);
     };
 
-    // Handle role filter change
     const handleRoleFilterChange = (event) => {
         setRoleFilter(event.target.value);
     };
 
-    // Filter all-employees based on search query and filters
     const filteredEmployees = allEmployees.filter((employee) => {
         const matchesSearchQuery =
             employee.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -73,7 +68,6 @@ const EmployeeList = () => {
         );
     });
 
-    // Handle individual row selection
     const handleSelect = (id) => {
         if (selected.includes(id)) {
             setSelected((prev) => prev.filter((item) => item !== id));
@@ -82,7 +76,6 @@ const EmployeeList = () => {
         }
     };
 
-    // Handle "Select All" functionality
     const handleSelectAll = () => {
         if (selected.length === filteredEmployees.length) {
             setSelected([]);
@@ -91,13 +84,11 @@ const EmployeeList = () => {
         }
     };
 
-    // Handle delete individual employee
     const handleDeleteEmployee = (id) => {
         console.log(`Delete employee with ID: ${id}`);
         // Add your delete logic here
     };
 
-    // Handle delete all selected all-employees
     const handleDeleteAllSelected = () => {
         console.log(`Delete selected employees: ${selected}`);
         // Add your delete logic here
@@ -112,7 +103,6 @@ const EmployeeList = () => {
                     Employee List
                 </Typography>
 
-                {/* Search Bar */}
                 <TextField
                     label="Search by Employee Name"
                     variant="outlined"
@@ -122,9 +112,7 @@ const EmployeeList = () => {
                     sx={{ mb: 2 }}
                 />
 
-                {/* Filters */}
                 <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
-                    {/* Profile Filter */}
                     <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Profile</InputLabel>
                         <Select
@@ -139,7 +127,6 @@ const EmployeeList = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Section Filter */}
                     <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Section</InputLabel>
                         <Select
@@ -159,7 +146,6 @@ const EmployeeList = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Role Filter */}
                     <FormControl variant="outlined" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Role</InputLabel>
                         <Select
@@ -177,7 +163,6 @@ const EmployeeList = () => {
                     </FormControl>
                 </Box>
 
-                {/* Delete All Selected Button */}
                 <Button
                     variant="contained"
                     color="error"

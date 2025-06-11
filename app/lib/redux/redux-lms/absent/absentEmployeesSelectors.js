@@ -1,9 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
-// Base selectors
 const selectAbsentEmployeesState = (state) => state.absentEmployees;
 
-// Memoized selectors
 export const selectEmployees = createSelector(
     [selectAbsentEmployeesState],
     (absentEmployees) => absentEmployees.employees
@@ -49,6 +47,12 @@ export const selectIsAdmin = createSelector(
     (absentEmployees) => absentEmployees.isAdmin
 );
 
+// Add a selector to check if data has been fetched
+export const selectHasDataBeenFetched = createSelector(
+    [selectAbsentEmployeesState],
+    (absentEmployees) => absentEmployees.hasDataBeenFetched || false
+);
+
 // Computed selectors
 export const selectUnresolvedEmployees = createSelector(
     [selectEmployees],
@@ -63,7 +67,7 @@ export const selectResolvedEmployees = createSelector(
 export const selectPaginationInfo = createSelector(
     [selectCurrentPage, selectPageSize, selectTotalElements],
     (currentPage, pageSize, totalElements) => ({
-        startIndex: (currentPage * pageSize) + 1,
+        startIndex: totalElements > 0 ? (currentPage * pageSize) + 1 : 0,
         endIndex: Math.min((currentPage + 1) * pageSize, totalElements),
         totalElements
     })
@@ -75,11 +79,11 @@ export const selectHasEmployees = createSelector(
 );
 
 export const selectIsFirstLoad = createSelector(
-    [selectLoading, selectEmployees],
-    (loading, employees) => loading && employees.length === 0
+    [selectLoading, selectHasDataBeenFetched],
+    (loading, hasDataBeenFetched) => loading && !hasDataBeenFetched
 );
 
 export const selectIsSubsequentLoad = createSelector(
-    [selectLoading, selectEmployees],
-    (loading, employees) => loading && employees.length > 0
+    [selectLoading, selectHasDataBeenFetched],
+    (loading, hasDataBeenFetched) => loading && hasDataBeenFetched
 );

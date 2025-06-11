@@ -48,14 +48,13 @@ const AttendanceForm = ({ isVisible, onClose }) => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(formData),
-                credentials: 'include' // This will send cookies with the request
+                credentials: 'include'
             });
 
             if (response.ok) {
                 alert('Attendance submitted successfully!');
                 setShowModal(false);
                 onClose();
-                // Reset form or perform other actions as needed
             } else {
                 alert('Failed to submit attendance.');
             }
@@ -68,16 +67,12 @@ const AttendanceForm = ({ isVisible, onClose }) => {
 
     return (
         <div className="relative">
-            {/* Plus Button */}
             <button
                 onClick={() => setShowModal(true)}
                 className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
             >
                 <PlusCircle size={24} />
             </button>
-
-            {/* Modal */}
-
         </div>
     );
 };

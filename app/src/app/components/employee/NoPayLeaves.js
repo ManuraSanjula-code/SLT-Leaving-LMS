@@ -49,22 +49,18 @@ import {
 const ManageNoPay = ({ isAdmin = false }) => {
   const dispatch = useDispatch();
 
-  // Get state from Redux store
   const noPayRecords = useSelector(state => state.noPay.records);
   const loading = useSelector(state => state.noPay.loading);
   const error = useSelector(state => state.noPay.error);
   const pagination = useSelector(state => state.noPay.pagination);
   const filters = useSelector(state => state.noPay.filters);
 
-  // Local component state
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [adminMode, setAdminMode] = useState(isAdmin);
 
-  // Get userId from sessionStorage on component mount
   const userId = typeof window !== 'undefined' ? sessionStorage.getItem('userId') : null;
 
-  // Fetch no pay data when relevant state changes
   useEffect(() => {
     if (userId) {
       dispatch(fetchNoPayRecords({
@@ -84,9 +80,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
     filters.userIdFilter
   ]);
 
-  // Handle page change
   const handlePageChange = (event, value) => {
-    // MUI Pagination is 1-indexed but API is 0-indexed
     dispatch(setCurrentPage(value - 1));
   };
 
@@ -96,19 +90,16 @@ const ManageNoPay = ({ isAdmin = false }) => {
     dispatch(setPageSize(newSize));
   };
 
-  // Handle -admin mode toggle
   const handleAdminModeToggle = (event) => {
     setAdminMode(event.target.checked);
     dispatch(setCurrentPage(0));
     dispatch(setUserIdFilter(""));
   };
 
-  // Handle search input change
   const handleSearchChange = (event) => {
     dispatch(setSearchQuery(event.target.value));
   };
 
-  // Handle date filter changes
   const handleStartDateChange = (event) => {
     dispatch(setStartDateFilter(event.target.value));
   };
@@ -117,17 +108,13 @@ const ManageNoPay = ({ isAdmin = false }) => {
     dispatch(setEndDateFilter(event.target.value));
   };
 
-  // Handle user ID filter change (-admin only)
   const handleUserIdFilterChange = (event) => {
     dispatch(setUserIdFilter(event.target.value));
   };
 
-  // Apply filter and search
   const handleApplyFilters = () => {
-    // Reset to first page when applying new filters
     dispatch(setCurrentPage(0));
 
-    // Fetch data with updated filters
     dispatch(fetchNoPayRecords({
       isAdmin: adminMode,
       userId,
@@ -137,9 +124,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
     }));
   };
 
-  // Filter no pay records based on search query and date filters (client-side filtering)
   const filteredNoPayRecords = noPayRecords.filter((record) => {
-    // Safely handle potentially undefined string properties
     const employeeIdLower = (record.employeeID || "").toLowerCase();
     const commentLower = (record.comment || "").toLowerCase();
     const searchQueryLower = filters.searchQuery.toLowerCase();
@@ -161,13 +146,11 @@ const ManageNoPay = ({ isAdmin = false }) => {
     );
   });
 
-  // Open detail dialog
   const handleOpenDetailDialog = (record) => {
     setSelectedRecord(record);
     setDetailDialogOpen(true);
   };
 
-  // Get type of no pay record
   const getNoPayType = (record) => {
     if (record.absent) return "Absent";
     if (record.halfDay) return "Half Day";
@@ -176,7 +159,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
     return "Unknown";
   };
 
-  // Check if user has -admin role
   const checkIsAdminRole = () => {
     const userRole = typeof window !== 'undefined' ? sessionStorage.getItem('userRole') : null;
     return userRole && userRole.includes("ADMIN");
@@ -190,7 +172,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
             No Pay Records
           </Typography>
 
-          {/* Admin toggle (only shown if user has -admin role) */}
           {checkIsAdminRole() && (
               <FormControlLabel
                   control={
@@ -205,21 +186,18 @@ const ManageNoPay = ({ isAdmin = false }) => {
               />
           )}
 
-          {/* Error display */}
           {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 Error: {error}
               </Alert>
           )}
 
-          {/* Loading indicator */}
           {loading ? (
               <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                 <CircularProgress />
               </Box>
           ) : (
               <>
-                {/* Search and Filter Section */}
                 <Box sx={{ mb: 3 }}>
                   <TextField
                       label="Search by Employee ID or Comments"
@@ -231,7 +209,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
                   />
 
                   <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
-                    {/* Admin-only user ID filter */}
                     {adminMode && checkIsAdminRole() && (
                         <TextField
                             label="Filter by User ID"
@@ -270,7 +247,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
                   </Box>
                 </Box>
 
-                {/* Records per page selector and record count */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                   <Typography variant="body2">
                     Showing {filteredNoPayRecords.length} of {pagination.totalElements} total no pay records
@@ -292,7 +268,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
                   </FormControl>
                 </Box>
 
-                {/* Table */}
                 {noPayRecords.length === 0 ? (
                     <Alert severity="info">No pay records found.</Alert>
                 ) : (
@@ -339,7 +314,6 @@ const ManageNoPay = ({ isAdmin = false }) => {
                     </TableContainer>
                 )}
 
-                {/* Pagination */}
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
                   {pagination.totalPages > 0 && (
                       <Pagination
@@ -356,7 +330,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
           )}
         </Box>
 
-        {/* Detail Dialog */}
+
         <Dialog
             open={detailDialogOpen}
             onClose={() => setDetailDialogOpen(false)}

@@ -67,11 +67,13 @@ public class UserController {
     }
 
     @RequestMapping(value = "/auth/{userid}", method = {RequestMethod.POST, RequestMethod.PUT})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public AuthorityDTO saveAuth(@RequestBody AuthReq req, @PathVariable("userid") String userid) {
         return userService.saveAuthority(req);
     }
 
     @DeleteMapping("/auth/{id}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ResponseEntity<Void> deleteAuth(@PathVariable("id") String id, @PathVariable("userid") String userid) {
         userService.deleteAuth(Long.parseLong(id));
         return new ResponseEntity<>(HttpStatus.OK);
@@ -80,17 +82,20 @@ public class UserController {
     /// -------------------------------- SECTION ------------------------------------ START *********
 
     @DeleteMapping("/section/{id}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ResponseEntity<Void> deleteSection(@PathVariable("id") Long id, @PathVariable("userid") String userid) {
         userService.deleteSection(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @RequestMapping(value = "/section/{userid}", method = {RequestMethod.POST})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public SectionDTO saveSection(@RequestBody SectionReq req, @PathVariable("userid") String userid) {
         return userService.saveSection(req);
     }
 
     @RequestMapping(value = "/section/{sectionId}/{userid}", method = {RequestMethod.PUT})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public SectionDTO updateSection(@RequestBody SectionReq req,@PathVariable("sectionId") String sectionId, @PathVariable("userid") String userid) {
         req.setPublicId(sectionId);
         return userService.saveSection(req);
@@ -101,11 +106,13 @@ public class UserController {
     /// -------------------------------- Profile ------------------------------------ START *********
 
     @RequestMapping(value = "/profile/{userid}", method = {RequestMethod.POST})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ProfilesDTO saveAProfile(@RequestBody ProfileReq req, @PathVariable("userid") String userid) {
         return userService.saveProfile(req);
     }
 
     @RequestMapping(value = "/profile/{profileID}/{userid}", method = {RequestMethod.PUT})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ProfilesDTO updateProfile(@RequestBody ProfileReq req, @PathVariable("profileID") String profileID, @PathVariable("userid") String userid) {
         if(req.getPublicId() == null)
             req.setPublicId(profileID);
@@ -113,6 +120,7 @@ public class UserController {
     }
 
     @DeleteMapping("/profile/{id}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ResponseEntity<Void> deleteProfile(@PathVariable("id") Long id, @PathVariable("userid") String userid) {
         userService.deleteProfile(id);
         return new ResponseEntity<>(HttpStatus.OK);
@@ -123,17 +131,20 @@ public class UserController {
 
     /// -------------------------------- ROLE ------------------------------------ START *********
     @RequestMapping(value = "/roles/{userid}", method = {RequestMethod.POST})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public RoleDTOArchive createARole(@RequestBody RoleReq req, @PathVariable String userid) {
         return userService.saveRoleV1(req);
     }
 
     @RequestMapping(value = "/roles/{roleId}/{userid}", method = {RequestMethod.PUT})
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public RoleDTOArchive updateARole(@RequestBody RoleReq req, @PathVariable String roleId, @PathVariable String userid) {
         req.setRoleId(roleId);
         return userService.saveRoleV1(req);
     }
 
     @DeleteMapping("/delete/role/{id}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public void deleteRole(@PathVariable Long id, @PathVariable String userid) {
         userService.deleteRole(id);
 
@@ -234,11 +245,13 @@ public class UserController {
     }
 
     @PostMapping("/add/employees/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public UserDto createEmployee(@PathVariable String userid, @RequestBody UserReq userReq) throws Exception {
         return userService.createUser(userReq);
     }
 
     @PutMapping(path = "/update/{employeeId}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     @Deprecated
     public UserRest updateEmployee(
             @PathVariable String userid,
@@ -252,6 +265,7 @@ public class UserController {
     }
 
     @PutMapping(path = "/update/v2/{employeeId}/{userid}")
+    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public UserRest updateEmployeeV2(
             @PathVariable String userid,
             @PathVariable String employeeId,

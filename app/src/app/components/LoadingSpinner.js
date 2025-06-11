@@ -1,4 +1,4 @@
-'use client'; // This is a client component
+'use client';
 
 import React from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
@@ -11,9 +11,9 @@ const LoadingSpinner = () => {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh', // Full viewport height
-        width: '100vw', // Full viewport width
-        backgroundColor: '#f5f5f5', // Optional: Add a light background
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: '#f5f5f5',
       }}
     >
       <CircularProgress size={60} thickness={4} />

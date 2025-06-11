@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Async thunk for fetching absent employees
 export const fetchAbsentEmployees = createAsyncThunk(
     'absentEmployees/fetchAbsentEmployees',
     async (params, { rejectWithValue }) => {
@@ -12,17 +11,16 @@ export const fetchAbsentEmployees = createAsyncThunk(
                 startDate = '',
                 endDate = '',
                 resolutionFilter = 'All',
-                isAdmin = params.isAdmin
+                isAdmin = false
             } = params;
 
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 throw new Error('User ID not found in session storage');
             }
-            // Construct URL based on admin status
             const baseUrl = isAdmin
                 ? `http://localhost:8080/lms/absent/all/${empId}`
-                : `http://localhost:8080/lms/absent/${empId}/${empId}`;
+                : `http://localhost:8080/lms/absent/${empId}/${empId}`
 
             // Add query parameters
             const urlParams = new URLSearchParams({
@@ -62,22 +60,46 @@ export const fetchAbsentEmployees = createAsyncThunk(
             }
 
             const data = await response.json();
-
-            // Transform API data to match component structure
             const transformedEmployees = data.content.map((item) => ({
                 id: item.id,
                 publicId: item.publicId,
-                employeeName: item.employeeID,
+                employeeId: item.employeeId,
+                employeeName: item.userId,
                 date: new Date(item.date).toISOString().split('T')[0],
-                reason: item.issueDescription || 'No leave applied',
-                isResolved: item.resolve,
-                issues: item.issues,
+                reason: item.issueDescription || 'No issue description',
+
+                isResolved: item.isResolved || false,
+                isLate: item.isLate || false,
+                isLateCovered: item.isLateCovered || false,
+                isUnauthorized: item.isUnauthorized || false,
+                isUnSuccessful: item.isUnSuccessful || false,
+                isHoliday: item.isHoliday || false,
+                hasIssues: item.hasIssues || false,
+                isManual: item.isManual || false,
+                isActive: item.isActive !== false,
+
+                attendanceType: item.attendanceType,
+                leaveStatus: item.leaveStatus,
+                payStatus: item.payStatus,
+                resolve: item.resolve,
+
+                isFullDay: item.isFullDay || false,
+                isHalfDay: item.isHalfDay || false,
+                isAbsent: item.isAbsent || false,
+                isNoPay: item.isNoPay || false,
+
+                arrivalDate: item.arrivalDate,
+                arrivalTime: item.arrivalTime,
+                leftTime: item.leftTime,
                 dueDateForUA: item.dueDateForUA,
-                leaveReq: item.leaveReq,
-                leaveSuccess: item.leaveSuccess,
-                absent: item.absent,
-                noPay: item.noPay,
-                active: item.active,
+                etlRunTime: item.etlRunTime,
+                createdDate: item.createdDate,
+                updatedDate: item.updatedDate,
+
+                terminalId: item.terminalId,
+                viaMovement: item.viaMovement,
+                viaLeave: item.viaLeave,
+
                 originalData: item
             }));
 
@@ -86,37 +108,10 @@ export const fetchAbsentEmployees = createAsyncThunk(
                 totalPages: data.totalPages,
                 totalElements: data.totalElements,
                 currentPage: data.number,
-                pageSize: size
+                pageSize: data.size
             };
         } catch (error) {
-            return rejectWithValue(error.message);
-        }
-    }
-);
-
-// Async thunk for resolving absence
-export const resolveAbsence = createAsyncThunk(
-    'absentEmployees/resolveAbsence',
-    async (employeeId, { rejectWithValue }) => {
-        try {
-            // Uncomment and modify this when you have the resolve API endpoint
-            /*
-            const response = await fetch(`http://localhost:8080/lms/absent/resolve/${employeeId}`, {
-              method: 'PUT',
-              credentials: 'include',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            */
-
-            // For now, just return the employee ID
-            return employeeId;
-        } catch (error) {
+            console.error('Fetch error:', error);
             return rejectWithValue(error.message);
         }
     }
@@ -126,9 +121,9 @@ const initialState = {
     employees: [],
     loading: false,
     error: null,
-    currentPage: 0,
     totalPages: 0,
     totalElements: 0,
+    currentPage: 0,
     pageSize: 10,
     filters: {
         startDate: '',
@@ -136,7 +131,8 @@ const initialState = {
         resolutionFilter: 'All',
         searchQuery: ''
     },
-    isAdmin: false
+    isAdmin: false,
+    hasDataBeenFetched: false
 };
 
 const absentEmployeesSlice = createSlice({
@@ -167,18 +163,18 @@ const absentEmployeesSlice = createSlice({
         clearError: (state) => {
             state.error = null;
         },
-        // Optimistic update for resolve action
         resolveAbsenceOptimistic: (state, action) => {
             const employeeId = action.payload;
             const employee = state.employees.find(emp => emp.id === employeeId);
             if (employee) {
                 employee.isResolved = true;
             }
-        }
+        },
+
+        resetState: () => initialState
     },
     extraReducers: (builder) => {
         builder
-            // Fetch absent employees
             .addCase(fetchAbsentEmployees.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -191,23 +187,12 @@ const absentEmployeesSlice = createSlice({
                 state.currentPage = action.payload.currentPage;
                 state.pageSize = action.payload.pageSize;
                 state.error = null;
+                state.hasDataBeenFetched = true;
             })
             .addCase(fetchAbsentEmployees.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
-            })
-            // Resolve absence
-            .addCase(resolveAbsence.pending, (state) => {
-                // Loading state handled optimistically
-            })
-            .addCase(resolveAbsence.fulfilled, (state, action) => {
-                // Already updated optimistically
-            })
-            .addCase(resolveAbsence.rejected, (state, action) => {
-                // Revert optimistic update on error
-                state.error = action.payload;
-                // You might want to revert the optimistic update here
-                // by refetching or keeping track of the original state
+                state.hasDataBeenFetched = true;
             });
     },
 });
@@ -219,7 +204,8 @@ export const {
     setCurrentPage,
     setIsAdmin,
     clearError,
-    resolveAbsenceOptimistic
+    resolveAbsenceOptimistic,
+    resetState
 } = absentEmployeesSlice.actions;
 
 export default absentEmployeesSlice.reducer;

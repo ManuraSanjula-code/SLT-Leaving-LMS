@@ -22,17 +22,14 @@ const RosterDisplay = () => {
     const { rosterData, loading, error, selectedDate } = useSelector(state => state.roster);
 
     useEffect(() => {
-        // Fetch data when component mounts
         dispatch(fetchRosterData(selectedDate));
     }, [dispatch, selectedDate]);
 
     const handleDateChange = (newDate) => {
-        // Update selected date in Redux store
         dispatch(setSelectedDate(newDate));
     };
 
     const handleRefresh = () => {
-        // Manually trigger data refresh
         dispatch(fetchRosterData(selectedDate));
     };
 

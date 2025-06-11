@@ -5,7 +5,6 @@ const CharanaTVRosterTable = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
-        // Get current Monday as default
         const today = new Date();
         const monday = new Date(today);
         monday.setDate(today.getDate() - today.getDay() + 1);
@@ -25,12 +24,10 @@ const CharanaTVRosterTable = () => {
 
             const data = await response.json();
 
-            // Check if data is empty or invalid
             if (!data || Object.keys(data).length === 0) {
                 throw new Error('No data found for the selected week');
             }
 
-            // Validate required fields
             if (!data.dailyDuties || !Array.isArray(data.dailyDuties)) {
                 throw new Error('Invalid data structure received from server');
             }
@@ -475,7 +472,6 @@ const CharanaTVRosterTable = () => {
                 </div>
             )}
 
-            {/* Shift Type Legend */}
             {rosterData && (
                 <div style={styles.card}>
                     <h3 style={{ marginBottom: '16px' }}>Shift Type Legend</h3>

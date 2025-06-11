@@ -41,7 +41,6 @@ import { format } from "date-fns";
 const ManageLeaveRequests = () => {
   const dispatch = useDispatch();
 
-  // Get state from Redux store
   const leaveRequests = useSelector(state => state.leave.requests);
   const selected = useSelector(state => state.leave.selected);
   const pagination = useSelector(state => state.leave.pagination);
@@ -49,7 +48,7 @@ const ManageLeaveRequests = () => {
   const error = useSelector(state => state.leave.error);
   const notification = useSelector(state => state.leave.notification);
 
-  // Fetch leave requests when component mounts
+
   useEffect(() => {
     dispatch(fetchLeaveRequests({
       page: pagination.currentPage,
@@ -57,7 +56,23 @@ const ManageLeaveRequests = () => {
     }));
   }, [dispatch, pagination.currentPage, pagination.pageSize]);
 
-  // Handle page change
+  const isNonSelectable = (request) => {
+    return request.accepted ||
+        request.expired ||
+        request.isCanceled ||
+        request.canceled ||
+        request.reject ||
+        request.rejected;
+  };
+
+  const hasNonSelectableRequests = leaveRequests.some(request =>
+      request && request.publicId && isNonSelectable(request)
+  );
+
+  const selectableRequests = leaveRequests.filter(request =>
+      request && request.publicId && !isNonSelectable(request)
+  );
+
   const handlePageChange = (event, value) => {
     // API pages are 0-indexed, but Pagination component is 1-indexed
     dispatch(fetchLeaveRequests({
@@ -66,7 +81,6 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle page size change
   const handlePageSizeChange = (event) => {
     const newSize = event.target.value;
     dispatch(setPageSize(newSize));
@@ -76,17 +90,17 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle individual row selection
   const handleSelect = (id) => {
+    const request = leaveRequests.find(req => req.publicId === id);
+    if (request && isNonSelectable(request)) return;
+
     dispatch(selectLeaveRequest(id));
   };
 
-  // Handle "Select All" functionality
   const handleSelectAll = () => {
     dispatch(selectAllLeaveRequests());
   };
 
-  // Handle approve for a single request
   const handleApprove = (publicId) => {
     dispatch(processLeaveRequest({
       publicId,
@@ -94,7 +108,6 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle reject for a single request
   const handleReject = (publicId) => {
     dispatch(processLeaveRequest({
       publicId,
@@ -102,7 +115,6 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle bulk approve
   const handleBulkApprove = () => {
     dispatch(processBulkLeaveRequests({
       leaveIds: selected,
@@ -110,7 +122,6 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle bulk reject
   const handleBulkReject = () => {
     dispatch(processBulkLeaveRequests({
       leaveIds: selected,
@@ -118,12 +129,10 @@ const ManageLeaveRequests = () => {
     }));
   };
 
-  // Handle notification close
   const handleNotificationClose = () => {
     dispatch(clearNotification());
   };
 
-  // Format date to readable format
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -133,7 +142,6 @@ const ManageLeaveRequests = () => {
     }
   };
 
-  // Get leave type display text
   const getLeaveTypeText = (request) => {
     if (!request) return "N/A";
 
@@ -148,21 +156,26 @@ const ManageLeaveRequests = () => {
     }
   };
 
-  // Get status chip for leave request
   const getStatusChip = (leaveRequest) => {
     if (!leaveRequest) return <Chip label="Unknown" color="default" size="small" />;
 
-    if (leaveRequest.cancelled) {
+    if (leaveRequest.cancelled || leaveRequest.canceled) {
       return <Chip label="Canceled" color="error" size="small" />;
-    } else if (leaveRequest.reject) {
-      return <Chip label="Reject" color="error" size="small" />;
-    } else if (leaveRequest.accepted) {
-      return <Chip label="Approved" color="success" size="small" />;
-    } else if (leaveRequest.pending) {
-      return <Chip label="Pending" color="warning" size="small" />;
-    } else {
-      return <Chip label="Submitted" color="default" size="small" />;
     }
+
+    if (leaveRequest.reject || leaveRequest.rejected) {
+      return <Chip label="Rejected" color="error" size="small" />;
+    }
+
+    if (leaveRequest.accepted) {
+      return <Chip label="Approved" color="success" size="small" />;
+    }
+
+    if (leaveRequest.pending) {
+      return <Chip label="Pending" color="warning" size="small" />;
+    }
+
+    return <Chip label="Submitted" color="default" size="small" />;
   };
 
   return (
@@ -173,14 +186,12 @@ const ManageLeaveRequests = () => {
             Manage Leave Requests
           </Typography>
 
-          {/* Error message */}
           {error && (
               <Box sx={{ mb: 2, p: 2, bgcolor: "error.light", borderRadius: 1 }}>
                 <Typography color="error">Error: {error}</Typography>
               </Box>
           )}
 
-          {/* Notification Snackbar */}
           <Snackbar
               open={notification.open}
               autoHideDuration={6000}
@@ -196,26 +207,43 @@ const ManageLeaveRequests = () => {
             </Alert>
           </Snackbar>
 
-          {/* Bulk Actions */}
           <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between" }}>
             <Box>
               <Button
                   variant="contained"
                   color="primary"
                   onClick={handleBulkApprove}
-                  disabled={selected.length === 0 || loading}
+                  disabled={
+                      selected.length === 0 ||
+                      loading ||
+                      hasNonSelectableRequests ||
+                      selected.some(id => {
+                        const request = leaveRequests.find(req => req.publicId === id);
+                        return request && isNonSelectable(request);
+                      })
+                  }
                   sx={{ mr: 1 }}
               >
-                Approve Selected
+                Approve Selected ({selected.length})
+                {hasNonSelectableRequests && " - Some items cannot be processed"}
               </Button>
               <Button
                   variant="contained"
                   color="secondary"
                   onClick={handleBulkReject}
-                  disabled={selected.length === 0 || loading}
+                  disabled={
+                      selected.length === 0 ||
+                      loading ||
+                      hasNonSelectableRequests ||
+                      selected.some(id => {
+                        const request = leaveRequests.find(req => req.publicId === id);
+                        return request && isNonSelectable(request);
+                      })
+                  }
                   sx={{ mr: 1 }}
               >
-                Reject Selected
+                Reject Selected ({selected.length})
+                {hasNonSelectableRequests && " - Some items cannot be processed"}
               </Button>
             </Box>
             <FormControl sx={{ minWidth: 120 }}>
@@ -236,14 +264,12 @@ const ManageLeaveRequests = () => {
             </FormControl>
           </Box>
 
-          {/* Loading indicator */}
           {loading ? (
               <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                 <CircularProgress />
               </Box>
           ) : (
               <>
-                {/* Table */}
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead sx={{ bgcolor: "primary.light" }}>
@@ -251,10 +277,14 @@ const ManageLeaveRequests = () => {
                         <TableCell padding="checkbox">
                           <Checkbox
                               indeterminate={
-                                  selected.length > 0 && selected.length < leaveRequests.filter(req => req && req.publicId).length
+                                  selected.length > 0 && selected.length < selectableRequests.length
                               }
-                              checked={selected.length === leaveRequests.filter(req => req && req.publicId).length && leaveRequests.length > 0}
+                              checked={
+                                  selected.length === selectableRequests.length &&
+                                  selectableRequests.length > 0
+                              }
                               onChange={handleSelectAll}
+                              disabled={hasNonSelectableRequests}
                           />
                         </TableCell>
                         <TableCell>Employee ID</TableCell>
@@ -277,10 +307,11 @@ const ManageLeaveRequests = () => {
                           </TableRow>
                       ) : (
                           leaveRequests.map((request, index) => {
-                            // Skip rendering if request is null or undefined
                             if (!request || !request.publicId) {
                               return null;
                             }
+
+                            const isRequestNonSelectable = isNonSelectable(request);
 
                             return (
                                 <TableRow key={request.publicId || index}>
@@ -288,6 +319,7 @@ const ManageLeaveRequests = () => {
                                     <Checkbox
                                         checked={selected.includes(request.publicId)}
                                         onChange={() => handleSelect(request.publicId)}
+                                        disabled={isRequestNonSelectable}
                                     />
                                   </TableCell>
                                   <TableCell>{request.employeeID ? request.employeeID.substring(0, 8) + '...' : 'N/A'}</TableCell>
@@ -310,7 +342,7 @@ const ManageLeaveRequests = () => {
                                         color="primary"
                                         size="small"
                                         sx={{ mr: 1, mb: 1 }}
-                                        disabled={request.accepted || request.reject || loading}
+                                        disabled={isRequestNonSelectable || loading}
                                         onClick={() => handleApprove(request.publicId)}
                                     >
                                       Approve
@@ -319,7 +351,7 @@ const ManageLeaveRequests = () => {
                                         variant="outlined"
                                         color="error"
                                         size="small"
-                                        disabled={request.accepted || request.reject || loading}
+                                        disabled={isRequestNonSelectable || loading}
                                         onClick={() => handleReject(request.publicId)}
                                     >
                                       Reject
@@ -333,7 +365,6 @@ const ManageLeaveRequests = () => {
                   </Table>
                 </TableContainer>
 
-                {/* Pagination */}
                 {pagination.totalPages > 0 && (
                     <Stack spacing={2} sx={{ mt: 2, display: "flex", alignItems: "center" }}>
                       <Pagination

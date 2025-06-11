@@ -1,15 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 const API_BASE_URL = 'http://localhost:8080/api';
-
-// Helper function for handling API errors
 const handleApiError = (response, fallbackMessage) => {
     if (!response.ok) {
         throw new Error(`${fallbackMessage}. Status: ${response.status}`);
     }
 };
 
-// Async thunk for fetching roster data
 export const fetchRosterData = createAsyncThunk(
     'rosterManagement/fetchRosterData',
     async ({ month, year }, { rejectWithValue }) => {
@@ -31,7 +28,6 @@ export const fetchRosterData = createAsyncThunk(
     }
 );
 
-// Async thunk for fetching team details
 export const fetchTeamDetails = createAsyncThunk(
     'rosterManagement/fetchTeamDetails',
     async (teamIds, { rejectWithValue }) => {
@@ -59,7 +55,6 @@ export const fetchTeamDetails = createAsyncThunk(
     }
 );
 
-// Async thunk for fetching employee details
 export const fetchEmployeeDetails = createAsyncThunk(
     'rosterManagement/fetchEmployeeDetails',
     async (employeeIds, { rejectWithValue }) => {
@@ -82,7 +77,6 @@ export const fetchEmployeeDetails = createAsyncThunk(
 
             const employeeResults = await Promise.all(employeePromises);
 
-            // Convert array to object for easier lookup
             return employeeResults.reduce((acc, emp) => {
                 acc[emp.id] = emp;
                 return acc;
@@ -94,7 +88,6 @@ export const fetchEmployeeDetails = createAsyncThunk(
     }
 );
 
-// Async thunk for updating employee data
 export const updateEmployeeRoster = createAsyncThunk(
     'rosterManagement/updateEmployeeRoster',
     async (payload, { rejectWithValue }) => {
@@ -124,7 +117,6 @@ export const updateEmployeeRoster = createAsyncThunk(
     }
 );
 
-// Helper function to filter teams based on search term
 const filterTeams = (teams, teamDetails, employees, searchTerm) => {
     if (!searchTerm) return teams;
 
@@ -152,7 +144,6 @@ const filterTeams = (teams, teamDetails, employees, searchTerm) => {
     });
 };
 
-// Helper function to update team employees
 const updateTeamEmployees = (teamsList, teamId, employeeId, updates) => {
     return teamsList.map(team => {
         if (team.teamId === teamId) {
@@ -167,7 +158,6 @@ const updateTeamEmployees = (teamsList, teamId, employeeId, updates) => {
     });
 };
 
-// Initial state
 const initialState = {
     roster: null,
     teams: [],
@@ -310,14 +300,12 @@ const rosterManagementSlice = createSlice({
                 console.error("Error fetching employee details:", action.payload);
             })
 
-            // Employee update handlers
             .addCase(updateEmployeeRoster.pending, (state) => {
                 state.loading = true;
             })
             .addCase(updateEmployeeRoster.fulfilled, (state, action) => {
                 const { teamId, employeeId, updates } = action.payload;
 
-                // Update both roster and filtered teams
                 if (state.roster) {
                     state.roster.teams = updateTeamEmployees(
                         state.roster.teams, teamId, employeeId, updates
@@ -327,12 +315,9 @@ const rosterManagementSlice = createSlice({
                     state.filteredTeams, teamId, employeeId, updates
                 );
 
-                // Reset edit state
                 state.editMode = false;
                 state.editingEmployee = null;
                 state.editData = {};
-
-                // Show success notification
                 state.notification = {
                     open: true,
                     message: "Employee data updated successfully",

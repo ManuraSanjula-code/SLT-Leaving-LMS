@@ -2,25 +2,28 @@ package com.slt.peotv.lmsmangmentservice.service.impl;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Attendance.types.AttendanceTypeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.category.LeaveCategoryEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeTotalEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
-import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.exceptions.LMSServiceException_AllReadyExits;
-import com.slt.peotv.lmsmangmentservice.mapper.LMSMapper;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
 import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import com.slt.peotv.lmsmangmentservice.repository.*;
+import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
+import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
+import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -37,13 +40,9 @@ import java.util.stream.Collectors;
 @Service
 public class LMS_Service_impl implements LMS_Service {
     @Autowired
-    private LMSMapper lmsMapper;
+    private LMSUtils lmsUtils;
     @Autowired
     private AttendanceRepo attendanceRepo;
-    @Autowired
-    private AttendanceTypeRepo attendanceTypeRepo;
-    @Autowired
-    private LeaveCategoryRepo leaveCategoryRepo;
     @Autowired
     private LeaveRepo leaveRepo;
     @Autowired
@@ -68,6 +67,10 @@ public class LMS_Service_impl implements LMS_Service {
     private AccessLogRepo accessLogRepo;
     @Autowired
     private InOutRepo inOutRepo;
+    @Autowired
+    private Helper helper;
+    @Autowired
+    private Check_Service check_Service;
 
     @Override
     public List<InOutDTO> getAllInOuts(String id, boolean swap) {
@@ -78,32 +81,26 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<AttendanceDTO> getAllAttendance(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findAll(pageable);
-        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public void makeInAttendanceActive(String publicId) {
-        Optional<AttendanceEntity> entity = attendanceRepo.findByPublicId(publicId);
-        entity.ifPresent(attendanceEntity -> {
-            attendanceEntity.setActive(false);
-            attendanceRepo.save(attendanceEntity);
-        });
+        AttendanceEntity attendanceEntity = attendanceRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        attendanceEntity.setIsActive(false);
+        attendanceRepo.save(attendanceEntity);
     }
 
     @Override
     public DashBoardRes getDashBoard(String userId) {
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
+        Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(userId);
         if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         EmployeeEntity employeeEntity = employee.get();
         List<AttendanceEntity> attedance = attendanceRepo.findByEmployee(employeeEntity);
 
         EmployeeEntity emp = employee.get();
 
-        List<UserLeaveTypeRemainingEntity> remain = leaveTypeRemaiRepo.findByEmployeeID(emp.getEmployeeId());
-
-        if (remain.isEmpty() || attedance.isEmpty()) {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        List<UserLeaveTypeRemainingEntity> remain = leaveTypeRemaiRepo.findByEmployee(emp);
 
         int totalRemainingLeaves = remain.stream()
                 .filter(leave -> leave.getRemainingLeaves() != null)
@@ -113,7 +110,7 @@ public class LMS_Service_impl implements LMS_Service {
         int total = attedance.stream().map(AttendanceEntity::getIsFullDay).toList().size();
         String name = employee.get().getFirstName() + " " + employee.get().getLastName();
 
-        Map<String, Integer> remainLeaveDistribution = leaveTypeRemaiRepo.findByEmployeeID(employee.get().getEmployeeId())
+        Map<String, Integer> remainLeaveDistribution = leaveTypeRemaiRepo.findByEmployee(emp)
                 .stream()
                 .collect(Collectors.toMap(
                         leave -> leave.getLeaveType().getName(),
@@ -130,6 +127,7 @@ public class LMS_Service_impl implements LMS_Service {
 
         Map<String, Integer> monthlyAttendanceDistribution = attendanceThisYear.stream()
                 .filter(attendance -> Boolean.TRUE.equals(attendance.getIsFullDay()))
+                .filter(attendance -> Boolean.TRUE.equals(attendance.getIsActive()))
                 .collect(Collectors.groupingBy(
                         attendance -> {
                             LocalDate date = attendance.getDate().toInstant()
@@ -154,78 +152,48 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size, Boolean admin) {
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
+    public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByEmployee(employeeEntity, pageable);
-        if (admin)
-            return attendanceEntityPage.map(lmsMapper::toAttendanceDTOAdmin);
-        else
-            return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByEmployee(helper.getEmployeeById(userId), pageable);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrue(pageable);
-        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnAuthorizedTrue(pageable);
-        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrue(pageable);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnByUserId(String userId, int page, int size) {
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
         Pageable pageable = PageRequest.of(page, size);
-        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrueAndEmployee(employeeEntity, pageable);
-        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrueAndEmployee(helper.getEmployeeById(userId), pageable);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnAByUserId(String userId, int page, int size) {
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
         Pageable pageable = PageRequest.of(page, size);
-        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnAuthorizedTrueAndEmployee(employeeEntity, pageable);
-        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
+        Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrueAndEmployee(helper.getEmployeeById(userId), pageable);
+        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public List<AttendanceEntity> getAttendanceByUserId(String employeeId) {
-        if (employeeId == null)
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(employeeId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
-
-        return attendanceRepo.findByEmployee(employeeEntity);
+        return attendanceRepo.findByEmployee(helper.getEmployeeById(employeeId));
     }
 
     @Override
     public List<AttendanceEntity> getAttendanceByEmployeeId(String employeeId) {
-        if (employeeId == null)
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(employeeId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
-        return attendanceRepo.findByEmployee(employeeEntity);
+        return attendanceRepo.findByEmployee(helper.getEmployeeById(employeeId));
     }
 
     @Override
@@ -236,92 +204,71 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void deleteAttendance(String publicId) {
-        Optional<AttendanceEntity> entity = attendanceRepo.findByPublicId(publicId);
-        entity.ifPresent(attendanceEntity -> {
-            if (attendanceEntity.getIsManual())
-                attendanceRepo.delete(attendanceEntity);
-            else
-                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        });
+        AttendanceEntity attendance = attendanceRepo.findByPublicId(publicId)
+                .orElseThrow(() -> new IllegalArgumentException("Attendance record not found or cannot be deleted"));
+
+        attendanceRepo.delete(attendance);
     }
 
     @Override
     public void deleteAttendanceV1(String publicId) {
-        Optional<AttendanceEntity> entity = attendanceRepo.findByPublicId(publicId);
-        entity.ifPresent(attendanceEntity -> {
-            attendanceEntity.setActive(false);
-            attendanceRepo.save(attendanceEntity);
-        });
+        AttendanceEntity entity = attendanceRepo.findByPublicId(publicId)
+                .orElseThrow(() -> new IllegalArgumentException("Attendance record not found or cannot be deleted"));
+        entity.setIsActive(false);
+        attendanceRepo.save(entity);
     }
 
     @Override
-    public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size, Boolean isAdmin) {
-        if (employeeId == null)
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(employeeId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
+    public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployee(employeeEntity, pageable);
-
-        if (allByUser.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        if (isAdmin)
-            return allByUser.map(lmsMapper::toMovementDTOAdmin);
-        else
-            return allByUser.map(lmsMapper::toMovementDTO);
+        Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployee(helper.getEmployeeById(employeeId), pageable);
+        return allByUser.map(lmsUtils::toMovementDTO);
     }
 
     @Override
-    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size, Boolean isAdmin) {
+    public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId)
-                .or(() -> employeeRepo.findBySltId(userId))
-                .or(() -> employeeRepo.findByEmployeeId(userId));
 
-        return employee.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(coAdminsEntity -> {
-            Optional<MovementsEntity> publicId = movementsRepo.findByPublicId(coAdminsEntity.getComponetID());
-            if (isAdmin)
-                return publicId.map(lmsMapper::toMovementDTOAdmin).orElse(null);
-            else
-                return publicId.map(lmsMapper::toMovementDTO).orElse(null);
-        })).orElseGet(() -> new PageImpl<>(Collections.emptyList()));
+        Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(userId);
+        if (employee.isEmpty()) {
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        }
+
+        return employee.map(employeeEntity -> {
+            Page<ComponetAdminsEntity> coAdminsPage = componetAdminsRepo.findByEmployee(employeeEntity, pageable);
+            List<MovementDTO> movementDTOs = coAdminsPage.getContent().stream()
+                    .map(coAdminsEntity -> {
+                        Optional<MovementsEntity> movement = movementsRepo.findByPublicId(coAdminsEntity.getComponetID());
+                        return movement.map(lmsUtils::toMovementDTO).orElse(null);
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            return new PageImpl<>(movementDTOs, pageable, coAdminsPage.getTotalElements());
+        }).orElseGet(() -> new PageImpl<>(Collections.emptyList()));
     }
 
     @Override
-    public Page<MovementDTO> getAllMovements(int page, int size, Boolean isAdmin) {
+    public Page<MovementDTO> getAllMovements(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
-
-        if (allByUser.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        if (isAdmin)
-            return allByUser.map(lmsMapper::toMovementDTOAdmin);
-        else
-            return allByUser.map(lmsMapper::toMovementDTO);
+        return allByUser.map(lmsUtils::toMovementDTO);
     }
 
     @Override
     public MovementsEntity getMovement(String publicId) {
-        Optional<MovementsEntity> byPublicId = movementsRepo.findByPublicId(publicId);
-        if (byPublicId.isPresent())
-            return byPublicId.get();
-        else
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        return movementsRepo.findByPublicId(publicId).orElseThrow(
+                () -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage())
+        );
     }
-
 
     @Override
     public void updateMovement(MovementReq req, String publicId) {
+        MovementsEntity movementsEntity = movementsRepo.findByPublicId(publicId)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        Optional<MovementsEntity> byPublicId = movementsRepo.findByPublicId(publicId);
-        if (byPublicId.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        MovementsEntity movementsEntity = byPublicId.get();
+        if (movementsEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || movementsEntity.getRequestStatus().equals(RequestStatus.REJECTED)
+                || movementsEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
 
         if (req.getMovementType() != null)
             movementsEntity.setMovementType(req.getMovementType());
@@ -333,27 +280,20 @@ public class LMS_Service_impl implements LMS_Service {
             movementsEntity.setCategory(req.getCategory());
         if (req.getHappenDate() != null)
             movementsEntity.setHappenDate(req.getHappenDate());
-        if (req.getIsAbsent() != null)
-            movementsEntity.setIsAbsent(req.getIsAbsent());
-        if (req.getIsUnSuccessfulAttdate() != null)
-            movementsEntity.setIsUnSuccessfulAttdate(req.getIsUnSuccessfulAttdate());
-        if (req.getIsHalfDay() != null)
-            movementsEntity.setIsHalfDay(req.getIsHalfDay());
-        if (req.getUnAuthorized() != null)
-            movementsEntity.setUnAuthorized(req.getUnAuthorized());
-        if (req.getIsLate() != null)
-            movementsEntity.setIsLate(req.getIsLate());
-        if (req.getIsLateCover() != null)
-            movementsEntity.setIsLateCover(req.getIsLateCover());
         if (req.getLogTime() != null)
             movementsEntity.setLogTime(req.getLogTime());
-        if (req.getIntime() != null)
-            movementsEntity.setInTime(req.getIntime());
-        if (req.getOuttime() != null)
-            movementsEntity.setOutTime(req.getOuttime());
+        if (req.getInTime() != null)
+            movementsEntity.setInTime(req.getInTime());
+        if (req.getOutTime() != null)
+            movementsEntity.setOutTime(req.getOutTime());
+        if (req.getIsEdited() != null) {
+            movementsEntity.setIsEdited(req.getIsEdited());
+        }
+        if (req.getComponentBehavior() != null)
+            movementsEntity.setComponentBehavior(req.getComponentBehavior());
 
-        // Handle admin comments using mapper
-        lmsMapper.addAdminCommentToEntity(movementsEntity, req.getAdminComment(), req.getAdminId());
+        if (req.getRequestStatus() != null)
+            movementsEntity.setRequestStatus(req.getRequestStatus());
 
         movementsEntity.setUpdateDate(new Date());
         movementsRepo.save(movementsEntity);
@@ -364,7 +304,12 @@ public class LMS_Service_impl implements LMS_Service {
         MovementsEntity movement = getMovement(publicId);
         if (movement == null)
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        movementsRepo.delete(movement);
+
+        if (movement.getRequestStatus().equals(RequestStatus.CANCELLED) || movement.getRequestStatus().equals(RequestStatus.REJECTED)
+                || movement.getRequestStatus().equals(RequestStatus.APPROVED)) return;
+
+        movement.setRequestStatus(RequestStatus.CANCELLED);
+        movementsRepo.save(movement);
     }
 
     @Override
@@ -374,51 +319,27 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<NopayDTO> getAllNoPayByUser(String employeeId, int page, int size) {
-        if (employeeId == null)
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(employeeId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
+        EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(employeeId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         Pageable pageable = PageRequest.of(page, size);
         Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
-
-        if (byUser.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        return byUser.map(lmsMapper::toNopayDTO);
+        return byUser.map(lmsUtils::toNopayDTO);
     }
 
     @Override
     public Page<NopayDTO> getAllNoPays(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<NoPayEntity> byUser = noPayRepo.findAll(pageable);
-
-        if (byUser.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        return byUser.map(lmsMapper::toNopayDTO);
+        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
     }
 
     @Override
     public NoPayEntity getNoPay(String publicId) {
-        Optional<NoPayEntity> byPublicId = noPayRepo.findByPublicId(publicId);
-        if (byPublicId.isPresent()) {
-            return byPublicId.get();
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        return noPayRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
     }
 
     @Override
     public void deleteNoPay(String publicId) {
-        Optional<NoPayEntity> byPublicId = noPayRepo.findByPublicId(publicId);
-        if (byPublicId.isPresent()) {
-            noPayRepo.delete(byPublicId.get());
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        NoPayEntity noPayEntity = noPayRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        noPayRepo.delete(noPayEntity);
     }
 
     @Override
@@ -428,142 +349,38 @@ public class LMS_Service_impl implements LMS_Service {
     }
 
     @Override
-    public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size, Boolean isAdmin) {
-        if (userId == null)
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-
-        Optional<EmployeeEntity> employee = employeeRepo.findByPublicId(userId);
-        if (employee.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        EmployeeEntity employeeEntity = employee.get();
-
+    public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size) {
+        EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(userId)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         Pageable pageable = PageRequest.of(page, size);
         Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
-        if(isAdmin)
-            return leaveEntityPage.map(lmsMapper::toLeaveDTOAdmin);
-        else
-            return leaveEntityPage.map(lmsMapper::toLeaveDTO);
+        return leaveEntityPage.map(lmsUtils::toLeaveDTO);
+
     }
 
     @Override
-    public Page<LeaveDTO> getAllLeaves(int page, int size, Boolean isAdmin) {
+    public Page<LeaveDTO> getAllLeaves(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
-        if(isAdmin)
-            return leaveEntityPage.map(lmsMapper::toLeaveDTOAdmin);
-        else
-            return leaveEntityPage.map(lmsMapper::toLeaveDTO);
+        return leaveEntityPage.map(lmsUtils::toLeaveDTO);
+
     }
 
     @Override
     public LeaveEntity getOneLeave(String publicId) {
-        Optional<LeaveEntity> byPublicId = leaveRepo.findByPublicId(publicId);
-        if (byPublicId.isPresent()) {
-            return byPublicId.get();
-        } else
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        return leaveRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
     }
 
     @Override
     public void deleteLeave(String publicId) {
-        Optional<LeaveEntity> byPublicId = leaveRepo.findByPublicId(publicId);
-        if (byPublicId.isPresent()) {
-            LeaveEntity leaveEntity = byPublicId.get();
-            leaveEntity.setIsCanceled(true);
-            leaveRepo.save(leaveEntity);
-        } else
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-    }
+        LeaveEntity leaveEntity = leaveRepo.findByPublicId(publicId).
+                orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-    @Override
-    public void saveAttendanceType(String shortName, String Description) {
-        if (getAttendanceType(shortName) != null)
-            throw new LMSServiceException_AllReadyExits(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
-        AttendanceTypeEntity entity = new AttendanceTypeEntity();
-        entity.setShortName(shortName);
-        entity.setPublicId(utils.generateId(10));
+        if (leaveEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || leaveEntity.getRequestStatus().equals(RequestStatus.REJECTED) ||
+                leaveEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
 
-        entity.setDescription(Description);
-        attendanceTypeRepo.save(entity);
-    }
-
-    @Override
-    public AttendanceTypeEntity getAttendanceType(String shortName) {
-        Optional<AttendanceTypeEntity> byShortName = attendanceTypeRepo.findByShortName(shortName);
-        if (byShortName.isPresent()) {
-            return byShortName.get();
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void updateAttendanceType(String old_shortName, String shortName, String Description) {
-        Optional<AttendanceTypeEntity> byShortName = attendanceTypeRepo.findByShortName(old_shortName);
-        if (byShortName.isPresent()) {
-            AttendanceTypeEntity attendanceTypeEntity = byShortName.get();
-            attendanceTypeEntity.setShortName(shortName);
-            attendanceTypeEntity.setDescription(Description);
-            attendanceTypeRepo.save(attendanceTypeEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void deleteAttendanceType(String shortName) {
-        Optional<AttendanceTypeEntity> byShortName = attendanceTypeRepo.findByShortName(shortName);
-        if (byShortName.isPresent()) {
-            AttendanceTypeEntity attendanceTypeEntity = byShortName.get();
-            attendanceTypeRepo.delete(attendanceTypeEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void saveLeaveCategory(String name) {
-        if (getLeaveCategory(name) != null)
-            throw new LMSServiceException_AllReadyExits(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
-
-        LeaveCategoryEntity leaveCategoryEntity = new LeaveCategoryEntity();
-        leaveCategoryEntity.setName(name);
-        leaveCategoryEntity.setPublicId(utils.generateId(10));
-        leaveCategoryRepo.save(leaveCategoryEntity);
-    }
-
-    public LeaveCategoryEntity getLeaveCategory(String name) {
-        if (name != null) {
-            Optional<LeaveCategoryEntity> result = leaveCategoryRepo.findByName(name);
-            if (result.isPresent()) {
-                return result.get();
-            }
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-        return null;
-    }
-
-    @Override
-    public void updateLeaveCategory(String old_name, String name) {
-        Optional<LeaveCategoryEntity> result = leaveCategoryRepo.findByName(old_name);
-        if (result.isPresent()) {
-            LeaveCategoryEntity leaveCategoryEntity = result.get();
-            leaveCategoryEntity.setName(name);
-            leaveCategoryRepo.save(leaveCategoryEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
-    }
-
-    @Override
-    public void deleteLeaveCategory(String name) {
-        Optional<LeaveCategoryEntity> result = leaveCategoryRepo.findByName(name);
-        if (result.isPresent()) {
-            LeaveCategoryEntity leaveCategoryEntity = result.get();
-            leaveCategoryRepo.delete(leaveCategoryEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        leaveEntity.setRequestStatus(RequestStatus.CANCELLED);
+        leaveRepo.save(leaveEntity);
     }
 
     @Override
@@ -592,52 +409,36 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void updateLeaveType(String old_name, String name) {
-        Optional<LeaveTypeEntity> result = leaveTypeRepo.findByName(old_name);
-        if (result.isPresent()) {
-            LeaveTypeEntity leaveTypeEntity = result.get();
-            leaveTypeEntity.setName(name);
-            leaveTypeRepo.save(leaveTypeEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        LeaveTypeEntity leaveTypeEntity = leaveTypeRepo.findByName(old_name)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        leaveTypeEntity.setName(name);
+        leaveTypeRepo.save(leaveTypeEntity);
     }
 
     @Override
     public void updateLeaveType(String old_name, String userId, int days) {
-        if (old_name == null)
+        LeaveTypeEntity leaveTypeEntity = leaveTypeRepo.findByName(old_name)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+
+        EmployeeEntity employee = helper.getEmployeeById(userId);
+        if (employee == null)
             throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
-        Optional<LeaveTypeEntity> result = leaveTypeRepo.findByName(old_name);
-
-        if (result.isPresent()) {
-            LeaveTypeEntity leaveTypeEntity = result.get();
-
-            if (userId == null)
-                throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
-
-            UserLeaveTypeRemainingEntity type = leaveTypeRemaiRepo.findByEmployeeIDAndLeaveType(userId, leaveTypeEntity);
-            type.setRemainingLeaves(days);
-            leaveTypeRemaiRepo.save(type);
-
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        UserLeaveTypeRemainingEntity type = leaveTypeRemaiRepo.findByEmployeeAndLeaveType(employee, leaveTypeEntity);
+        type.setRemainingLeaves(days);
+        leaveTypeRemaiRepo.save(type);
     }
 
     @Override
     public void deleteLeaveType(String name) {
-        Optional<LeaveTypeEntity> result = leaveTypeRepo.findByName(name);
-        if (result.isPresent()) {
-            LeaveTypeEntity leaveTypeEntity = result.get();
-            leaveTypeRepo.delete(leaveTypeEntity);
-        } else {
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        }
+        LeaveTypeEntity leaveTypeEntity = leaveTypeRepo.findByName(name)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        leaveTypeRepo.delete(leaveTypeEntity);
     }
 
     @Override
     public LeaveTypeTotDTO getTotalLeaves(String employeeId, String leaveTypeName) {
-        List<UserLeaveTypeTotalEntity> totalEntities = leaveTypeTotRepo.findByEmployeeID(employeeId);
+        List<UserLeaveTypeTotalEntity> totalEntities = leaveTypeTotRepo.findByEmployee(helper.getEmployeeById(employeeId));
 
         for (UserLeaveTypeTotalEntity entity : totalEntities) {
             if (entity.getLeaveType().getName().equals(leaveTypeName)) {
@@ -652,7 +453,11 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public LeaveTypeRetDTO getRemainingLeaves(String employeeId, String leaveTypeName) {
-        List<UserLeaveTypeRemainingEntity> remainingEntities = leaveTypeRemaiRepo.findByEmployeeID(employeeId);
+        EmployeeEntity employee = helper.getEmployeeById(employeeId);
+        if (employee == null)
+            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+
+        List<UserLeaveTypeRemainingEntity> remainingEntities = leaveTypeRemaiRepo.findByEmployee(employee);
 
         for (UserLeaveTypeRemainingEntity entity : remainingEntities) {
             if (entity.getLeaveType().getName().equals(leaveTypeName)) {
@@ -667,13 +472,14 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public UserLeaveDetailsDTO getAllLeaveDetails(String userId) {
-        Optional<EmployeeEntity> opt = employeeRepo.findByPublicId(userId);
-        if (opt.isEmpty())
-            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        EmployeeEntity employee = helper.getEmployeeById(userId);
+        if (employee == null) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
-        EmployeeEntity employee = opt.get();
-        List<UserLeaveTypeTotalEntity> totalEntities = leaveTypeTotRepo.findByEmployeeID(employee.getEmployeeId());
-        List<UserLeaveTypeRemainingEntity> remainingEntities = leaveTypeRemaiRepo.findByEmployeeID(employee.getEmployeeId());
+        List<UserLeaveTypeTotalEntity> totalEntities = leaveTypeTotRepo.findByEmployee(employee);
+        List<UserLeaveTypeRemainingEntity> remainingEntities = leaveTypeRemaiRepo.findByEmployee(employee);
+
+        if (totalEntities == null || totalEntities.isEmpty() || remainingEntities == null || remainingEntities.isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         Map<Long, Integer> remainingLeavesMap = new HashMap<>();
         for (UserLeaveTypeRemainingEntity entity : remainingEntities) {
@@ -703,140 +509,85 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void updateLeave(LeaveReq req, String leaveId) {
-        // Find the existing leave entity
         Optional<LeaveEntity> byPublicId = leaveRepo.findByPublicId(leaveId);
         if (byPublicId.isEmpty())
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         LeaveEntity leaveEntity = byPublicId.get();
 
-        // Validate and update leave type if provided
+        if (leaveEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || leaveEntity.getRequestStatus().equals(RequestStatus.REJECTED)
+                || leaveEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
+
         if (req.getLeaveType() != null && !req.getLeaveType().trim().isEmpty()) {
             LeaveTypeEntity type = leaveTypeRepository.findByName(req.getLeaveType())
                     .orElseThrow(() -> new IllegalArgumentException("Invalid leave type: " + req.getLeaveType()));
             leaveEntity.setLeaveType(type);
         }
-
-        // Update dates with null checks
         if (req.getFromDate() != null) {
-            leaveEntity.setFromDate(lmsMapper.stripTimeFromDate(req.getFromDate()));
+            leaveEntity.setFromDate(lmsUtils.stripTimeFromDate(req.getFromDate()));
         }
-
         if (req.getToDate() != null) {
-            leaveEntity.setToDate(lmsMapper.stripTimeFromDate(req.getToDate()));
+            leaveEntity.setToDate(lmsUtils.stripTimeFromDate(req.getToDate()));
         }
-
         if (req.getHappenDate() != null) {
-            leaveEntity.setHappenDate(lmsMapper.stripTimeFromDate(req.getHappenDate()));
+            leaveEntity.setHappenDate(lmsUtils.stripTimeFromDate(req.getHappenDate()));
         }
-
-        // Update description with null and empty check
         if (req.getDescription() != null && !req.getDescription().trim().isEmpty()) {
             leaveEntity.setDescription(req.getDescription());
         }
-
-        // Update numeric fields with null checks
         if (req.getNumOfDays() != null) {
             leaveEntity.setNumOfDays(req.getNumOfDays());
         }
-
-        if (req.getIsNoPay() != null) {
-            leaveEntity.setIsNoPay(req.getIsNoPay());
+        if (req.getIsManualRequest() != null) {
+            leaveEntity.setIsManualRequest(req.getIsManualRequest());
         }
-
-        // Update Boolean flags with null checks
-        if (req.getHalfDay() != null) {
-            leaveEntity.setIsHalfDay(req.getHalfDay());
+        if (req.getIsEdited() != null) {
+            leaveEntity.setIsEdited(req.getIsEdited());
         }
-
-        if (req.getFullDay() != null) {
-            leaveEntity.setIsFullDay(req.getFullDay());
-        }
-
-        if (req.getUnauthorized() != null) {
-            leaveEntity.setIsUnauthorized(req.getUnauthorized());
-        }
-
-        if (req.getManualRequest() != null) {
-            leaveEntity.setIsManualRequest(req.getManualRequest());
-        }
-
-        if (req.getAbsent() != null) {
-            leaveEntity.setIsAbsent(req.getAbsent());
-        }
-
-        if (req.getLateCover() != null) {
-            leaveEntity.setIsLateCover(req.getLateCover());
-        }
-
-        if (req.getLate() != null) {
-            leaveEntity.setIsLate(req.getLate());
-        }
-
-        if (req.getUnSuccessful() != null) {
-            leaveEntity.setUnSuccessful(req.getUnSuccessful());
-        }
-
-        if (req.getEdited() != null) {
-            leaveEntity.setIsEdited(req.getEdited());
-        }
-
-        if (req.getReject() != null) {
-            leaveEntity.setIsReject(req.getReject());
-        }
-
-        if (req.getPending() != null) {
-            leaveEntity.setIsPending(req.getPending());
-        }
-
-        if (req.getCanceled() != null) {
-            leaveEntity.setIsCanceled(req.getCanceled());
-        }
-
-        // BUG FIX: This was using req.getReject() instead of req.getAccepted()
-        if (req.getAccepted() != null) {
-            leaveEntity.setIsAccepted(req.getAccepted());
-        }
-
         if (req.getNotUsed() != null) {
             leaveEntity.setNotUsed(req.getNotUsed());
         }
-
-        if (req.getShort_Leave() != null) {
-            leaveEntity.setIsShort_Leave(req.getShort_Leave());
-        }
-
-        // Handle admin comments with null checks
-        if (req.getAdminComment() != null && !req.getAdminComment().trim().isEmpty()) {
+        /*if (req.getAdminComment() != null && !req.getAdminComment().trim().isEmpty()) {
             lmsMapper.addAdminCommentToEntity(leaveEntity, req.getAdminComment(), req.getAdminId());
-        }
+        }*/
 
-        // Set update date
+        if (req.getComponentBehavior() != null)
+            leaveEntity.setComponentBehavior(req.getComponentBehavior());
+
+        if (req.getRequestStatus() != null)
+            leaveEntity.setRequestStatus(req.getRequestStatus());
+
         leaveEntity.setUpdateDate(new Date());
-
-
         leaveRepo.save(leaveEntity);
     }
 
     @Override
-    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size, Boolean isAdmin) {
+    public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size) {
+        if (userId == null || userId.trim().isEmpty())
+            throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         Pageable pageable = PageRequest.of(page, size);
-        Optional<EmployeeEntity> em = employeeRepo.findByPublicId(userId);
+        Optional<EmployeeEntity> em = helper.getEmployeeByIdV2(userId);
+        if (em.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+
         return em.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(componetAdmins -> {
             Optional<LeaveEntity> publicId = leaveRepo.findByPublicId(componetAdmins.getComponetID());
-            if(isAdmin)
-                return publicId.map(lmsMapper::toLeaveDTOAdmin).orElse(null);
-            else
-                return publicId.map(lmsMapper::toLeaveDTO).orElse(null);
+            return publicId.map(lmsUtils::toLeaveDTO).orElse(null);
         })).orElseGet(Page::empty);
     }
 
-
     @Override
     public AttendanceDTO createAttendance(AttendanceReq req) {
-        AttendanceEntity attendanceEntity = lmsMapper.toAttendanceEntity(req);
+        AttendanceEntity attendanceEntity = lmsUtils.toAttendanceEntity(req);
         AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
-        return lmsMapper.toAttendanceDTO(saved);
+        EmployeeEntity employee = saved.getEmployee();
+        if (saved.getPayStatus() != null) {
+            if (saved.getPayStatus().equals(PayStatus.NO_PAY)) {
+                check_Service.saveNoPayEntity(employee, attendanceEntity, check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
+                        req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
+            }
+        }
+        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity);
+        return lmsUtils.toAttendanceDTO(saved);
     }
 
     @Override
@@ -845,14 +596,19 @@ public class LMS_Service_impl implements LMS_Service {
         if (opt.isPresent()) {
             AttendanceEntity attendanceEntity = opt.get();
 
-            // Use mapper to update entity from request
-            lmsMapper.updateAttendanceEntityFromReq(attendanceEntity, req);
-
-            // Handle admin comments using mapper
-            lmsMapper.addAdminCommentToEntity(attendanceEntity, req.getAdminComment(), req.getAdminId());
+            lmsUtils.updateAttendanceEntityFromReq(attendanceEntity, req);
 
             AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
-            return lmsMapper.toAttendanceDTO(saved);
+            EmployeeEntity employee = saved.getEmployee();
+            if (saved.getPayStatus() != null) {
+                if (!attendanceEntity.getPayStatus().equals(PayStatus.NO_PAY) && saved.getPayStatus().equals(PayStatus.NO_PAY)) {
+                    check_Service.saveNoPayEntity(employee, attendanceEntity, check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
+                            req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
+                }
+            }
+            if (!attendanceEntity.getIsUnSuccessful() && saved.getIsUnSuccessful())
+                helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity);
+            return lmsUtils.toAttendanceDTO(saved);
         } else {
             return null;
         }
@@ -860,20 +616,16 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void createAccessLog(AccessLogReq req) {
-        AccessLogEntity accessLogEntity = lmsMapper.toAccessLogEntity(req);
+        AccessLogEntity accessLogEntity = lmsUtils.toAccessLogEntity(req);
         accessLogEntity.setIsManual(true);
-        accessLogEntity.setUpdateDate(new Date());
-        lmsMapper.addAdminCommentToEntity(accessLogEntity, req.getAdminComment(), req.getAdminId());
+        accessLogEntity.setUpdatedDate(new Date());
+        lmsUtils.addAdminCommentToEntity(accessLogEntity, req.getAdminComment(), req.getAdminId());
         AccessLogEntity saved = accessLogRepo.save(accessLogEntity);
     }
 
     @Override
     public void createInout(InOutReq req) {
-        InOutEntity inOutEntity = lmsMapper.toInOutEntity(req);
-        inOutEntity.setIsManual(true);
-        inOutEntity.setUpdateDate(new Date());
-        lmsMapper.addAdminCommentToEntity(inOutEntity, req.getAdminComment(), req.getAdminId());
-        InOutEntity save = inOutRepo.save(inOutEntity);
+
     }
 
     @Override
@@ -889,16 +641,13 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public Page<AttendanceDTO> getAllAbsent(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return attendanceRepo.findByIsAbsent(true, pageable).map(lmsMapper::toAttendanceDTO);
+        return attendanceRepo.findByAttendanceType(AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAbsentByUser(int page, int size, String user) {
-        EmployeeEntity employee = employeeRepo.findByEmployeeId(user)
-                .or(() -> employeeRepo.findBySltId(user)
-                        .or(() -> employeeRepo.findByPublicId(user)))
-                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        EmployeeEntity employee = helper.getEmployeeById(user);
         Pageable pageable = PageRequest.of(page, size);
-        return attendanceRepo.findByEmployeeAndIsAbsent(employee, true, pageable).map(lmsMapper::toAttendanceDTO);
+        return attendanceRepo.findByEmployeeAndAttendanceType(employee, AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
     }
 }

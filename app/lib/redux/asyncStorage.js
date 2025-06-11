@@ -1,10 +1,7 @@
-// app/redux-user/asyncStorage.js @/app/utils/cryptoUtils
 import { encryptData, decryptData } from '../../utils/cryptoUtils';
 
-// Create a custom storage engine that works with redux-persist and handles encryption
 class AsyncCryptoStorage {
     constructor() {
-        // Make sure we're in a browser environment
         this.isClient = typeof window !== 'undefined';
         this.storage = this.isClient ? window.sessionStorage : null;
     }
@@ -23,9 +20,7 @@ class AsyncCryptoStorage {
                 return;
             }
 
-            // Check if this looks like our encrypted data before trying to decrypt
             try {
-                // Simple check for Base64 content that could be our encrypted data
                 if (item && typeof item === 'string' &&
                     (item.startsWith('eyJ') ||
                         item.includes('+') ||
@@ -35,14 +30,14 @@ class AsyncCryptoStorage {
                         .then(decrypted => resolve(decrypted))
                         .catch(err => {
                             console.error('Decryption failed:', err);
-                            resolve(item); // Return original if decryption fails
+                            resolve(item);
                         });
                 } else {
-                    resolve(item); // Not encrypted, return as is
+                    resolve(item);
                 }
             } catch (error) {
                 console.error('Error in getItem:', error);
-                resolve(item); // Return original on error
+                resolve(item);
             }
         });
     }
@@ -54,7 +49,6 @@ class AsyncCryptoStorage {
                 return;
             }
 
-            // Only encrypt objects
             if (value && typeof value === 'object') {
                 encryptData(value)
                     .then(encrypted => {
@@ -63,7 +57,6 @@ class AsyncCryptoStorage {
                     })
                     .catch(err => {
                         console.error('Encryption failed:', err);
-                        // Fall back to storing as JSON
                         try {
                             this.storage.setItem(key, JSON.stringify(value));
                         } catch (e) {
@@ -72,7 +65,6 @@ class AsyncCryptoStorage {
                         resolve();
                     });
             } else {
-                // Store primitive values directly
                 try {
                     this.storage.setItem(key, value);
                 } catch (e) {

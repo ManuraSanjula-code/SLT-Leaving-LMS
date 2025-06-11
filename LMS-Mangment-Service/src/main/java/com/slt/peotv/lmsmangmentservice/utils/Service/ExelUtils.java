@@ -11,6 +11,7 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -20,23 +21,18 @@ import java.util.Optional;
 
 @Service
 public class ExelUtils {
-    @Autowired
-    private EmployeeRepo employeeRepo;
-
-    @Autowired
-    private AttendanceRepo attendanceRepo;
-
-    @Autowired
-    private MovementsRepo movementsRepo;
-
-    @Autowired
-    private LeaveRepo leaveRepo;
-
-    @Autowired
-    private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
-
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    @Autowired
+    private EmployeeRepo employeeRepo;
+    @Autowired
+    private AttendanceRepo attendanceRepo;
+    @Autowired
+    private MovementsRepo movementsRepo;
+    @Autowired
+    private LeaveRepo leaveRepo;
+    @Autowired
+    private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
 
     public byte[] generateEmployeeExcelReport(String id) throws IOException {
         // Find employee
@@ -44,7 +40,7 @@ public class ExelUtils {
                 .or(() -> employeeRepo.findBySltId(id))
                 .or(() -> employeeRepo.findByPublicId(id));
 
-        if(employeeEntity.isEmpty())
+        if (employeeEntity.isEmpty())
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();
@@ -52,7 +48,7 @@ public class ExelUtils {
         List<AttendanceEntity> attendance = attendanceRepo.findByEmployee(employee);
         List<LeaveEntity> leaves = leaveRepo.findByEmployee(employee);
         List<MovementsEntity> movements = movementsRepo.findAllByEmployee(employee);
-        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployeeID(employee.getEmployeeId());
+        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
         // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -85,7 +81,7 @@ public class ExelUtils {
                 .or(() -> employeeRepo.findBySltId(id))
                 .or(() -> employeeRepo.findByPublicId(id));
 
-        if(employeeEntity.isEmpty())
+        if (employeeEntity.isEmpty())
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();
@@ -93,11 +89,11 @@ public class ExelUtils {
 
         List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, date, date);
 
-        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, date,date);
+        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, date, date);
 
-        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, date,date);
+        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, date, date);
 
-        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployeeID(employee.getEmployeeId());
+        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
 
         // Create workbook
@@ -234,19 +230,13 @@ public class ExelUtils {
 
                 // Boolean fields
                 createCell(row, colNum++, attendance.getIsFullDay() != null ? (attendance.getIsFullDay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsHalfDay() != null ? (attendance.getIsHalfDay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsFullLeave() != null ? (attendance.getIsFullLeave() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsShortLeave() != null ? (attendance.getIsShortLeave() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getIsLate() != null ? (attendance.getIsLate() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getLateCover() != null ? (attendance.getLateCover() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsAbsent() != null ? (attendance.getIsAbsent() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getIsUnSuccessful() != null ? (attendance.getIsUnSuccessful() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsNoPay() != null ? (attendance.getIsNoPay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIssues() != null ? (attendance.getIssues() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsUnAuthorized() != null ? (attendance.getIsUnAuthorized() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getResolve() != null ? (attendance.getResolve() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getLeaveSuccess() != null ? (attendance.getLeaveSuccess() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getLeaveReq() != null ? (attendance.getLeaveReq() ? "Yes" : "No") : "No");
+
+                createCell(row, colNum++, attendance.getAttendanceType() != null ? (attendance.getAttendanceType().getDescription() != null ? attendance.getAttendanceType().getDescription() : "") : "");
+                createCell(row, colNum++, attendance.getLeaveStatus() != null ? (attendance.getLeaveStatus().getDescription() != null ? attendance.getLeaveStatus().getDescription() : "") : "");
+                createCell(row, colNum++, attendance.getPayStatus() != null ? (attendance.getPayStatus().getDescription() != null ? attendance.getPayStatus().getDescription() : "") : "");
+                createCell(row, colNum++, attendance.getResolve() != null ? (attendance.getResolve().getDescription() != null ? attendance.getResolve().getDescription() : "") : "");
 
                 // Issue Description
                 createCell(row, colNum++, attendance.getIssueDescription() != null ? attendance.getIssueDescription() : "");
@@ -255,9 +245,6 @@ public class ExelUtils {
                 createCell(row, colNum++, attendance.getDueDateForUA() != null ? dateFormat.format(attendance.getDueDateForUA()) : "");
 
                 // More Boolean fields
-                createCell(row, colNum++, attendance.getActive() != null ? (attendance.getActive() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getNopay() != null ? (attendance.getNopay() ? "Yes" : "No") : "No");
-
                 // User ID
                 createCell(row, colNum++, attendance.getEmployee().getPublicId() != null ? attendance.getEmployee().getPublicId() : "");
 
@@ -333,9 +320,6 @@ public class ExelUtils {
                 // Leave Type
                 createCell(row, colNum++, leave.getLeaveType() != null ? leave.getLeaveType().getName() : "");
 
-                // Is No Pay
-                createCell(row, colNum++, leave.getIsNoPay() != null ? leave.getIsNoPay().toString() : "0");
-
                 // Num of Days
                 createCell(row, colNum++, leave.getNumOfDays() != null ? leave.getNumOfDays().toString() : "");
 
@@ -343,18 +327,9 @@ public class ExelUtils {
                 createCell(row, colNum++, leave.getDescription() != null ? leave.getDescription() : "");
 
                 // Boolean fields
-                createCell(row, colNum++, leave.getIsHalfDay() != null ? (leave.getIsHalfDay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsFullDay() != null ? (leave.getIsFullDay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getUnSuccessful() != null ? (leave.getUnSuccessful() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsUnauthorized() != null ? (leave.getIsUnauthorized() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsLate() != null ? (leave.getIsLate() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsLateCover() != null ? (leave.getIsLateCover() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsShort_Leave() != null ? (leave.getIsShort_Leave() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsPending() != null ? (leave.getIsPending() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsAccepted() != null ? (leave.getIsAccepted() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsAbsent() != null ? (leave.getIsAbsent() ? "Yes" : "No") : "No");
+
                 createCell(row, colNum++, leave.getNotUsed() != null ? (leave.getNotUsed() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getIsCanceled() != null ? (leave.getIsCanceled() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, leave.getRequestStatus() != null ? (leave.getRequestStatus().getDescription() != null ? leave.getRequestStatus().getDescription() : "") : "");
                 createCell(row, colNum++, leave.getIsManualRequest() != null ? (leave.getIsManualRequest() ? "Yes" : "No") : "No");
 
                 // Happen Date
@@ -451,15 +426,7 @@ public class ExelUtils {
                 createCell(row, colNum++, movement.getHappenDate() != null ? dateFormat.format(movement.getHappenDate()) : "");
 
                 // Boolean fields
-                createCell(row, colNum++, movement.getIsPending() != null ? (movement.getIsPending() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsAccepted() != null ? (movement.getIsAccepted() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsAbsent() != null ? (movement.getIsAbsent() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsUnSuccessfulAttdate() != null ? (movement.getIsUnSuccessfulAttdate() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getUnAuthorized() != null ? (movement.getUnAuthorized() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getResolve() != null ? (movement.getResolve() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsHalfDay() != null ? (movement.getIsHalfDay() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsLate() != null ? (movement.getIsLate() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, movement.getIsLateCover() != null ? (movement.getIsLateCover() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, movement.getRequestStatus() != null ? (movement.getRequestStatus().getDescription() != null ? movement.getRequestStatus().getDescription() : "") : "");
             }
         }
 
@@ -510,7 +477,7 @@ public class ExelUtils {
                 createCell(row, colNum++, remainingLeave.getPublicId() != null ? remainingLeave.getPublicId() : "");
 
                 // Employee ID
-                createCell(row, colNum++, remainingLeave.getEmployeeID() != null ? remainingLeave.getEmployeeID() : "");
+                createCell(row, colNum++, remainingLeave.getEmployee().getEmployeeId() != null ? remainingLeave.getEmployee().getEmployeeId() : "");
 
                 // Leave Type
                 createCell(row, colNum++, remainingLeave.getLeaveType() != null ? remainingLeave.getLeaveType().getName() : "");

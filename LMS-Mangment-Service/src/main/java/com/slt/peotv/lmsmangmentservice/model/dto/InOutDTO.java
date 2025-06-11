@@ -6,33 +6,28 @@ import java.util.Date;
 public class InOutDTO {
     private String employeeID;
     private Date date;
-    private Date punchInMoa;
-    private Date punchInEv;
-    private Time timeMoa;
-    private Time timeEve;
-    private Integer InOut = 0;
-    private Boolean isMoaning = false;
-    private Boolean isEvening = false;
-    private Boolean isPast = false;
+    private Date punchDate;
+    private Time pucnhTime;
+    private Integer InOut = 0;;
     private String terminalID;
     private AccessLogDTO accessLog;
 
-    public AccessLogDTO getAccessLog() {
-        return accessLog;
+    public boolean isMorning() {
+        if (pucnhTime != null) {
+            int hour = pucnhTime.toLocalTime().getHour();
+            // Morning: 5 AM to 12 PM (5-11)
+            return (hour >= 5 && hour < 12);
+        }
+        return false;
     }
 
-    public void setAccessLog(AccessLogDTO accessLog) {
-        this.accessLog = accessLog;
+    public boolean isEvening() {
+        if (pucnhTime != null) {
+            int hour = pucnhTime.toLocalTime().getHour();
+            return (hour >= 17 && hour <= 21);
+        }
+        return false;
     }
-
-    public String getTerminalID() {
-        return terminalID;
-    }
-
-    public void setTerminalID(String terminalID) {
-        this.terminalID = terminalID;
-    }
-
     public String getEmployeeID() {
         return employeeID;
     }
@@ -49,36 +44,20 @@ public class InOutDTO {
         this.date = date;
     }
 
-    public Date getPunchInMoa() {
-        return punchInMoa;
+    public Date getPunchDate() {
+        return punchDate;
     }
 
-    public void setPunchInMoa(Date punchInMoa) {
-        this.punchInMoa = punchInMoa;
+    public void setPunchDate(Date punchDate) {
+        this.punchDate = punchDate;
     }
 
-    public Date getPunchInEv() {
-        return punchInEv;
+    public Time getPucnhTime() {
+        return pucnhTime;
     }
 
-    public void setPunchInEv(Date punchInEv) {
-        this.punchInEv = punchInEv;
-    }
-
-    public Time getTimeMoa() {
-        return timeMoa;
-    }
-
-    public void setTimeMoa(Time timeMoa) {
-        this.timeMoa = timeMoa;
-    }
-
-    public Time getTimeEve() {
-        return timeEve;
-    }
-
-    public void setTimeEve(Time timeEve) {
-        this.timeEve = timeEve;
+    public void setPucnhTime(Time pucnhTime) {
+        this.pucnhTime = pucnhTime;
     }
 
     public Integer getInOut() {
@@ -88,28 +67,19 @@ public class InOutDTO {
     public void setInOut(Integer inOut) {
         InOut = inOut;
     }
-
-    public Boolean getMoaning() {
-        return isMoaning;
+    public String getTerminalID() {
+        return terminalID;
     }
 
-    public void setMoaning(Boolean moaning) {
-        isMoaning = moaning;
+    public void setTerminalID(String terminalID) {
+        this.terminalID = terminalID;
     }
 
-    public Boolean getEvening() {
-        return isEvening;
+    public AccessLogDTO getAccessLog() {
+        return accessLog;
     }
 
-    public void setEvening(Boolean evening) {
-        isEvening = evening;
-    }
-
-    public Boolean getPast() {
-        return isPast;
-    }
-
-    public void setPast(Boolean past) {
-        isPast = past;
+    public void setAccessLog(AccessLogDTO accessLog) {
+        this.accessLog = accessLog;
     }
 }

@@ -7,17 +7,17 @@ const initialState = {
         firstName: '',
         lastName: '',
         email: '',
-        profilePic: '', // Profile picture URL
-        roles: [], // User roles (e.g., ROLE_ADMIN, ROLE_EMPLOYEE)
-        phone: null, // Phone number
-        gender: null, // Gender
-        active: 0, // Active status
-        addresses: [], // Addresses array
-        sections: [], // Sections array
-        profiles: [], // Profiles array
-        isSltEmp: null, // Is SLT employee
-        isSltIntern: null, // Is SLT intern
-        defaultAddress: 0, // Default address index
+        profilePic: '',
+        roles: [],
+        phone: null,
+        gender: null,
+        active: 0,
+        addresses: [],
+        sections: [],
+        profiles: [],
+        isSltEmp: null,
+        isSltIntern: null,
+        defaultAddress: 0,
         isAuthenticated: false,
         integrityHash: null,
         highestRolePriority: 0,
@@ -105,15 +105,9 @@ const authSlice = createSlice({
             state.loading = false;
             state.userDetails = action.payload.user;
             state.token = action.payload.token;
-
-            // Add security features
-
-            // 1. Add expiration (24 hours from now)
             state._expires = Date.now() + (24 * 60 * 60 * 1000);
 
-            // 2. Add token fingerprint (optional, for additional verification)
             if (typeof window !== 'undefined') {
-                // Fingerprint combines user agent and a subset of the token
                 const fingerprint = CryptoJS.SHA256(
                     navigator.userAgent +
                     (action.payload.token ? action.payload.token.substr(0, 10) : '')
@@ -129,13 +123,10 @@ const authSlice = createSlice({
             state._expires = null;
         },
         logout: (state) => {
-            // Reset to initial state on logout
             return initialState;
         },
-        // Extend token expiration when needed
         extendSession: (state) => {
             if (state.token) {
-                // Extend for another 24 hours
                 state._expires = Date.now() + (24 * 60 * 60 * 1000);
             }
         }

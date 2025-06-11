@@ -44,12 +44,10 @@ const ShiftRosterTable = () => {
 
             const data = await response.json();
 
-            // Check if data is empty or invalid
             if (!data || Object.keys(data).length === 0) {
                 throw new Error('No data found for the selected month and year');
             }
 
-            // Validate required fields
             if (!data.dutyTurn || !data.dates) {
                 throw new Error('Invalid data structure received from server');
             }
@@ -65,7 +63,7 @@ const ShiftRosterTable = () => {
 
     useEffect(() => {
         fetchRosterData();
-    }, [selectedYear, selectedMonth]); // Auto-fetch when year or month changes
+    }, [selectedYear, selectedMonth]);
 
     const handleFetchData = () => {
         fetchRosterData();

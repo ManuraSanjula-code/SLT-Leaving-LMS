@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,69 +31,49 @@ import {
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 
-// Redux imports
 import {
   fetchAbsentEmployees,
-  resolveAbsence,
-  resolveAbsenceOptimistic,
   setFilters,
   clearFilters,
   setPageSize,
   setCurrentPage,
-  setIsAdmin,
   clearError
 } from '../../../../lib/redux/redux-lms/absent/absentEmployeesSlice';
 
-import {
-  selectEmployees,
-  selectLoading,
-  selectError,
-  selectCurrentPage,
-  selectTotalPages,
-  selectTotalElements,
-  selectPageSize,
-  selectFilters,
-  selectIsAdmin,
-  selectPaginationInfo,
-  selectHasEmployees,
-  selectIsFirstLoad,
-  selectIsSubsequentLoad
-} from '../../../../lib/redux/redux-lms/absent/absentEmployeesSelectors';
-
-const AbsentEmployees = ({ isAdmin = false }) => {
+const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
   const dispatch = useDispatch();
   const router = useRouter();
 
-  // Redux state selectors
-  const allEmployees = useSelector(selectEmployees); // All loaded employees
-  const loading = useSelector(selectLoading);
-  const error = useSelector(selectError);
-  const currentPage = useSelector(selectCurrentPage);
-  const pageSize = useSelector(selectPageSize);
-  const filters = useSelector(selectFilters);
-  const isAdminFromState = useSelector(selectIsAdmin);
-  const hasEmployees = useSelector(selectHasEmployees);
-  const isFirstLoad = useSelector(selectIsFirstLoad);
-  const isSubsequentLoad = useSelector(selectIsSubsequentLoad);
+  const isAdmin = propIsAdmin !== undefined ? propIsAdmin :
+      (sessionStorage.getItem('userRole') === 'ADMIN' || sessionStorage.getItem('isAdmin') === 'true');
 
-  // Destructure filters
+  const {
+    employees: allEmployees,
+    loading,
+    error,
+    totalPages,
+    totalElements,
+    currentPage,
+    pageSize,
+    filters,
+    hasDataBeenFetched
+  } = useSelector(state => state.absentEmployees);
+
   const { startDate, endDate, resolutionFilter, searchQuery } = filters;
 
-  // CLIENT-SIDE FILTERING AND SEARCHING
   const filteredEmployees = useMemo(() => {
     let filtered = [...allEmployees];
 
-    // Search filter (only for admin)
-    if (isAdminFromState && searchQuery.trim()) {
+    if (isAdmin && searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(employee =>
           employee.employeeName?.toLowerCase().includes(query) ||
           employee.reason?.toLowerCase().includes(query) ||
-          employee.publicId?.toLowerCase().includes(query)
+          employee.publicId?.toLowerCase().includes(query) ||
+          employee.employeeId?.toLowerCase().includes(query)
       );
     }
 
-    // Date range filter
     if (startDate) {
       filtered = filtered.filter(employee => {
         const employeeDate = new Date(employee.date);
@@ -110,141 +90,41 @@ const AbsentEmployees = ({ isAdmin = false }) => {
       });
     }
 
-    // Resolution filter
     if (resolutionFilter !== 'All') {
       const isResolved = resolutionFilter === 'Resolved';
       filtered = filtered.filter(employee => employee.isResolved === isResolved);
     }
 
     return filtered;
-  }, [allEmployees, searchQuery, startDate, endDate, resolutionFilter, isAdminFromState]);
+  }, [allEmployees, searchQuery, startDate, endDate, resolutionFilter, isAdmin]);
 
-  // CLIENT-SIDE PAGINATION
   const paginatedEmployees = useMemo(() => {
     const startIndex = currentPage * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredEmployees.slice(startIndex, endIndex);
   }, [filteredEmployees, currentPage, pageSize]);
 
-  // Calculate pagination info based on filtered data
   const paginationInfo = useMemo(() => {
-    const totalElements = filteredEmployees.length;
-    const totalPages = Math.ceil(totalElements / pageSize);
-    const startIndex = (currentPage * pageSize) + 1;
-    const endIndex = Math.min((currentPage + 1) * pageSize, totalElements);
+    const totalFilteredElements = filteredEmployees.length;
+    const totalFilteredPages = Math.ceil(totalFilteredElements / pageSize);
+    const startIndex = totalFilteredElements > 0 ? (currentPage * pageSize) + 1 : 0;
+    const endIndex = Math.min((currentPage + 1) * pageSize, totalFilteredElements);
 
     return {
-      totalElements,
-      totalPages,
-      startIndex: totalElements > 0 ? startIndex : 0,
+      totalElements: totalFilteredElements,
+      totalPages: totalFilteredPages,
+      startIndex,
       endIndex
     };
   }, [filteredEmployees.length, currentPage, pageSize]);
 
-  // Set admin status and clear search if not admin
   useEffect(() => {
-    dispatch(setIsAdmin(isAdmin));
     if (!isAdmin) {
       dispatch(setFilters({ searchQuery: '' }));
     }
   }, [dispatch, isAdmin]);
 
-  // Initial data fetch ONLY - no subsequent API calls for filtering
   useEffect(() => {
-    if (allEmployees.length === 0 && !loading) {
-      dispatch(fetchAbsentEmployees({
-        page: 0,
-        size: 1000, // Load more data initially for better client-side filtering
-        search: '',
-        startDate: '',
-        endDate: '',
-        resolutionFilter: 'All',
-        isAdmin: isAdminFromState
-      }));
-    }
-  }, [dispatch, isAdminFromState, allEmployees.length, loading]);
-
-  // Handle page change - CLIENT SIDE ONLY
-  const handlePageChange = (event, newPage) => {
-    dispatch(setCurrentPage(newPage - 1));
-  };
-
-  // Handle page size change - CLIENT SIDE ONLY
-  const handlePageSizeChange = (event) => {
-    const newSize = event.target.value;
-    dispatch(setPageSize(newSize));
-    dispatch(setCurrentPage(0)); // Reset to first page
-  };
-
-  // Handle search query change - CLIENT SIDE ONLY
-  const handleSearchQueryChange = (event) => {
-    dispatch(setFilters({ searchQuery: event.target.value }));
-    dispatch(setCurrentPage(0)); // Reset to first page on search
-  };
-
-  // Handle search - CLIENT SIDE ONLY (no API call)
-  const handleSearch = () => {
-    dispatch(setCurrentPage(0)); // Reset to first page
-    // No API call - filtering happens via useMemo
-  };
-
-  // Handle search on Enter key
-  const handleSearchKeyPress = (event) => {
-    if (event.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  // Handle filter changes - CLIENT SIDE ONLY
-  const handleStartDateChange = (event) => {
-    dispatch(setFilters({ startDate: event.target.value }));
-    dispatch(setCurrentPage(0));
-  };
-
-  const handleEndDateChange = (event) => {
-    dispatch(setFilters({ endDate: event.target.value }));
-    dispatch(setCurrentPage(0));
-  };
-
-  const handleResolutionFilterChange = (event) => {
-    dispatch(setFilters({ resolutionFilter: event.target.value }));
-    dispatch(setCurrentPage(0));
-  };
-
-  // Apply filters - CLIENT SIDE ONLY
-  const handleFiltersApply = () => {
-    dispatch(setCurrentPage(0));
-    // No API call - filtering happens automatically via useMemo
-  };
-
-  // Clear all filters - CLIENT SIDE ONLY
-  const handleClearFilters = () => {
-    dispatch(clearFilters());
-    dispatch(setCurrentPage(0));
-    // No API call - filtering resets automatically via useMemo
-  };
-
-  // Handle applying for leave
-  const handleApplyLeave = () => {
-    router.push('/apply-leave');
-  };
-
-  // Handle resolving an absence (only for admin)
-  const handleResolveAbsence = async (id) => {
-    try {
-      dispatch(resolveAbsenceOptimistic(id));
-      const result = await dispatch(resolveAbsence(id));
-      if (resolveAbsence.fulfilled.match(result)) {
-        console.log(`Resolved absence for employee ID: ${id}`);
-      }
-    } catch (err) {
-      console.error('Error resolving absence:', err);
-    }
-  };
-
-  // Handle retry - ONLY for initial data load
-  const handleRetry = () => {
-    dispatch(clearError());
     dispatch(fetchAbsentEmployees({
       page: 0,
       size: 1000,
@@ -252,11 +132,58 @@ const AbsentEmployees = ({ isAdmin = false }) => {
       startDate: '',
       endDate: '',
       resolutionFilter: 'All',
-      isAdmin: isAdminFromState
+      isAdmin: isAdmin
     }));
+  }, [dispatch, isAdmin]);
+
+  const handlePageChange = (event, newPage) => {
+    dispatch(setCurrentPage(newPage - 1));
   };
 
-  // Handle refresh - ONLY refetch from API
+  const handlePageSizeChange = (event) => {
+    const newSize = event.target.value;
+    dispatch(setPageSize(newSize));
+  };
+
+  const handleSearchQueryChange = (event) => {
+    const newQuery = event.target.value;
+    dispatch(setFilters({ searchQuery: newQuery }));
+    dispatch(setCurrentPage(0));
+  };
+
+  const handleSearch = () => {
+    dispatch(setCurrentPage(0));
+  };
+
+  const handleSearchKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleStartDateChange = (event) => {
+    const newDate = event.target.value;
+    dispatch(setFilters({ startDate: newDate }));
+    dispatch(setCurrentPage(0));
+  };
+
+  const handleEndDateChange = (event) => {
+    const newDate = event.target.value;
+    dispatch(setFilters({ endDate: newDate }));
+    dispatch(setCurrentPage(0));
+  };
+
+  const handleResolutionFilterChange = (event) => {
+    const newFilter = event.target.value;
+    dispatch(setFilters({ resolutionFilter: newFilter }));
+    dispatch(setCurrentPage(0));
+  };
+
+  const handleClearFilters = () => {
+    dispatch(clearFilters());
+    dispatch(setCurrentPage(0));
+  };
+
   const handleRefresh = () => {
     dispatch(fetchAbsentEmployees({
       page: 0,
@@ -265,24 +192,44 @@ const AbsentEmployees = ({ isAdmin = false }) => {
       startDate: '',
       endDate: '',
       resolutionFilter: 'All',
-      isAdmin: isAdminFromState
+      isAdmin: isAdmin
     }));
   };
 
-  // Show loading spinner for first load
-  if (isFirstLoad) {
+  const handleApplyLeave = () => {
+    router.push('/apply-leave');
+  };
+
+  const handleRetry = () => {
+    dispatch(clearError());
+    handleRefresh();
+  };
+
+  const formatAttendanceType = (attendanceType) => {
+    if (!attendanceType) return '';
+    return attendanceType.replace('_', ' ').toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatResolveType = (resolveType) => {
+    if (!resolveType) return '';
+    return resolveType.replace('_', ' ').toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  if (loading && !hasDataBeenFetched) {
     return (
         <Container maxWidth="lg">
           <CssBaseline />
           <Box sx={{ mt: 4, mb: 4, display: 'flex', justifyContent: 'center' }}>
             <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading absent employees...</Typography>
           </Box>
         </Container>
     );
   }
 
-  // Show error message for first load
-  if (error && !hasEmployees) {
+  if (error && !hasDataBeenFetched) {
     return (
         <Container maxWidth="lg">
           <CssBaseline />
@@ -304,19 +251,15 @@ const AbsentEmployees = ({ isAdmin = false }) => {
         <Box sx={{ mt: 4, mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h4" gutterBottom>
-              {isAdminFromState ? 'All Employees - Absent History' : 'My Absent History'}
+              {isAdmin ? 'All Employees - Absent History' : 'My Absent History'}
             </Typography>
-            {isAdminFromState && (
-                <Chip label="Admin View" color="primary" variant="outlined" />
-            )}
           </Box>
 
-          {/* Search Bar - Only show for admin */}
-          {isAdminFromState && (
+          {isAdmin && (
               <Box sx={{ mb: 2 }}>
                 <TextField
                     fullWidth
-                    placeholder="Search by Employee ID, Issue Description..."
+                    placeholder="Search by User ID, Employee ID, Issue Description, Public ID..."
                     variant="outlined"
                     value={searchQuery}
                     onChange={handleSearchQueryChange}
@@ -339,14 +282,12 @@ const AbsentEmployees = ({ isAdmin = false }) => {
               </Box>
           )}
 
-          {/* Error Alert */}
-          {error && hasEmployees && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
-                Error: {error}
+          {error && hasDataBeenFetched && (
+              <Alert severity="warning" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
+                Warning: {error}
               </Alert>
           )}
 
-          {/* Filters */}
           <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: 'wrap' }}>
             <TextField
                 label="Start Date"
@@ -392,19 +333,15 @@ const AbsentEmployees = ({ isAdmin = false }) => {
                 <MenuItem value={100}>100</MenuItem>
               </Select>
             </FormControl>
-            <Button variant="contained" onClick={handleFiltersApply}>
-              Apply Filters
-            </Button>
             <Button variant="outlined" onClick={handleClearFilters}>
-              Clear All
+              Clear Filters
             </Button>
             <Button variant="outlined" onClick={handleRefresh}>
               Refresh Data
             </Button>
           </Box>
 
-          {/* Results Info - Now shows filtered results */}
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
               Showing {paginatedEmployees.length} of {paginationInfo.totalElements} filtered results
               {paginationInfo.totalPages > 1 && ` (Page ${currentPage + 1} of ${paginationInfo.totalPages})`}
@@ -412,29 +349,42 @@ const AbsentEmployees = ({ isAdmin = false }) => {
                   ` (${allEmployees.length} total records)`
               }
             </Typography>
+            {loading && hasDataBeenFetched && (
+                <CircularProgress size={20} />
+            )}
           </Box>
 
-          {/* Table - Now shows paginated + filtered data */}
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Employee ID</TableCell>
+                  <TableCell>User ID</TableCell>
                   <TableCell>Date</TableCell>
                   <TableCell>Issue Description</TableCell>
                   <TableCell>Due Date</TableCell>
+                  <TableCell>Attendance Type</TableCell>
                   <TableCell>Status</TableCell>
-                  {!isAdminFromState && <TableCell>Action</TableCell>}
+                  <TableCell>Resolution</TableCell>
+                  {!isAdmin && <TableCell>Action</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedEmployees.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        {filteredEmployees.length === 0 && allEmployees.length > 0
-                            ? "No records match your search/filter criteria"
-                            : "No records found"
-                        }
+                      <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                          {filteredEmployees.length === 0 && allEmployees.length > 0
+                              ? "No records match your search/filter criteria"
+                              : allEmployees.length === 0
+                                  ? "No absent employee records found"
+                                  : "No records to display"
+                          }
+                        </Typography>
+                        {filteredEmployees.length === 0 && allEmployees.length > 0 && (
+                            <Button variant="outlined" onClick={handleClearFilters} sx={{ mt: 2 }}>
+                              Clear Filters
+                            </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                 ) : (
@@ -442,41 +392,77 @@ const AbsentEmployees = ({ isAdmin = false }) => {
                         <TableRow key={employee.id}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              {!employee.isResolved && (
+                              {!employee.isResolved && employee.hasIssues && (
                                   <Badge color="error" variant="dot" />
                               )}
-                              {employee.employeeName}
+                              <Box>
+                                <Typography variant="body2" fontWeight="medium">
+                                  {employee.employeeName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {employee.publicId}
+                                </Typography>
+                              </Box>
                             </Box>
                           </TableCell>
-                          <TableCell>{employee.date}</TableCell>
-                          <TableCell sx={{ maxWidth: 300, wordWrap: 'break-word' }}>
-                            {employee.reason}
+                          <TableCell>
+                            <Typography variant="body2">
+                              {employee.date}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 300 }}>
+                            <Typography variant="body2" sx={{ wordWrap: 'break-word' }}>
+                              {employee.reason}
+                            </Typography>
                           </TableCell>
                           <TableCell>
-                            {employee.dueDateForUA
-                                ? new Date(employee.dueDateForUA).toLocaleDateString()
-                                : 'N/A'
-                            }
+                            <Typography variant="body2">
+                              {employee.dueDateForUA
+                                  ? new Date(employee.dueDateForUA).toLocaleDateString()
+                                  : 'N/A'
+                              }
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                                label={formatAttendanceType(employee.attendanceType)}
+                                color={employee.attendanceType === 'ABSENT' ? 'error' : 'default'}
+                                size="small"
+                            />
                           </TableCell>
                           <TableCell>
                             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                              {employee.absent && (
+                              {employee.isAbsent && (
                                   <Chip label="Absent" color="error" size="small" />
                               )}
-                              {employee.noPay && (
+                              {employee.isNoPay && (
                                   <Chip label="No Pay" color="warning" size="small" />
                               )}
-                              {employee.issues && (
-                                  <Chip label="Issues" color="error" size="small" />
+                              {employee.hasIssues && (
+                                  <Chip label="Has Issues" color="error" size="small" />
+                              )}
+                              {employee.isLate && (
+                                  <Chip label="Late" color="warning" size="small" />
                               )}
                               {employee.isResolved && (
                                   <Chip label="Resolved" color="success" size="small" />
                               )}
                             </Stack>
                           </TableCell>
-                          {!isAdminFromState && (
+                          <TableCell>
+                            {employee.resolve ? (
+                                <Chip
+                                    label={formatResolveType(employee.resolve)}
+                                    color="info"
+                                    size="small"
+                                />
+                            ) : (
+                                <Chip label="Pending" color="default" size="small" />
+                            )}
+                          </TableCell>
+                          {!isAdmin && (
                               <TableCell>
-                                {!employee.isResolved && (
+                                {!employee.isResolved && employee.hasIssues && (
                                     <Button
                                         variant="contained"
                                         color="secondary"
@@ -495,23 +481,36 @@ const AbsentEmployees = ({ isAdmin = false }) => {
             </Table>
           </TableContainer>
 
-          {/* Pagination - Now based on filtered data */}
           {paginationInfo.totalElements > 0 && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mt: 3,
+                p: 2,
+                bgcolor: 'background.paper',
+                borderRadius: 1,
+                border: 1,
+                borderColor: 'divider'
+              }}>
                 <Typography variant="body2" color="text.secondary">
                   Showing {paginationInfo.startIndex} to {paginationInfo.endIndex} of {paginationInfo.totalElements} entries
                 </Typography>
-                <Pagination
-                    count={Math.max(1, paginationInfo.totalPages)}
-                    page={currentPage + 1}
-                    onChange={handlePageChange}
-                    color="primary"
-                    size="large"
-                    showFirstButton
-                    showLastButton
-                    siblingCount={2}
-                    boundaryCount={1}
-                />
+
+                {paginationInfo.totalPages > 1 && (
+                    <Pagination
+                        count={paginationInfo.totalPages}
+                        page={currentPage + 1}
+                        onChange={handlePageChange}
+                        color="primary"
+                        size="large"
+                        showFirstButton
+                        showLastButton
+                        siblingCount={1}
+                        boundaryCount={1}
+                    />
+                )}
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     Rows per page:
@@ -530,13 +529,6 @@ const AbsentEmployees = ({ isAdmin = false }) => {
                     <MenuItem value={100}>100</MenuItem>
                   </Select>
                 </Box>
-              </Box>
-          )}
-
-          {/* Loading overlay for API refresh only */}
-          {isSubsequentLoad && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <CircularProgress size={24} />
               </Box>
           )}
         </Box>

@@ -52,26 +52,39 @@ import {
     updateLeaveRequest,
 } from "../../../../lib/redux/redux-lms/leave/leaveSlice";
 
+const COMPONENT_BEHAVIORS = {
+    HALF_DAY: "Half Day",
+    FULL_DAY: "Full Day",
+    UNSUCCESSFUL: "Unsuccessful",
+    UNAUTHORIZED: "Unauthorized",
+    ABSENT: "Absent"
+};
+
+const REQUEST_STATUSES = {
+    DRAFT: "Draft",
+    SUBMITTED: "Submitted",
+    PENDING_APPROVAL: "Pending Approval",
+    APPROVED: "Approved",
+    REJECTED: "Rejected",
+    CANCELLED: "Cancelled",
+    EXPIRED: "Expired"
+};
+
 const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) => {
     const dispatch = useDispatch();
 
-    // Check both possible state locations based on your Redux configuration
     const leaveState = useSelector((state) => {
-        // First try the correct path based on isAdmin
         const correctReducer = isAdmin ? state?.leave : state?.leaveNo;
 
-        // If the data exists in the expected place, use it
         if (correctReducer?.data) {
             return correctReducer;
         }
 
-        // Otherwise, try the alternate reducer
         const alternateReducer = isAdmin ? state?.leaveNo : state?.leave;
         if (alternateReducer?.data) {
             return alternateReducer;
         }
 
-        // If no data in either place, return empty structure
         return {
             data: [],
             pagination: {
@@ -96,9 +109,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         loadingInOutData
     } = leaveState;
 
-    // Try both potential paths for balances
     const balanceState = useSelector((state) => {
-        // Try both possible locations for balances
         if (state?.leave?.balances?.data) {
             return state.leave.balances;
         } else if (state?.leaveNo?.balances?.data) {
@@ -118,7 +129,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         error: balanceError,
     } = balanceState;
 
-    // Local state
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [typeFilter, setTypeFilter] = useState("All");
@@ -137,26 +147,13 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         endDate: "",
         type: "",
         comment: "",
-        isHalfDay: false,
-        isFullDay: false,
-        // Fields everyone can update
-        isUnauthorized: false,
+        componentBehavior: "FULL_DAY",
+        requestStatus: "PENDING_APPROVAL",
         isManualRequest: false,
-        isAbsent: false,
-        isLateCover: false,
-        isLate: false,
-        isShort_Leave: false,
         notUsed: false,
-        // Admin-only fields
-        isEdited: false,
-        isReject: false,
-        isCanceled: false,
-        isAccepted: false,
-        isPending: false,
     });
 
     useEffect(() => {
-        // Get the userID for fetching data
         const userIdToUse = userId || sessionStorage.getItem("userId");
         if (!userIdToUse) return;
 
@@ -173,11 +170,14 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         dispatch(fetchLeaveBalances(userIdToUse));
     }, [dispatch, isAdmin, userId, currentPage, pageSize]);
 
-    // Guard against undefined or null leaveRequests
     const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : [];
 
-    // Filtering logic with safety check
     const filteredLeaves = safeLeaveRequests.filter((leave) => {
+        const unwantedBehaviors = ['LATE', 'LATE_COVER', 'SHORT_LEAVE'];
+        if (unwantedBehaviors.includes(leave.originalItem?.componentBehavior)) {
+            return false;
+        }
+
         const matchesSearchQuery =
             leave.employeeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             leave.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -221,7 +221,14 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         );
     });
 
-    // Handlers
+    const hasNonEditableLeaves = filteredLeaves.some(leave =>
+        leave.accepted || leave.reject || leave.canceled || leave.expired
+    );
+
+    const isLeaveEditable = (leave) => {
+        return !(leave.accepted || leave.reject || leave.canceled || leave.expired);
+    };
+
     const handleSearchChange = (event) => setSearchQuery(event.target.value);
     const handleStatusFilterChange = (event) => setStatusFilter(event.target.value);
     const handleTypeFilterChange = (event) => setTypeFilter(event.target.value);
@@ -252,36 +259,26 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         setDeleteDialogOpen(true);
     };
 
-    // Updated openEditDialog function to properly load all data
     const openEditDialog = (leave) => {
-        console.log('Opening edit dialog for leave:', leave);
-
         setCurrentLeave(leave);
+
+        const validComponentBehavior = Object.keys(COMPONENT_BEHAVIORS).includes(leave.originalItem?.componentBehavior)
+            ? leave.originalItem.componentBehavior
+            : "FULL_DAY";
+
+        const validRequestStatus = Object.keys(REQUEST_STATUSES).includes(leave.originalItem?.requestStatus)
+            ? leave.originalItem.requestStatus
+            : "PENDING_APPROVAL";
+
         setEditFormData({
             startDate: leave.startDate || "",
             endDate: leave.endDate || "",
             type: leave.leaveTypeName || leave.type || "",
             comment: leave.comment || "",
-
-            // Day type flags
-            isHalfDay: Boolean(leave.halfDay),
-            isFullDay: Boolean(leave.fullDay),
-
-            // Regular user fields - load from originalItem to get all backend fields
-            isUnauthorized: Boolean(leave.originalItem?.unauthorized),
+            componentBehavior: validComponentBehavior,
+            requestStatus: validRequestStatus,
             isManualRequest: Boolean(leave.manualRequest),
-            isAbsent: Boolean(leave.absent),
-            isLateCover: Boolean(leave.originalItem?.lateCover),
-            isLate: Boolean(leave.late),
-            isShort_Leave: Boolean(leave.originalItem?.short_Leave),
             notUsed: Boolean(leave.originalItem?.notUsed),
-
-            // Admin-only fields
-            isEdited: Boolean(leave.originalItem?.edited),
-            isReject: Boolean(leave.reject),
-            isCanceled: Boolean(leave.canceled),
-            isAccepted: Boolean(leave.accepted),
-            isPending: Boolean(leave.pending),
         });
 
         setEditDialogOpen(true);
@@ -291,7 +288,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         setViewLeaveData(leave);
         setViewDialogOpen(true);
 
-        // Fetch in-out data if start date is available
         if (leave.startDate) {
             dispatch(fetchInOutData({
                 userId: userId || sessionStorage.getItem('userId'),
@@ -312,37 +308,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         const { name, value, checked, type } = e.target;
 
         if (type === 'checkbox') {
-            // Handle checkbox logic for half-day and full-day (mutually exclusive)
-            if (name === 'isHalfDay' && checked) {
-                setEditFormData((prev) => ({
-                    ...prev,
-                    [name]: checked,
-                    isFullDay: false // Uncheck full day if half day is selected
-                }));
-            } else if (name === 'isFullDay' && checked) {
-                setEditFormData((prev) => ({
-                    ...prev,
-                    [name]: checked,
-                    isHalfDay: false // Uncheck half day if full day is selected
-                }));
-            }
-            // Handle admin-only status checkboxes (mutually exclusive)
-            else if (['isAccepted', 'isReject', 'isPending', 'isCanceled'].includes(name) && checked) {
-                setEditFormData((prev) => ({
-                    ...prev,
-                    // Reset all status fields
-                    isAccepted: false,
-                    isReject: false,
-                    isPending: false,
-                    isCanceled: false,
-                    // Set the selected one
-                    [name]: checked
-                }));
-            }
-            // Handle other checkboxes (can be multiple or independent)
-            else {
-                setEditFormData((prev) => ({ ...prev, [name]: checked }));
-            }
+            setEditFormData((prev) => ({ ...prev, [name]: checked }));
         } else {
             setEditFormData((prev) => ({ ...prev, [name]: value }));
         }
@@ -357,6 +323,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                 fetchLeaveData({
                     isAdmin,
                     userId: userId || sessionStorage.getItem("userId"),
+                    userAdmin,
                     page: currentPage - 1,
                     size: pageSize,
                 })
@@ -389,66 +356,58 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         }
     };
 
-    // Updated handleSaveEditedLeave function with proper field mapping
     const handleSaveEditedLeave = async () => {
         if (!currentLeave) return;
 
-        // Calculate number of days based on date range
+        // Calculate number of days based on date range and component behavior
         const startDate = new Date(editFormData.startDate);
         const endDate = new Date(editFormData.endDate);
         const timeDiff = endDate.getTime() - startDate.getTime();
         const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
 
-        // Create the update payload with proper field mapping to match backend LeaveReq
+        let numOfDays;
+        switch (editFormData.componentBehavior) {
+            case 'HALF_DAY':
+                numOfDays = 1;
+                break;
+            default:
+                numOfDays = daysDiff * 2;
+                break;
+        }
+
         const updatePayload = {
             publicId: currentLeave.publicId,
-
-            // Basic fields
             fromDate: editFormData.startDate,
             toDate: editFormData.endDate,
             leaveType: editFormData.type,
             description: editFormData.comment,
-            numOfDays: editFormData.isHalfDay ? 0.5 : daysDiff,
+            numOfDays: numOfDays,
             happenDate: editFormData.startDate,
             userId: currentLeave.originalItem?.userId || currentLeave.userId,
             employeeID: currentLeave.employeeId,
-            isNoPay: currentLeave.originalItem?.isNoPay || 0,
 
-            // Boolean fields - using exact backend field names (without 'is' prefix)
-            halfDay: editFormData.isHalfDay,
-            fullDay: editFormData.isFullDay,
-            unauthorized: editFormData.isUnauthorized,
-            manualRequest: editFormData.isManualRequest,
-            absent: editFormData.isAbsent,
-            lateCover: editFormData.isLateCover,
-            late: editFormData.isLate,
-            short_Leave: editFormData.isShort_Leave,
+            componentBehavior: editFormData.componentBehavior,
+            requestStatus: editFormData.requestStatus,
+
             notUsed: editFormData.notUsed,
-            unSuccessful: currentLeave.originalItem?.unSuccessful || false,
+            isManualRequest: editFormData.isManualRequest,
+            isEdited: true,
         };
-
-        // Admin-only fields (only include if user is admin)
-        if (isAdmin) {
-            updatePayload.edited = editFormData.isEdited;
-            updatePayload.reject = editFormData.isReject;
-            updatePayload.canceled = editFormData.isCanceled;
-            updatePayload.accepted = editFormData.isAccepted;
-            updatePayload.pending = editFormData.isPending;
-        }
 
         try {
             await dispatch(
                 updateLeaveRequest({
                     updatePayload: updatePayload,
+                    userAdmin,
                     isAdmin: isAdmin
                 })
             ).unwrap();
 
-            // Refresh the data
             dispatch(
                 fetchLeaveData({
                     isAdmin,
                     userId: userId || sessionStorage.getItem("userId"),
+                    userAdmin,
                     page: currentPage - 1,
                     size: pageSize,
                 })
@@ -456,7 +415,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
             handleCloseDialogs();
         } catch (err) {
             console.error("Update failed:", err);
-            // Show error message to user
             alert(`Update failed: ${err.message || err}`);
         }
     };
@@ -471,7 +429,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         }
     };
 
-    // Safely extract unique values with fallbacks
     const leaveTypes = [...new Set(safeLeaveRequests.map((leave) => leave.type).filter(Boolean))];
     const statuses = [...new Set(safeLeaveRequests.map((leave) => leave.status).filter(Boolean))];
 
@@ -483,7 +440,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         pageSize: 10
     };
 
-    // Safely handle leave balances
     const safeLeaveBalances = Array.isArray(leaveBalances) ? leaveBalances : [];
 
     return (
@@ -491,7 +447,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
             <CssBaseline />
             <Box sx={{ mt: 4, mb: 4 }}>
                 <Typography variant="h4" gutterBottom>
-                    {isAdmin ? "All Leave Requests" : "My Leave Requests"}
+                    {isAdmin || userAdmin ? "All Leave Requests" : "My Leave Requests"}
                 </Typography>
 
                 {error && (
@@ -635,14 +591,16 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                             onClick={handleDeleteAllSelected}
                             disabled={
                                 selected.length === 0 ||
+                                hasNonEditableLeaves ||
                                 selected.some((id) => {
                                     const leave = safeLeaveRequests.find((l) => l.id === id);
-                                    return leave?.accepted;
+                                    return !isLeaveEditable(leave);
                                 })
                             }
                             sx={{ mb: 2 }}
                         >
                             Delete Selected ({selected.length})
+                            {hasNonEditableLeaves && " - Some items cannot be deleted"}
                         </Button>
 
                         {filteredLeaves.length === 0 ? (
@@ -663,6 +621,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                         filteredLeaves.length > 0
                                                     }
                                                     onChange={handleSelectAll}
+                                                    disabled={hasNonEditableLeaves}
                                                 />
                                             </TableCell>
                                             <TableCell>Employee ID</TableCell>
@@ -670,53 +629,88 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                             <TableCell>Start Date</TableCell>
                                             <TableCell>End Date</TableCell>
                                             <TableCell>Status</TableCell>
+                                            <TableCell>Component Behavior</TableCell>
                                             <TableCell>Actions</TableCell>
                                             <TableCell>View</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredLeaves.map((leave, index) => (
-                                            <TableRow key={leave.id || `leave-${index}`}>
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox
-                                                        checked={selected.includes(leave.id)}
-                                                        onChange={() => handleSelect(leave.id)}
-                                                        disabled={leave.accepted || leave.reject || leave.canceled}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>{leave.employeeId || 'N/A'}</TableCell>
-                                                <TableCell>{leave.type || 'N/A'}</TableCell>
-                                                <TableCell>{leave.startDate || "N/A"}</TableCell>
-                                                <TableCell>{leave.endDate || "N/A"}</TableCell>
-                                                <TableCell>{leave.status || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <IconButton
-                                                        onClick={() => openEditDialog(leave)}
-                                                        disabled={leave.accepted || leave.reject || leave.canceled}
-                                                        color="primary"
-                                                    >
-                                                        <EditIcon />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        onClick={() => openDeleteDialog(leave)}
-                                                        disabled={leave.accepted || leave.reject || leave.canceled}
-                                                        color="error"
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Tooltip title="View Details">
-                                                        <IconButton
-                                                            onClick={() => handleOpenViewDialog(leave)}
-                                                            color="info"
+                                        {filteredLeaves.map((leave, index) => {
+                                            const isEditable = isLeaveEditable(leave);
+                                            return (
+                                                <TableRow
+                                                    key={leave.id || `leave-${index}`}
+                                                    sx={{
+                                                        backgroundColor: leave.expired ? '#ffebee' : 'inherit', // Light red background for expired
+                                                        opacity: leave.expired ? 0.7 : 1 // Slightly faded for expired
+                                                    }}
+                                                >
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox
+                                                            checked={selected.includes(leave.id)}
+                                                            onChange={() => handleSelect(leave.id)}
+                                                            disabled={!isEditable}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>{leave.employeeId || 'N/A'}</TableCell>
+                                                    <TableCell>{leave.type || 'N/A'}</TableCell>
+                                                    <TableCell>{leave.startDate || "N/A"}</TableCell>
+                                                    <TableCell>{leave.endDate || "N/A"}</TableCell>
+                                                    <TableCell>
+                                                        <Typography
+                                                            color={leave.expired ? 'error' : 'inherit'}
+                                                            sx={{
+                                                                fontWeight: leave.expired ? 'bold' : 'normal',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 1
+                                                            }}
                                                         >
-                                                            <VisibilityIcon />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                            {leave.status || 'N/A'}
+                                                            {leave.expired && <Tooltip title="This leave request has expired and cannot be modified"><span>⏰</span></Tooltip>}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {COMPONENT_BEHAVIORS[leave.originalItem?.componentBehavior] || leave.originalItem?.componentBehavior || 'N/A'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Tooltip title={!isEditable ? "This leave cannot be edited" : ""}>
+                                                        <span>
+                                                            <IconButton
+                                                                onClick={() => openEditDialog(leave)}
+                                                                disabled={!isEditable}
+                                                                color="primary"
+                                                                sx={{
+                                                                    opacity: !isEditable ? 0.3 : 1
+                                                                }}
+                                                            >
+                                                                <EditIcon />
+                                                            </IconButton>
+                                                            <IconButton
+                                                                onClick={() => openDeleteDialog(leave)}
+                                                                disabled={!isEditable}
+                                                                color="error"
+                                                                sx={{
+                                                                    opacity: !isEditable ? 0.3 : 1
+                                                                }}
+                                                            >
+                                                                <DeleteIcon />
+                                                            </IconButton>
+                                                        </span>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Tooltip title="View Details">
+                                                            <IconButton
+                                                                onClick={() => handleOpenViewDialog(leave)}
+                                                                color="info"
+                                                            >
+                                                                <VisibilityIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )})}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
@@ -733,15 +727,14 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                             />
                         </Box>
 
-                        {/* Enhanced Edit Dialog */}
                         <Dialog
                             open={editDialogOpen}
                             onClose={handleCloseDialogs}
-                            maxWidth="sm"
+                            maxWidth="md"
                             fullWidth
                         >
                             <DialogTitle>
-                                {isAdmin ? "Edit Leave Request (Admin)" : "Edit Leave Request"}
+                                {isAdmin || userAdmin ? "Edit Leave Request (Admin)" : "Edit Leave Request"}
                             </DialogTitle>
                             <DialogContent>
                                 <Box sx={{ mt: 2 }}>
@@ -780,77 +773,46 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                         </Select>
                                     </FormControl>
 
-                                    {/* Day Type Selection */}
-                                    <Box sx={{ mt: 2, mb: 2 }}>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Leave Duration
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isHalfDay"
-                                                    checked={editFormData.isHalfDay}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Half Day</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isFullDay"
-                                                    checked={editFormData.isFullDay}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Full Day</Typography>
-                                            </Box>
-                                        </Box>
-                                    </Box>
+                                    {/* Component Behavior Selection - Only showing allowed options */}
+                                    <FormControl fullWidth margin="normal">
+                                        <InputLabel>Component Behavior</InputLabel>
+                                        <Select
+                                            name="componentBehavior"
+                                            value={editFormData.componentBehavior}
+                                            onChange={handleEditFormChange}
+                                            label="Component Behavior"
+                                        >
+                                            {Object.entries(COMPONENT_BEHAVIORS).map(([key, value]) => (
+                                                <MenuItem key={key} value={key}>
+                                                    {value}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
 
-                                    {/* Leave Type Controls - Available to all users */}
+                                    {(isAdmin || userAdmin) && (
+                                        <FormControl fullWidth margin="normal">
+                                            <InputLabel>Request Status</InputLabel>
+                                            <Select
+                                                name="requestStatus"
+                                                value={editFormData.requestStatus}
+                                                onChange={handleEditFormChange}
+                                                label="Request Status"
+                                            >
+                                                {Object.entries(REQUEST_STATUSES).map(([key, value]) => (
+                                                    <MenuItem key={key} value={key}>
+                                                        {value}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+
                                     <Box sx={{ mt: 2, mb: 2 }}>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Leave Type Controls
+                                            Additional Options
                                         </Typography>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isAbsent"
-                                                    checked={editFormData.isAbsent}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Absent</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isLate"
-                                                    checked={editFormData.isLate}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Late</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isLateCover"
-                                                    checked={editFormData.isLateCover}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Late Cover</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isShort_Leave"
-                                                    checked={editFormData.isShort_Leave}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Short Leave</Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Checkbox
-                                                    name="isUnauthorized"
-                                                    checked={editFormData.isUnauthorized}
-                                                    onChange={handleEditFormChange}
-                                                />
-                                                <Typography variant="body2">Unauthorized</Typography>
-                                            </Box>
+                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Checkbox
                                                     name="isManualRequest"
@@ -859,8 +821,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                 />
                                                 <Typography variant="body2">Manual Request</Typography>
                                             </Box>
-                                        </Box>
-                                        <Box sx={{ mt: 1 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Checkbox
                                                     name="notUsed"
@@ -871,64 +831,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                             </Box>
                                         </Box>
                                     </Box>
-
-                                    {/* Admin-only fields */}
-                                    {isAdmin && (
-                                        <>
-                                            <Typography variant="subtitle2" gutterBottom sx={{ mt: 3, color: 'primary.main' }}>
-                                                Admin-Only Controls
-                                            </Typography>
-
-                                            {/* Status Controls - Admin Only */}
-                                            <Box sx={{ mt: 2, mb: 2 }}>
-                                                <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold' }}>
-                                                    Status Controls (Admin Only)
-                                                </Typography>
-                                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Checkbox
-                                                            name="isAccepted"
-                                                            checked={editFormData.isAccepted}
-                                                            onChange={handleEditFormChange}
-                                                        />
-                                                        <Typography variant="body2">Accepted</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Checkbox
-                                                            name="isReject"
-                                                            checked={editFormData.isReject}
-                                                            onChange={handleEditFormChange}
-                                                        />
-                                                        <Typography variant="body2">Rejected</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Checkbox
-                                                            name="isPending"
-                                                            checked={editFormData.isPending}
-                                                            onChange={handleEditFormChange}
-                                                        />
-                                                        <Typography variant="body2">Pending</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Checkbox
-                                                            name="isCanceled"
-                                                            checked={editFormData.isCanceled}
-                                                            onChange={handleEditFormChange}
-                                                        />
-                                                        <Typography variant="body2">Canceled</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Checkbox
-                                                            name="isEdited"
-                                                            checked={editFormData.isEdited}
-                                                            onChange={handleEditFormChange}
-                                                        />
-                                                        <Typography variant="body2">Edited</Typography>
-                                                    </Box>
-                                                </Box>
-                                            </Box>
-                                        </>
-                                    )}
 
                                     <TextField
                                         label="Comment"
@@ -941,7 +843,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                         rows={3}
                                     />
 
-                                    {isAdmin && (
+                                    {(isAdmin || userAdmin) && (
                                         <Alert severity="info" sx={{ mt: 2 }}>
                                             As an admin, you will be prompted to enter a comment when saving changes.
                                         </Alert>
@@ -961,7 +863,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                             </DialogActions>
                         </Dialog>
 
-                        {/* Delete Dialog */}
                         <Dialog
                             open={deleteDialogOpen}
                             onClose={handleCloseDialogs}
@@ -985,7 +886,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                             </DialogActions>
                         </Dialog>
 
-                        {/* Enhanced View Details Dialog */}
                         <Dialog
                             open={viewDialogOpen}
                             onClose={handleCloseDialogs}
@@ -1024,6 +924,18 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                         <TableCell>{viewLeaveData.startDate || "Not specified"}</TableCell>
                                                         <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>End Date</TableCell>
                                                         <TableCell>{viewLeaveData.endDate || "Not specified"}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Component Behavior</TableCell>
+                                                        <TableCell>{COMPONENT_BEHAVIORS[viewLeaveData.originalItem?.componentBehavior] || 'N/A'}</TableCell>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Request Status</TableCell>
+                                                        <TableCell>{REQUEST_STATUSES[viewLeaveData.originalItem?.requestStatus] || 'N/A'}</TableCell>
+                                                    </TableRow>
+                                                    <TableRow>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Days</TableCell>
+                                                        <TableCell>{viewLeaveData.actualDays || viewLeaveData.numOfDays || 'N/A'}</TableCell>
+                                                        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Manual Request</TableCell>
+                                                        <TableCell>{viewLeaveData.manualRequest ? 'Yes' : 'No'}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
                                                         <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Comment</TableCell>
@@ -1172,46 +1084,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                             </TableContainer>
                                         ) : (
                                             <Alert severity="info" sx={{ mb: 4 }}>No approval history available.</Alert>
-                                        )}
-
-                                        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-                                            Edit History
-                                        </Typography>
-                                        {viewLeaveData.editedByDTOs && viewLeaveData.editedByDTOs.length > 0 ? (
-                                            <TableContainer component={Paper}>
-                                                <Table>
-                                                    <TableHead>
-                                                        <TableRow>
-                                                            <TableCell>Profile</TableCell>
-                                                            <TableCell>Name</TableCell>
-                                                            <TableCell>Employee ID</TableCell>
-                                                            <TableCell>Comment</TableCell>
-                                                            <TableCell>Edit Date</TableCell>
-                                                        </TableRow>
-                                                    </TableHead>
-                                                    <TableBody>
-                                                        {viewLeaveData.editedByDTOs.map((editor, index) => (
-                                                            <TableRow key={editor.id || index}>
-                                                                <TableCell>
-                                                                    <Avatar
-                                                                        src={editor.profilePicture}
-                                                                        alt={editor.name}
-                                                                        sx={{ width: 40, height: 40 }}
-                                                                    >
-                                                                        {!editor.profilePicture && editor.name?.charAt(0)}
-                                                                    </Avatar>
-                                                                </TableCell>
-                                                                <TableCell>{editor.name || 'N/A'}</TableCell>
-                                                                <TableCell>{editor.employeeId || 'N/A'}</TableCell>
-                                                                <TableCell>{editor.comment || 'No comment'}</TableCell>
-                                                                <TableCell>{formatDate(editor.editDate) || 'N/A'}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </TableContainer>
-                                        ) : (
-                                            <Alert severity="info">No edit history available.</Alert>
                                         )}
                                     </Box>
                                 )}

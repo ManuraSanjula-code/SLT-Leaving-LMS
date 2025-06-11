@@ -87,9 +87,7 @@ import {
     clearError,
     handleFormChange
 } from "../../../../lib/redux/redux-lms/employee-activities/employeeActivitiesSlice";
-import {ActivityDetailsMenu} from "../../components/employee/ActivityDetailsMenu";
 
-// Custom theme with better colors
 const theme = createTheme({
     palette: {
         primary: {
@@ -134,12 +132,34 @@ const theme = createTheme({
     }
 });
 
+const ATTENDANCE_TYPE_LABELS = {
+    'FULL_DAY': 'Full Day',
+    'HALF_DAY': 'Half Day',
+    'ABSENT': 'Absent'
+};
+
+const LEAVE_STATUS_LABELS = {
+    'NO_LEAVE': 'No Leave',
+    'FULL_LEAVE': 'Full Leave',
+    'SHORT_LEAVE': 'Short Leave',
+    'LEAVE_REQUESTED': 'Leave Requested',
+    'LEAVE_APPROVED': 'Leave Approved'
+};
+
+const PAY_STATUS_LABELS = {
+    'NO_PAY': 'No Pay'
+};
+
+const RESOLVE_TYPE_LABELS = {
+    'VIA_MOVEMENT': 'Via Movement',
+    'VIA_LEAVE': 'Via Leave'
+};
+
 const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString();
 };
 
-// Helper function to format time from Time object to HH:MM format for form inputs
 const formatTimeForInput = (timeString) => {
     if (!timeString) return "";
 
@@ -152,7 +172,6 @@ const formatTimeForInput = (timeString) => {
     return "";
 };
 
-// Helper function to format date for input fields
 const formatDateForInput = (dateString) => {
     if (!dateString) return new Date().toISOString().split('T')[0];
 
@@ -168,7 +187,6 @@ const formatDateForInput = (dateString) => {
     }
 };
 
-// Custom pagination actions component
 function TablePaginationActions(props) {
     const { count, page, rowsPerPage, onPageChange } = props;
 
@@ -222,47 +240,63 @@ function TablePaginationActions(props) {
     );
 }
 
-// Status chip component for better visual representation
-const StatusChip = ({ status }) => {
+const StatusChip = ({ activity }) => {
     const getChipProps = () => {
-        switch (status) {
-            case 'Unauthorized':
-                return {
-                    color: 'error',
-                    icon: <BlockIcon fontSize="small" />,
-                    label: status
-                };
-            case 'Unsuccessful':
-                return {
-                    color: 'warning',
-                    icon: <ErrorIcon fontSize="small" />,
-                    label: status
-                };
-            case 'Approved':
-                return {
-                    color: 'success',
-                    icon: <CheckCircleIcon fontSize="small" />,
-                    label: status
-                };
-            case 'Pending':
-                return {
-                    color: 'info',
-                    icon: <HourglassEmptyIcon fontSize="small" />,
-                    label: status
-                };
-            case 'Issue':
-                return {
-                    color: 'warning',
-                    icon: <ErrorIcon fontSize="small" />,
-                    label: status
-                };
-            default:
-                return {
-                    color: 'default',
-                    icon: <CheckCircleIcon fontSize="small" />,
-                    label: 'Normal'
-                };
+        if (activity.isUnauthorized) {
+            return {
+                color: 'error',
+                icon: <BlockIcon fontSize="small" />,
+                label: 'Unauthorized'
+            };
         }
+        if (activity.isUnSuccessful) {
+            return {
+                color: 'warning',
+                icon: <ErrorIcon fontSize="small" />,
+                label: 'Unsuccessful'
+            };
+        }
+        if (activity.hasIssues) {
+            return {
+                color: 'warning',
+                icon: <ErrorIcon fontSize="small" />,
+                label: 'Has Issues'
+            };
+        }
+        if (activity.leaveStatus === 'LEAVE_APPROVED') {
+            return {
+                color: 'success',
+                icon: <CheckCircleIcon fontSize="small" />,
+                label: 'Leave Approved'
+            };
+        }
+        if (activity.leaveStatus === 'LEAVE_REQUESTED') {
+            return {
+                color: 'info',
+                icon: <HourglassEmptyIcon fontSize="small" />,
+                label: 'Leave Requested'
+            };
+        }
+        if (activity.isLate && !activity.isLateCovered) {
+            return {
+                color: 'warning',
+                icon: <AccessTimeIcon fontSize="small" />,
+                label: 'Late'
+            };
+        }
+        if (activity.isLate && activity.isLateCovered) {
+            return {
+                color: 'info',
+                icon: <CheckCircleIcon fontSize="small" />,
+                label: 'Late Covered'
+            };
+        }
+
+        return {
+            color: 'success',
+            icon: <CheckCircleIcon fontSize="small" />,
+            label: 'Normal'
+        };
     };
 
     const { color, icon, label } = getChipProps();
@@ -278,48 +312,59 @@ const StatusChip = ({ status }) => {
     );
 };
 
-// Type badge component for better visual representation
-const TypeBadge = ({ type }) => {
+const TypeBadge = ({ activity }) => {
     const getTypeProps = () => {
-        switch (type) {
-            case 'Absent':
-                return {
-                    bgcolor: '#ffcdd2',
-                    color: '#c62828'
-                };
-            case 'Late':
-                return {
-                    bgcolor: '#fff9c4',
-                    color: '#f57f17'
-                };
-            case 'Full Leave':
-                return {
-                    bgcolor: '#bbdefb',
-                    color: '#0d47a1'
-                };
-            case 'Half Day':
-                return {
-                    bgcolor: '#c8e6c9',
-                    color: '#1b5e20'
-                };
-            case 'Short Leave':
-                return {
-                    bgcolor: '#e1bee7',
-                    color: '#4a148c'
-                };
-            default:
-                return {
-                    bgcolor: '#e8f5e9',
-                    color: '#2e7d32'
-                };
+        const attendanceType = activity.attendanceType;
+        const leaveStatus = activity.leaveStatus;
+
+        if (attendanceType === 'ABSENT') {
+            return {
+                bgcolor: '#ffcdd2',
+                color: '#c62828',
+                label: 'Absent'
+            };
         }
+        if (attendanceType === 'HALF_DAY') {
+            return {
+                bgcolor: '#c8e6c9',
+                color: '#1b5e20',
+                label: 'Half Day'
+            };
+        }
+        if (leaveStatus === 'FULL_LEAVE') {
+            return {
+                bgcolor: '#bbdefb',
+                color: '#0d47a1',
+                label: 'Full Leave'
+            };
+        }
+        if (leaveStatus === 'SHORT_LEAVE') {
+            return {
+                bgcolor: '#e1bee7',
+                color: '#4a148c',
+                label: 'Short Leave'
+            };
+        }
+        if (activity.isLate) {
+            return {
+                bgcolor: '#fff9c4',
+                color: '#f57f17',
+                label: 'Late'
+            };
+        }
+
+        return {
+            bgcolor: '#e8f5e9',
+            color: '#2e7d32',
+            label: 'Full Day'
+        };
     };
 
-    const { bgcolor, color } = getTypeProps();
+    const { bgcolor, color, label } = getTypeProps();
 
     return (
         <Chip
-            label={type}
+            label={label}
             size="small"
             sx={{
                 bgcolor,
@@ -331,7 +376,6 @@ const TypeBadge = ({ type }) => {
 };
 
 const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
-    // Get userId from sessionStorage if not provided
     if (userId == null) userId = sessionStorage.getItem('userId');
 
     // Use Redux state and dispatch
@@ -375,36 +419,29 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(handleFormChange({ name, value, type, checked }));
     };
 
-    // Handle edit button click
     const handleEditClick = (activity) => {
         const preparedData = {
             date: formatDateForInput(activity.date),
-            employeeID: activity.employeeID || '',
-            fullDay: activity.fullDay || false,
+            employeeId: activity.employeeId || '',
             arrivalDate: formatDateForInput(activity.arrivalDate),
             arrivalTime: formatTimeForInput(activity.arrivalTime),
             leftTime: formatTimeForInput(activity.leftTime),
-            late: activity.late || false,
-            lateCover: activity.lateCover || false,
-            halfDay: activity.halfDay || false,
-            fullLeave: activity.fullLeave || false,
-            shortLeave: activity.shortLeave || false,
-            absent: activity.absent || false,
-            unSuccessful: activity.isUnSuccessful || false,
-            isNoPay: activity.isNoPay || false,
-            issues: activity.issues || false,
-            unAuthorized: activity.isUnAuthorized || false,
-            resolve: activity.resolve || false,
-            leaveSuccess: activity.leaveSuccess || false,
-            leaveReq: activity.leaveReq || false,
+            attendanceType: activity.attendanceType || 'FULL_DAY',
+            leaveStatus: activity.leaveStatus || null,
+            payStatus: activity.payStatus || null,
+            resolve: activity.resolve || null,
+            isLate: activity.isLate || false,
+            isLateCovered: activity.isLateCovered || false,
+            isUnauthorized: activity.isUnauthorized || false,
+            isUnSuccessful: activity.isUnSuccessful || false,
+            isHoliday: activity.isHoliday || false,
+            isResolved: activity.isResolved || false,
+            hasIssues: activity.hasIssues || false,
+            isManual: activity.isManual || false,
+            isActive: activity.isActive !== false,
             issueDescription: activity.issueDescription || '',
             dueDateForUA: formatDateForInput(activity.dueDateForUA),
-            active: activity.active !== false,
-            nopay: activity.nopay || false,
-            viaMovement: activity.viaMovement || false,
-            viaLeave: activity.viaLeave || false,
-            manual: false,
-            terminalID: activity.terminalID || ''
+            terminalId: activity.terminalId || ''
         };
 
         dispatch(setFormData(preparedData));
@@ -412,6 +449,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(setEditMode(true));
         dispatch(setShowModal(true));
     };
+
     const handleDeleteClick = (id) => {
         dispatch(setIdToDelete(id));
         dispatch(setOpenDeleteDialog(true));
@@ -494,25 +532,26 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(setRowsPerPage(parseInt(event.target.value, 10)));
     };
 
-    // Determine activity type based on properties
+    // Determine activity type based on new structure
     const getActivityType = (activity) => {
-        if (activity.isAbsent) return "Absent";
-        if (activity.isFullLeave) return "Full Leave";
-        if (activity.isHalfDay) return "Half Day";
-        if (activity.isShortLeave) return "Short Leave";
+        if (activity.attendanceType === 'ABSENT') return "Absent";
+        if (activity.leaveStatus === 'FULL_LEAVE') return "Full Leave";
+        if (activity.leaveStatus === 'SHORT_LEAVE') return "Short Leave";
+        if (activity.attendanceType === 'HALF_DAY') return "Half Day";
         if (activity.isLate) return "Late";
         if (activity.isUnSuccessful) return "Swipe error";
-        if (activity.isUnAuthorized) return "Swipe error";
-        return "Present";
+        if (activity.isUnauthorized) return "Swipe error";
+        return "Full Day";
     };
 
-    // Determine activity status based on properties
+    // Determine activity status based on new structure
     const getActivityStatus = (activity) => {
-        if (activity.isUnAuthorized) return "Unauthorized";
-        if (activity.isUnSuccessful) return "Unauthorized";
-        if (activity.leaveSuccess) return "Approved";
-        if (activity.leaveReq) return "Pending";
-        if (activity.issues) return "Issue";
+        if (activity.isUnauthorized) return "Unauthorized";
+        if (activity.isUnSuccessful) return "Unsuccessful";
+        if (activity.leaveStatus === 'LEAVE_APPROVED') return "Approved";
+        if (activity.leaveStatus === 'LEAVE_REQUESTED') return "Pending";
+        if (activity.hasIssues) return "Issue";
+        if (activity.isLate && !activity.isLateCovered) return "Late";
         return "Normal";
     };
 
@@ -521,12 +560,12 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         const activityType = getActivityType(activity);
         const activityStatus = getActivityStatus(activity);
 
-        const matchesSearch = activity.employeeID?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = activity.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = filterType === "all" || activityType === filterType;
         const matchesStatus = filterStatus === "all" || activityStatus === filterStatus;
         const matchesActive = filterActive === "all" ||
-            (filterActive === "active" && activity.active !== false) ||
-            (filterActive === "inactive" && activity.active === false);
+            (filterActive === "active" && activity.isActive !== false) ||
+            (filterActive === "inactive" && activity.isActive === false);
 
         // Convert date strings to Date objects for comparison
         const activityDate = activity.date ? new Date(activity.date).toISOString().split('T')[0] : "";
@@ -636,8 +675,8 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 <TextField
                                     fullWidth
                                     label="Employee ID"
-                                    name="employeeID"
-                                    value={formData.employeeID}
+                                    name="employeeId"
+                                    value={formData.employeeId}
                                     onChange={handleChange}
                                     InputProps={{
                                         startAdornment: (
@@ -654,8 +693,8 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 <TextField
                                     fullWidth
                                     label="Terminal ID"
-                                    name="terminalID"
-                                    value={formData.terminalID}
+                                    name="terminalId"
+                                    value={formData.terminalId}
                                     onChange={handleChange}
                                     InputProps={{
                                         startAdornment: (
@@ -727,6 +766,76 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
+                            {/* Attendance Type */}
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Attendance Type</InputLabel>
+                                    <Select
+                                        name="attendanceType"
+                                        value={formData.attendanceType}
+                                        onChange={handleChange}
+                                        label="Attendance Type"
+                                    >
+                                        <MenuItem value="FULL_DAY">Full Day</MenuItem>
+                                        <MenuItem value="HALF_DAY">Half Day</MenuItem>
+                                        <MenuItem value="ABSENT">Absent</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Leave Status */}
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Leave Status</InputLabel>
+                                    <Select
+                                        name="leaveStatus"
+                                        value={formData.leaveStatus || ''}
+                                        onChange={handleChange}
+                                        label="Leave Status"
+                                    >
+                                        <MenuItem value="">None</MenuItem>
+                                        <MenuItem value="NO_LEAVE">No Leave</MenuItem>
+                                        <MenuItem value="FULL_LEAVE">Full Leave</MenuItem>
+                                        <MenuItem value="SHORT_LEAVE">Short Leave</MenuItem>
+                                        <MenuItem value="LEAVE_REQUESTED">Leave Requested</MenuItem>
+                                        <MenuItem value="LEAVE_APPROVED">Leave Approved</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Pay Status */}
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Pay Status</InputLabel>
+                                    <Select
+                                        name="payStatus"
+                                        value={formData.payStatus || ''}
+                                        onChange={handleChange}
+                                        label="Pay Status"
+                                    >
+                                        <MenuItem value="">Normal Pay</MenuItem>
+                                        <MenuItem value="NO_PAY">No Pay</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Resolve Type */}
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Resolve Type</InputLabel>
+                                    <Select
+                                        name="resolve"
+                                        value={formData.resolve || ''}
+                                        onChange={handleChange}
+                                        label="Resolve Type"
+                                    >
+                                        <MenuItem value="">None</MenuItem>
+                                        <MenuItem value="VIA_MOVEMENT">Via Movement</MenuItem>
+                                        <MenuItem value="VIA_LEAVE">Via Leave</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
                             {/* Due Date For UA */}
                             <Grid item xs={12} md={6}>
                                 <TextField
@@ -760,32 +869,23 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                 />
                             </Grid>
 
-                            {/* Status Options */}
+                            {/* Boolean Options */}
                             <Grid item xs={12}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1.5 }}>
-                                    Status Options
+                                    Additional Options
                                 </Typography>
 
                                 <Grid container spacing={1}>
                                     {[
-                                        { name: 'isFullDay', label: 'Full Day' },
                                         { name: 'isLate', label: 'Late' },
-                                        { name: 'lateCover', label: 'Late Cover' },
-                                        { name: 'isHalfDay', label: 'Half Day' },
-                                        { name: 'isFullLeave', label: 'Full Leave' },
-                                        { name: 'isShortLeave', label: 'Short Leave' },
-                                        { name: 'absent', label: 'Absent' },
+                                        { name: 'isLateCovered', label: 'Late Covered' },
+                                        { name: 'isUnauthorized', label: 'Unauthorized' },
                                         { name: 'isUnSuccessful', label: 'Unsuccessful' },
-                                        { name: 'isNoPay', label: 'No Pay' },
-                                        { name: 'issues', label: 'Issues' },
-                                        { name: 'isUnAuthorized', label: 'Unauthorized' },
-                                        { name: 'resolve', label: 'Resolved' },
-                                        { name: 'leaveSuccess', label: 'Leave Success' },
-                                        { name: 'leaveReq', label: 'Leave Request' },
-                                        { name: 'active', label: 'Active' },
-                                        { name: 'nopay', label: 'No Pay' },
-                                        { name: 'viaMovement', label: 'Via Movement' },
-                                        { name: 'viaLeave', label: 'Via Leave' }
+                                        { name: 'isHoliday', label: 'Holiday' },
+                                        { name: 'isResolved', label: 'Resolved' },
+                                        { name: 'hasIssues', label: 'Has Issues' },
+                                        { name: 'isManual', label: 'Manual Entry' },
+                                        { name: 'isActive', label: 'Active' }
                                     ].map((field) => (
                                         <Grid item xs={6} sm={4} md={3} key={field.name}>
                                             <FormControlLabel
@@ -962,7 +1062,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                         label="Type"
                                                     >
                                                         <MenuItem value="all">All Types</MenuItem>
-                                                        <MenuItem value="Present">Present</MenuItem>
+                                                        <MenuItem value="Full Day">Full Day</MenuItem>
                                                         <MenuItem value="Late">Late</MenuItem>
                                                         <MenuItem value="Absent">Absent</MenuItem>
                                                         <MenuItem value="Full Leave">Full Leave</MenuItem>
@@ -988,6 +1088,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                         <MenuItem value="Unauthorized">Unauthorized</MenuItem>
                                                         <MenuItem value="Unsuccessful">Unsuccessful</MenuItem>
                                                         <MenuItem value="Issue">Issue</MenuItem>
+                                                        <MenuItem value="Late">Late</MenuItem>
                                                     </Select>
                                                 </FormControl>
                                             </Grid>
@@ -1060,7 +1161,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 <TableCell>
                                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                         <PersonIcon fontSize="small" sx={{ mr: 1, opacity: 0.7 }} />
-                                                        SLT ID
+                                                        Employee ID
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell>
@@ -1083,6 +1184,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 </TableCell>
                                                 <TableCell>Type</TableCell>
                                                 <TableCell>Status</TableCell>
+                                                <TableCell>Terminal</TableCell>
                                                 <TableCell>Issue Description</TableCell>
                                                 <TableCell>Actions</TableCell>
                                             </TableRow>
@@ -1096,12 +1198,12 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                             '&:hover': {
                                                                 backgroundColor: '#f5f5f5',
                                                             },
-                                                            backgroundColor: activity.active === false ? '#ffebee' : 'inherit'
+                                                            backgroundColor: activity.isActive === false ? '#ffebee' : 'inherit'
                                                         }}
                                                     >
                                                         <TableCell sx={{ fontWeight: 500 }}>
-                                                            {activity.employeeID}
-                                                            {activity.active === false && (
+                                                            {activity.userId}
+                                                            {activity.isActive === false && (
                                                                 <Chip
                                                                     label="Inactive"
                                                                     size="small"
@@ -1114,17 +1216,18 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                         <TableCell>{activity.arrivalTime || "-"}</TableCell>
                                                         <TableCell>{activity.leftTime || "-"}</TableCell>
                                                         <TableCell>
-                                                            <TypeBadge type={getActivityType(activity)} />
+                                                            <TypeBadge activity={activity} />
                                                         </TableCell>
                                                         <TableCell>
-                                                            <StatusChip status={getActivityStatus(activity)} />
+                                                            <StatusChip activity={activity} />
                                                         </TableCell>
+                                                        <TableCell>{activity.terminalId || "-"}</TableCell>
                                                         <TableCell sx={{
                                                             maxWidth: 300,
                                                             whiteSpace: 'normal',
                                                             wordBreak: 'break-word'
                                                         }}>
-                                                            {activity.issues ? (
+                                                            {activity.hasIssues && activity.issueDescription ? (
                                                                 <Tooltip title={activity.issueDescription} arrow>
                                                                     <Typography
                                                                         variant="body2"
@@ -1145,13 +1248,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <ActivityDetailsMenu
-                                                                activity={activity}
-                                                                onEdit={handleEditClick.bind(activity)}
-                                                                onDelete={activity.manual ? handleDeleteClick.bind(activity.publicId) : handleDeleteDeClick.bind(activity.publicId)}
-                                                                isAdmin={isAdmin}
-                                                            />
-                                                            {/*{isAdmin && activity.manual && (
+                                                            {isAdmin && activity.isManual && (
                                                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                                                     <IconButton
                                                                         color="primary"
@@ -1169,7 +1266,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                                     </IconButton>
                                                                 </Box>
                                                             )}
-                                                            {isAdmin && !activity.manual && (
+                                                            {isAdmin && !activity.isManual && activity.isActive && (
                                                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                                                     <IconButton
                                                                         color="error"
@@ -1179,13 +1276,13 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                                         <X size={18} />
                                                                     </IconButton>
                                                                 </Box>
-                                                            )}*/}
+                                                            )}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                                                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                                         <Box sx={{
                                                             display: 'flex',
                                                             flexDirection: 'column',
@@ -1211,7 +1308,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                 <TableRow>
                                                     <TablePagination
                                                         rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
-                                                        colSpan={8}
+                                                        colSpan={9}
                                                         count={filteredActivities.length}
                                                         rowsPerPage={rowsPerPage}
                                                         page={page}

@@ -2,14 +2,15 @@ package com.slt.peotv.lmsmangmentservice.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
-import com.slt.peotv.lmsmangmentservice.model.AbsenteeReq;
 import com.slt.peotv.lmsmangmentservice.model.dto.InOutDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.model.req.LeaveReq;
 import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
+import com.slt.peotv.lmsmangmentservice.service.impl.Check_Service_Impl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -59,11 +60,13 @@ public interface Check_Service {
 
     public void getAllTheInOutRecordsFromSLT();
 
-    NoPayEntity saveNoPayEntity(EmployeeEntity employee, InOutEntity inOut, AttendanceEntity attendanceEntity, Boolean isHalfDay, Boolean unSuccessful, Boolean isLate, Boolean isLateCover, Boolean isAbsent,
-                                Date accualDate);
+    NoPayEntity saveNoPayEntity(EmployeeEntity employee,
+                                AttendanceEntity attendanceEntity,
+                                Check_Service_Impl.NoPayRequest noPayRequest,
+                                Date actualDate);
 
     Page<InOutDTO> getAllInOut(String employeeID, int pageNumber, int pageSize);
 
     List<InOutDTO> getAllInOut(String employeeID, Date date);
-
+    public Check_Service_Impl.NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
 }

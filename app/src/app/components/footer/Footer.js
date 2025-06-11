@@ -1,4 +1,5 @@
 "use client";
+
 import React from "react";
 import { Box, Typography, Container } from "@mui/material";
 
@@ -11,7 +12,7 @@ const Footer = () => {
                 padding: "20px 0",
                 textAlign: "center",
                 width: "100%",
-                mt: "auto", // Pushes the footer to the bottom
+                mt: "auto",
             }}
         >
             <Container>

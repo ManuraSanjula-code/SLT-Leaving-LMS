@@ -35,7 +35,6 @@ const EmployeeSelectionDialog = ({
     const [newlyAdded, setNewlyAdded] = useState([]);
     const [deleted, setDeleted] = useState([]);
 
-    // Fetch admins when dialog opens or page changes
     useEffect(() => {
         if (open) {
             dispatch(fetchPaginatedAdmins({
@@ -45,7 +44,6 @@ const EmployeeSelectionDialog = ({
         }
     }, [open, currentAdminPage, adminPageSize, dispatch]);
 
-    // Initialize selection when dialog opens
     useEffect(() => {
         if (open) {
             setSelected([...initialSelected]);

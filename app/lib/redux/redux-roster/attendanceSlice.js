@@ -16,7 +16,6 @@ export const fetchAttendanceData = createAsyncThunk(
 
             const response = await axios.get(`http://localhost:8080/api/attendance/2025-05-06`);
 
-            // Handle various response formats
             const responseData = response.data || {};
             let attendanceRecords = [];
 
@@ -41,7 +40,7 @@ const initialState = {
     filteredData: [],
     loading: false,
     error: null,
-    selectedDate: new Date().toISOString(), // Store as ISO string
+    selectedDate: new Date().toISOString(),
     searchTerm: '',
     filterStatus: 'all',
     page: 0,
@@ -57,7 +56,6 @@ const attendanceSlice = createSlice({
                 state.selectedDate = action.payload;
             },
             prepare: (date) => {
-                // Convert Date object to ISO string before storing
                 const isoDate = date instanceof Date ? date.toISOString() : date;
                 return { payload: isoDate };
             }

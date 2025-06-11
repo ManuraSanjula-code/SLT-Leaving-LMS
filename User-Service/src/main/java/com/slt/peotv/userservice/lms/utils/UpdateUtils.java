@@ -171,7 +171,7 @@ public class UpdateUtils {
 
         messageProducerService.sendMessage("user.queue", lmsUser);
         messageProducerService.sendMessage("user.queue.roster", lmsUser);
-        redisService.setValue(userEntity.getEmail(), userReq.getPassword());
+        redisService.setValue(userEntity.getEmployeeId(), userReq.getPassword());
         // Return the updated user as a DTO
         return UserMapper.mapToUserDto(updatedUserEntity);
     }

@@ -1,5 +1,10 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
+import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
+
 import java.sql.Time;
 import java.util.Date;
 import java.util.List;
@@ -7,75 +12,47 @@ import java.util.List;
 public class AttendanceDTO {
     private Long id;
     private String publicId;
+    private String employeeId;
+    private String userId;
     private Date date;
-    private String employeeID;
-    private Boolean isFullDay = false;
     private Date arrivalDate;
     private Time arrivalTime;
     private Time leftTime;
+    private String terminalId;
+
+    private AttendanceType attendanceType;
+    private LeaveStatus leaveStatus;
+    private PayStatus payStatus;
+    private ResolveType resolve;
+
     private Boolean isLate = false;
-    private Boolean lateCover = false;
-    private Boolean isHalfDay = false;
-    private Boolean isFullLeave = false;
-    private Boolean isShortLeave = false;
-    private Boolean isAbsent = false;
+    private Boolean isLateCovered = false;
+    private Boolean isUnauthorized = false;
     private Boolean isUnSuccessful = false;
-    private Boolean isNoPay = false;
-    private Boolean issues = false;
-    private Boolean isUnAuthorized = false;
-    private Boolean resolve = false;
-    private Boolean leaveSuccess = false;
-    private Boolean leaveReq = false;
+    private Boolean isHoliday = false;
+    private Boolean isResolved = false;
+    private Boolean hasIssues = false;
+    private Boolean isManual = false;
+    private Boolean isActive = true;
+
     private String issueDescription;
     private Date dueDateForUA;
-    private Boolean active = true;
-    private Boolean nopay = false;
-    private Boolean isManual = false;
-    private String userId;
-    private String terminalID;
+    private Date etlRunTime;
+    private Date createdDate;
+    private Date updatedDate;
+
     private List<InOutDTO> inOutDTOs;
-    private List<EditedByDTO> editedByDTOs;
+
     private Boolean viaMovement;
     private Boolean viaLeave;
 
-    public Boolean getViaMovement() {
-        return viaMovement;
-    }
+    public AttendanceDTO() {}
 
-    public void setViaMovement(Boolean viaMovement) {
-        this.viaMovement = viaMovement;
-    }
-
-    public Boolean getViaLeave() {
-        return viaLeave;
-    }
-
-    public void setViaLeave(Boolean viaLeave) {
-        this.viaLeave = viaLeave;
-    }
-
-    public List<EditedByDTO> getEditedByDTOs() {
-        return editedByDTOs;
-    }
-
-    public void setEditedByDTOs(List<EditedByDTO> editedByDTOs) {
-        this.editedByDTOs = editedByDTOs;
-    }
-
-    public List<InOutDTO> getInOutDTOs() {
-        return inOutDTOs;
-    }
-
-    public void setInOutDTOs(List<InOutDTO> inOutDTOs) {
-        this.inOutDTOs = inOutDTOs;
-    }
-
-    public String getTerminalID() {
-        return terminalID;
-    }
-
-    public void setTerminalID(String terminalID) {
-        this.terminalID = terminalID;
+    public AttendanceDTO(Long id, String publicId, String employeeId, Date date) {
+        this.id = id;
+        this.publicId = publicId;
+        this.employeeId = employeeId;
+        this.date = date;
     }
 
     public String getUserId() {
@@ -84,14 +61,6 @@ public class AttendanceDTO {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public Boolean getManual() {
-        return isManual;
-    }
-
-    public void setManual(Boolean manual) {
-        isManual = manual;
     }
 
     public Long getId() {
@@ -110,28 +79,20 @@ public class AttendanceDTO {
         this.publicId = publicId;
     }
 
+    public String getEmployeeId() {
+        return employeeId;
+    }
+
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+    }
+
     public Date getDate() {
         return date;
     }
 
     public void setDate(Date date) {
         this.date = date;
-    }
-
-    public String getEmployeeID() {
-        return employeeID;
-    }
-
-    public void setEmployeeID(String employeeID) {
-        this.employeeID = employeeID;
-    }
-
-    public Boolean getFullDay() {
-        return isFullDay;
-    }
-
-    public void setFullDay(Boolean fullDay) {
-        isFullDay = fullDay;
     }
 
     public Date getArrivalDate() {
@@ -158,108 +119,116 @@ public class AttendanceDTO {
         this.leftTime = leftTime;
     }
 
-    public Boolean getLate() {
-        return isLate;
+    public String getTerminalId() {
+        return terminalId;
     }
 
-    public void setLate(Boolean late) {
-        isLate = late;
+    public void setTerminalId(String terminalId) {
+        this.terminalId = terminalId;
     }
 
-    public Boolean getLateCover() {
-        return lateCover;
+    public AttendanceType getAttendanceType() {
+        return attendanceType;
     }
 
-    public void setLateCover(Boolean lateCover) {
-        this.lateCover = lateCover;
+    public void setAttendanceType(AttendanceType attendanceType) {
+        this.attendanceType = attendanceType;
     }
 
-    public Boolean getHalfDay() {
-        return isHalfDay;
+    public LeaveStatus getLeaveStatus() {
+        return leaveStatus;
     }
 
-    public void setHalfDay(Boolean halfDay) {
-        isHalfDay = halfDay;
+    public void setLeaveStatus(LeaveStatus leaveStatus) {
+        this.leaveStatus = leaveStatus;
     }
 
-    public Boolean getFullLeave() {
-        return isFullLeave;
+    public PayStatus getPayStatus() {
+        return payStatus;
     }
 
-    public void setFullLeave(Boolean fullLeave) {
-        isFullLeave = fullLeave;
+    public void setPayStatus(PayStatus payStatus) {
+        this.payStatus = payStatus;
     }
 
-    public Boolean getShortLeave() {
-        return isShortLeave;
-    }
-
-    public void setShortLeave(Boolean shortLeave) {
-        isShortLeave = shortLeave;
-    }
-
-    public Boolean getAbsent() {
-        return isAbsent;
-    }
-
-    public void setAbsent(Boolean absent) {
-        isAbsent = absent;
-    }
-
-    public Boolean getUnSuccessful() {
-        return isUnSuccessful;
-    }
-
-    public void setUnSuccessful(Boolean unSuccessful) {
-        isUnSuccessful = unSuccessful;
-    }
-
-    public Boolean getNoPay() {
-        return isNoPay;
-    }
-
-    public void setNoPay(Boolean noPay) {
-        isNoPay = noPay;
-    }
-
-    public Boolean getIssues() {
-        return issues;
-    }
-
-    public void setIssues(Boolean issues) {
-        this.issues = issues;
-    }
-
-    public Boolean getUnAuthorized() {
-        return isUnAuthorized;
-    }
-
-    public void setUnAuthorized(Boolean unAuthorized) {
-        isUnAuthorized = unAuthorized;
-    }
-
-    public Boolean getResolve() {
+    public ResolveType getResolve() {
         return resolve;
     }
 
-    public void setResolve(Boolean resolve) {
+    public void setResolve(ResolveType resolve) {
         this.resolve = resolve;
     }
 
-    public Boolean getLeaveSuccess() {
-        return leaveSuccess;
+    public Boolean getIsLate() {
+        return isLate;
     }
 
-    public void setLeaveSuccess(Boolean leaveSuccess) {
-        this.leaveSuccess = leaveSuccess;
+    public void setIsLate(Boolean isLate) {
+        this.isLate = isLate;
     }
 
-    public Boolean getLeaveReq() {
-        return leaveReq;
+    public Boolean getIsLateCovered() {
+        return isLateCovered;
     }
 
-    public void setLeaveReq(Boolean leaveReq) {
-        this.leaveReq = leaveReq;
+    public void setIsLateCovered(Boolean isLateCovered) {
+        this.isLateCovered = isLateCovered;
+    }
+
+    public Boolean getIsUnauthorized() {
+        return isUnauthorized;
+    }
+
+    public void setIsUnauthorized(Boolean isUnauthorized) {
+        this.isUnauthorized = isUnauthorized;
+    }
+
+    public Boolean getIsUnSuccessful() {
+        return isUnSuccessful;
+    }
+
+    public void setIsUnSuccessful(Boolean isUnSuccessful) {
+        this.isUnSuccessful = isUnSuccessful;
+    }
+
+    public Boolean getIsHoliday() {
+        return isHoliday;
+    }
+
+    public void setIsHoliday(Boolean isHoliday) {
+        this.isHoliday = isHoliday;
+    }
+
+    public Boolean getIsResolved() {
+        return isResolved;
+    }
+
+    public void setIsResolved(Boolean isResolved) {
+        this.isResolved = isResolved;
+    }
+
+    public Boolean getHasIssues() {
+        return hasIssues;
+    }
+
+    public void setHasIssues(Boolean hasIssues) {
+        this.hasIssues = hasIssues;
+    }
+
+    public Boolean getIsManual() {
+        return isManual;
+    }
+
+    public void setIsManual(Boolean isManual) {
+        this.isManual = isManual;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 
     public String getIssueDescription() {
@@ -278,20 +247,69 @@ public class AttendanceDTO {
         this.dueDateForUA = dueDateForUA;
     }
 
-    public Boolean getActive() {
-        return active;
+    public Date getEtlRunTime() {
+        return etlRunTime;
     }
 
-    public void setActive(Boolean active) {
-        this.active = active;
+    public void setEtlRunTime(Date etlRunTime) {
+        this.etlRunTime = etlRunTime;
     }
 
-    public Boolean getNopay() {
-        return nopay;
+    public Date getCreatedDate() {
+        return createdDate;
     }
 
-    public void setNopay(Boolean nopay) {
-        this.nopay = nopay;
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Date getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Date updatedDate) {
+        this.updatedDate = updatedDate;
+    }
+
+    public List<InOutDTO> getInOutDTOs() {
+        return inOutDTOs;
+    }
+
+    public void setInOutDTOs(List<InOutDTO> inOutDTOs) {
+        this.inOutDTOs = inOutDTOs;
+    }
+
+    public Boolean getViaMovement() {
+        return viaMovement;
+    }
+
+    public void setViaMovement(Boolean viaMovement) {
+        this.viaMovement = viaMovement;
+    }
+
+    public Boolean getViaLeave() {
+        return viaLeave;
+    }
+
+    public void setViaLeave(Boolean viaLeave) {
+        this.viaLeave = viaLeave;
+    }
+
+    // Convenience methods
+    public Boolean getIsFullDay() {
+        return attendanceType != null && attendanceType.equals(AttendanceType.FULL_DAY);
+    }
+
+    public Boolean getIsHalfDay() {
+        return attendanceType != null && attendanceType.equals(AttendanceType.HALF_DAY);
+    }
+
+    public Boolean getIsAbsent() {
+        return attendanceType != null && attendanceType.equals(AttendanceType.ABSENT);
+    }
+
+    public Boolean getIsNoPay() {
+        return payStatus != null && payStatus.equals(PayStatus.NO_PAY);
     }
 
     @Override
@@ -299,31 +317,15 @@ public class AttendanceDTO {
         return "AttendanceDTO{" +
                 "id=" + id +
                 ", publicId='" + publicId + '\'' +
+                ", employeeId='" + employeeId + '\'' +
                 ", date=" + date +
-                ", employeeID='" + employeeID + '\'' +
-                ", isFullDay=" + isFullDay +
-                ", arrivalDate=" + arrivalDate +
+                ", attendanceType=" + attendanceType +
+                ", leaveStatus=" + leaveStatus +
+                ", payStatus=" + payStatus +
                 ", arrivalTime=" + arrivalTime +
                 ", leftTime=" + leftTime +
                 ", isLate=" + isLate +
-                ", lateCover=" + lateCover +
-                ", isHalfDay=" + isHalfDay +
-                ", isFullLeave=" + isFullLeave +
-                ", isShortLeave=" + isShortLeave +
-                ", isAbsent=" + isAbsent +
-                ", isUnSuccessful=" + isUnSuccessful +
-                ", isNoPay=" + isNoPay +
-                ", issues=" + issues +
-                ", isUnAuthorized=" + isUnAuthorized +
-                ", resolve=" + resolve +
-                ", leaveSuccess=" + leaveSuccess +
-                ", leaveReq=" + leaveReq +
-                ", issueDescription='" + issueDescription + '\'' +
-                ", dueDateForUA=" + dueDateForUA +
-                ", active=" + active +
-                ", nopay=" + nopay +
-                ", isManual=" + isManual +
-                ", userId='" + userId + '\'' +
+                ", isActive=" + isActive +
                 '}';
     }
 }

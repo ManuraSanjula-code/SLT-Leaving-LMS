@@ -9,28 +9,24 @@ const initialState = {
         destination: '',
         category: '',
         happenDate: '',
-        isAbsent: false,
-        isUnSuccessfulAttdate: false,
-        isHalfDay: false,
-        unAuthorized: false,
-        isLate: false,
-        isLateCover: false,
         logTime: '',
-        intime: '',
-        outtime: ''
+        inTime: '00:00',
+        outTime: '00:00',
+        componentBehavior: 'FULL_DAY',
+        requestStatus: 'DRAFT'
     },
     status: 'idle',
     error: null,
     successMessage: ''
 };
 
-// Async thunk to submit movement request
 export const submitMovementRequest = createAsyncThunk(
     'movementRequest/submit',
-    async (_, { getState, rejectWithValue }) => {
+    async (submissionData, { getState, rejectWithValue }) => {
         const { movementRequest } = getState();
-        const { userId, formData } = movementRequest;
+        const { userId } = movementRequest;
         const empId = sessionStorage.getItem('userId');
+
         if (!empId) {
             return rejectWithValue('Employee ID not found in session storage');
         }
@@ -38,25 +34,35 @@ export const submitMovementRequest = createAsyncThunk(
             return rejectWithValue('User ID not found. Please login again.');
         }
 
-        // Validate required fields
-        if (!formData.movementType) {
+        if (!submissionData.movementType) {
             return rejectWithValue('Movement Type is required');
         }
-        if (!formData.happenDate) {
+        if (!submissionData.happenDate) {
             return rejectWithValue('Date is required');
         }
-        if (!formData.comment) {
+        if (!submissionData.comment) {
             return rejectWithValue('Comment/Reason is required');
         }
+        if (!submissionData.destination) {
+            return rejectWithValue('Destination is required');
+        }
+        if (!submissionData.componentBehavior) {
+            return rejectWithValue('Component Behavior is required');
+        }
 
-        // Prepare data for API
         const requestData = {
-            ...formData,
+            employeeId: submissionData.employeeId?.trim(),
             userId: userId,
-            logTime: formData.logTime ? new Date(formData.logTime) : new Date(1990, 0, 1),
-            intime: formData.intime ? formData.intime : '01:00',
-            outtime: formData.outtime ? formData.outtime : '12:00',
-            happenDate: formData.happenDate ? new Date(formData.happenDate) : null
+            movementType: submissionData.movementType,
+            comment: submissionData.comment?.trim(),
+            destination: submissionData.destination?.trim(),
+            category: submissionData.category?.trim() || '',
+            happenDate: submissionData.happenDate ? new Date(submissionData.happenDate).toISOString() : null,
+            logTime: submissionData.logTime ? new Date(submissionData.logTime).toISOString() : new Date('1990-01-01T00:00:00').toISOString(),
+            inTime: submissionData.inTime || '00:00',
+            outTime: submissionData.outTime || '00:00',
+            componentBehavior: submissionData.componentBehavior,
+            requestStatus: 'DRAFT'
         };
 
         try {
@@ -70,8 +76,15 @@ export const submitMovementRequest = createAsyncThunk(
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                return rejectWithValue(errorData.message || 'Failed to submit movement request');
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                }
+                return rejectWithValue(errorMessage);
             }
 
             return 'Movement request submitted successfully!';
@@ -81,23 +94,46 @@ export const submitMovementRequest = createAsyncThunk(
     }
 );
 
-// Create the movement request slice
 const movementRequestSlice = createSlice({
     name: 'movementRequest',
     initialState,
     reducers: {
-        // Set the user ID
         setUserId: (state, action) => {
             state.userId = action.payload;
         },
 
-        // Update form field
         updateFormField: (state, action) => {
             const { name, value } = action.payload;
             state.formData[name] = value;
+
+            if (name === 'movementType') {
+                switch (value) {
+                    case 'ABSENT':
+                        state.formData.componentBehavior = 'ABSENT';
+                        break;
+                    case 'LATEWORK':
+                        state.formData.componentBehavior = 'LATE';
+                        break;
+                    case 'UNSUCCESSFUL':
+                        state.formData.componentBehavior = 'UNSUCCESSFUL';
+                        break;
+                    case 'UNAUTHORIZED':
+                        state.formData.componentBehavior = 'UNAUTHORIZED';
+                        break;
+                    case 'REMOTEWORK':
+                        state.formData.componentBehavior = 'FULL_DAY';
+                        break;
+                    default:
+                        state.formData.componentBehavior = 'FULL_DAY';
+                        break;
+                }
+            }
         },
 
-        // Reset form
+        setComponentBehavior: (state, action) => {
+            state.formData.componentBehavior = action.payload;
+        },
+
         resetForm: (state) => {
             state.formData = initialState.formData;
             state.status = 'idle';
@@ -105,12 +141,10 @@ const movementRequestSlice = createSlice({
             state.successMessage = '';
         },
 
-        // Clear error
         clearError: (state) => {
             state.error = null;
         },
 
-        // Clear success message
         clearSuccessMessage: (state) => {
             state.successMessage = '';
         }
@@ -134,20 +168,18 @@ const movementRequestSlice = createSlice({
     }
 });
 
-// Export actions
 export const {
     setUserId,
     updateFormField,
+    setComponentBehavior,
     resetForm,
     clearError,
     clearSuccessMessage
 } = movementRequestSlice.actions;
 
-// Export selectors
 export const selectMovementRequestForm = state => state.movementRequest.formData;
 export const selectMovementRequestStatus = state => state.movementRequest.status;
 export const selectMovementRequestError = state => state.movementRequest.error;
 export const selectMovementRequestSuccess = state => state.movementRequest.successMessage;
 
-// Export reducer
 export default movementRequestSlice.reducer;

@@ -16,60 +16,49 @@ import {useSelector, useDispatch} from 'react-redux';
 const Other = () => {
     const {userDetails, loading} = useSelector((state) => state.auth);
 
-    // State for file uploads
     const [rosterFile, setRosterFile] = useState(null);
     const [rosterShiftFile, setRosterShiftFile] = useState(null);
 
-    // State for dialogs
     const [openUploadRoster, setOpenUploadRoster] = useState(false);
     const [openUploadRosterShift, setOpenUploadRosterShift] = useState(false);
     const [openDeleteRoster, setOpenDeleteRoster] = useState(false);
     const [openDeleteRosterShift, setOpenDeleteRosterShift] = useState(false);
     const [openGetAttendance, setOpenGetAttendance] = useState(false);
     const [openGetAttendanceByDate, setOpenGetAttendanceByDate] = useState(false);
-    // New dialogs for duty roster
     const [openUploadDutyRoster, setOpenUploadDutyRoster] = useState(false);
     const [openDeleteDutyRoster, setOpenDeleteDutyRoster] = useState(false);
 
-    // State for user inputs
     const [userId, setUserId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [rosterDate, setRosterDate] = useState('');
     const [rosterShiftDate, setRosterShiftDate] = useState('');
 
-    // New state for duty roster upload fields
     const [dutyRosterFile, setDutyRosterFile] = useState(null);
     const [rosterName, setRosterName] = useState('CharanaTV_MCR');
     const [weekStartingDate, setWeekStartingDate] = useState('');
 
-    // Function to handle roster file upload
     const handleRosterFileChange = (event) => {
         setRosterFile(event.target.files[0]);
     };
 
-    // Function to handle roster shift file upload
     const handleRosterShiftFileChange = (event) => {
         setRosterShiftFile(event.target.files[0]);
     };
 
-    // Function to handle duty roster file upload
     const handleDutyRosterFileChange = (event) => {
         setDutyRosterFile(event.target.files[0]);
     };
 
-    // Function handlers for each action
     const handleUploadRoster = () => {
         if (!rosterFile) {
             alert('Please select a file first');
             return;
         }
 
-        // Create FormData object to send the file
         const formData = new FormData();
         formData.append('file', rosterFile);
 
-        // Make the API call to upload roster (original endpoint)
         fetch('http://localhost:8080/api/roster/upload/employee', {
             method: 'POST',
             body: formData
@@ -311,13 +300,10 @@ const Other = () => {
             return;
         }
 
-        // Extract just the date part (YYYY-MM-DD) from the datetime
         const dateOnly = startDate.split('T')[0];
 
-        // Form the URL with the dynamic parts
         const url = `http://localhost:8080/lms/employee/${userId}/excel/date/${dateOnly}/${loggedInUserId}`;
 
-        // Trigger file download
         fetch(url, {
             method: 'GET',
             credentials: 'include', // This includes cookies in the request
@@ -329,25 +315,21 @@ const Other = () => {
                 return response.blob();
             })
             .then(blob => {
-                // Create a URL for the blob
                 const downloadUrl = window.URL.createObjectURL(blob);
 
-                // Create a temporary link and trigger download
                 const a = document.createElement('a');
                 a.href = downloadUrl;
                 a.download = `employee_report_${userId}_${dateOnly}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
 
-                // Clean up
                 window.URL.revokeObjectURL(downloadUrl);
                 document.body.removeChild(a);
 
-                // Close dialog and reset state
                 setOpenGetAttendanceByDate(false);
                 setUserId('');
                 setStartDate('');
-                setEndDate(''); // Also reset endDate even though we're not using it
+                setEndDate('');
             })
             .catch(error => {
                 console.error('Error downloading date-specific attendance report:', error);
@@ -545,7 +527,6 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Upload Roster Shift Dialog */}
             <Dialog open={openUploadRosterShift} onClose={() => setOpenUploadRosterShift(false)}>
                 <DialogTitle>Upload Roster Shift</DialogTitle>
                 <DialogContent>
@@ -581,7 +562,6 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Roster Dialog */}
             <Dialog open={openDeleteRoster} onClose={() => setOpenDeleteRoster(false)}>
                 <DialogTitle>Delete Roster</DialogTitle>
                 <DialogContent>
@@ -638,7 +618,6 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Roster Shift Dialog */}
             <Dialog open={openDeleteRosterShift} onClose={() => setOpenDeleteRosterShift(false)}>
                 <DialogTitle>Delete Roster Shift</DialogTitle>
                 <DialogContent>
@@ -667,7 +646,6 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Get Attendance Dialog */}
             <Dialog open={openGetAttendance} onClose={() => setOpenGetAttendance(false)}>
                 <DialogTitle>Get All Attendance by User ID</DialogTitle>
                 <DialogContent>
@@ -693,7 +671,6 @@ const Other = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Get Attendance by Date Dialog */}
             <Dialog open={openGetAttendanceByDate} onClose={() => setOpenGetAttendanceByDate(false)}>
                 <DialogTitle>Get All Attendance by User ID and Date</DialogTitle>
                 <DialogContent>

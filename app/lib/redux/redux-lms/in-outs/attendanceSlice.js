@@ -38,6 +38,7 @@ export const fetchAttendanceData = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             return data;
         } catch (error) {
             return rejectWithValue(`Failed to fetch attendance data: ${error.message}`);
@@ -45,7 +46,6 @@ export const fetchAttendanceData = createAsyncThunk(
     }
 );
 
-// Create the attendance slice
 const attendanceSlice = createSlice({
     name: 'attendance',
     initialState: {
@@ -62,7 +62,6 @@ const attendanceSlice = createSlice({
         }
     },
     reducers: {
-        // Update filters
         setStartDate: (state, action) => {
             state.filters.startDate = action.payload;
         },
@@ -72,11 +71,9 @@ const attendanceSlice = createSlice({
         toggleDateRangeMode: (state) => {
             state.filters.dateRangeMode = !state.filters.dateRangeMode;
         },
-        // Update employee info
         setEmployeeName: (state, action) => {
             state.employeeInfo.employeeName = action.payload;
         },
-        // Reset error
         clearError: (state) => {
             state.error = null;
         }
@@ -98,7 +95,6 @@ const attendanceSlice = createSlice({
     }
 });
 
-// Helper function for formatting date
 function formatDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -106,7 +102,6 @@ function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-// Export actions
 export const {
     setStartDate,
     setEndDate,
@@ -115,29 +110,24 @@ export const {
     clearError
 } = attendanceSlice.actions;
 
-// Export selectors
 export const selectAttendanceData = state => state.attendance.attendanceData;
 export const selectFilters = state => state.attendance.filters;
 export const selectLoading = state => state.attendance.loading;
 export const selectError = state => state.attendance.error;
 export const selectEmployeeInfo = state => state.attendance.employeeInfo;
 
-// Export helpers for processing attendance data
 export const attendanceHelpers = {
-    // Format time string to display in readable format
     formatTime: (timeString) => {
         if (!timeString) return '--:--';
         return timeString;
     },
 
-    // Format ISO date string
     formatISODate: (isoString) => {
         if (!isoString) return '';
         const date = new Date(isoString);
         return formatDate(date);
     },
 
-    // Calculate duration between punch-in and punch-out
     calculateDuration: (punchInTime, punchOutTime) => {
         if (!punchInTime || !punchOutTime) return '--:--';
 
@@ -153,13 +143,12 @@ export const attendanceHelpers = {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     },
 
-    // Process data to group punch-ins and punch-outs by date
     processAttendanceData: (attendanceData) => {
         const processedData = {};
 
         attendanceData.forEach(record => {
-            // Determine the date from either punchInMoa or punchInEv
-            const dateString = attendanceHelpers.formatISODate(record.punchInMoa || record.punchInEv);
+            // Use the new 'date' field from the API response
+            const dateString = attendanceHelpers.formatISODate(record.date);
             if (!dateString) return;
 
             if (!processedData[dateString]) {
@@ -173,28 +162,25 @@ export const attendanceHelpers = {
             processedData[dateString].records.push(record);
         });
 
-        // Sort by date
         return Object.values(processedData).sort((a, b) =>
             new Date(b.date) - new Date(a.date)
         );
     },
 
-    // Group data to pair in-out records
     groupInOutPairs: (dateRecords) => {
         const pairs = [];
         let currentPair = {};
 
-        // Sort by time
+        // Sort records by punch time
         const sortedRecords = [...dateRecords].sort((a, b) => {
-            const timeA = a.timeMoa || a.timeEve || '';
-            const timeB = b.timeMoa || b.timeEve || '';
+            const timeA = a.pucnhTime || '';
+            const timeB = b.pucnhTime || '';
             return timeA.localeCompare(timeB);
         });
 
         sortedRecords.forEach(record => {
             if (record.inOut === 1) { // Punch in
                 if (Object.keys(currentPair).length > 0 && !currentPair.out) {
-                    // Complete the previous pair if it's missing out
                     pairs.push({...currentPair, out: null});
                 }
                 currentPair = {in: record, out: null};
@@ -204,13 +190,11 @@ export const attendanceHelpers = {
                     pairs.push({...currentPair});
                     currentPair = {};
                 } else {
-                    // Orphaned punch out
                     pairs.push({in: null, out: record});
                 }
             }
         });
 
-        // Add any remaining incomplete pair
         if (Object.keys(currentPair).length > 0) {
             pairs.push(currentPair);
         }
@@ -218,7 +202,6 @@ export const attendanceHelpers = {
         return pairs;
     },
 
-    // Calculate attendance summary
     calculateSummary: (attendanceData) => {
         let totalWorkingDays = 0;
         let totalWorkHours = 0;
@@ -231,18 +214,17 @@ export const attendanceHelpers = {
 
             pairs.forEach(pair => {
                 if (pair.in && pair.out) {
-                    const inTime = pair.in.timeMoa || pair.in.timeEve;
-                    const outTime = pair.out.timeMoa || pair.out.timeEve;
+                    const inTime = pair.in.pucnhTime;
+                    const outTime = pair.out.pucnhTime;
 
                     if (inTime && outTime) {
                         dayHasValidPair = true;
 
-                        // Calculate hours
-                        const [inHours, inMinutes] = inTime.split(':').map(Number);
-                        const [outHours, outMinutes] = outTime.split(':').map(Number);
+                        const [inHours, inMinutes, inSeconds] = inTime.split(':').map(Number);
+                        const [outHours, outMinutes, outSeconds] = outTime.split(':').map(Number);
 
                         let durationMinutes = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-                        if (durationMinutes < 0) durationMinutes += 24 * 60; // Handle overnight shifts
+                        if (durationMinutes < 0) durationMinutes += 24 * 60;
 
                         totalWorkHours += durationMinutes / 60;
                     }
@@ -263,5 +245,4 @@ export const attendanceHelpers = {
     }
 };
 
-// Export reducer
 export default attendanceSlice.reducer;

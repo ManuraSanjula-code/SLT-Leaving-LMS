@@ -2,8 +2,9 @@ package com.slt.peotv.lmsmangmentservice.entity.Movement;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
-import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -66,29 +67,16 @@ public class MovementsEntity {
     @Builder.Default
     private Integer attSync = 0;
 
-    private Date happenDate; /// The Day situation happened to make a movement to resolve it
+    private Date happenDate;
 
-    @Builder.Default
-    private Boolean isPending = true;
-    @Builder.Default
-    private Boolean isAccepted = false;
-    @Builder.Default
-    private Boolean isAbsent = false;
-    @Builder.Default
-    private Boolean isUnSuccessfulAttdate = false;
-    @Builder.Default
-    private Boolean unAuthorized = false;
-    @Builder.Default
-    private Boolean resolve = false;
-    @Builder.Default
-    private Boolean isHalfDay = false;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "component_behavior")
+    private ComponentBehavior componentBehavior;
 
-    @Builder.Default
-    private Boolean isLate = false;
-    
-    @Builder.Default
-    private Boolean isLateCover = false;
-    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_status")
+    private RequestStatus requestStatus;
+
     @OneToOne
     @JoinColumn(name = "attendance_id")
     private AttendanceEntity attendance;
@@ -96,17 +84,11 @@ public class MovementsEntity {
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<ComponetAdminsEntity> admins;
 
-    @OneToMany
-    @Builder.Default
-    private List<EditedBy> editedBys = new ArrayList<>();
-
-    @Builder.Default
-    private Boolean isReject = false;
-
     @Builder.Default
     private Date createDate = new Date();
     private Date updateDate;
 
     @Builder.Default
     private Boolean isEdited = false;
+
 }

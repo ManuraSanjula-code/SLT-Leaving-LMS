@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     fetchAttendanceData,
@@ -32,63 +32,26 @@ import {
     Card,
     CardContent,
     Chip,
-    Badge,
-    Avatar,
-    createTheme,
-    ThemeProvider
+    Alert,
+    Pagination,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem
 } from '@mui/material';
-import { AccessTime, CalendarToday, Person, Work } from '@mui/icons-material';
-
-// Dark theme configuration
-const darkTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        primary: {
-            main: '#90caf9',
-        },
-        secondary: {
-            main: '#ce93d8',
-        },
-        background: {
-            default: '#121212',
-            paper: '#1e1e1e',
-        },
-        text: {
-            primary: '#ffffff',
-            secondary: '#b0bec5',
-        },
-    },
-    components: {
-        MuiCard: {
-            styleOverrides: {
-                root: {
-                    backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
-                    borderRadius: '12px',
-                }
-            }
-        },
-        MuiChip: {
-            styleOverrides: {
-                root: {
-                    borderRadius: '8px',
-                }
-            }
-        }
-    }
-});
 
 const AttendanceTracker = ({ userId }) => {
     const dispatch = useDispatch();
 
-    // Select from Redux store
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
     const attendanceData = useSelector(selectAttendanceData);
     const { startDate, endDate, dateRangeMode } = useSelector(selectFilters);
     const loading = useSelector(selectLoading);
     const error = useSelector(selectError);
     const { employeeName } = useSelector(selectEmployeeInfo);
-    const { userDetails } = useSelector((state) => state.auth);
 
-    // Destructure helpers for readability
     const {
         formatTime,
         processAttendanceData,
@@ -97,12 +60,10 @@ const AttendanceTracker = ({ userId }) => {
         calculateSummary
     } = attendanceHelpers;
 
-    // If userId is not passed, get from session storage
     if (!userId) {
         userId = sessionStorage.getItem('userId');
     }
 
-    // Fetch attendance data when component mounts or filters change
     useEffect(() => {
         dispatch(fetchAttendanceData({
             userId,
@@ -112,22 +73,18 @@ const AttendanceTracker = ({ userId }) => {
         }));
     }, [dispatch, userId, startDate, endDate, dateRangeMode]);
 
-    // Handle start date change
     const handleStartDateChange = (e) => {
         dispatch(setStartDate(e.target.value));
     };
 
-    // Handle end date change
     const handleEndDateChange = (e) => {
         dispatch(setEndDate(e.target.value));
     };
 
-    // Toggle date range mode
     const handleToggleDateRangeMode = () => {
         dispatch(toggleDateRangeMode());
     };
 
-    // Handle refresh button click
     const handleRefresh = () => {
         dispatch(fetchAttendanceData({
             userId,
@@ -137,340 +94,347 @@ const AttendanceTracker = ({ userId }) => {
         }));
     };
 
-    // Process data and calculate summary
     const processedData = processAttendanceData(attendanceData);
     const summary = calculateSummary(attendanceData);
 
+    const totalPages = Math.ceil(processedData.length / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const paginatedData = processedData.slice(startIndex, startIndex + pageSize);
+
+    const handlePageChange = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handlePageSizeChange = (event) => {
+        setPageSize(event.target.value);
+        setPage(1);
+    };
+
+    useEffect(() => {
+        setPage(1);
+    }, [attendanceData]);
+
     return (
-        <ThemeProvider theme={darkTheme}>
-            <Box sx={{
-                p: 3,
-                minHeight: '100vh',
-                background: 'linear-gradient(to bottom, #121212, #212121)'
-            }}>
-                {/* Header with Employee Info */}
-                <Paper
-                    elevation={3}
-                    sx={{
-                        p: 2,
-                        mb: 3,
-                        borderRadius: '12px',
-                        background: 'linear-gradient(45deg, #1a237e, #283593)'
-                    }}
-                >
-                    <Grid container alignItems="center" spacing={2}>
-                        <Grid item>
-                            <Avatar
-                                sx={{
-                                    width: 56,
-                                    height: 56,
-                                    bgcolor: '#5c6bc0',
-                                    border: '2px solid #fff'
-                                }}
-                            >
-                                <Person fontSize="large" />
-                            </Avatar>
-                        </Grid>
-                        <Grid item xs>
-                            <Typography variant="h5" fontWeight="bold">
-                                {employeeName}
-                            </Typography>
-                            <Grid container spacing={1} alignItems="center">
-                                <Grid item>
-                                    <Chip
-                                        label={`ID: ${userId}`}
-                                        color="secondary"
-                                        size="small"
-                                        sx={{ fontWeight: 'bold' }}
-                                    />
-                                </Grid>
-                                <Grid item>
-                                    <Chip
-                                        icon={<Work />}
-                                        label="Full-Time"
-                                        variant="outlined"
-                                        size="small"
-                                        sx={{ borderColor: '#fff', color: '#fff' }}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </Grid>
-                    </Grid>
+        <Box sx={{
+            minHeight: '100vh',
+            backgroundColor: '#ffffff',
+            color: '#000000',
+            p: 3
+        }}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#000000' }}>
+                Attendance Tracker
+            </Typography>
+
+            {(employeeName || userId) && (
+                <Paper sx={{ p: 2, mb: 3, backgroundColor: '#ffffff', boxShadow: 1 }}>
+                    <Typography variant="h6" sx={{ color: '#000000' }}>
+                        {employeeName || 'Employee Dashboard'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#666666' }}>
+                        Employee ID: {userId || 'N/A'}
+                    </Typography>
                 </Paper>
+            )}
 
-                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#fff' }}>
-                    Attendance Tracker
-                </Typography>
+            <Paper sx={{ p: 2, mb: 3, backgroundColor: '#ffffff', boxShadow: 1 }}>
+                <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={3}>
+                        <TextField
+                            label="Start Date"
+                            type="date"
+                            value={startDate}
+                            onChange={handleStartDateChange}
+                            fullWidth
+                            InputLabelProps={{ shrink: true }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    backgroundColor: '#ffffff',
+                                    color: '#000000'
+                                },
+                                '& .MuiInputLabel-root': {
+                                    color: '#000000'
+                                }
+                            }}
+                        />
+                    </Grid>
 
-                {/* Date Selection */}
-                <Paper sx={{ p: 2, mb: 3, borderRadius: '12px' }}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={4}>
+                    {dateRangeMode && (
+                        <Grid item xs={12} sm={3}>
                             <TextField
-                                label="Start Date"
+                                label="End Date"
                                 type="date"
-                                value={startDate}
-                                onChange={handleStartDateChange}
+                                value={endDate}
+                                onChange={handleEndDateChange}
                                 fullWidth
-                                InputLabelProps={{shrink: true}}
-                                variant="outlined"
+                                InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        backgroundColor: '#ffffff',
+                                        color: '#000000'
+                                    },
+                                    '& .MuiInputLabel-root': {
+                                        color: '#000000'
+                                    }
+                                }}
                             />
                         </Grid>
+                    )}
 
-                        {dateRangeMode && (
-                            <Grid item xs={12} sm={4}>
-                                <TextField
-                                    label="End Date"
-                                    type="date"
-                                    value={endDate}
-                                    onChange={handleEndDateChange}
-                                    fullWidth
-                                    InputLabelProps={{shrink: true}}
-                                    variant="outlined"
-                                />
-                            </Grid>
-                        )}
-
-                        <Grid item xs={12} sm={dateRangeMode ? 4 : 8} sx={{display: 'flex', alignItems: 'center'}}>
+                    <Grid item xs={12} sm={dateRangeMode ? 6 : 9}>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Button
-                                variant="contained"
-                                color="primary"
+                                variant="outlined"
                                 onClick={handleToggleDateRangeMode}
-                                sx={{ mr: 2, borderRadius: '8px' }}
-                                startIcon={<CalendarToday />}
+                                sx={{
+                                    backgroundColor: '#ffffff',
+                                    color: '#1976d2',
+                                    borderColor: '#1976d2',
+                                    '&:hover': {
+                                        backgroundColor: '#f5f5f5',
+                                        borderColor: '#1976d2'
+                                    }
+                                }}
                             >
                                 {dateRangeMode ? 'Single Day' : 'Date Range'}
                             </Button>
-
                             <Button
                                 variant="contained"
-                                color="secondary"
                                 onClick={handleRefresh}
-                                sx={{ borderRadius: '8px' }}
+                                sx={{
+                                    backgroundColor: '#1976d2',
+                                    '&:hover': {
+                                        backgroundColor: '#1565c0'
+                                    }
+                                }}
                             >
                                 Refresh
                             </Button>
-                        </Grid>
-                    </Grid>
-                </Paper>
-
-                {/* Summary Cards */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} md={4}>
-                        <Card
-                            sx={{
-                                height: '100%',
-                                borderLeft: '4px solid #5c6bc0'
-                            }}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: 'primary.dark', mr: 2 }}>
-                                        <CalendarToday />
-                                    </Avatar>
-                                    <Typography variant="h6" color="text.secondary">
-                                        Working Days
-                                    </Typography>
-                                </Box>
-                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                                    {summary.totalWorkingDays}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                        <Card
-                            sx={{
-                                height: '100%',
-                                borderLeft: '4px solid #7e57c2'
-                            }}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: 'secondary.dark', mr: 2 }}>
-                                        <AccessTime />
-                                    </Avatar>
-                                    <Typography variant="h6" color="text.secondary">
-                                        Total Hours
-                                    </Typography>
-                                </Box>
-                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                                    {summary.totalWorkHours}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-
-                    <Grid item xs={12} md={4}>
-                        <Card
-                            sx={{
-                                height: '100%',
-                                borderLeft: '4px solid #26a69a'
-                            }}
-                        >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <Avatar sx={{ bgcolor: '#26a69a', mr: 2 }}>
-                                        <AccessTime />
-                                    </Avatar>
-                                    <Typography variant="h6" color="text.secondary">
-                                        Avg. Daily Hours
-                                    </Typography>
-                                </Box>
-                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                                    {summary.averageDailyHours}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                        </Box>
                     </Grid>
                 </Grid>
+            </Paper>
 
-                {/* Error Message */}
-                {error && (
-                    <Box sx={{ mb: 2 }}>
-                        <Paper sx={{ p: 2, bgcolor: '#f44336', color: '#fff', borderRadius: '8px' }}>
-                            <Typography>{error}</Typography>
-                        </Paper>
-                    </Box>
-                )}
-
-                {/* Loading Indicator */}
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                        <CircularProgress size={60} thickness={5} />
-                    </Box>
-                ) : (
-                    /* Attendance Data Table */
-                    processedData.length > 0 ? (
-                        <>
-                            {processedData.map((dayData) => (
-                                <Box key={dayData.date} sx={{ mb: 4 }}>
-                                    <Paper
-                                        sx={{
-                                            p: 2,
-                                            mb: 2,
-                                            borderRadius: '12px 12px 0 0',
-                                            background: 'linear-gradient(45deg, #303f9f, #3949ab)'
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 'bold' }}>
-                                                {new Date(dayData.date).toLocaleDateString('en-US', {
-                                                    weekday: 'long',
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
-                                            </Typography>
-                                            <Chip
-                                                label={`${groupInOutPairs(dayData.records).length} records`}
-                                                color="secondary"
-                                                sx={{ fontWeight: 'bold' }}
-                                            />
-                                        </Box>
-                                    </Paper>
-
-                                    <TableContainer component={Paper} sx={{ borderRadius: '0 0 12px 12px' }}>
-                                        <Table>
-                                            <TableHead>
-                                                <TableRow>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>No.</TableCell>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>Punch In</TableCell>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>Type</TableCell>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>Punch Out</TableCell>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>Type</TableCell>
-                                                    <TableCell sx={{
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                    }}>Duration</TableCell>
-                                                </TableRow>
-                                            </TableHead>
-                                            <TableBody>
-                                                {groupInOutPairs(dayData.records).map((pair, index) => (
-                                                    <TableRow
-                                                        key={index}
-                                                        sx={{
-                                                            '&:nth-of-type(odd)': { backgroundColor: 'rgba(255, 255, 255, 0.03)' },
-                                                            '&:hover': { backgroundColor: 'rgba(144, 202, 249, 0.08)' }
-                                                        }}
-                                                    >
-                                                        <TableCell>{index + 1}</TableCell>
-                                                        <TableCell>
-                                                            {pair.in ? formatTime(pair.in.timeMoa || pair.in.timeEve) : '--:--'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {pair.in ?
-                                                                <Chip
-                                                                    label={pair.in.moaning ? 'Morning' : pair.in.evening ? 'Evening' : 'Unknown'}
-                                                                    size="small"
-                                                                    color={pair.in.moaning ? 'primary' : 'secondary'}
-                                                                    sx={{ minWidth: '80px' }}
-                                                                /> :
-                                                                '-'
-                                                            }
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {pair.out ? formatTime(pair.out.timeMoa || pair.out.timeEve) : '--:--'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {pair.out ?
-                                                                <Chip
-                                                                    label={pair.out.moaning ? 'Morning' : pair.out.evening ? 'Evening' : 'Unknown'}
-                                                                    size="small"
-                                                                    color={pair.out.moaning ? 'primary' : 'secondary'}
-                                                                    sx={{ minWidth: '80px' }}
-                                                                /> :
-                                                                '-'
-                                                            }
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Typography
-                                                                fontWeight="bold"
-                                                                color={pair.in && pair.out ? 'success.main' : 'text.secondary'}
-                                                            >
-                                                                {pair.in && pair.out ?
-                                                                    calculateDuration(
-                                                                        pair.in.timeMoa || pair.in.timeEve,
-                                                                        pair.out.timeMoa || pair.out.timeEve
-                                                                    ) :
-                                                                    '--:--'
-                                                                }
-                                                            </Typography>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </TableContainer>
-                                </Box>
-                            ))}
-                        </>
-                    ) : (
-                        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '12px' }}>
-                            <Typography variant="h6" sx={{ color: 'text.secondary' }}>
-                                No attendance records found for the selected date(s)
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ backgroundColor: '#ffffff', boxShadow: 1 }}>
+                        <CardContent>
+                            <Typography color="text.secondary" gutterBottom sx={{ color: '#666666' }}>
+                                Working Days
                             </Typography>
+                            <Typography variant="h4" sx={{ color: '#000000' }}>
+                                {summary.totalWorkingDays}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ backgroundColor: '#ffffff', boxShadow: 1 }}>
+                        <CardContent>
+                            <Typography color="text.secondary" gutterBottom sx={{ color: '#666666' }}>
+                                Total Hours
+                            </Typography>
+                            <Typography variant="h4" sx={{ color: '#000000' }}>
+                                {summary.totalWorkHours}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ backgroundColor: '#ffffff', boxShadow: 1 }}>
+                        <CardContent>
+                            <Typography color="text.secondary" gutterBottom sx={{ color: '#666666' }}>
+                                Avg. Daily Hours
+                            </Typography>
+                            <Typography variant="h4" sx={{ color: '#000000' }}>
+                                {summary.averageDailyHours}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
+
+            {error && (
+                <Alert
+                    severity="error"
+                    sx={{
+                        mb: 3,
+                        backgroundColor: '#ffebee',
+                        color: '#c62828',
+                        '& .MuiAlert-icon': {
+                            color: '#c62828'
+                        }
+                    }}
+                >
+                    {error}
+                </Alert>
+            )}
+
+            {loading && (
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    my: 3,
+                    backgroundColor: '#ffffff',
+                    p: 2,
+                    borderRadius: 1
+                }}>
+                    <CircularProgress sx={{ color: '#1976d2' }} />
+                </Box>
+            )}
+
+            {!loading && processedData.length > 0 ? (
+                <>
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 2,
+                        backgroundColor: '#ffffff',
+                        p: 2,
+                        borderRadius: 1,
+                        boxShadow: 1
+                    }}>
+                        <Typography variant="body1" sx={{ color: '#000000' }}>
+                            Showing {startIndex + 1}-{Math.min(startIndex + pageSize, processedData.length)} of {processedData.length} records
+                        </Typography>
+                        <FormControl size="small">
+                            <InputLabel sx={{ color: '#000000' }}>Rows per page</InputLabel>
+                            <Select
+                                value={pageSize}
+                                onChange={handlePageSizeChange}
+                                label="Rows per page"
+                                sx={{
+                                    backgroundColor: '#ffffff',
+                                    color: '#000000',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#cccccc'
+                                    }
+                                }}
+                            >
+                                <MenuItem value={5}>5</MenuItem>
+                                <MenuItem value={10}>10</MenuItem>
+                                <MenuItem value={25}>25</MenuItem>
+                                <MenuItem value={50}>50</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {paginatedData.map((dayData) => (
+                        <Paper key={dayData.date} sx={{ mb: 3, backgroundColor: '#ffffff', boxShadow: 1 }}>
+                            <Box sx={{ p: 2, bgcolor: '#1976d2', color: '#ffffff' }}>
+                                <Typography variant="h6">
+                                    {new Date(dayData.date).toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </Typography>
+                            </Box>
+
+                            <TableContainer sx={{ backgroundColor: '#ffffff' }}>
+                                <Table>
+                                    <TableHead>
+                                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>No.</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Punch In</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Type</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Punch Out</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Type</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Duration</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Terminal</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {groupInOutPairs(dayData.records).map((pair, index) => (
+                                            <TableRow
+                                                key={index}
+                                                sx={{
+                                                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafafa',
+                                                    '&:hover': {
+                                                        backgroundColor: '#f0f0f0'
+                                                    }
+                                                }}
+                                            >
+                                                <TableCell sx={{ color: '#000000' }}>{index + 1}</TableCell>
+                                                <TableCell sx={{ color: '#000000' }}>
+                                                    {pair.in ? formatTime(pair.in.pucnhTime) : '--:--'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {pair.in ? (
+                                                        <Chip
+                                                            label={pair.in.morning ? 'Morning' : 'Evening'}
+                                                            size="small"
+                                                            color={pair.in.morning ? 'primary' : 'secondary'}
+                                                        />
+                                                    ) : '-'}
+                                                </TableCell>
+                                                <TableCell sx={{ color: '#000000' }}>
+                                                    {pair.out ? formatTime(pair.out.pucnhTime) : '--:--'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {pair.out ? (
+                                                        <Chip
+                                                            label={pair.out.morning ? 'Morning' : 'Evening'}
+                                                            size="small"
+                                                            color={pair.out.morning ? 'primary' : 'secondary'}
+                                                        />
+                                                    ) : '-'}
+                                                </TableCell>
+                                                <TableCell sx={{ color: '#000000' }}>
+                                                    {pair.in && pair.out ?
+                                                        calculateDuration(pair.in.pucnhTime, pair.out.pucnhTime) :
+                                                        '--:--'
+                                                    }
+                                                </TableCell>
+                                                <TableCell sx={{ color: '#000000' }}>
+                                                    {(pair.in?.terminalID || pair.out?.terminalID || '').trim() || 'N/A'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
                         </Paper>
-                    )
-                )}
-            </Box>
-        </ThemeProvider>
+                    ))}
+
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        mt: 3,
+                        backgroundColor: '#ffffff',
+                        p: 2,
+                        borderRadius: 1,
+                        boxShadow: 1
+                    }}>
+                        <Pagination
+                            count={totalPages}
+                            page={page}
+                            onChange={handlePageChange}
+                            color="primary"
+                            showFirstButton
+                            showLastButton
+                            sx={{
+                                '& .MuiPaginationItem-root': {
+                                    color: '#000000'
+                                }
+                            }}
+                        />
+                    </Box>
+                </>
+            ) : !loading ? (
+                <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: '#ffffff', boxShadow: 1 }}>
+                    <Typography variant="h6" color="text.secondary" sx={{ color: '#666666' }}>
+                        No attendance records found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#666666' }}>
+                        Try selecting a different date or date range
+                    </Typography>
+                </Paper>
+            ) : null}
+        </Box>
     );
 };
 

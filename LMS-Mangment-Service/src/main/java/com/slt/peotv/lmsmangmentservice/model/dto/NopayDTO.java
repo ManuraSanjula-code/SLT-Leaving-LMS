@@ -1,22 +1,35 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import java.util.Date;
+import java.util.List;
 
 public class NopayDTO {
     private Long id;
-    public String publicId;
-    private String employeeID;
+    private String publicId;
+    private String employeeId;
+    private Long attendanceId;
     private Date submissionDate;
-    private Date acctualDate;
-    private Boolean isHalfDay = false;
-    private Boolean unSuccessful = false;
-    private Boolean isLate = false;
-    private Boolean isLateCover = false;
-    private Boolean isAbsent = false;
-    private String attendance;
+    private Date date;
     private String comment;
-    private Date happenDate;
+    private Date createdDate;
+    private Date updatedDate;
+    private Boolean isActive = true;
 
+    // Related DTOs
+    private List<NoPayReasonDTO> reasons;
+
+    // Constructors
+    public NopayDTO() {}
+
+    public NopayDTO(Long id, String publicId, String employeeId, Date submissionDate, Date date) {
+        this.id = id;
+        this.publicId = publicId;
+        this.employeeId = employeeId;
+        this.submissionDate = submissionDate;
+        this.date = date;
+    }
+
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -33,12 +46,20 @@ public class NopayDTO {
         this.publicId = publicId;
     }
 
-    public String getEmployeeID() {
-        return employeeID;
+    public String getEmployeeId() {
+        return employeeId;
     }
 
-    public void setEmployeeID(String employeeID) {
-        this.employeeID = employeeID;
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+    }
+
+    public Long getAttendanceId() {
+        return attendanceId;
+    }
+
+    public void setAttendanceId(Long attendanceId) {
+        this.attendanceId = attendanceId;
     }
 
     public Date getSubmissionDate() {
@@ -49,60 +70,12 @@ public class NopayDTO {
         this.submissionDate = submissionDate;
     }
 
-    public Date getAcctualDate() {
-        return acctualDate;
+    public Date getDate() {
+        return date;
     }
 
-    public void setAcctualDate(Date acctualDate) {
-        this.acctualDate = acctualDate;
-    }
-
-    public Boolean getHalfDay() {
-        return isHalfDay;
-    }
-
-    public void setHalfDay(Boolean halfDay) {
-        isHalfDay = halfDay;
-    }
-
-    public Boolean getUnSuccessful() {
-        return unSuccessful;
-    }
-
-    public void setUnSuccessful(Boolean unSuccessful) {
-        this.unSuccessful = unSuccessful;
-    }
-
-    public Boolean getLate() {
-        return isLate;
-    }
-
-    public void setLate(Boolean late) {
-        isLate = late;
-    }
-
-    public Boolean getLateCover() {
-        return isLateCover;
-    }
-
-    public void setLateCover(Boolean lateCover) {
-        isLateCover = lateCover;
-    }
-
-    public Boolean getAbsent() {
-        return isAbsent;
-    }
-
-    public void setAbsent(Boolean absent) {
-        isAbsent = absent;
-    }
-
-    public String getAttendance() {
-        return attendance;
-    }
-
-    public void setAttendance(String attendance) {
-        this.attendance = attendance;
+    public void setDate(Date date) {
+        this.date = date;
     }
 
     public String getComment() {
@@ -113,11 +86,80 @@ public class NopayDTO {
         this.comment = comment;
     }
 
-    public Date getHappenDate() {
-        return happenDate;
+    public Date getCreatedDate() {
+        return createdDate;
     }
 
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Date getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Date updatedDate) {
+        this.updatedDate = updatedDate;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public List<NoPayReasonDTO> getReasons() {
+        return reasons;
+    }
+
+    public void setReasons(List<NoPayReasonDTO> reasons) {
+        this.reasons = reasons;
+    }
+
+    // Backward compatibility methods (deprecated - for migration period)
+    @Deprecated
+    public String getEmployeeID() {
+        return employeeId;
+    }
+
+    @Deprecated
+    public void setEmployeeID(String employeeID) {
+        this.employeeId = employeeID;
+    }
+
+    @Deprecated
+    public Date getAcctualDate() {
+        return date;
+    }
+
+    @Deprecated
+    public void setAcctualDate(Date acctualDate) {
+        this.date = acctualDate;
+    }
+
+    @Deprecated
+    public Date getHappenDate() {
+        return date;
+    }
+
+    @Deprecated
     public void setHappenDate(Date happenDate) {
-        this.happenDate = happenDate;
+        this.date = happenDate;
+    }
+
+    @Override
+    public String toString() {
+        return "NoPayDTO{" +
+                "id=" + id +
+                ", publicId='" + publicId + '\'' +
+                ", employeeId='" + employeeId + '\'' +
+                ", attendanceId=" + attendanceId +
+                ", submissionDate=" + submissionDate +
+                ", date=" + date +
+                ", comment='" + comment + '\'' +
+                ", isActive=" + isActive +
+                '}';
     }
 }

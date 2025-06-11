@@ -25,19 +25,16 @@ export const fetchActivityRecords = createAsyncThunk(
     }
 );
 
-// Initial state for the activity records
 const initialState = {
     records: [],
     totalElements: 0,
     totalPages: 0,
     loading: false,
     error: null,
-    // Search and filter states
     searchTerm: '',
     filterType: 'all',
     filterStatus: 'all',
     filterIssue: 'all',
-    // Pagination states
     page: 0,
     rowsPerPage: 10,
 };
@@ -46,32 +43,25 @@ const activityRecordsSlice = createSlice({
     name: 'activityRecords',
     initialState,
     reducers: {
-        // Set search term
         setSearchTerm: (state, action) => {
             state.searchTerm = action.payload;
         },
-        // Set filter type
         setFilterType: (state, action) => {
             state.filterType = action.payload;
         },
-        // Set filter status
         setFilterStatus: (state, action) => {
             state.filterStatus = action.payload;
         },
-        // Set filter issue
         setFilterIssue: (state, action) => {
             state.filterIssue = action.payload;
         },
-        // Set page
         setPage: (state, action) => {
             state.page = action.payload;
         },
-        // Set rows per page
         setRowsPerPage: (state, action) => {
             state.rowsPerPage = action.payload;
-            state.page = 0; // Reset to first page when changing rows per page
+            state.page = 0;
         },
-        // Clear all filters
         clearFilters: (state) => {
             state.searchTerm = '';
             state.filterType = 'all';
@@ -98,7 +88,6 @@ const activityRecordsSlice = createSlice({
     },
 });
 
-// Export actions
 export const {
     setSearchTerm,
     setFilterType,
@@ -109,7 +98,6 @@ export const {
     clearFilters,
 } = activityRecordsSlice.actions;
 
-// Create selector functions for filtered activities
 export const selectFilteredActivities = (state) => {
     const {
         activityRecords: {
@@ -122,38 +110,49 @@ export const selectFilteredActivities = (state) => {
     } = state;
 
     return records ? records.filter((activity) => {
-        const matchesSearch = activity.employeeID.toLowerCase().includes(searchTerm.toLowerCase());
+        // Search by employee ID
+        const matchesSearch = activity.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // Type filter
+        // Filter by attendance type based on new enum structure
         let matchesType = true;
         if (filterType !== "all") {
-            if (filterType === "fullDay") matchesType = activity.fullDay;
-            else if (filterType === "halfDay") matchesType = activity.halfDay;
-            else if (filterType === "fullLeave") matchesType = activity.fullLeave;
-            else if (filterType === "shortLeave") matchesType = activity.shortLeave;
-            else if (filterType === "absent") matchesType = activity.absent;
-            else if (filterType === "late") matchesType = activity.late;
+            if (filterType === "fullDay") {
+                matchesType = activity.attendanceType === 'FULL_DAY' && !activity.isLate;
+            } else if (filterType === "halfDay") {
+                matchesType = activity.attendanceType === 'HALF_DAY';
+            } else if (filterType === "absent") {
+                matchesType = activity.attendanceType === 'ABSENT';
+            } else if (filterType === "fullLeave") {
+                matchesType = activity.leaveStatus === 'FULL_LEAVE';
+            } else if (filterType === "shortLeave") {
+                matchesType = activity.leaveStatus === 'SHORT_LEAVE';
+            } else if (filterType === "late") {
+                matchesType = activity.isLate;
+            }
         }
 
-        // Status filter
+        // Filter by status based on new structure
         let matchesStatus = true;
         if (filterStatus !== "all") {
-            if (filterStatus === "Approved") matchesStatus = activity.leaveSuccess;
-            else if (filterStatus === "Pending") matchesStatus = !activity.leaveSuccess && !activity.unSuccessful && !activity.unAuthorized;
-            else if (filterStatus === "Not Approved") matchesStatus = activity.unSuccessful || activity.unAuthorized;
+            if (filterStatus === "Approved") {
+                matchesStatus = activity.leaveStatus === 'LEAVE_APPROVED';
+            } else if (filterStatus === "Pending") {
+                matchesStatus = activity.leaveStatus === 'LEAVE_REQUESTED' ||
+                    (!activity.isUnSuccessful && !activity.isUnauthorized && !activity.hasIssues);
+            } else if (filterStatus === "Not Approved") {
+                matchesStatus = activity.isUnSuccessful || activity.isUnauthorized;
+            }
         }
 
-        // Issue filter
         let matchesIssue = true;
         if (filterIssue !== "all") {
-            matchesIssue = filterIssue === "hasIssue" ? activity.issues : !activity.issues;
+            matchesIssue = filterIssue === "hasIssue" ? activity.hasIssues : !activity.hasIssues;
         }
 
         return matchesSearch && matchesType && matchesStatus && matchesIssue;
     }) : [];
 };
 
-// Export selectors
 export const selectActivitiesData = (state) => state.activityRecords;
 export const selectIsFiltering = (state) => {
     const { searchTerm, filterType, filterStatus, filterIssue } = state.activityRecords;

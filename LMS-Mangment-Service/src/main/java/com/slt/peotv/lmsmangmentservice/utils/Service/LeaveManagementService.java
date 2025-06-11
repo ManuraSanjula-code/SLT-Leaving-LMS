@@ -34,6 +34,7 @@ public class LeaveManagementService {
     private UserLeaveTypeRemainingRepo remainingRepository;
 
     @Autowired
+
     private UserLeaveTypeTotalRepo totalRepository;
 
     // Constants for leave types
@@ -56,9 +57,7 @@ public class LeaveManagementService {
         allocateLeaves(employee);
     }
 
-    /**
-     * Allocate leaves based on employee's years of service
-     */
+
     public void allocateLeaves(EmployeeEntity employee) {
         // Calculate years of service
         LocalDate joinDate = employee.getJoin_date().toInstant()
@@ -169,12 +168,12 @@ public class LeaveManagementService {
 
     private void saveLeaveAllocation(EmployeeEntity employee, LeaveTypeEntity leaveType, int leaves) {
         // Save total leaves
-        UserLeaveTypeTotalEntity totalEntity = totalRepository.findByEmployeeIDAndLeaveType(
-                employee.getEmployeeId(), leaveType);
+        UserLeaveTypeTotalEntity totalEntity = totalRepository.findByEmployeeAndLeaveType(
+                employee, leaveType);
         
         if (totalEntity == null) {
             totalEntity = new UserLeaveTypeTotalEntity();
-            totalEntity.setEmployeeID(employee.getEmployeeId());
+            totalEntity.setEmployee(employee);
             totalEntity.setLeaveType(leaveType);
             totalEntity.setPublicId(UUID.randomUUID().toString());
         }
@@ -183,13 +182,13 @@ public class LeaveManagementService {
         totalRepository.save(totalEntity);
         
         // Save remaining leaves (initially equal to total)
-        UserLeaveTypeRemainingEntity remainingEntity = remainingRepository.findByEmployeeIDAndLeaveType(
-                employee.getEmployeeId(), leaveType);
+        UserLeaveTypeRemainingEntity remainingEntity = remainingRepository.findByEmployeeAndLeaveType(
+                employee, leaveType);
         
         if (remainingEntity == null) {
         	remainingEntity = new UserLeaveTypeRemainingEntity();
             remainingEntity = new UserLeaveTypeRemainingEntity();
-            remainingEntity.setEmployeeID(employee.getEmployeeId());
+            remainingEntity.setEmployee(employee);
             remainingEntity.setLeaveType(leaveType);
             remainingEntity.setPublicId(UUID.randomUUID().toString());
         }

@@ -28,8 +28,6 @@ import {
     FilterList,
     Refresh
 } from '@mui/icons-material';
-
-// Helper function to format date as YYYY-MM-DD
 const formatDate = (date) => {
     const d = new Date(date);
     let month = '' + (d.getMonth() + 1);
@@ -43,32 +41,26 @@ const formatDate = (date) => {
 };
 
 const AttendanceComponent = () => {
-    // Set today's date as initial date (formatted as YYYY-MM-DD)
     const [dateInput, setDateInput] = useState(formatDate(new Date()));
 
-    // Pagination state
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // Filter states
     const [employeeFilter, setEmployeeFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [shiftFilter, setShiftFilter] = useState('all');
 
-    // Data state
     const [attendanceData, setAttendanceData] = useState(null);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Force white background on component mount
     useEffect(() => {
         document.body.style.backgroundColor = '#ffffff';
         document.documentElement.style.backgroundColor = '#ffffff';
         document.body.style.color = '#000000';
     }, []);
 
-    // Fetch attendance data
     const fetchAttendanceData = async (dateString) => {
         try {
             setLoading(true);
@@ -91,20 +83,17 @@ const AttendanceComponent = () => {
         }
     };
 
-    // Apply filters
     const applyFilters = () => {
         if (!attendanceData) return;
 
         let result = [...attendanceData.content];
 
-        // Employee ID filter
         if (employeeFilter) {
             result = result.filter(record =>
                 record.employeeID.toLowerCase().includes(employeeFilter.toLowerCase())
             );
         }
 
-        // Status filter
         if (statusFilter !== 'all') {
             result = result.filter(record => {
                 if (statusFilter === 'present') return !record.isAbsent && !record.isFullLeave && !record.isHalfDay;
@@ -115,7 +104,6 @@ const AttendanceComponent = () => {
             });
         }
 
-        // Shift filter
         if (shiftFilter !== 'all') {
             result = result.filter(record =>
                 record.shiftCode.toLowerCase().includes(shiftFilter.toLowerCase())
@@ -123,10 +111,9 @@ const AttendanceComponent = () => {
         }
 
         setFilteredData(result);
-        setPage(1); // Reset to first page when filters change
+        setPage(1);
     };
 
-    // Reset all filters
     const resetFilters = () => {
         setEmployeeFilter('');
         setStatusFilter('all');
@@ -171,7 +158,6 @@ const AttendanceComponent = () => {
         return <Chip label="Present" color="success" size="small" />;
     };
 
-    // Calculate paginated data
     const paginatedData = filteredData.slice(
         (page - 1) * rowsPerPage,
         page * rowsPerPage

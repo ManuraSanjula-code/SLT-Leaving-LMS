@@ -40,7 +40,6 @@ export const fetchManagementData = createAsyncThunk(
     'management/fetchData',
     async ({ usersPage = 0, usersSize = 10 }, { rejectWithValue }) => {
         try {
-            // Fetch all non-user data first
             const [roles, authorities, profiles, roleNames, sectionNames, profileNames, sections] =
                 await Promise.all([
                     fetchWithHeaders(`${baseUrl}/roles`).then(res => res.json()),
@@ -52,11 +51,9 @@ export const fetchManagementData = createAsyncThunk(
                     fetchWithHeaders(`${baseUrl}/sections`).then(res => res.json()),
                 ]);
 
-            // Fetch paginated users
             const usersResponse = await fetchWithHeaders(`${baseUrl}?page=${usersPage}&limit=${usersSize}`);
             const users = await usersResponse.json();
 
-            // Fetch dynamic roles
             const dynamicRoles = roleNames || [];
             const roleFetchPromises = dynamicRoles.map(role =>
                 fetchWithHeaders(`${baseUrl}/get-role/${role}`).then(res => res.json())
@@ -91,7 +88,6 @@ export const fetchManagementData = createAsyncThunk(
     }
 );
 
-// Paginated users
 export const fetchPaginatedUsers = createAsyncThunk(
     'management/fetchPaginatedUsers',
     async ({page, limit}, {rejectWithValue}) => {
@@ -136,7 +132,6 @@ export const fetchPaginatedAdmins = createAsyncThunk(
     }
 );
 
-// Role CRUD operations
 export const saveRole = createAsyncThunk(
     'management/saveRole',
     async ({roleData, isUpdate, roleId}, {rejectWithValue}) => {
@@ -194,7 +189,6 @@ export const deleteRole = createAsyncThunk(
     }
 );
 
-// Section CRUD operations
 export const saveSection = createAsyncThunk(
     'management/saveSection',
     async ({sectionData, isUpdate, publicId}, {rejectWithValue}) => {
@@ -259,7 +253,6 @@ export const deleteSection = createAsyncThunk(
     }
 );
 
-// Profile CRUD operations
 export const saveProfile = createAsyncThunk(
     'management/saveProfile',
     async ({profileData, isUpdate}, {rejectWithValue}) => {

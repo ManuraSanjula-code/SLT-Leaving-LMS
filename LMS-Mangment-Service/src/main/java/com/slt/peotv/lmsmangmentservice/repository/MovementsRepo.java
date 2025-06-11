@@ -2,7 +2,6 @@ package com.slt.peotv.lmsmangmentservice.repository;
 
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
-import org.apache.zookeeper.Op;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.CrudRepository;
@@ -19,8 +18,6 @@ public interface MovementsRepo extends CrudRepository<MovementsEntity, Long> {
     List<MovementsEntity> findAllByEmployee(EmployeeEntity employee);
     Optional<MovementsEntity> findAllByEmployeeAndReqDate(EmployeeEntity employeeI, Date reqDate);
     Optional<MovementsEntity> findByPublicId(String publicId);
-    List<MovementsEntity> findByHappenDate(Date happenDate);
-    List<MovementsEntity> findByIsPendingAndEmployee(Boolean isPending, EmployeeEntity employee);
     List<MovementsEntity> findByEmployeeAndReqDateBetween(
             EmployeeEntity employee,
             Date startDate,

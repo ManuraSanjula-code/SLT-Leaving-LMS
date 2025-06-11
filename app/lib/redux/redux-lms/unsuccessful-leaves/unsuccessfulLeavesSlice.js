@@ -49,10 +49,10 @@ export const resolveLeave = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            await axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
+            const response = await axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
                 withCredentials: true
             });
-            return id;
+            return { id, resolveType: response.data?.resolveType || 'VIA_MOVEMENT' };
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || "Failed to resolve leave");
         }
@@ -67,14 +67,19 @@ export const bulkResolveLeaves = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            await Promise.all(
-                ids.map(id =>
-                    axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
-                        withCredentials: true
-                    })
-                )
+            const promises = ids.map(id =>
+                axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
+                    withCredentials: true
+                })
             );
-            return ids;
+
+            const responses = await Promise.all(promises);
+            const resolvedItems = ids.map((id, index) => ({
+                id,
+                resolveType: responses[index].data?.resolveType || 'VIA_MOVEMENT'
+            }));
+
+            return resolvedItems;
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || "Failed to resolve selected leaves");
         }
@@ -90,7 +95,7 @@ const unsuccessfulLeavesSlice = createSlice({
         },
         setPageSize: (state, action) => {
             state.pageSize = action.payload;
-            state.currentPage = 0; // Reset to first page when changing page size
+            state.currentPage = 0;
         },
         clearError: (state) => {
             state.error = null;
@@ -111,21 +116,20 @@ const unsuccessfulLeavesSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(resolveLeave.fulfilled, (state, action) => {
-                // Update the resolved leave in the state
-                const resolvedId = action.payload;
+                const { id, resolveType } = action.payload;
                 state.leaves.content = state.leaves.content.map(leave =>
-                    leave.id === resolvedId ? { ...leave, resolve: true } : leave
+                    leave.id === id ? { ...leave, resolve: resolveType, isResolved: true } : leave
                 );
             })
             .addCase(resolveLeave.rejected, (state, action) => {
                 state.error = action.payload;
             })
             .addCase(bulkResolveLeaves.fulfilled, (state, action) => {
-                // Update all resolved leaves in the state
-                const resolvedIds = action.payload;
-                state.leaves.content = state.leaves.content.map(leave =>
-                    resolvedIds.includes(leave.id) ? { ...leave, resolve: true } : leave
-                );
+                const resolvedItems = action.payload;
+                state.leaves.content = state.leaves.content.map(leave => {
+                    const resolvedItem = resolvedItems.find(item => item.id === leave.id);
+                    return resolvedItem ? { ...leave, resolve: resolvedItem.resolveType, isResolved: true } : leave;
+                });
             })
             .addCase(bulkResolveLeaves.rejected, (state, action) => {
                 state.error = action.payload;

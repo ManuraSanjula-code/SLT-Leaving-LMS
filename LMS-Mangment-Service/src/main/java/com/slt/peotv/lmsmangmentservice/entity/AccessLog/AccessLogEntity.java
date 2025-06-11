@@ -1,63 +1,57 @@
 package com.slt.peotv.lmsmangmentservice.entity.AccessLog;
 
-import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
-import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 @Entity
-@Table(name = "accesslog")
+@Table(name = "access_log")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@ToString
+@AllArgsConstructor
+@NoArgsConstructor
 public class AccessLogEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "EmployeeID", nullable = false)
-    private String employeeID;
+    @Column(name = "employee_id", nullable = false)
+    private String employeeId;
 
-    @Column(name = "LogDate", nullable = false)
+    @Column(name = "log_date", nullable = false)
     private String logDate;
 
-    @Column(name = "LogTime", nullable = false)
+    @Column(name = "log_time", nullable = false)
     private String logTime;
 
-    @Column(name = "TerminalID", nullable = false)
-    private String terminalID;
+    @Column(name = "terminal_id", nullable = false)
+    private String terminalId;
 
-    @Column(name = "InOut", nullable = false)
+    @Column(name = "in_out", nullable = false)
     private String inOut;
 
-    @Column(name = "`read`", nullable = false)
+    @Column(name = "read_status", nullable = false)
     private String readStatus;
 
     @Column(name = "processed", nullable = false)
-    private int processed;
+    private Integer processed;
 
     @Column(name = "etl_run_time", nullable = false)
     private Date etlRunTime;
 
-    @OneToOne(mappedBy = "accessLog", fetch = FetchType.EAGER)
-    private InOutEntity inOu;
-
-    @OneToMany
     @Builder.Default
-    private List<EditedBy> editedBys = new ArrayList<>();
-
-    @Builder.Default
-    private Date createDate = new Date();
-    private Date updateDate;
-
-    @Builder.Default
-    private Boolean isEdited = false;
-    @Builder.Default
+    @Column(name = "is_manual")
     private Boolean isManual = false;
+
+    @Builder.Default
+    @Column(name = "created_date")
+    private Date createdDate = new Date();
+
+    @Column(name = "updated_date")
+    private Date updatedDate;
+
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 }

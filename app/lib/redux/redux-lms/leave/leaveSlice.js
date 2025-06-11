@@ -27,7 +27,7 @@ export const fetchLeaveData = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const url = `http://localhost:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}&isAdmin=${userAdmin}`;
+            const url = `http://localhost:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
             const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
@@ -64,7 +64,6 @@ export const fetchLeaveBalances = createAsyncThunk(
 
             const data = await response.json();
 
-            // Extract leaveDetails from the response based on your API format
             return data.leaveDetails || [];
         } catch (err) {
             return rejectWithValue(err.message);
@@ -119,22 +118,16 @@ export const deleteLeaveRequest = createAsyncThunk(
     }
 );
 
-// Updated updateLeaveRequest thunk with proper field mapping
 export const updateLeaveRequest = createAsyncThunk(
     'leave/updateLeaveRequest',
-    async ({updatePayload, isAdmin}, {rejectWithValue}) => {
+    async ({updatePayload, userAdmin, isAdmin}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            // Create a clean payload by removing undefined/null values and mapping fields correctly
-            const cleanPayload = {};
-
-            // Map the fields correctly to match backend LeaveReq class
-            const fieldMapping = {
-                // Basic fields
+            const cleanPayload = {
                 fromDate: updatePayload.fromDate,
                 toDate: updatePayload.toDate,
                 leaveType: updatePayload.leaveType,
@@ -143,54 +136,18 @@ export const updateLeaveRequest = createAsyncThunk(
                 happenDate: updatePayload.happenDate,
                 userId: updatePayload.userId,
                 employeeID: updatePayload.employeeID,
-                isNoPay: updatePayload.isNoPay,
-
-                // Boolean fields - map frontend names to backend names
-                halfDay: updatePayload.halfDay,                    // isHalfDay -> halfDay
-                fullDay: updatePayload.fullDay,                    // isFullDay -> fullDay
-                unauthorized: updatePayload.unauthorized,           // isUnauthorized -> unauthorized
-                manualRequest: updatePayload.manualRequest,        // isManualRequest -> manualRequest
-                absent: updatePayload.absent,                      // isAbsent -> absent
-                lateCover: updatePayload.lateCover,               // isLateCover -> lateCover
-                late: updatePayload.late,                         // isLate -> late
-                short_Leave: updatePayload.short_Leave,           // isShort_Leave -> short_Leave
-                notUsed: updatePayload.notUsed,                   // notUsed -> notUsed
-                unSuccessful: updatePayload.unSuccessful,         // unSuccessful -> unSuccessful
-
-                // Admin-only fields
-                edited: updatePayload.edited,                     // isEdited -> edited
-                reject: updatePayload.reject,                     // isReject -> reject
-                canceled: updatePayload.canceled,                 // isCanceled -> canceled
-                accepted: updatePayload.accepted,                 // isAccepted -> accepted
-                pending: updatePayload.pending                    // isPending -> pending
+                componentBehavior: updatePayload.componentBehavior,
+                requestStatus: updatePayload.requestStatus,
+                notUsed: updatePayload.notUsed || false,
+                isManualRequest: updatePayload.isManualRequest || false,
+                isEdited: updatePayload.isEdited || false
             };
 
-            // Only include fields that have actual values
-            Object.entries(fieldMapping).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && value !== '') {
-                    // Handle boolean fields properly
-                    if (typeof value === 'boolean') {
-                        cleanPayload[key] = value;
-                    } else if (typeof value === 'string' && value.trim() !== '') {
-                        cleanPayload[key] = value.trim();
-                    } else if (typeof value === 'number') {
-                        cleanPayload[key] = value;
-                    } else if (value instanceof Date) {
-                        cleanPayload[key] = value.toISOString();
-                    }
+            Object.keys(cleanPayload).forEach(key => {
+                if (cleanPayload[key] === undefined || cleanPayload[key] === null || cleanPayload[key] === '') {
+                    delete cleanPayload[key];
                 }
             });
-
-            // Handle admin-specific logic
-            if (isAdmin) {
-                let userInput = prompt("Enter your comment:");
-                if (userInput == null || userInput.trim() === '') {
-                    return rejectWithValue('Comment is Required');
-                }
-                cleanPayload.adminId = empId;
-                cleanPayload.adminComment = userInput.trim();
-            }
-
 
             const response = await fetch(
                 `http://localhost:8080/lms/management/leave/${updatePayload.publicId}/${empId}`,
@@ -219,7 +176,7 @@ export const updateLeaveRequest = createAsyncThunk(
 );
 
 const leaveSlice = createSlice({
-    name: 'leaveNo',  // Use the correct slice name based on your Redux store structure
+    name: 'leaveNo',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
@@ -287,7 +244,6 @@ const leaveSlice = createSlice({
     }
 });
 
-// Enhanced helper function to include more properties from leave data
 const transformLeaveItem = (item) => ({
     id: item.id,
     publicId: item.publicId,
@@ -301,62 +257,87 @@ const transformLeaveItem = (item) => ({
     description: item.description || "",
     category: item.leaveType?.name || "",
     leaveTypeName: item.leaveType?.name || "",
-
-    // Date fields
     fromDate: item.fromDate || "",
     toDate: item.toDate || "",
     submitDate: item.submitDate || "",
 
-    // Status flags - ensure proper boolean conversion
-    late: Boolean(item.late),
-    absent: Boolean(item.absent),
-    fullDay: Boolean(item.fullDay),
-    halfDay: Boolean(item.halfDay),
-    pending: Boolean(item.pending),
-    accepted: Boolean(item.accepted),
-    expired: Boolean(item.expired),
-    reject: Boolean(item.reject),
-    canceled: Boolean(item.canceled),
-    manualRequest: Boolean(item.manualRequest),
+    componentBehavior: item.componentBehavior,
+    requestStatus: item.requestStatus,
 
-    // Additional fields
+    late: item.componentBehavior === 'LATE',
+    absent: item.componentBehavior === 'ABSENT',
+    fullDay: item.componentBehavior === 'FULL_DAY',
+    halfDay: item.componentBehavior === 'HALF_DAY',
+    short_Leave: item.componentBehavior === 'SHORT_LEAVE',
+    unauthorized: item.componentBehavior === 'UNAUTHORIZED',
+    unSuccessful: item.componentBehavior === 'UNSUCCESSFUL',
+    lateCover: item.componentBehavior === 'LATE_COVER',
+
+    pending: item.requestStatus === 'PENDING_APPROVAL' || item.requestStatus === 'SUBMITTED',
+    accepted: item.requestStatus === 'APPROVED',
+    reject: item.requestStatus === 'REJECTED',
+    canceled: item.requestStatus === 'CANCELLED',
+    expired: item.requestStatus === 'EXPIRED',
+
+    manualRequest: Boolean(item.isManualRequest),
     numOfDays: item.numOfDays || 0,
-    isNoPay: item.isNoPay || 0,
-
-    // Admin and edit tracking
+    actualDays: item.actualDays || 0,
     adminsTra: item.adminsTra || [],
     editedByDTOs: item.editedByDTOs || [],
+    notUsed: Boolean(item.notUsed),
+    isEdited: Boolean(item.isEdited),
 
-    // Keep original item for reference with all fields properly mapped
     originalItem: {
         ...item,
-        // Ensure all boolean fields are properly set
-        unauthorized: Boolean(item.unauthorized),
-        lateCover: Boolean(item.lateCover),
-        short_Leave: Boolean(item.short_Leave),
-        notUsed: Boolean(item.notUsed),
-        edited: Boolean(item.edited),
-        unSuccessful: Boolean(item.unSuccessful),
-        isNoPay: item.isNoPay || 0
+        componentBehavior: item.componentBehavior,
+        requestStatus: item.requestStatus,
+        componentBehaviorString: item.componentBehaviorString,
+        leaveStatusString: item.leaveStatusString
     }
 });
 
 const getLeaveType = (item) => {
-    if (item.fullDay) return "Full Day Leave";
-    if (item.halfDay) return "Half Day Leave";
-    if (item.absent) return "Absence";
-    if (item.late) return "Late Arrival";
-    return item.leaveType?.name || "Regular Leave";
+    switch (item.componentBehavior) {
+        case 'FULL_DAY':
+            return "Full Day Leave";
+        case 'HALF_DAY':
+            return "Half Day Leave";
+        case 'ABSENT':
+            return "Absence";
+        case 'LATE':
+            return "Late Arrival";
+        case 'LATE_COVER':
+            return "Late Cover";
+        case 'SHORT_LEAVE':
+            return "Short Leave";
+        case 'UNSUCCESSFUL':
+            return "Unsuccessful";
+        case 'UNAUTHORIZED':
+            return "Unauthorized";
+        default:
+            return item.leaveType?.name || "Regular Leave";
+    }
 };
 
 const getLeaveStatus = (item) => {
-    if (item.reject) return "Reject";
-    else if (item.pending) return "Pending";
-    else if (item.accepted) return "Approved";
-    else if (item.canceled) return "Canceled";
-    else if (item.late && !item.pending && !item.accepted) return "Recorded Late";
-    else if (!item.fullDay && !item.halfDay && !item.late && !item.pending && !item.accepted) return "Recorded Absent";
-    return "Processed";
+    switch (item.requestStatus) {
+        case 'DRAFT':
+            return "Draft";
+        case 'SUBMITTED':
+            return "Submitted";
+        case 'PENDING_APPROVAL':
+            return "Pending";
+        case 'APPROVED':
+            return "Approved";
+        case 'REJECTED':
+            return "Rejected";
+        case 'CANCELLED':
+            return "Canceled";
+        case 'EXPIRED':
+            return "Expired";
+        default:
+            return "Unknown";
+    }
 };
 
 export default leaveSlice.reducer;

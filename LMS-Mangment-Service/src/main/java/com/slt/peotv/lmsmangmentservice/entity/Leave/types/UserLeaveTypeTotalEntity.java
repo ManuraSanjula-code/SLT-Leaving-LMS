@@ -1,8 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.entity.Leave.types;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.Objects;
 
 @Entity
 @Table(name = "user_leave_type_total")
@@ -19,7 +19,8 @@ public class UserLeaveTypeTotalEntity {
 
     private String publicId;
 
-    private String employeeID;
+    @ManyToOne
+    private EmployeeEntity employee;
 
     @ManyToOne
     @JoinColumn(name = "leave_type_id")

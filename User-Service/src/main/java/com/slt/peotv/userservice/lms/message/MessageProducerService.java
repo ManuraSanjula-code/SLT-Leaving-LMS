@@ -15,7 +15,6 @@ public class MessageProducerService {
     }
     public void sendMessage(String destination, LMSUser lmsUser) {
         jmsTemplate.convertAndSend(destination, lmsUser, message -> {
-            System.out.println("destination: " + destination);
             System.out.println(message);
             if(destination.equals("user.queue"))
                 message.setStringProperty("_type", "com.slt.peotv.lmsmangmentservice.messaging.LMSUser");

@@ -252,9 +252,12 @@ const leaveSlice = createSlice({
                     if (action.payload.approved) {
                         state.requests[index].accepted = true;
                         state.requests[index].pending = false;
+                        state.requests[index].reject = false;
                     } else {
-                        state.requests[index].rejected = true;
+                        // When rejected, set reject to true and pending to false
+                        state.requests[index].reject = true;
                         state.requests[index].pending = false;
+                        state.requests[index].accepted = false;
                     }
                 }
                 // Set success notification
@@ -289,9 +292,12 @@ const leaveSlice = createSlice({
                         if (action.payload.approved) {
                             state.requests[index].accepted = true;
                             state.requests[index].pending = false;
+                            state.requests[index].reject = false;
                         } else {
-                            state.requests[index].rejected = true;
+                            // When rejected, set reject to true and pending to false
+                            state.requests[index].reject = true;
                             state.requests[index].pending = false;
+                            state.requests[index].accepted = false;
                         }
                     }
                 });

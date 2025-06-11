@@ -1,4 +1,3 @@
-// components/management/ProfileForm.js
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -28,7 +27,6 @@ import { fetchManagementData, saveProfile, deleteProfile } from '../../../../../
 import SuccessDialog from '../../SuccessDialog';
 import ErrorDialog from '../../ErrorDialog';
 
-// Simple TimeInput component since TimePicker wasn't available
 const TimeInput = ({ label, value, onChange, error, helperText }) => {
   return (
       <TextField
@@ -226,7 +224,6 @@ const ProfileForm = ({ onSubmit }) => {
       }
     });
 
-    // Validate time format (HH:MM)
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     const timeFields = ['workStart', 'workEnds', 'gracePeriodStart', 'hdStart',
       'slStartMorning', 'slStartEvening', 'flexiHrsStart'];
@@ -277,7 +274,6 @@ const ProfileForm = ({ onSubmit }) => {
   const isFormDirty = useMemo(() => {
     if (!currentProfile) return true;
 
-    // Check all fields except users
     const fieldsToCheck = [
       'name', 'workStart', 'workEnds', 'ignoreSl', 'gracePeriodStart',
       'hdStart', 'slStartMorning', 'slStartEvening', 'possibleFpLocations',
@@ -289,7 +285,6 @@ const ProfileForm = ({ onSubmit }) => {
       return formData[field] !== currentProfile[field];
     });
 
-    // Check users separately
     const areUsersChanged =
         selectedUsers.length !== currentProfile.users.length ||
         !selectedUsers.every(userId =>

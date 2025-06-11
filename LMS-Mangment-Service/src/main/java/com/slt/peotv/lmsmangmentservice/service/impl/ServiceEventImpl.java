@@ -4,10 +4,8 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.repository.*;
-import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
-import com.slt.peotv.lmsmangmentservice.utils.Utils;
-import org.modelmapper.ModelMapper;
+import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,34 +15,24 @@ import java.util.Optional;
 
 @Service
 public class ServiceEventImpl implements ServiceEvent {
-    private final ModelMapper modelMapper = new ModelMapper();
-    @Autowired
-    private UserLeaveCategoryTotalRepo userLeaveCategoryTotalRepo;
-    @Autowired
-    private UserLeaveTypeTotalRepo userLeaveTypeTotalRepo;
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired
-    private LeaveCategoryRepo leaveCategoryRepo;
-    @Autowired
     private LeaveTypeRepo leaveTypeRepo;
     @Autowired
-    private LMS_Service lmsService;
-    @Autowired
-    private Utils utils;
+    private Helper helper;
 
     @Override
     public List<UserLeaveTypeRemainingEntity> getUserLeaveTypeRemaining(String employee_id) {
-        return userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeID(employee_id);
+        return userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployee(helper.getEmployeeById(employee_id));
     }
 
     @Override
     public UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String type_name, String employee_id) {
-        System.out.println("type_name = " + type_name);
 
         Optional<LeaveTypeEntity> byName = leaveTypeRepo.findByName(type_name);
         if (employee_id != null && byName.isPresent()) {
-            List<UserLeaveTypeRemainingEntity> byLeaveTypeAndUser = userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeIDAndLeaveType(employee_id, byName.get());
+            List<UserLeaveTypeRemainingEntity> byLeaveTypeAndUser = userLeaveTypeRemainingRepo.findUserLeaveTypeRemainingByEmployeeAndLeaveType(helper.getEmployeeById(employee_id), byName.get());
             if (byLeaveTypeAndUser.isEmpty()) {
                 throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
             } else {

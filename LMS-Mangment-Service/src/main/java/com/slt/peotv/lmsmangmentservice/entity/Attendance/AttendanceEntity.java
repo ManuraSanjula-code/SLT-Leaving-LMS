@@ -1,127 +1,104 @@
 package com.slt.peotv.lmsmangmentservice.entity.Attendance;
 
-import com.slt.peotv.lmsmangmentservice.entity.EditedBy;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
-import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import java.sql.Time;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import lombok.*;
+import java.sql.Time;
+import java.util.Date;
+
 
 @Entity
-@Table(name = "attendance")
+@Table(name = "attendance",uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "date","arrival_date","arrival_time"}))
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = {"inOuts", "editedBys"})
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"inOuts", "editedBys"})
 public class AttendanceEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "public_id", unique = true, nullable = false)
     private String publicId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private EmployeeEntity employee;
 
     @Column(nullable = false)
     private Date date;
-    private Date etl_run_time;
 
-    @ManyToOne
-    private EmployeeEntity employee;
-
-    @Builder.Default
-    private Boolean isFullDay = false;
+    @Column(name = "arrival_date")
     private Date arrivalDate;
+
+    @Column(name = "arrival_time")
     private Time arrivalTime;
+
     private Time leftTime;
+
+    @Column(name = "terminal_id", nullable = false)
+    private String terminalId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attendance_type")
+    private AttendanceType attendanceType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "leave_status")
+    private LeaveStatus leaveStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pay_status")
+    private PayStatus payStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resolve")
+    private ResolveType resolve;
 
     @Builder.Default
     private Boolean isLate = false;
-
     @Builder.Default
-    private Boolean lateCover = false;
-
+    private Boolean isLateCovered = false;
     @Builder.Default
-    private Boolean isHalfDay = false;
-
-    @Builder.Default
-    private Boolean isFullLeave = false;
-
-    @Builder.Default
-    private Boolean isShortLeave = false;
-
-    @Builder.Default
-    private Boolean isAbsent = false;
-
+    private Boolean isUnauthorized = false;
     @Builder.Default
     private Boolean isUnSuccessful = false;
-
-    @Builder.Default
-    private Boolean isNoPay = false;
-
-    @Builder.Default
-    private Boolean issues = false;
-
-    @Builder.Default
-    private Boolean isUnAuthorized = false;
-
-    @Builder.Default
-    private Boolean resolve = false;
-
-    @Builder.Default
-    private Boolean leaveSuccess = false;
-
-    @Builder.Default
-    private Boolean leaveReq = false;
-
-    @Column(length = 1000)
-    private String issueDescription;
-
-    private Date dueDateForUA;
-
-    @Builder.Default
-    private Boolean active = true;
-    
-    @Builder.Default
-    private Boolean nopay = false;
-
-    @Builder.Default
-    private Boolean viaMovement = false;
-    
-    @Builder.Default
-    private Boolean viaLeave = false;
-
-    @Builder.Default
-    private Boolean isManual = false;
-
-    @Column(name = "TerminalID", nullable = false)
-    private String terminalID;
-
     @Builder.Default
     private Boolean isHoliday = false;
-
-    @OneToMany(mappedBy = "attendance", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
-    private List<InOutEntity> inOuts = new ArrayList<>();
-
-    @OneToMany
+    private Boolean isResolved = false;
     @Builder.Default
-    private List<EditedBy> editedBys = new ArrayList<>();
+    private Boolean hasIssues = false;
+    @Builder.Default
+    private Boolean isManual = false;
+    @Column(name = "issue_description", length = 1000)
+    private String issueDescription;
+
+    @Column(name = "due_date_for_ua")
+    private Date dueDateForUA;
+
+    @Column(name = "etl_run_time")
+    private Date etlRunTime;
 
     @Builder.Default
-    private Date createDate = new Date();
-    private Date updateDate;
+    @Column(name = "created_date", nullable = false)
+    private Date createdDate = new Date();
+
+    @Column(name = "updated_date")
+    private Date updatedDate;
 
     @Builder.Default
-    private Boolean isEdited = false;
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+    private Boolean viaMovement;
+    private Boolean viaLeave;
 
+    public Boolean getIsFullDay() {
+        return attendanceType != null && attendanceType.equals(AttendanceType.FULL_DAY);
+    }
 }

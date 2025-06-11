@@ -2,14 +2,14 @@ import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 
 export const fetchMovementRequests = createAsyncThunk(
     'movement/fetchMovementRequests',
-    async ({isAdmin, userId, page, size}, {rejectWithValue}) => {
+    async ({isAdmin, userId, useAdmin, page, size}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const response = await fetch(
-                `http://localhost:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}&isAdmin=${isAdmin}`,
+                `http://localhost:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}`,
                 {credentials: 'include'}
             );
 
@@ -18,6 +18,7 @@ export const fetchMovementRequests = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             return data;
         } catch (err) {
             return rejectWithValue(err.message);
@@ -49,51 +50,47 @@ export const deleteMovementRequest = createAsyncThunk(
     }
 );
 
-// Updated to send all movement fields with proper boolean handling
 export const updateMovementRequest = createAsyncThunk(
     'movement/updateMovementRequest',
-    async ({updatePayload, isAdmin}, {rejectWithValue}) => {
+    async ({updatePayload, isAdmin, useAdmin}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            // Clean payload and ensure boolean values are properly handled
-            const cleanPayload = {};
+            const cleanPayload = {
+                employeeId: updatePayload.employeeId,
+                userId: updatePayload.userId,
+                destination: updatePayload.destination,
+                movementType: updatePayload.movementType,
+                comment: updatePayload.comment,
+                category: updatePayload.category,
+                inTime: updatePayload.inTime,
+                outTime: updatePayload.outTime,
+                componentBehavior: updatePayload.componentBehavior,
+                requestStatus: updatePayload.requestStatus,
+                attSync: updatePayload.attSync || 0,
+                attendance: updatePayload.attendance || '',
+                isEdited: true
+            };
 
-            // Handle each field appropriately
-            Object.entries(updatePayload).forEach(([key, value]) => {
-                if (key !== 'publicId' && value !== undefined && value !== null) {
-                    // For boolean fields, ensure they are actual booleans
-                    if (typeof value === 'boolean' ||
-                        ['unAuthorized', 'accepted', 'pending', 'reject', 'halfDay', 'absent',
-                            'isAbsent', 'isUnSuccessfulAttdate', 'isHalfDay', 'isLate', 'isLateCover'].includes(key)) {
-                        cleanPayload[key] = Boolean(value);
-                    }
-                    // For string fields, don't include empty strings unless they're meaningful
-                    else if (typeof value === 'string' && value.trim() !== '') {
-                        cleanPayload[key] = value;
-                    }
-                    // For numbers
-                    else if (typeof value === 'number') {
-                        cleanPayload[key] = value;
-                    }
-                    // For dates (should already be ISO strings at this point)
-                    else if (value instanceof Date || (typeof value === 'string' && value.includes('T'))) {
-                        cleanPayload[key] = value;
-                    }
+            if (updatePayload.happenDate) {
+                cleanPayload.happenDate = updatePayload.happenDate;
+            }
+            if (updatePayload.reqDate) {
+                cleanPayload.reqDate = updatePayload.reqDate;
+            }
+            if (updatePayload.logTime) {
+                cleanPayload.logTime = updatePayload.logTime;
+            }
+
+            Object.keys(cleanPayload).forEach(key => {
+                if (cleanPayload[key] === undefined || cleanPayload[key] === null || cleanPayload[key] === '') {
+                    delete cleanPayload[key];
                 }
             });
 
-            if (isAdmin) {
-                let userInput = prompt("Enter your comment:");
-                if (userInput == null) return rejectWithValue('Comment is Required');
-                cleanPayload.adminId = empId;
-                cleanPayload.adminComment = userInput;
-            }
-
-            console.log("Clean payload being sent:", cleanPayload);
 
             const response = await fetch(`http://localhost:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
                 method: 'PUT',
@@ -143,7 +140,6 @@ export const fetchInOutData = createAsyncThunk(
     }
 );
 
-// Helper function to safely convert to boolean
 const safeBooleanConvert = (value) => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'true';
@@ -234,39 +230,35 @@ const movementSlice = createSlice({
                         startDate: item.happenDate ? new Date(item.happenDate).toISOString().split('T')[0] : "",
                         endDate: item.reqDate ? new Date(item.reqDate).toISOString().split('T')[0] : "",
                         status: getStatus(item),
-                        inTime: item.inTime || "00:00:00",
-                        outTime: item.outTime || "00:00:00",
+                        inTime: item.inTime || "00:00",
+                        outTime: item.outTime || "00:00",
                         logTime: item.logTime ? new Date(item.logTime).toISOString() : "",
                         comment: item.comment || "",
                         destination: item.destination || "",
                         category: item.category || "",
 
-                        // Boolean fields - properly converted
-                        unAuthorized: safeBooleanConvert(item.unAuthorized),
-                        accepted: safeBooleanConvert(item.accepted),
-                        pending: safeBooleanConvert(item.pending),
-                        reject: safeBooleanConvert(item.reject),
-                        halfDay: safeBooleanConvert(item.halfDay),
-                        absent: safeBooleanConvert(item.absent),
+                        componentBehavior: item.componentBehavior,
+                        requestStatus: item.requestStatus,
+                        movementType: item.movementType || "",
 
-                        // Additional boolean fields from MovementReq
-                        isAbsent: safeBooleanConvert(item.isAbsent),
-                        isUnSuccessfulAttdate: safeBooleanConvert(item.unSuccessfulAttdate || item.isUnSuccessfulAttdate),
-                        isHalfDay: safeBooleanConvert(item.isHalfDay),
-                        isLate: safeBooleanConvert(item.isLate),
-                        isLateCover: safeBooleanConvert(item.isLateCover),
+                        unAuthorized: item.componentBehavior === 'UNAUTHORIZED',
+                        absent: item.componentBehavior === 'ABSENT',
+                        halfDay: item.componentBehavior === 'HALF_DAY',
+                        isLate: item.componentBehavior === 'LATE',
+                        isLateCover: item.componentBehavior === 'LATE_COVER',
+                        isUnSuccessfulAttdate: item.componentBehavior === 'UNSUCCESSFUL',
 
-                        // Original dates for editing
+                        accepted: item.requestStatus === 'APPROVED',
+                        pending: item.requestStatus === 'PENDING_APPROVAL' || item.requestStatus === 'SUBMITTED',
+                        reject: item.requestStatus === 'REJECTED',
+
                         happenDate: item.happenDate || "",
                         reqDate: item.reqDate || "",
-                        movementType: item.movementType || "",
                         adminsTra: item.adminsTra || [],
                         editedByDTOs: item.editedByDTOs || [],
-
-                        // Additional fields
                         attSync: item.attSync || 0,
                         attendance: item.attendance || "",
-                        unSuccessfulAttdate: safeBooleanConvert(item.unSuccessfulAttdate)
+                        isEdited: safeBooleanConvert(item.isEdited)
                     }));
 
                     state.pagination = {
@@ -294,8 +286,6 @@ const movementSlice = createSlice({
             })
             .addCase(updateMovementRequest.fulfilled, (state, action) => {
                 state.loading = false;
-                // The data will be refreshed by the component, so we don't need to update here
-                // This prevents stale data issues
             })
             .addCase(updateMovementRequest.rejected, (state, action) => {
                 state.loading = false;
@@ -316,15 +306,25 @@ const movementSlice = createSlice({
     }
 });
 
-// Helper function to determine status with proper boolean checking
 const getStatus = (item) => {
-    if (safeBooleanConvert(item.pending)) return "Pending";
-    if (safeBooleanConvert(item.accepted)) return "Approved";
-    if (safeBooleanConvert(item.reject)) return "Rejected";
-    if (safeBooleanConvert(item.unAuthorized)) return "Unauthorized";
-    if (safeBooleanConvert(item.absent) || safeBooleanConvert(item.isAbsent)) return "Absent";
-    if (safeBooleanConvert(item.halfDay) || safeBooleanConvert(item.isHalfDay)) return "Half Day";
-    return "Unknown";
+    switch (item.requestStatus) {
+        case 'DRAFT':
+            return "Draft";
+        case 'SUBMITTED':
+            return "Submitted";
+        case 'PENDING_APPROVAL':
+            return "Pending";
+        case 'APPROVED':
+            return "Approved";
+        case 'REJECTED':
+            return "Rejected";
+        case 'CANCELLED':
+            return "Cancelled";
+        case 'EXPIRED':
+            return "Expired";
+        default:
+            return "Unknown";
+    }
 };
 
 export const {

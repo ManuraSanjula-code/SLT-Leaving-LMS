@@ -73,10 +73,10 @@ public class LmsMangmentServiceApplicationTests {
         String paddedTerminal = String.format("%-20s", terminal);
 
         return AccessLogEntity.builder()
-                .employeeID(empId)
+                .employeeId(empId)
                 .logDate(date)
                 .logTime(String.format("%-10s", time)) // Pad time to 10 chars
-                .terminalID(paddedTerminal)
+                .terminalId(paddedTerminal)
                 .inOut(inOut)
                 .readStatus("0")
                 .processed(1)

@@ -8,12 +8,13 @@ import {
   setUserId,
   updateFormField,
   calculateDays,
+  setComponentBehavior,
   validateForm,
   closeNotification,
   selectUserId,
   selectFormData,
   selectErrors,
-  selectIsValid, // Import the new selector
+  selectIsValid,
   selectLeaveBalances,
   selectLoading,
   selectFetchingBalance,
@@ -36,26 +37,41 @@ import {
   Grid,
   Card,
   CardContent,
-  Divider
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  Chip
 } from '@mui/material';
 
 const ApplyLeave = () => {
   const dispatch = useDispatch();
 
-  // Select from Redux store
   const userId = useSelector(selectUserId);
   const formData = useSelector(selectFormData);
   const errors = useSelector(selectErrors);
-  const isValid = useSelector(selectIsValid); // Use the new selector
+  const isValid = useSelector(selectIsValid);
   const leaveBalances = useSelector(selectLeaveBalances);
   const loading = useSelector(selectLoading);
   const fetchingBalance = useSelector(selectFetchingBalance);
   const notification = useSelector(selectNotification);
 
-  // Destructure leave helpers
-  const { getRemainingLeaveBalance, leaveTypes } = leaveHelpers;
+  const {
+    getRemainingLeaveBalance,
+    leaveTypes,
+    componentBehaviors,
+    getCategoryType,
+    isManualRequestAllowed,
+    allowedManualCategories,
+    restrictedCategories
+  } = leaveHelpers;
 
-  // Initialize user data from session storage
+  const isManualRequestDisabled = restrictedCategories.includes(formData.componentBehavior);
+
+  const isManualRequestAllowedForCategory = allowedManualCategories.includes(formData.componentBehavior);
+
+  const currentCategoryType = getCategoryType(formData.componentBehavior);
+
   useEffect(() => {
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -73,30 +89,56 @@ const ApplyLeave = () => {
     }
   }, [dispatch]);
 
-  // Calculate days when dates or half-day changes
+  useEffect(() => {
+    if (isManualRequestAllowedForCategory && !formData.isManualRequest) {
+      dispatch(updateFormField({
+        name: 'isManualRequest',
+        value: true,
+        checked: true,
+        type: 'checkbox'
+      }));
+    }
+  }, [dispatch, formData.componentBehavior, isManualRequestAllowedForCategory, formData.isManualRequest]);
+
+  useEffect(() => {
+    if (isManualRequestDisabled && formData.isManualRequest) {
+      dispatch(updateFormField({
+        name: 'isManualRequest',
+        value: false,
+        checked: false,
+        type: 'checkbox'
+      }));
+    }
+  }, [dispatch, formData.componentBehavior, isManualRequestDisabled, formData.isManualRequest]);
+
   useEffect(() => {
     if (formData.fromDate && formData.toDate) {
       dispatch(calculateDays());
     }
-  }, [dispatch, formData.fromDate, formData.toDate, formData.isHalfDay]);
+  }, [dispatch, formData.fromDate, formData.toDate, formData.componentBehavior]);
 
-  // Handle form field changes
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
     dispatch(updateFormField({ name, value, checked, type }));
   };
 
-  // Handle form submission - FIXED: Use selector instead of action payload
+  const handleComponentBehaviorChange = (event) => {
+    const newBehavior = event.target.value;
+    dispatch(setComponentBehavior(newBehavior));
+  };
+
+  const handleManualRequestChange = (event) => {
+    if (!isManualRequestDisabled) {
+      handleChange(event);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Dispatch validation and then check the result from state
     dispatch(validateForm());
 
-    // We need to get the validation result after the state update
-    // So we'll use a setTimeout to check the state in the next tick
     setTimeout(() => {
-      // Get the current state
       const currentIsValid = isValid;
 
       if (!currentIsValid) return;
@@ -116,15 +158,24 @@ const ApplyLeave = () => {
       dispatch(submitLeaveRequest({ formData, userId }))
           .unwrap()
           .then(() => {
-            // Refresh leave balances after successful submission
             dispatch(fetchLeaveBalances(userId));
           });
     }, 0);
   };
 
-  // Handle notification close
   const handleCloseNotification = () => {
     dispatch(closeNotification());
+  };
+
+  const getCategoryTypeColor = (type) => {
+    switch (type) {
+      case 'leave':
+        return 'primary';
+      case 'attendance':
+        return 'secondary';
+      default:
+        return 'default';
+    }
   };
 
   return (
@@ -135,7 +186,6 @@ const ApplyLeave = () => {
             Apply for Leave
           </Typography>
 
-          {/* Leave Balance Cards */}
           <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
             Available Leave Balance
           </Typography>
@@ -183,6 +233,58 @@ const ApplyLeave = () => {
               ))}
             </TextField>
 
+            <FormControl fullWidth margin="normal" required>
+              <InputLabel id="componentBehavior-label">Leave Category</InputLabel>
+              <Select
+                  labelId="componentBehavior-label"
+                  id="componentBehavior"
+                  name="componentBehavior"
+                  value={formData.componentBehavior}
+                  label="Leave Category"
+                  onChange={handleComponentBehaviorChange}
+                  error={!!errors.componentBehavior}
+              >
+                {componentBehaviors.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{option.label}</span>
+                        <Chip
+                            label={option.type}
+                            size="small"
+                            color={getCategoryTypeColor(option.type)}
+                            variant="outlined"
+                        />
+                        {option.allowsManualRequest && (
+                            <Chip
+                                label="Manual OK"
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                            />
+                        )}
+                      </Box>
+                    </MenuItem>
+                ))}
+              </Select>
+              {errors.componentBehavior && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                    {errors.componentBehavior}
+                  </Typography>
+              )}
+            </FormControl>
+
+            <Box sx={{ mt: 1, mb: 2 }}>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Category Type:</strong>{' '}
+                <Chip
+                    label={currentCategoryType.charAt(0).toUpperCase() + currentCategoryType.slice(1)}
+                    size="small"
+                    color={getCategoryTypeColor(currentCategoryType)}
+                    variant="filled"
+                />
+              </Typography>
+            </Box>
+
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -215,39 +317,15 @@ const ApplyLeave = () => {
                     InputLabelProps={{ shrink: true }}
                     error={!!errors.toDate}
                     helperText={errors.toDate}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Leave day type selection */}
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isHalfDay}
-                          onChange={handleChange}
-                          name="isHalfDay"
-                      />
-                    }
-                    label="Half Day"
-                />
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isFullDay}
-                          onChange={handleChange}
-                          name="isFullDay"
-                      />
-                    }
-                    label="Full Day"
+                    disabled={formData.componentBehavior === 'HALF_DAY'}
                 />
               </Grid>
             </Grid>
 
             {formData.numOfDays > 0 && (
                 <Typography variant="body2" sx={{ mt: 1, mb: 2 }}>
-                  Number of days: <strong>{formData.numOfDays}</strong> ({formData.isHalfDay ? "Half Day" : "Full Day"})
+                  Number of days: <strong>{formData.numOfDays}</strong>
+                  {formData.componentBehavior === 'HALF_DAY' ? " (Half Day)" : " (Full Day)"}
                 </Typography>
             )}
 
@@ -279,94 +357,80 @@ const ApplyLeave = () => {
             />
 
             <Divider sx={{ my: 2 }} />
+
             <Typography variant="subtitle1" gutterBottom>
-              Leave Request Options
+              Request Options
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <FormControlLabel
                     control={
                       <Checkbox
                           checked={formData.isManualRequest}
-                          onChange={handleChange}
+                          onChange={handleManualRequestChange}
                           name="isManualRequest"
-                          disabled={formData.isHalfDay || formData.isUnauthorized || formData.isAbsent ||
-                              formData.isLateCover || formData.isLate || formData.unSuccessful}
+                          disabled={isManualRequestDisabled}
                       />
                     }
-                    label="Manual Request"
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isUnauthorized}
-                          onChange={handleChange}
-                          name="isUnauthorized"
-                      />
+                    label={
+                      <Box>
+                        <Typography component="span">Manual Request</Typography>
+                        {isManualRequestDisabled && (
+                            <Typography variant="caption" color="error" display="block">
+                              Not available for {currentCategoryType} categories
+                            </Typography>
+                        )}
+                        {isManualRequestAllowedForCategory && (
+                            <Typography variant="caption" color="success.main" display="block">
+                              Available for this category
+                            </Typography>
+                        )}
+                      </Box>
                     }
-                    label="Unauthorized Leave"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isAbsent}
-                          onChange={handleChange}
-                          name="isAbsent"
-                      />
-                    }
-                    label="Absent"
-                />
+                {errors.isManualRequest && (
+                    <Typography variant="caption" color="error" display="block" sx={{ ml: 4 }}>
+                      {errors.isManualRequest}
+                    </Typography>
+                )}
               </Grid>
             </Grid>
 
-            {/* New fields from LeaveReq */}
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isLateCover}
-                          onChange={handleChange}
-                          name="isLateCover"
-                      />
-                    }
-                    label="Late Cover"
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Selected Category:</strong> {componentBehaviors.find(cb => cb.value === formData.componentBehavior)?.label}
+                <Chip
+                    label={currentCategoryType}
+                    size="small"
+                    color={getCategoryTypeColor(currentCategoryType)}
+                    variant="outlined"
+                    sx={{ ml: 1 }}
                 />
-              </Grid>
+              </Typography>
 
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.isLate}
-                          onChange={handleChange}
-                          name="isLate"
-                      />
-                    }
-                    label="Late"
-                />
-              </Grid>
+              {formData.componentBehavior === 'HALF_DAY' && (
+                  <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                    Half day leave must be for a single day only. Manual Request is available.
+                  </Typography>
+              )}
+              {formData.componentBehavior === 'FULL_DAY' && (
+                  <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                    Full day leave. Manual Request is available.
+                  </Typography>
+              )}
+              {restrictedCategories.includes(formData.componentBehavior) && (
+                  <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
+                    Manual Request is not available for this category.
+                  </Typography>
+              )}
 
-              <Grid item xs={12} sm={4}>
-                <FormControlLabel
-                    control={
-                      <Checkbox
-                          checked={formData.unSuccessful}
-                          onChange={handleChange}
-                          name="unSuccessful"
-                      />
-                    }
-                    label="Unsuccessful"
-                />
-              </Grid>
-            </Grid>
+              <Box sx={{ mt: 2, p: 1, bgcolor: isManualRequestAllowedForCategory ? 'success.50' : 'error.50', borderRadius: 1 }}>
+                <Typography variant="caption" color={isManualRequestAllowedForCategory ? 'success.main' : 'error.main'}>
+                  <strong>Manual Request:</strong> {isManualRequestAllowedForCategory ? 'Allowed' : 'Not Allowed'} for this category
+                </Typography>
+              </Box>
+            </Box>
 
             <Button
                 type="submit"

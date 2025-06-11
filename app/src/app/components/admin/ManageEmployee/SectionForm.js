@@ -1,4 +1,3 @@
-// components/management/SectionForm.js
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";

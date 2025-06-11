@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.service.impl;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.InOutType;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.AccessLogRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
@@ -24,10 +25,7 @@ import java.util.List;
 public class AccessLogServiceImpl implements AccessLogService {
 
     private static final Logger logger = LoggerFactory.getLogger(AccessLogServiceImpl.class);
-    private static final LocalTime NOON = LocalTime.NOON; // 12:00:00
-    private static final String IN = "IN";
-    private static final String OUT = "OUT";
-
+    private static final LocalTime NOON = LocalTime.NOON;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
     private final SimpleDateFormat inputDateFormat = new SimpleDateFormat("dd/MM/yyyy");
@@ -54,7 +52,7 @@ public class AccessLogServiceImpl implements AccessLogService {
                 AccessLogEntity managedLog = accessLogRepository.findById(log.getId()).orElse(log);
                 processAccessLog(managedLog);
             } catch (ParseException e) {
-                logger.error("Failed to process log entry with ID: {}", log.getEmployeeID(), e);
+                logger.error("Failed to process log entry with ID: {}", log.getEmployeeId(), e);
                 throw e;
             }
         }
@@ -67,8 +65,8 @@ public class AccessLogServiceImpl implements AccessLogService {
         Time punchTime = parseTime(log.getLogTime());
 
         logger.debug("Processing log - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
-                punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID(), log);
+                punchDate, punchTime, log.getEmployeeId(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(), log.getTerminalId(), log);
     }
 
     @Override
@@ -81,7 +79,6 @@ public class AccessLogServiceImpl implements AccessLogService {
     @Override
     public void prerequisite() {
         logger.info("Running prerequisite checks");
-        // Existing prerequisite logic
     }
 
     @Override
@@ -92,8 +89,8 @@ public class AccessLogServiceImpl implements AccessLogService {
         Time punchTime = parseTime(log.getLogTime());
 
         logger.debug("Processing log entry - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
-                punchDate, punchTime, log.getEmployeeID(), log.getInOut());
-        saveInOutRecord(logDate, punchTime, log.getEmployeeID(), log.getInOut(), log.getTerminalID(), log);
+                punchDate, punchTime, log.getEmployeeId(), log.getInOut());
+        saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(), log.getTerminalId(), log);
     }
 
     private Date parseDate(String dateString) throws ParseException {
@@ -122,48 +119,44 @@ public class AccessLogServiceImpl implements AccessLogService {
         }
 
         InOutEntity inOut = new InOutEntity();
-        inOut.setTerminalID(terminalId);
+        inOut.setTerminalId(terminalId);
         LocalTime punchLocalTime = LocalTime.parse(punchTime.toString());
         boolean isMorning = punchLocalTime.isBefore(NOON);
 
         try {
-            // Parse the input date (format: "dd/MM/yyyy")
             Date date = inputDateFormat.parse(logDate);
-            long combinedDateTime = date.getTime();
-            Timestamp punchTimestamp = new Timestamp(combinedDateTime);
 
-            // Set employee ID
-            inOut.setEmployeeID(employeeID);
+            inOut.setEmployeeId(employeeID);
             inOut.setDate(helper.getYesterdayDate());
             inOut.setEtlRunTime(new Date());
             String normalizedInout = inout.trim().toUpperCase();
 
             switch (normalizedInout) {
                 case "IN":
-                    inOut.setInOut(1);
+                    inOut.setInOutValue(1);
                     if (isMorning) {
-                        inOut.setPunchInMoa(punchTimestamp);
-                        inOut.setTimeMoa(punchTime);
-                        inOut.setIsMoaning(true);
+                        inOut.setInOutType(InOutType.MORNING_IN);
+                        inOut.setPunchTypeTime(punchTime);
+                        inOut.setPunchTime(date);
                     } else {
-                        inOut.setPunchInEv(punchTimestamp);
-                        inOut.setTimeEve(punchTime);
-                        inOut.setIsEvening(true);
+                        inOut.setInOutType(InOutType.EVENING_IN);
+                        inOut.setPunchTypeTime(punchTime);
+                        inOut.setPunchTime(date);
                     }
                     logger.debug("Prepared IN record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
                     break;
 
                 case "OUT":
-                    inOut.setInOut(0);
+                    inOut.setInOutValue(0);
                     if (isMorning) {
-                        inOut.setPunchInMoa(punchTimestamp);
-                        inOut.setTimeMoa(punchTime);
-                        inOut.setIsMoaning(true);
+                        inOut.setInOutType(InOutType.MORNING_OUT);
+                        inOut.setPunchTypeTime(punchTime);
+                        inOut.setPunchTime(date);
                     } else {
-                        inOut.setPunchInEv(punchTimestamp);
-                        inOut.setTimeEve(punchTime);
-                        inOut.setIsEvening(true);
+                        inOut.setInOutType(InOutType.MORNING_IN);
+                        inOut.setPunchTypeTime(punchTime);
+                        inOut.setPunchTime(date);
                     }
                     logger.debug("Prepared OUT record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
@@ -174,14 +167,10 @@ public class AccessLogServiceImpl implements AccessLogService {
                     throw new IllegalArgumentException("Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
             }
 
-            // Check for existing entries
-            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIDAndDateAndPunchInMoaAndPunchInEvAndTimeMoaAndTimeEve(
-                    inOut.getEmployeeID(),
+            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIdAndDateAndPunchTime(
+                    inOut.getEmployeeId(),
                     inOut.getDate(),
-                    inOut.getPunchInMoa(),
-                    inOut.getPunchInEv(),
-                    inOut.getTimeMoa(),
-                    inOut.getTimeEve());
+                    inOut.getPunchTime());
 
             boolean shouldSave = true;
 
@@ -196,32 +185,13 @@ public class AccessLogServiceImpl implements AccessLogService {
                 }
             }
 
-            // Only save if the record doesn't already exist
             if (shouldSave) {
-                // Set additional fields before saving
-                inOut.setCreateDate(new Date());
-                inOut.setUpdateDate(new Date());
+                inOut.setCreatedDate(new Date());
+                inOut.setUpdatedDate(new Date());
 
-                // Save the InOut record first
                 InOutEntity savedInOut = inOutRepository.save(inOut);
                 logger.debug("Successfully saved InOut record with ID: {} for employee: {}",
                         savedInOut.getId(), employeeID);
-
-                // Now update the AccessLog with reference to the saved InOut
-                // CRITICAL FIX: Fetch the managed entity to avoid detached entity error
-                AccessLogEntity managedLog = accessLogRepository.findById(log.getId())
-                        .orElseThrow(() -> new RuntimeException("AccessLog not found with ID: " + log.getId()));
-
-                // Set the relationship and update the access log
-                savedInOut.setAccessLog(managedLog);
-                managedLog.setInOu(savedInOut);
-                managedLog.setUpdateDate(new Date());
-
-                // Save both entities to ensure the relationship is persisted
-                inOutRepository.save(savedInOut);
-                accessLogRepository.save(managedLog);
-
-                logger.debug("Successfully updated AccessLog with InOut reference for employee: {}", employeeID);
             }
 
         } catch (ParseException e) {

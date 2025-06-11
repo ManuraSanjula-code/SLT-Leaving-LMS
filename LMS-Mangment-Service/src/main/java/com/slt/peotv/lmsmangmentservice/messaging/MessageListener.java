@@ -10,8 +10,6 @@ import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
-
 @Component
 public class MessageListener {
 

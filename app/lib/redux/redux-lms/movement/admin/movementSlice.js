@@ -4,7 +4,6 @@ export const fetchMovementRequests = createAsyncThunk(
     'movement/fetchMovementRequests',
     async ({ page = 0, size = 10 }, { rejectWithValue }) => {
         try {
-            // Get userId from session storage
             const storedUserId = sessionStorage.getItem('userId');
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -14,10 +13,9 @@ export const fetchMovementRequests = createAsyncThunk(
                 throw new Error('User ID not found in session storage');
             }
 
-            // Use the URL with the userId from session storage
-            const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}&isAdmin=${true}`, {
+            const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
                 method: 'GET',
-                credentials: 'include', // This will send cookies with the request
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -28,7 +26,6 @@ export const fetchMovementRequests = createAsyncThunk(
 
             const data = await response.json();
 
-            // Filter out null values from the content array
             const filteredContent = data.content.filter(item => item !== null);
 
             return {
@@ -172,21 +169,17 @@ export const processBulkMovementRequests = createAsyncThunk(
                 throw new Error('User ID not found in session storage');
             }
 
-            // Get the movement requests from the state
             const state = getState();
             const movementRequests = state.movement.requests;
 
-            // Extract employee IDs from the selected movement requests
             const approvedEmployeesToday = [];
 
             movementRequests.forEach(request => {
                 if (request && request.publicId && movementIds.includes(request.publicId) && request.employeeId) {
-                    // Fixed: Changed from request.employeeID to request.employeeId (lowercase 'd')
                     approvedEmployeesToday.push(request.employeeId);
                 }
             });
 
-            // Create the request body
             const requestBody = {
                 approvedEmployeesToday,
                 approvedIds: movementIds
@@ -228,7 +221,6 @@ export const processBulkMovementRequests = createAsyncThunk(
     }
 );
 
-// Create the movement slice
 const movementSlice = createSlice({
     name: 'movement',
     initialState: {
@@ -244,7 +236,6 @@ const movementSlice = createSlice({
         error: null
     },
     reducers: {
-        // Handle selection of a single row
         selectMovementRequest: (state, action) => {
             const id = action.payload;
             if (state.selected.includes(id)) {
@@ -254,7 +245,6 @@ const movementSlice = createSlice({
             }
         },
 
-        // Handle "Select All" functionality
         selectAllMovementRequests: (state) => {
             if (state.selected.length === state.requests.length) {
                 state.selected = [];
@@ -263,19 +253,16 @@ const movementSlice = createSlice({
             }
         },
 
-        // Clear selected items
         clearSelectedMovementRequests: (state) => {
             state.selected = [];
         },
 
-        // Set page size
         setPageSize: (state, action) => {
             state.pagination.pageSize = action.payload;
         }
     },
     extraReducers: (builder) => {
         builder
-            // Handle fetchMovementRequests
             .addCase(fetchMovementRequests.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -289,15 +276,12 @@ const movementSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-
-            // Handle processMovementRequest
             .addCase(processMovementRequest.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(processMovementRequest.fulfilled, (state, action) => {
                 state.loading = false;
-                // Update the status of the processed request in the state
                 const index = state.requests.findIndex(request => request.publicId === action.payload.movementId);
                 if (index !== -1) {
                     if (action.payload.approved) {
@@ -314,14 +298,12 @@ const movementSlice = createSlice({
                 state.error = action.payload;
             })
 
-            // Handle processBulkMovementRequests
             .addCase(processBulkMovementRequests.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(processBulkMovementRequests.fulfilled, (state, action) => {
                 state.loading = false;
-                // For each ID in the payload, update the corresponding request
                 action.payload.movementIds.forEach(id => {
                     const index = state.requests.findIndex(request => request.publicId === id);
                     if (index !== -1) {
@@ -334,7 +316,6 @@ const movementSlice = createSlice({
                         }
                     }
                 });
-                // Clear selection after bulk processing
                 state.selected = [];
             })
             .addCase(processBulkMovementRequests.rejected, (state, action) => {
@@ -344,7 +325,6 @@ const movementSlice = createSlice({
     }
 });
 
-// Export actions
 export const {
     selectMovementRequest,
     selectAllMovementRequests,
@@ -352,5 +332,4 @@ export const {
     setPageSize
 } = movementSlice.actions;
 
-// Export reducer
 export default movementSlice.reducer;

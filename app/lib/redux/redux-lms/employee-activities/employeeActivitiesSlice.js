@@ -8,32 +8,26 @@ const initialState = {
     rowsPerPage: 5,
     formData: {
         date: new Date().toISOString().split('T')[0],
-        employeeID: '',
-        fullDay: false,
+        employeeId: '',
         arrivalDate: new Date().toISOString().split('T')[0],
         arrivalTime: '',
         leftTime: '',
-        late: false,
-        lateCover: false,
-        halfDay: false,
-        fullLeave: false,
-        shortLeave: false,
-        absent: true,
-        unSuccessful: false,
-        isNoPay: false,
-        issues: false,
-        unAuthorized: false,
-        resolve: false,
-        leaveSuccess: false,
-        leaveReq: false,
+        attendanceType: 'FULL_DAY',
+        leaveStatus: null,
+        payStatus: null,
+        resolve: null,
+        isLate: false,
+        isLateCovered: false,
+        isUnauthorized: false,
+        isUnSuccessful: false,
+        isHoliday: false,
+        isResolved: false,
+        hasIssues: false,
+        isManual: true,
+        isActive: true,
         issueDescription: '',
         dueDateForUA: '',
-        active: true,
-        nopay: false,
-        viaMovement: false,
-        viaLeave: false,
-        manual: false,
-        terminalID: '',
+        terminalId: '',
     },
     isEditMode: false,
     editId: null,
@@ -59,7 +53,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}&isAdmin=${isAdmin}`, {
+            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`, {
                 credentials: 'include',
             });
 
@@ -88,7 +82,6 @@ export const createEmployeeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-
             const response = await fetch('http://localhost:8080/lms/' + empId, {
                 method: 'POST',
                 headers: {
@@ -119,10 +112,6 @@ export const updateEmployeeActivity = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const submissionData = prepareFormData(formData);
-            let userInput = prompt("Enter your comment:");
-            if(userInput == null) return rejectWithValue('Comment is Required');
-            submissionData.adminId = empId;
-            submissionData.adminComment = userInput;
             const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'PUT',
                 headers: {
@@ -198,11 +187,10 @@ export const deleteEmployeeDeActivity = createAsyncThunk(
     }
 );
 
-// Helper function to prepare form data for submission
 const prepareFormData = (formData) => {
     const submissionData = { ...formData };
 
-    // Convert time strings to proper SQL Time format
+    // Handle time formatting
     if (submissionData.arrivalTime) {
         if (!submissionData.arrivalTime.includes(':')) {
             submissionData.arrivalTime = submissionData.arrivalTime + ":00:00";
@@ -223,7 +211,7 @@ const prepareFormData = (formData) => {
         submissionData.leftTime = "00:00:00";
     }
 
-    // Handle dates - ensure they are in ISO format
+    // Handle date formatting
     if (submissionData.date) {
         submissionData.date = new Date(submissionData.date).toISOString();
     } else {
@@ -236,12 +224,25 @@ const prepareFormData = (formData) => {
         submissionData.arrivalDate = new Date().toISOString();
     }
 
-    if (submissionData.dueDateForUA) {
+    if (submissionData.dueDateForUA && submissionData.isUnauthorized) {
         submissionData.dueDateForUA = new Date(submissionData.dueDateForUA).toISOString();
-    } else if (submissionData.isUnAuthorized) {
+    } else if (submissionData.isUnauthorized) {
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 7);
         submissionData.dueDateForUA = dueDate.toISOString();
+    } else {
+        submissionData.dueDateForUA = null;
+    }
+
+    // Convert null values to proper enum values or null
+    if (!submissionData.leaveStatus || submissionData.leaveStatus === '') {
+        submissionData.leaveStatus = null;
+    }
+    if (!submissionData.payStatus || submissionData.payStatus === '') {
+        submissionData.payStatus = null;
+    }
+    if (!submissionData.resolve || submissionData.resolve === '') {
+        submissionData.resolve = null;
     }
 
     return submissionData;
