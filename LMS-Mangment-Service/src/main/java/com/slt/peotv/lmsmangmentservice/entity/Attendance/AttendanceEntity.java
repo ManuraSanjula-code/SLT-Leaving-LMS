@@ -90,7 +90,7 @@ public class AttendanceEntity {
     private Date createdDate = new Date();
 
     @Column(name = "updated_date")
-    private Date updatedDate;
+    private Date updatedDate = new Date();
 
     @Builder.Default
     @Column(name = "is_active")

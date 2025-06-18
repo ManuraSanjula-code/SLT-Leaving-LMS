@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchMovementRequests,
@@ -32,12 +32,24 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Divider
 } from "@mui/material";
 import { format } from "date-fns";
 
 const ManageMovementRequests = () => {
   const dispatch = useDispatch();
+  const [openDetails, setOpenDetails] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState(null);
 
   const movementRequests = useSelector(state => state.movement.requests);
   const selected = useSelector(state => state.movement.selected);
@@ -113,7 +125,6 @@ const ManageMovementRequests = () => {
       movementIds: selected,
       approved: false
     })).then(() => {
-      // Refresh data after bulk rejection
       dispatch(fetchMovementRequests({
         page: pagination.currentPage,
         size: pagination.pageSize
@@ -126,7 +137,6 @@ const ManageMovementRequests = () => {
       movementId,
       approved: true
     })).then(() => {
-      // Refresh data after approval
       dispatch(fetchMovementRequests({
         page: pagination.currentPage,
         size: pagination.pageSize
@@ -139,12 +149,21 @@ const ManageMovementRequests = () => {
       movementId,
       approved: false
     })).then(() => {
-      // Refresh data after rejection
       dispatch(fetchMovementRequests({
         page: pagination.currentPage,
         size: pagination.pageSize
       }));
     });
+  };
+
+  const handleOpenDetails = (movement) => {
+    setSelectedMovement(movement);
+    setOpenDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setOpenDetails(false);
+    setSelectedMovement(null);
   };
 
   const formatDate = (dateString) => {
@@ -223,6 +242,23 @@ const ManageMovementRequests = () => {
     }
 
     return <Chip label="Submitted" color="default" size="small" />;
+  };
+
+  const getAdminApprovalStatus = (movement) => {
+    if (!movement.adminsTra || movement.adminsTra.length === 0) {
+      return <Chip label="No Approvers" color="default" size="small" />;
+    }
+
+    const approved = movement.adminsTra.filter(admin => admin.accepted).length;
+    const total = movement.adminsTra.length;
+
+    if (approved === total) {
+      return <Chip label={`Approved (${approved}/${total})`} color="success" size="small" />;
+    } else if (approved > 0) {
+      return <Chip label={`Partially Approved (${approved}/${total})`} color="warning" size="small" />;
+    } else {
+      return <Chip label={`Pending (0/${total})`} color="default" size="small" />;
+    }
   };
 
   return (
@@ -324,8 +360,7 @@ const ManageMovementRequests = () => {
                         <TableCell>Movement Date</TableCell>
                         <TableCell>Type</TableCell>
                         <TableCell>In/Out Times</TableCell>
-                        <TableCell>Destination</TableCell>
-                        <TableCell>Comment</TableCell>
+                        <TableCell>Approval Status</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Actions</TableCell>
                       </TableRow>
@@ -333,7 +368,7 @@ const ManageMovementRequests = () => {
                     <TableBody>
                       {movementRequests.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={10} align="center">
+                            <TableCell colSpan={9} align="center">
                               No movement requests found
                             </TableCell>
                           </TableRow>
@@ -347,17 +382,17 @@ const ManageMovementRequests = () => {
                                     <Tooltip
                                         title={isRequestNonSelectable ? "This movement request cannot be selected" : ""}
                                     >
-                                    <span>
-                                      <Checkbox
-                                          checked={selected.includes(request.publicId)}
-                                          onChange={() => handleSelect(request.publicId)}
-                                          disabled={isRequestNonSelectable}
-                                      />
-                                    </span>
+                              <span>
+                                <Checkbox
+                                    checked={selected.includes(request.publicId)}
+                                    onChange={() => handleSelect(request.publicId)}
+                                    disabled={isRequestNonSelectable}
+                                />
+                              </span>
                                     </Tooltip>
                                   </TableCell>
                                   <TableCell>
-                                    {request.employeeId?.substring(0, 8)}...
+                                    {request.employeeId}
                                   </TableCell>
                                   <TableCell>{formatDateTime(request.reqDate)}</TableCell>
                                   <TableCell>{formatDate(request.happenDate)}</TableCell>
@@ -369,43 +404,50 @@ const ManageMovementRequests = () => {
                                   <TableCell>
                                     {request.inTime ? formatTime(request.inTime) : "N/A"} - {request.outTime ? formatTime(request.outTime) : "N/A"}
                                   </TableCell>
-                                  <TableCell>{request.destination || "N/A"}</TableCell>
-                                  <TableCell sx={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {request.comment || "N/A"}
+                                  <TableCell>
+                                    {getAdminApprovalStatus(request)}
                                   </TableCell>
                                   <TableCell>{getStatusChip(request)}</TableCell>
                                   <TableCell>
-                                    <Tooltip
-                                        title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
-                                    >
-                                    <span>
-                                      <Button
-                                          variant="contained"
-                                          color="primary"
-                                          size="small"
-                                          sx={{ mr: 1, mb: 1 }}
-                                          disabled={isRequestNonSelectable || loading}
-                                          onClick={() => handleApprove(request.publicId)}
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Tooltip
+                                          title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
                                       >
-                                        Approve
-                                      </Button>
-                                    </span>
-                                    </Tooltip>
-                                    <Tooltip
-                                        title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
-                                    >
-                                    <span>
+                                <span>
+                                  <Button
+                                      variant="contained"
+                                      color="primary"
+                                      size="small"
+                                      disabled={isRequestNonSelectable || loading}
+                                      onClick={() => handleApprove(request.publicId)}
+                                  >
+                                    Approve
+                                  </Button>
+                                </span>
+                                      </Tooltip>
+                                      <Tooltip
+                                          title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
+                                      >
+                                <span>
+                                  <Button
+                                      variant="outlined"
+                                      color="error"
+                                      size="small"
+                                      disabled={isRequestNonSelectable || loading}
+                                      onClick={() => handleReject(request.publicId)}
+                                  >
+                                    Reject
+                                  </Button>
+                                </span>
+                                      </Tooltip>
                                       <Button
                                           variant="outlined"
-                                          color="error"
                                           size="small"
-                                          disabled={isRequestNonSelectable || loading}
-                                          onClick={() => handleReject(request.publicId)}
+                                          onClick={() => handleOpenDetails(request)}
                                       >
-                                        Reject
+                                        View Details
                                       </Button>
-                                    </span>
-                                    </Tooltip>
+                                    </Box>
                                   </TableCell>
                                 </TableRow>
                             );
@@ -434,6 +476,114 @@ const ManageMovementRequests = () => {
               </>
           )}
         </Box>
+
+        {/* Movement Details Dialog */}
+        <Dialog open={openDetails} onClose={handleCloseDetails} maxWidth="md" fullWidth>
+          {selectedMovement && (
+              <>
+                <DialogTitle>Movement Request Details</DialogTitle>
+                <DialogContent dividers>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Basic Information</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                      <div>
+                        <Typography variant="subtitle2">Employee ID:</Typography>
+                        <Typography>{selectedMovement.employeeId}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Movement Type:</Typography>
+                        <Typography>{getMovementTypeDisplay(selectedMovement)}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Movement Date:</Typography>
+                        <Typography>{formatDate(selectedMovement.happenDate)}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Request Date:</Typography>
+                        <Typography>{formatDateTime(selectedMovement.reqDate)}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">In Time:</Typography>
+                        <Typography>{formatTime(selectedMovement.inTime) || "N/A"}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Out Time:</Typography>
+                        <Typography>{formatTime(selectedMovement.outTime) || "N/A"}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Duration:</Typography>
+                        <Typography>
+                          {selectedMovement.movementDurationMinutes !== undefined
+                              ? `${selectedMovement.movementDurationMinutes} minutes`
+                              : "N/A"}
+                        </Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Same Day Movement:</Typography>
+                        <Typography>{selectedMovement.sameDayMovement ? "Yes" : "No"}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Category:</Typography>
+                        <Typography>{selectedMovement.category || "N/A"}</Typography>
+                      </div>
+                      <div>
+                        <Typography variant="subtitle2">Destination:</Typography>
+                        <Typography>{selectedMovement.destination || "N/A"}</Typography>
+                      </div>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>Comments</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <Typography>
+                      {selectedMovement.comment || "No comments provided"}
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="h6" gutterBottom>Approval Status</Typography>
+                    <Divider sx={{ mb: 2 }} />
+                    <List>
+                      {selectedMovement.adminsTra && selectedMovement.adminsTra.length > 0 ? (
+                          selectedMovement.adminsTra.map((admin, index) => (
+                              <ListItem key={index}>
+                                <ListItemAvatar>
+                                  <Avatar>
+                                    {admin.firstName ? admin.firstName.charAt(0) : 'A'}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={`${admin.firstName || 'Unknown'} ${admin.lastName || ''}`}
+                                    secondary={
+                                      <>
+                                        <Typography component="span" variant="body2" color="text.primary">
+                                          {admin.email}
+                                        </Typography>
+                                        <br />
+                                        {admin.accepted ? (
+                                            <Chip label="Approved" color="success" size="small" />
+                                        ) : (
+                                            <Chip label="Pending" color="warning" size="small" />
+                                        )}
+                                      </>
+                                    }
+                                />
+                              </ListItem>
+                          ))
+                      ) : (
+                          <Typography>No approvers assigned</Typography>
+                      )}
+                    </List>
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseDetails}>Close</Button>
+                </DialogActions>
+              </>
+          )}
+        </Dialog>
       </Container>
   );
 };

@@ -56,7 +56,5 @@ public class CommandLine implements CommandLineRunner {
                 accessLogRepository.save(accessLog);
             });
         }*/
-
-        /// Check all the missing dates and get all of them also get today day and compare to
     }
 }

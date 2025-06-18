@@ -17,6 +17,7 @@ public interface MovementsRepo extends CrudRepository<MovementsEntity, Long> {
     Page<MovementsEntity> findAllByEmployee(EmployeeEntity employee, Pageable pageable);
     List<MovementsEntity> findAllByEmployee(EmployeeEntity employee);
     Optional<MovementsEntity> findAllByEmployeeAndReqDate(EmployeeEntity employeeI, Date reqDate);
+    Optional<MovementsEntity> findAllByEmployeeAndHappenDate(EmployeeEntity employeeI, Date happenDate);
     Optional<MovementsEntity> findByPublicId(String publicId);
     List<MovementsEntity> findByEmployeeAndReqDateBetween(
             EmployeeEntity employee,

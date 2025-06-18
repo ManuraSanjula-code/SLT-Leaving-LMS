@@ -63,18 +63,13 @@ import {
 } from "../../../../lib/redux/redux-lms/movement/movementSlice";
 
 const MOVEMENT_TYPES = {
-    ABSENT: 'Absent',
-    UNSUCCESSFUL: 'Unsuccessful',
-    REMOTEWORK: 'Remote Work',
-    UNAUTHORIZED: 'Unauthorized'
-};
-
-const COMPONENT_BEHAVIORS = {
-    HALF_DAY: 'Half Day',
-    FULL_DAY: 'Full Day',
-    UNSUCCESSFUL: 'Unsuccessful',
-    UNAUTHORIZED: 'Unauthorized',
-    ABSENT: 'Absent'
+    OFFICE_TO_HOME: 'Office to Home',
+    HOME_TO_OFFICE: 'Home to Office',
+    REMOTE_WORK: 'Remote Work',
+    SITE_VISIT: 'Site Visit',
+    TRAINING: 'Training',
+    MEETING: 'Meeting',
+    OTHER: 'Other'
 };
 
 const REQUEST_STATUSES = {
@@ -86,6 +81,7 @@ const REQUEST_STATUSES = {
     CANCELLED: 'Cancelled',
     EXPIRED: 'Expired'
 };
+
 const ADMIN_SELECTABLE_STATUSES = {
     DRAFT: 'Draft',
     SUBMITTED: 'Submitted',
@@ -95,7 +91,7 @@ const ADMIN_SELECTABLE_STATUSES = {
     CANCELLED: 'Cancelled'
 };
 
-const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = null }) => {
+const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = null }) => {
     const dispatch = useDispatch();
     const {
         requests: movementRequests,
@@ -126,7 +122,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
         inTime: "",
         outTime: "",
         logTime: "",
-        componentBehavior: "FULL_DAY",
         requestStatus: "DRAFT",
         attSync: 0,
         attendance: "",
@@ -138,7 +133,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
 
     useEffect(() => {
         if (userId == null) userId = sessionStorage.getItem('userId');
-        console.log(userId)
         if (userId) {
             dispatch(fetchMovementRequests({
                 isAdmin,
@@ -179,11 +173,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
     };
 
     const filteredMovementRequests = movementRequests.filter((request) => {
-        const unwantedBehaviors = ['LATE', 'LATE_COVER', 'SHORT_LEAVE'];
-        if (unwantedBehaviors.includes(request.componentBehavior)) {
-            return false;
-        }
-
         const employeeIdLower = (request.employeeId || "").toLowerCase();
         const typeLower = (request.type || "").toLowerCase();
         const destinationLower = (request.destination || "").toLowerCase();
@@ -303,10 +292,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
     const handleOpenEditDialog = (request) => {
         setCurrentEdit(request);
 
-        const validComponentBehavior = Object.keys(COMPONENT_BEHAVIORS).includes(request.componentBehavior)
-            ? request.componentBehavior
-            : "FULL_DAY";
-
         const validRequestStatus = Object.keys(ADMIN_SELECTABLE_STATUSES).includes(request.requestStatus)
             ? request.requestStatus
             : "DRAFT";
@@ -327,7 +312,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
             inTime: formatTimeForInput(request.inTime),
             outTime: formatTimeForInput(request.outTime),
             logTime: formatDateTimeForInput(request.logTime),
-            componentBehavior: validComponentBehavior,
             requestStatus: validRequestStatus,
             attSync: request.attSync || 0,
             attendance: request.attendance || "",
@@ -364,10 +348,10 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                 category: editValues.category,
                 inTime: editValues.inTime,
                 outTime: editValues.outTime,
-                componentBehavior: editValues.componentBehavior,
                 requestStatus: editValues.requestStatus,
                 attSync: editValues.attSync,
                 attendance: editValues.attendance,
+                isEdited: true
             };
 
             if (editValues.happenDate) {
@@ -637,7 +621,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                             <TableCell>Date</TableCell>
                                             <TableCell>Request Date</TableCell>
                                             <TableCell>Status</TableCell>
-                                            <TableCell>Component Behavior</TableCell>
                                             <TableCell>Actions</TableCell>
                                             <TableCell>View</TableCell>
                                         </TableRow>
@@ -674,7 +657,7 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                                         </Tooltip>
                                                     </TableCell>
                                                     <TableCell>{request.employeeId || ""}</TableCell>
-                                                    <TableCell>{request.type || "Unknown"}</TableCell>
+                                                    <TableCell>{MOVEMENT_TYPES[request.movementType] || request.type || "Unknown"}</TableCell>
                                                     <TableCell>{request.destination || "Not specified"}</TableCell>
                                                     <TableCell>{request.startDate || "Not specified"}</TableCell>
                                                     <TableCell>{request.endDate || "Not specified"}</TableCell>
@@ -695,9 +678,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                                                 </Tooltip>
                                                             )}
                                                         </Typography>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {COMPONENT_BEHAVIORS[request.componentBehavior] || request.componentBehavior || 'N/A'}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Tooltip
@@ -809,24 +789,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                         label="Movement Type"
                                     >
                                         {Object.entries(MOVEMENT_TYPES).map(([key, value]) => (
-                                            <MenuItem key={key} value={key}>
-                                                {value}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth margin="normal">
-                                    <InputLabel>Component Behavior</InputLabel>
-                                    <Select
-                                        name="componentBehavior"
-                                        value={editValues.componentBehavior}
-                                        onChange={handleEditChange}
-                                        label="Component Behavior"
-                                    >
-                                        {Object.entries(COMPONENT_BEHAVIORS).map(([key, value]) => (
                                             <MenuItem key={key} value={key}>
                                                 {value}
                                             </MenuItem>
@@ -999,9 +961,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                     <Typography variant="body2" color="textSecondary">
                                         <strong>Selected Movement Type:</strong> {MOVEMENT_TYPES[editValues.movementType] || 'None'}
                                     </Typography>
-                                    <Typography variant="body2" color="textSecondary">
-                                        <strong>Selected Component Behavior:</strong> {COMPONENT_BEHAVIORS[editValues.componentBehavior] || 'None'}
-                                    </Typography>
                                     {(isAdmin || useAdmin) && (
                                         <Typography variant="body2" color="textSecondary">
                                             <strong>Request Status:</strong> {REQUEST_STATUSES[editValues.requestStatus] || 'None'}
@@ -1066,7 +1025,7 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                         </TableRow>
                                         <TableRow>
                                             <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                                            <TableCell>{viewMovementData.type}</TableCell>
+                                            <TableCell>{MOVEMENT_TYPES[viewMovementData.movementType] || viewMovementData.type}</TableCell>
                                             <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Destination</TableCell>
                                             <TableCell>{viewMovementData.destination || "Not specified"}</TableCell>
                                         </TableRow>
@@ -1077,14 +1036,14 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                             <TableCell>{viewMovementData.endDate || "Not specified"}</TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                                            <TableCell>{viewMovementData.status}</TableCell>
-                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Component Behavior</TableCell>
-                                            <TableCell>{COMPONENT_BEHAVIORS[viewMovementData.componentBehavior] || 'N/A'}</TableCell>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>IN-TIME</TableCell>
+                                            <TableCell>{viewMovementData.inTime || "Not specified"}</TableCell>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>OUT-TIME</TableCell>
+                                            <TableCell>{viewMovementData.outTime || "Not specified"}</TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Request Status</TableCell>
-                                            <TableCell>{REQUEST_STATUSES[viewMovementData.requestStatus] || 'N/A'}</TableCell>
+                                            <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                            <TableCell>{viewMovementData.status}</TableCell>
                                             <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Edited</TableCell>
                                             <TableCell>{viewMovementData.isEdited ? 'Yes' : 'No'}</TableCell>
                                         </TableRow>
@@ -1122,16 +1081,16 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch In Time</TableCell>
-                                                                <TableCell>{inOutData.morning?.timeMoa || "Not recorded"}</TableCell>
+                                                                <TableCell>{inOutData.morning?.punchTypeTime || "Not recorded"}</TableCell>
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch In (Server Time)</TableCell>
-                                                                <TableCell>{inOutData.morning?.punchInMoa ? formatDate(inOutData.morning.punchInMoa) : "Not recorded"}</TableCell>
+                                                                <TableCell>{inOutData.morning?.punchTime ? formatDate(inOutData.morning.punchTime) : "Not recorded"}</TableCell>
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                                                 <TableCell>
-                                                                    {inOutData.morning?.inOut === 1 ? (
+                                                                    {inOutData.morning?.inOutValue === 1 ? (
                                                                         <Typography color="primary">Checked In</Typography>
                                                                     ) : (
                                                                         <Typography color="error">Not Checked In</Typography>
@@ -1160,16 +1119,16 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin= false, userId = nul
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch Out Time</TableCell>
-                                                                <TableCell>{inOutData.evening?.timeEve || "Not recorded"}</TableCell>
+                                                                <TableCell>{inOutData.evening?.punchTypeTime || "Not recorded"}</TableCell>
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Punch Out (Server Time)</TableCell>
-                                                                <TableCell>{inOutData.evening?.punchInEv ? formatDate(inOutData.evening.punchInEv) : "Not recorded"}</TableCell>
+                                                                <TableCell>{inOutData.evening?.punchTime ? formatDate(inOutData.evening.punchTime) : "Not recorded"}</TableCell>
                                                             </TableRow>
                                                             <TableRow>
                                                                 <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                                                 <TableCell>
-                                                                    {inOutData.evening?.inOut === 0 ? (
+                                                                    {inOutData.evening?.inOutValue === 0 ? (
                                                                         <Typography color="primary">Checked Out</Typography>
                                                                     ) : (
                                                                         <Typography color="warning.main">Not Checked Out</Typography>

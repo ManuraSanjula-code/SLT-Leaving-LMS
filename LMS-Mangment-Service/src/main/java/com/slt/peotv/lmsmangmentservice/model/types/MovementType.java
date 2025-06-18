@@ -1,9 +1,8 @@
 package com.slt.peotv.lmsmangmentservice.model.types;
 
 public enum MovementType {
-    ABSENT,
-    LATEWORK,
-    UNSUCCESSFUL,
+    FULLDAY,
+    OFFICE_TO_HOME,
+    HOME_TO_OFFICE,
     REMOTEWORK,
-    UNAUTHORIZED,
 }

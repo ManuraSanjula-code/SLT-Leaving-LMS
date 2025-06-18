@@ -19,8 +19,7 @@ public interface LMSClient {
 
     default List<AccessLogArchiveRest> getLms(String date, String token, Throwable exception){
         AccessLogArchiveRest accessLogArchiveRest = new AccessLogArchiveRest();
-        accessLogArchiveRest.setId(0L);
-        accessLogArchiveRest.setEmployeeID("A0000");
+        accessLogArchiveRest.setEmployeeId("A0000");
         return List.of(accessLogArchiveRest);
     }
 

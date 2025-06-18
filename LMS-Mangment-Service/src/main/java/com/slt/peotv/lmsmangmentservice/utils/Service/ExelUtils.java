@@ -5,6 +5,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -23,6 +24,7 @@ import java.util.Optional;
 public class ExelUtils {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     @Autowired
     private EmployeeRepo employeeRepo;
     @Autowired
@@ -35,7 +37,6 @@ public class ExelUtils {
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
 
     public byte[] generateEmployeeExcelReport(String id) throws IOException {
-        // Find employee
         Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
                 .or(() -> employeeRepo.findBySltId(id))
                 .or(() -> employeeRepo.findByPublicId(id));
@@ -44,31 +45,18 @@ public class ExelUtils {
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();
-
         List<AttendanceEntity> attendance = attendanceRepo.findByEmployee(employee);
         List<LeaveEntity> leaves = leaveRepo.findByEmployee(employee);
         List<MovementsEntity> movements = movementsRepo.findAllByEmployee(employee);
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
-        // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
-            // Create employee info sheet
             createEmployeeInfoSheet(workbook, employee);
-
-            // Create attendance sheet
             createAttendanceSheet(workbook, attendance);
-
-            // Create leaves sheet
             createLeavesSheet(workbook, leaves);
-
-            // Create movements sheet
             createMovementsSheet(workbook, movements);
-
-            // Create remaining leaves sheet
             createRemainingLeavesSheet(workbook, remainingLeaves);
 
-            // Create absences sheet
-            // Write to byte array
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
@@ -76,7 +64,6 @@ public class ExelUtils {
     }
 
     public byte[] generateEmployeeExcelReportByDate(String id, Date date) throws IOException {
-        // Find employee
         Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
                 .or(() -> employeeRepo.findBySltId(id))
                 .or(() -> employeeRepo.findByPublicId(id));
@@ -85,35 +72,18 @@ public class ExelUtils {
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();
-
-
         List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, date, date);
-
         List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, date, date);
-
         List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, date, date);
-
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
-
-        // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
-            // Create employee info sheet
             createEmployeeInfoSheet(workbook, employee);
-
-            // Create attendance sheet
             createAttendanceSheet(workbook, attendance);
-
-            // Create leaves sheet
             createLeavesSheet(workbook, leaves);
-
-            // Create movements sheet
             createMovementsSheet(workbook, movements);
-
-            // Create remaining leaves sheet
             createRemainingLeavesSheet(workbook, remainingLeaves);
 
-            // Write to byte array
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
@@ -122,140 +92,95 @@ public class ExelUtils {
 
     private void createEmployeeInfoSheet(Workbook workbook, EmployeeEntity employee) {
         Sheet sheet = workbook.createSheet("Employee Info");
-
-        // Create header style
         CellStyle headerStyle = createHeaderStyle(workbook);
 
-        // Create headers
         Row headerRow = sheet.createRow(0);
         createHeaderCell(headerRow, 0, "Attribute", headerStyle);
         createHeaderCell(headerRow, 1, "Value", headerStyle);
 
-        // Create employee data rows
         int rowNum = 1;
-
-        // Database ID
         createDataRow(sheet, rowNum++, "Database ID", employee.getId() != null ? employee.getId().toString() : "");
-
-        // Employee ID
         createDataRow(sheet, rowNum++, "Employee ID", employee.getEmployeeId() != null ? employee.getEmployeeId() : "");
-
-        // Public ID
         createDataRow(sheet, rowNum++, "Public ID", employee.getPublicId() != null ? employee.getPublicId() : "");
-
-        // SLT ID
         createDataRow(sheet, rowNum++, "SLT ID", employee.getSltId() != null ? employee.getSltId() : "");
-
-        // First Name
         createDataRow(sheet, rowNum++, "First Name", employee.getFirstName() != null ? employee.getFirstName() : "");
-
-        // Last Name
         createDataRow(sheet, rowNum++, "Last Name", employee.getLastName() != null ? employee.getLastName() : "");
-
-        // Full Name
         createDataRow(sheet, rowNum++, "Full Name",
                 (employee.getFirstName() != null ? employee.getFirstName() : "") + " " +
                         (employee.getLastName() != null ? employee.getLastName() : ""));
-
-        // Email
         createDataRow(sheet, rowNum++, "Email", employee.getEmail() != null ? employee.getEmail() : "");
-
-        // Join Date
         createDataRow(sheet, rowNum++, "Join Date",
                 employee.getJoin_date() != null ? dateFormat.format(employee.getJoin_date()) : "");
+        createDataRow(sheet, rowNum++, "Roaster",
+                employee.getRoaster() != null ? (employee.getRoaster() ? "Yes" : "No") : "No");
+        createDataRow(sheet, rowNum++, "Profile Pic",
+                employee.getProfilePic() != null ? employee.getProfilePic() : "");
 
-        // Auto-size columns
         sheet.autoSizeColumn(0);
         sheet.autoSizeColumn(1);
     }
 
     private void createAttendanceSheet(Workbook workbook, List<AttendanceEntity> attendanceList) {
         Sheet sheet = workbook.createSheet("Attendance");
-
-        // Create header style
         CellStyle headerStyle = createHeaderStyle(workbook);
 
-        // Add information row
         Row infoRow = sheet.createRow(0);
-        Cell infoCell = infoRow.createCell(0);
-        infoCell.setCellValue("Total Attendance Records: " + (attendanceList != null ? attendanceList.size() : 0));
+        infoRow.createCell(0).setCellValue("Total Attendance Records: " + (attendanceList != null ? attendanceList.size() : 0));
 
-        // Create headers
         Row headerRow = sheet.createRow(1);
         String[] headers = {
                 "ID", "Public ID", "Date", "Employee ID", "Arrival Date", "Arrival Time", "Left Time",
-                "Full Day", "Half Day", "Full Leave", "Short Leave", "Late", "Late Cover",
-                "Absent", "Unsuccessful", "No Pay", "Issues", "Unauthorized", "Resolved",
-                "Leave Success", "Leave Req", "Issue Description", "Due Date for UA",
-                "Active", "NoPay", "User ID", "Via Movement", "Via Leave", "Is Manual"
+                "Terminal ID", "Attendance Type", "Leave Status", "Pay Status", "Resolve Type",
+                "Is Late", "Is Late Covered", "Is Unauthorized", "Is Unsuccessful", "Is Holiday",
+                "Is Resolved", "Has Issues", "Is Manual", "Issue Description", "Due Date for UA",
+                "ETL Run Time", "Created Date", "Updated Date", "Is Active", "Via Movement", "Via Leave"
         };
 
         for (int i = 0; i < headers.length; i++) {
             createHeaderCell(headerRow, i, headers[i], headerStyle);
         }
 
-        // Check if list is empty
         if (attendanceList == null || attendanceList.isEmpty()) {
             Row row = sheet.createRow(2);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("No attendance records found");
+            row.createCell(0).setCellValue("No attendance records found");
             sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
         } else {
-            // Create data rows
             int rowNum = 2;
             for (AttendanceEntity attendance : attendanceList) {
                 Row row = sheet.createRow(rowNum++);
                 int colNum = 0;
 
-                // ID
                 createCell(row, colNum++, attendance.getId() != null ? attendance.getId().toString() : "");
-
-                // Public ID
                 createCell(row, colNum++, attendance.getPublicId() != null ? attendance.getPublicId() : "");
-
-                // Date
                 createCell(row, colNum++, attendance.getDate() != null ? dateFormat.format(attendance.getDate()) : "");
-
-                // Employee ID
                 createCell(row, colNum++, attendance.getEmployee() != null ? attendance.getEmployee().getEmployeeId() : "");
-
-                // Arrival Date
                 createCell(row, colNum++, attendance.getArrivalDate() != null ? dateFormat.format(attendance.getArrivalDate()) : "");
-
-                // Arrival Time
                 createCell(row, colNum++, attendance.getArrivalTime() != null ? attendance.getArrivalTime().toString() : "");
-
-                // Left Time
                 createCell(row, colNum++, attendance.getLeftTime() != null ? attendance.getLeftTime().toString() : "");
-
-                // Boolean fields
-                createCell(row, colNum++, attendance.getIsFullDay() != null ? (attendance.getIsFullDay() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getTerminalId() != null ? attendance.getTerminalId() : "");
+                createCell(row, colNum++, attendance.getAttendanceType() != null ? attendance.getAttendanceType().getDescription() : "");
+                createCell(row, colNum++, attendance.getLeaveStatus() != null ? attendance.getLeaveStatus().getDescription() : "");
+                createCell(row, colNum++, attendance.getPayStatus() != null ? attendance.getPayStatus().getDescription() : "");
+                createCell(row, colNum++, attendance.getResolve() != null ? attendance.getResolve().getDescription() : "");
                 createCell(row, colNum++, attendance.getIsLate() != null ? (attendance.getIsLate() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getIsLateCovered() != null ? (attendance.getIsLateCovered() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getIsUnauthorized() != null ? (attendance.getIsUnauthorized() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getIsUnSuccessful() != null ? (attendance.getIsUnSuccessful() ? "Yes" : "No") : "No");
-
-                createCell(row, colNum++, attendance.getAttendanceType() != null ? (attendance.getAttendanceType().getDescription() != null ? attendance.getAttendanceType().getDescription() : "") : "");
-                createCell(row, colNum++, attendance.getLeaveStatus() != null ? (attendance.getLeaveStatus().getDescription() != null ? attendance.getLeaveStatus().getDescription() : "") : "");
-                createCell(row, colNum++, attendance.getPayStatus() != null ? (attendance.getPayStatus().getDescription() != null ? attendance.getPayStatus().getDescription() : "") : "");
-                createCell(row, colNum++, attendance.getResolve() != null ? (attendance.getResolve().getDescription() != null ? attendance.getResolve().getDescription() : "") : "");
-
-                // Issue Description
+                createCell(row, colNum++, attendance.getIsHoliday() != null ? (attendance.getIsHoliday() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getIsResolved() != null ? (attendance.getIsResolved() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getHasIssues() != null ? (attendance.getHasIssues() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getIsManual() != null ? (attendance.getIsManual() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getIssueDescription() != null ? attendance.getIssueDescription() : "");
-
-                // Due Date for UA
                 createCell(row, colNum++, attendance.getDueDateForUA() != null ? dateFormat.format(attendance.getDueDateForUA()) : "");
-
-                // More Boolean fields
-                // User ID
-                createCell(row, colNum++, attendance.getEmployee().getPublicId() != null ? attendance.getEmployee().getPublicId() : "");
-
-                // More Boolean fields
+                createCell(row, colNum++, attendance.getEtlRunTime() != null ? dateTimeFormat.format(attendance.getEtlRunTime()) : "");
+                createCell(row, colNum++, attendance.getCreatedDate() != null ? dateTimeFormat.format(attendance.getCreatedDate()) : "");
+                createCell(row, colNum++, attendance.getUpdatedDate() != null ? dateTimeFormat.format(attendance.getUpdatedDate()) : "");
+                createCell(row, colNum++, attendance.getIsActive() != null ? (attendance.getIsActive() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getViaMovement() != null ? (attendance.getViaMovement() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getViaLeave() != null ? (attendance.getViaLeave() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsManual() != null ? (attendance.getIsManual() ? "Yes" : "No") : "No");
             }
         }
 
-        // Apply auto-sizing to all columns
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
         }
@@ -263,84 +188,54 @@ public class ExelUtils {
 
     private void createLeavesSheet(Workbook workbook, List<LeaveEntity> leavesList) {
         Sheet sheet = workbook.createSheet("Leaves");
-
-        // Create header style
         CellStyle headerStyle = createHeaderStyle(workbook);
 
-        // Add information row
         Row infoRow = sheet.createRow(0);
-        Cell infoCell = infoRow.createCell(0);
-        infoCell.setCellValue("Total Leave Records: " + (leavesList != null ? leavesList.size() : 0));
+        infoRow.createCell(0).setCellValue("Total Leave Records: " + (leavesList != null ? leavesList.size() : 0));
 
-        // Create headers
         Row headerRow = sheet.createRow(1);
         String[] headers = {
                 "ID", "Public ID", "Employee ID", "Submit Date", "From Date", "To Date",
-                "Leave Type", "Is No Pay", "Num of Days", "Description", "Is Half Day",
-                "Is Full Day", "Unsuccessful", "Is Unauthorized", "Is Late", "Is Late Cover",
-                "Is Short Leave", "Is Pending", "Is Accepted", "Is Absent", "Not Used",
-                "Is Canceled", "Is Manual Request", "Happen Date", "User ID"
+                "Leave Type", "Num of Days", "Description", "Component Behavior",
+                "Request Status", "Not Used", "Is Manual Request", "Happen Date",
+                "Create Date", "Update Date", "Is Edited", "Attendance ID"
         };
 
         for (int i = 0; i < headers.length; i++) {
             createHeaderCell(headerRow, i, headers[i], headerStyle);
         }
 
-        // Check if list is empty
         if (leavesList == null || leavesList.isEmpty()) {
             Row row = sheet.createRow(2);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("No leave records found");
+            row.createCell(0).setCellValue("No leave records found");
             sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
         } else {
-            // Create data rows
             int rowNum = 2;
             for (LeaveEntity leave : leavesList) {
                 Row row = sheet.createRow(rowNum++);
                 int colNum = 0;
 
-                // ID
                 createCell(row, colNum++, leave.getId() != null ? leave.getId().toString() : "");
-
-                // Public ID
                 createCell(row, colNum++, leave.getPublicId() != null ? leave.getPublicId() : "");
-
-                // Employee ID
-                createCell(row, colNum++, leave.getEmployee().getEmployeeId() != null ? leave.getEmployee().getEmployeeId() : "");
-
-                // Submit Date
+                createCell(row, colNum++, leave.getEmployee() != null ? leave.getEmployee().getEmployeeId() : "");
                 createCell(row, colNum++, leave.getSubmitDate() != null ? dateFormat.format(leave.getSubmitDate()) : "");
-
-                // From Date
                 createCell(row, colNum++, leave.getFromDate() != null ? dateFormat.format(leave.getFromDate()) : "");
-
-                // To Date
                 createCell(row, colNum++, leave.getToDate() != null ? dateFormat.format(leave.getToDate()) : "");
-
-                // Leave Type
                 createCell(row, colNum++, leave.getLeaveType() != null ? leave.getLeaveType().getName() : "");
-
-                // Num of Days
                 createCell(row, colNum++, leave.getNumOfDays() != null ? leave.getNumOfDays().toString() : "");
-
-                // Description
                 createCell(row, colNum++, leave.getDescription() != null ? leave.getDescription() : "");
-
-                // Boolean fields
-
+                createCell(row, colNum++, leave.getComponentBehavior() != null ? leave.getComponentBehavior().name() : "");
+                createCell(row, colNum++, leave.getRequestStatus() != null ? leave.getRequestStatus().getDescription() : "");
                 createCell(row, colNum++, leave.getNotUsed() != null ? (leave.getNotUsed() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, leave.getRequestStatus() != null ? (leave.getRequestStatus().getDescription() != null ? leave.getRequestStatus().getDescription() : "") : "");
                 createCell(row, colNum++, leave.getIsManualRequest() != null ? (leave.getIsManualRequest() ? "Yes" : "No") : "No");
-
-                // Happen Date
                 createCell(row, colNum++, leave.getHappenDate() != null ? dateFormat.format(leave.getHappenDate()) : "");
-
-                // User ID
-                createCell(row, colNum++, leave.getEmployee().getPublicId() != null ? leave.getEmployee().getPublicId() : "");
+                createCell(row, colNum++, leave.getCreateDate() != null ? dateTimeFormat.format(leave.getCreateDate()) : "");
+                createCell(row, colNum++, leave.getUpdateDate() != null ? dateTimeFormat.format(leave.getUpdateDate()) : "");
+                createCell(row, colNum++, leave.getIsEdited() != null ? (leave.getIsEdited() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, leave.getAttendance() != null ? leave.getAttendance().getId().toString() : "");
             }
         }
 
-        // Apply auto-sizing to all columns
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
         }
@@ -348,89 +243,54 @@ public class ExelUtils {
 
     private void createMovementsSheet(Workbook workbook, List<MovementsEntity> movementsList) {
         Sheet sheet = workbook.createSheet("Movements");
-
-        // Create header style
         CellStyle headerStyle = createHeaderStyle(workbook);
 
-        // Add information row
         Row infoRow = sheet.createRow(0);
-        Cell infoCell = infoRow.createCell(0);
-        infoCell.setCellValue("Total Movement Records: " + (movementsList != null ? movementsList.size() : 0));
+        infoRow.createCell(0).setCellValue("Total Movement Records: " + (movementsList != null ? movementsList.size() : 0));
 
-        // Create headers
         Row headerRow = sheet.createRow(1);
         String[] headers = {
                 "ID", "Public ID", "In Time", "Out Time", "Comment", "Log Time", "Category",
-                "Destination", "Employee ID", "User ID", "Request Date", "Movement Type",
-                "ATT Sync", "Happen Date", "Is Pending", "Is Accepted", "Is Absent",
-                "Is Unsuccessful", "Unauthorized", "Resolve", "Is Half Day", "Is Late", "Is Late Cover"
+                "Destination", "Employee ID", "Request Date", "Movement Type", "ATT Sync",
+                "Happen Date", "Request Status", "Attendance ID", "Create Date", "Update Date",
+                "Is Edited"
         };
 
         for (int i = 0; i < headers.length; i++) {
             createHeaderCell(headerRow, i, headers[i], headerStyle);
         }
 
-        // Check if list is empty
         if (movementsList == null || movementsList.isEmpty()) {
             Row row = sheet.createRow(2);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("No movement records found");
+            row.createCell(0).setCellValue("No movement records found");
             sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
         } else {
-            // Create data rows
             int rowNum = 2;
             for (MovementsEntity movement : movementsList) {
                 Row row = sheet.createRow(rowNum++);
                 int colNum = 0;
 
-                // ID
                 createCell(row, colNum++, movement.getId() != null ? movement.getId().toString() : "");
-
-                // Public ID
                 createCell(row, colNum++, movement.getPublicId() != null ? movement.getPublicId() : "");
-
-                // In Time
                 createCell(row, colNum++, movement.getInTime() != null ? movement.getInTime() : "");
-
-                // Out Time
                 createCell(row, colNum++, movement.getOutTime() != null ? movement.getOutTime() : "");
-
-                // Comment
                 createCell(row, colNum++, movement.getComment() != null ? movement.getComment() : "");
-
-                // Log Time
                 createCell(row, colNum++, movement.getLogTime() != null ? dateTimeFormat.format(movement.getLogTime()) : "");
-
-                // Category
                 createCell(row, colNum++, movement.getCategory() != null ? movement.getCategory() : "");
-
-                // Destination
                 createCell(row, colNum++, movement.getDestination() != null ? movement.getDestination() : "");
-
-                // Employee ID
-                createCell(row, colNum++, movement.getEmployee().getEmployeeId() != null ? movement.getEmployee().getEmployeeId() : "");
-
-                // User ID
-                createCell(row, colNum++, movement.getEmployee().getPublicId() != null ? movement.getEmployee().getPublicId() : "");
-
-                // Request Date
+                createCell(row, colNum++, movement.getEmployee() != null ? movement.getEmployee().getEmployeeId() : "");
                 createCell(row, colNum++, movement.getReqDate() != null ? dateTimeFormat.format(movement.getReqDate()) : "");
-
-                // Movement Type
-                createCell(row, colNum++, movement.getMovementType() != null ? movement.getMovementType().toString() : "");
-
-                // ATT Sync
+                createCell(row, colNum++, movement.getMovementType() != null ? movement.getMovementType().name() : "");
                 createCell(row, colNum++, movement.getAttSync() != null ? movement.getAttSync().toString() : "0");
-
-                // Happen Date
                 createCell(row, colNum++, movement.getHappenDate() != null ? dateFormat.format(movement.getHappenDate()) : "");
-
-                // Boolean fields
-                createCell(row, colNum++, movement.getRequestStatus() != null ? (movement.getRequestStatus().getDescription() != null ? movement.getRequestStatus().getDescription() : "") : "");
+                createCell(row, colNum++, movement.getRequestStatus() != null ? movement.getRequestStatus().getDescription() : "");
+                createCell(row, colNum++, movement.getAttendance() != null ? movement.getAttendance().getId().toString() : "");
+                createCell(row, colNum++, movement.getCreateDate() != null ? dateTimeFormat.format(movement.getCreateDate()) : "");
+                createCell(row, colNum++, movement.getUpdateDate() != null ? dateTimeFormat.format(movement.getUpdateDate()) : "");
+                createCell(row, colNum++, movement.getIsEdited() != null ? (movement.getIsEdited() ? "Yes" : "No") : "No");
             }
         }
 
-        // Apply auto-sizing to all columns
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
         }
@@ -438,123 +298,40 @@ public class ExelUtils {
 
     private void createRemainingLeavesSheet(Workbook workbook, List<UserLeaveTypeRemainingEntity> remainingLeavesList) {
         Sheet sheet = workbook.createSheet("Remaining Leaves");
-
-        // Create header style
         CellStyle headerStyle = createHeaderStyle(workbook);
 
-        // Add information row
         Row infoRow = sheet.createRow(0);
-        Cell infoCell = infoRow.createCell(0);
-        infoCell.setCellValue("Total Remaining Leave Records: " + (remainingLeavesList != null ? remainingLeavesList.size() : 0));
+        infoRow.createCell(0).setCellValue("Total Remaining Leave Records: " + (remainingLeavesList != null ? remainingLeavesList.size() : 0));
 
-        // Create headers
         Row headerRow = sheet.createRow(1);
-        String[] headers = {
-                "ID", "Public ID", "Employee ID", "Leave Type", "Remaining Leaves"
-        };
+        String[] headers = {"ID", "Public ID", "Employee ID", "Leave Type", "Remaining Leaves"};
 
         for (int i = 0; i < headers.length; i++) {
             createHeaderCell(headerRow, i, headers[i], headerStyle);
         }
 
-        // Check if list is empty
         if (remainingLeavesList == null || remainingLeavesList.isEmpty()) {
             Row row = sheet.createRow(2);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("No remaining leave records found");
+            row.createCell(0).setCellValue("No remaining leave records found");
             sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
         } else {
-            // Create data rows
             int rowNum = 2;
             for (UserLeaveTypeRemainingEntity remainingLeave : remainingLeavesList) {
                 Row row = sheet.createRow(rowNum++);
                 int colNum = 0;
 
-                // ID
                 createCell(row, colNum++, remainingLeave.getId() != null ? remainingLeave.getId().toString() : "");
-
-                // Public ID
                 createCell(row, colNum++, remainingLeave.getPublicId() != null ? remainingLeave.getPublicId() : "");
-
-                // Employee ID
-                createCell(row, colNum++, remainingLeave.getEmployee().getEmployeeId() != null ? remainingLeave.getEmployee().getEmployeeId() : "");
-
-                // Leave Type
+                createCell(row, colNum++, remainingLeave.getEmployee() != null ? remainingLeave.getEmployee().getEmployeeId() : "");
                 createCell(row, colNum++, remainingLeave.getLeaveType() != null ? remainingLeave.getLeaveType().getName() : "");
-
-                // Remaining Leaves
                 createCell(row, colNum++, remainingLeave.getRemainingLeaves() != null ? remainingLeave.getRemainingLeaves().toString() : "0");
             }
         }
 
-        // Apply auto-sizing to all columns
         for (int i = 0; i < headers.length; i++) {
             sheet.autoSizeColumn(i);
         }
     }
-
-    /*private void createAbsencesSheet(Workbook workbook, List<AbsenteeEntity> absencesList) {
-        Sheet sheet = workbook.createSheet("Absences");
-
-        // Create header style
-        CellStyle headerStyle = createHeaderStyle(workbook);
-
-        // Add information row
-        Row infoRow = sheet.createRow(0);
-        Cell infoCell = infoRow.createCell(0);
-        infoCell.setCellValue("Total Absence Records: " + (absencesList != null ? absencesList.size() : 0));
-
-        // Create headers
-        Row headerRow = sheet.createRow(1);
-        String[] headers = {
-                "ID", "Public ID", "Date", "Employee ID", "User ID", "Audited", "Is No Pay"
-        };
-
-        for (int i = 0; i < headers.length; i++) {
-            createHeaderCell(headerRow, i, headers[i], headerStyle);
-        }
-
-        // Check if list is empty
-        if (absencesList == null || absencesList.isEmpty()) {
-            Row row = sheet.createRow(2);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("No absence records found");
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
-        } else {
-            // Create data rows
-            int rowNum = 2;
-            for (AbsenteeEntity absence : absencesList) {
-                Row row = sheet.createRow(rowNum++);
-                int colNum = 0;
-
-                // ID
-                createCell(row, colNum++, absence.getId() != null ? absence.getId().toString() : "");
-
-                // Public ID
-                createCell(row, colNum++, absence.getPublicId() != null ? absence.getPublicId() : "");
-
-                // Date
-                createCell(row, colNum++, absence.getDate() != null ? dateFormat.format(absence.getDate()) : "");
-
-                // Employee ID
-                createCell(row, colNum++, absence.getEmployeeID() != null ? absence.getEmployeeID() : "");
-
-                // User ID
-                createCell(row, colNum++, absence.getUserId() != null ? absence.getUserId() : "");
-
-                // Audited
-                createCell(row, colNum++, absence.getAudited() != null ? absence.getAudited().toString() : "0");
-
-                // Is No Pay
-                createCell(row, colNum++, absence.getIsNoPay() != null ? absence.getIsNoPay().toString() : "0");
-            }
-        }
-
-        // Apply auto-sizing to all columns
-        for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
-    }*/
 
     private CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
@@ -589,8 +366,29 @@ public class ExelUtils {
     }
 
     public byte[] generateEmployeeExcelReportByDateRange(String id, Date startDate, Date endDate) throws IOException {
-        // Implementation similar to generateEmployeeExcelReport but with date filters
-        // You can add this method when needed
-        return null;
+        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
+                .or(() -> employeeRepo.findBySltId(id))
+                .or(() -> employeeRepo.findByPublicId(id));
+
+        if (employeeEntity.isEmpty())
+            throw new RuntimeException("Employee not found with ID: " + id);
+
+        EmployeeEntity employee = employeeEntity.get();
+        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, startDate, endDate);
+        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, startDate, endDate);
+        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, startDate, endDate);
+        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            createEmployeeInfoSheet(workbook, employee);
+            createAttendanceSheet(workbook, attendance);
+            createLeavesSheet(workbook, leaves);
+            createMovementsSheet(workbook, movements);
+            createRemainingLeavesSheet(workbook, remainingLeaves);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
     }
 }

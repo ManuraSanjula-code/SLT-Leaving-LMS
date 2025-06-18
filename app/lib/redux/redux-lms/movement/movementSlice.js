@@ -18,7 +18,6 @@ export const fetchMovementRequests = createAsyncThunk(
             }
 
             const data = await response.json();
-            console.log(data)
             return data;
         } catch (err) {
             return rejectWithValue(err.message);

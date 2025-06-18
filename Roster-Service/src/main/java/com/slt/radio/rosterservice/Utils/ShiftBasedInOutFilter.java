@@ -133,16 +133,16 @@ public class ShiftBasedInOutFilter {
         return inOuts.stream()
                 .filter(inOut -> {
                     // Check morning punch time
-                    if (inOut.getTimeMoa() != null) {
-                        LocalTime morningTime = parseTime(inOut.getTimeMoa());
+                    if (inOut.getPunchTypeTime() != null) {
+                        LocalTime morningTime = inOut.getPunchTypeTime();
                         if (morningTime != null && determineShift(morningTime) == targetShift) {
                             return true;
                         }
                     }
 
                     // Check evening punch time
-                    if (inOut.getTimeEve() != null) {
-                        LocalTime eveningTime = parseTime(inOut.getTimeEve());
+                    if (inOut.getPunchTypeTime() != null) {
+                        LocalTime eveningTime = inOut.getPunchTypeTime();
                         if (eveningTime != null && determineShift(eveningTime) == targetShift) {
                             return true;
                         }
@@ -168,8 +168,8 @@ public class ShiftBasedInOutFilter {
             Set<Shift> assignedShifts = new HashSet<>();
 
             // Check morning punch time
-            if (inOut.getTimeMoa() != null) {
-                LocalTime morningTime = parseTime(inOut.getTimeMoa());
+            if (inOut.getPunchTypeTime() != null) {
+                LocalTime morningTime = inOut.getPunchTypeTime();
                 if (morningTime != null) {
                     Shift shift = determineShift(morningTime);
                     assignedShifts.add(shift);
@@ -177,8 +177,8 @@ public class ShiftBasedInOutFilter {
             }
 
             // Check evening punch time
-            if (inOut.getTimeEve() != null) {
-                LocalTime eveningTime = parseTime(inOut.getTimeEve());
+            if (inOut.getPunchTypeTime() != null) {
+                LocalTime eveningTime = inOut.getPunchTypeTime();
                 if (eveningTime != null) {
                     Shift shift = determineShift(eveningTime);
                     assignedShifts.add(shift);
@@ -231,31 +231,44 @@ public class ShiftBasedInOutFilter {
         // Filter for night shift (00:00-08:00)
         List<InOut> nightShiftRecords = inOuts.stream()
                 .filter(inOut -> {
-                    return (inOut.getTimeMoa() != null && isInTimeRange(inOut.getTimeMoa(), "00:00:00", "07:59:59")) ||
-                            (inOut.getTimeEve() != null && isInTimeRange(inOut.getTimeEve(), "00:00:00", "07:59:59"));
+                    return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "00:00:00", "07:59:59")) ||
+                            (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "00:00:00", "07:59:59"));
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         // Filter for day shift (08:00-16:00)
         List<InOut> dayShiftRecords = inOuts.stream()
                 .filter(inOut -> {
-                    return (inOut.getTimeMoa() != null && isInTimeRange(inOut.getTimeMoa(), "08:00:00", "15:59:59")) ||
-                            (inOut.getTimeEve() != null && isInTimeRange(inOut.getTimeEve(), "08:00:00", "15:59:59"));
+                    return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "08:00:00", "15:59:59")) ||
+                            (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "08:00:00", "15:59:59"));
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         // Filter for evening shift (16:00-24:00)
         List<InOut> eveningShiftRecords = inOuts.stream()
                 .filter(inOut -> {
-                    return (inOut.getTimeMoa() != null && isInTimeRange(inOut.getTimeMoa(), "16:00:00", "23:59:59")) ||
-                            (inOut.getTimeEve() != null && isInTimeRange(inOut.getTimeEve(), "16:00:00", "23:59:59"));
+                    return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "16:00:00", "23:59:59")) ||
+                            (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "16:00:00", "23:59:59"));
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private static boolean isInTimeRange(String timeStr, String startTime, String endTime) {
         try {
             LocalTime time = parseTime(timeStr);
+            LocalTime start = parseTime(startTime);
+            LocalTime end = parseTime(endTime);
+
+            return time != null && start != null && end != null &&
+                    (time.equals(start) || time.isAfter(start)) &&
+                    (time.equals(end) || time.isBefore(end));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean isInTimeRange(LocalTime time, String startTime, String endTime) {
+        try {
             LocalTime start = parseTime(startTime);
             LocalTime end = parseTime(endTime);
 

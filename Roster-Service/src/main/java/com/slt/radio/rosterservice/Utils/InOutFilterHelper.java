@@ -25,12 +25,12 @@ public class InOutFilterHelper {
             Date candidateTime = null;
 
             // Check punchInMoa if it exists and falls within shift time
-            if (inOut.getPunchInMoa() != null && isTimeInShift(inOut.getPunchInMoa(), startHour, endHour)) {
-                candidateTime = inOut.getPunchInMoa();
+            if (inOut.getPunchTime() != null && isTimeInShift(inOut.getPunchTime(), startHour, endHour)) {
+                candidateTime = inOut.getPunchTime();
             }
             // Check punchInEv if it exists and falls within shift time
-            else if (inOut.getPunchInEv() != null && isTimeInShift(inOut.getPunchInEv(), startHour, endHour)) {
-                candidateTime = inOut.getPunchInEv();
+            else if (inOut.getPunchTime() != null && isTimeInShift(inOut.getPunchTime(), startHour, endHour)) {
+                candidateTime = inOut.getPunchTime();
             }
 
             // Update earliest if this record is earlier
@@ -64,7 +64,7 @@ public class InOutFilterHelper {
 
     public static void filterByShifts(String cleanId, InOutRepository inOutRepository) {
         // Get data from database
-        List<InOut> inOuts = inOutRepository.findByEmployeeIDAndDate(cleanId, getYesterdayDate());
+        List<InOut> inOuts = inOutRepository.findByEmployeeIdAndDate(cleanId, getYesterdayDate());
 
         // Filter for Night Shift (00:00 - 08:00)
         InOut nightShiftEarliest = getEarliestInOutForShift(inOuts, "00:00 - 08:00");
@@ -77,13 +77,13 @@ public class InOutFilterHelper {
 
         // Use the results
         if (nightShiftEarliest != null) {
-            System.out.println("Night shift earliest: " + nightShiftEarliest.getPunchInMoa());
+            System.out.println("Night shift earliest: " + nightShiftEarliest.getPunchTime());
         }
         if (morningShiftEarliest != null) {
-            System.out.println("Morning shift earliest: " + morningShiftEarliest.getPunchInMoa());
+            System.out.println("Morning shift earliest: " + morningShiftEarliest.getPunchTime());
         }
         if (eveningShiftEarliest != null) {
-            System.out.println("Evening shift earliest: " + eveningShiftEarliest.getPunchInEv());
+            System.out.println("Evening shift earliest: " + eveningShiftEarliest.getPunchTime());
         }
     }
 

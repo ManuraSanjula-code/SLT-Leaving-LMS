@@ -28,7 +28,6 @@ export const fetchLeaveRequests = createAsyncThunk(
             }
 
             const data = await response.json();
-            console.log(data)
             return {
                 content: data.content || [], // Ensure we always have an array even if content is null
                 pagination: {

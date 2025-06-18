@@ -18,27 +18,33 @@ import java.util.Date;
 public class AccessLog {
     @Id
     private String id;
-
-    private String employeeID;
+    private String employeeId;
     private String logDate;
     private String logTime;
-    private String terminalID;
+    private String terminalId;
     private String inOut;
     private String readStatus;
-    private int processed;
+    private Integer processed;
     private Date etlRunTime;
-    private Date createdAt;
+    private Boolean isManual = false;
+    private Date createdDate = new Date();
+    private Date updatedDate;
+    private Boolean isActive = true;
 
     public AccessLog(AccessLogArchiveRest archiveRest) {
-        this.id = String.valueOf(archiveRest.getId());
-        this.employeeID = archiveRest.getEmployeeID();
-        this.logDate = archiveRest.getLogDate();
-        this.logTime = archiveRest.getLogTime();
-        this.terminalID = archiveRest.getTerminalID();
-        this.inOut = archiveRest.getInOut().trim();
-        this.readStatus = archiveRest.getReadStatus();
-        this.processed = archiveRest.getProcessed();
-        this.etlRunTime = archiveRest.getEtlRunTime();
-        this.createdAt = new Date();
+        if (archiveRest != null) {
+            this.employeeId = archiveRest.getEmployeeId();
+            this.logDate = archiveRest.getLogDate();
+            this.logTime = archiveRest.getLogTime();
+            this.terminalId = archiveRest.getTerminalId();
+            this.inOut = archiveRest.getInOut();
+            this.readStatus = archiveRest.getReadStatus();
+            this.processed = archiveRest.getProcessed();
+            this.etlRunTime = archiveRest.getEtlRunTime();
+            this.isManual = archiveRest.getIsManual();
+            this.createdDate = archiveRest.getCreatedDate();
+            this.updatedDate = archiveRest.getUpdatedDate();
+            this.isActive = archiveRest.getIsActive();
+        }
     }
 }

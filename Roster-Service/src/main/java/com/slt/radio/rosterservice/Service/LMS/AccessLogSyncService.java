@@ -57,7 +57,6 @@ public class AccessLogSyncService {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(dateWithTime);
 
-        // Reset hour, minute, second and millisecond
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
@@ -69,13 +68,12 @@ public class AccessLogSyncService {
     private String getYesterdayDate() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         Date date = removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-//        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
 
         return formatter.format(date);
     }
 
-    @Scheduled(cron = "00 50 13  * * ?")
+    @Scheduled(cron = "00 30 11  * * ?")
     public void getLogs() throws NoSuchAlgorithmException, JOSEException {
 
         log.info("Starting getting logs form the lms server");
@@ -84,17 +82,46 @@ public class AccessLogSyncService {
         String token = "Bearer " + tokenCreator.encryptToken(signToken);
 
         List<AccessLogArchiveRest> allAccessLogsToday = lmsClient.getAllAccessLogsToday(helper.getFormattedYesterdayDate(), token);
-        allAccessLogsToday.forEach(lms->{
-            AccessLog accessLog = new AccessLog(lms);
-            accessLogRepository.save(accessLog);
-        });
+        for (AccessLogArchiveRest lms : allAccessLogsToday) {
+            try {
+                log.info("Processing LMS data: {}", lms);
+
+                AccessLog accessLog = new AccessLog(lms);
+                log.info("Created AccessLog: {}", accessLog);
+
+                if (accessLog.getEmployeeId() == null || accessLog.getLogDate() == null) {
+                    log.warn("Skipping invalid access log - missing required fields: {}", accessLog);
+                    continue;
+                }
+
+                log.info("Attempting to save AccessLog to database...");
+                AccessLog saved = accessLogRepository.save(accessLog);
+
+                if (saved != null && saved.getId() != null) {
+                    log.info("Successfully saved AccessLog with ID: {}", saved.getId());
+                } else {
+                    log.error("Save returned null or without ID: {}", saved);
+                }
+
+                if (saved != null && saved.getId() != null) {
+                    Optional<AccessLog> fetched = accessLogRepository.findById(saved.getId());
+                    if (fetched.isPresent()) {
+                        log.info("Verification successful - record exists in database");
+                    } else {
+                        log.error("Verification failed - record not found in database after save");
+                    }
+                }
+
+            } catch (Exception e) {
+                log.error("Exception during save operation for LMS data: {}", lms, e);
+            }
+        }
     }
 
-    @Scheduled(cron = "00 17 19 * * ?")
+    @Scheduled(cron = "00 45 11 * * ?")
     public void syncAccessLogsAndProcessAttendance() {
         log.info("Starting daily sync of access logs and attendance processing");
 
-        // Get yesterday's date
         LocalDate yesterday = LocalDate.now().minusDays(1);
         String yesterdayStr = yesterday.format(DATE_FORMATTER);
 
@@ -102,10 +129,8 @@ public class AccessLogSyncService {
             List<AccessLog> accessLogs = fetchAccessLogsFromSLT(getYesterdayDate());
             attendanceService.processDutyAttendances();
 
-            // Process access logs to create InOut records
             attendanceService.processAccessLogs(accessLogs);
 
-            // Process attendance for yesterday
             attendanceService.processAttendanceForDate(yesterdayStr);
 
             log.info("Completed daily sync of access logs and attendance processing");
@@ -128,7 +153,6 @@ public class AccessLogSyncService {
             log.info("Processing attendance for date: {}", dateStr);
 
             try {
-                // Process attendance for the date
                 attendanceService.processAttendanceForDate(dateStr);
             } catch (Exception e) {
                 log.error("Error processing attendance for date: {}", dateStr, e);

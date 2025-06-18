@@ -30,5 +30,6 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
     List<InOutEntity> findByEmployeeIdAndDateBetween(String employeeId, Date dateAfter, Date dateBefore);
 
     List<InOutEntity> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
+    List<InOutEntity> findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(String employeeId, Date punchTime, Time punchTypeTime, String terminalId);
 }
 

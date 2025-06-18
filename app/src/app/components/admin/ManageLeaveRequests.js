@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchLeaveRequests,
@@ -34,12 +34,18 @@ import {
   Select,
   MenuItem,
   Snackbar,
-  Alert
+  Alert,
+  Tooltip,
+  Collapse,
+  IconButton
 } from "@mui/material";
 import { format } from "date-fns";
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 const ManageLeaveRequests = () => {
   const dispatch = useDispatch();
+  const [expandedRequest, setExpandedRequest] = useState(null);
 
   const leaveRequests = useSelector(state => state.leave.requests);
   const selected = useSelector(state => state.leave.selected);
@@ -47,7 +53,6 @@ const ManageLeaveRequests = () => {
   const loading = useSelector(state => state.leave.loading);
   const error = useSelector(state => state.leave.error);
   const notification = useSelector(state => state.leave.notification);
-
 
   useEffect(() => {
     dispatch(fetchLeaveRequests({
@@ -74,7 +79,6 @@ const ManageLeaveRequests = () => {
   );
 
   const handlePageChange = (event, value) => {
-    // API pages are 0-indexed, but Pagination component is 1-indexed
     dispatch(fetchLeaveRequests({
       page: value - 1,
       size: pagination.pageSize
@@ -133,10 +137,14 @@ const ManageLeaveRequests = () => {
     dispatch(clearNotification());
   };
 
+  const toggleExpandRequest = (publicId) => {
+    setExpandedRequest(expandedRequest === publicId ? null : publicId);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      return format(new Date(dateString), "MMM dd, yyyy");
+      return format(new Date(dateString), "MMM dd, yyyy HH:mm");
     } catch (e) {
       return dateString;
     }
@@ -164,15 +172,40 @@ const ManageLeaveRequests = () => {
     }
 
     if (leaveRequest.reject || leaveRequest.rejected) {
-      return <Chip label="Rejected" color="error" size="small" />;
+      const rejectingAdmin = leaveRequest.adminsTra?.find(a => a.accepted === false);
+      const tooltipTitle = rejectingAdmin
+          ? `Rejected by ${rejectingAdmin.firstName} ${rejectingAdmin.lastName}`
+          : 'Rejected';
+
+      return (
+          <Tooltip title={tooltipTitle}>
+            <Chip label="Rejected" color="error" size="small" />
+          </Tooltip>
+      );
     }
 
     if (leaveRequest.accepted) {
-      return <Chip label="Approved" color="success" size="small" />;
+      const allApproved = leaveRequest.adminsTra?.every(a => a.accepted);
+      const someApproved = leaveRequest.adminsTra?.some(a => a.accepted);
+
+      if (allApproved) {
+        return <Chip label="Approved" color="success" size="small" />;
+      } else if (someApproved) {
+        return <Chip label="Partially Approved" color="info" size="small" />;
+      }
     }
 
     if (leaveRequest.pending) {
-      return <Chip label="Pending" color="warning" size="small" />;
+      const pendingAdmins = leaveRequest.adminsTra?.filter(a => !a.accepted && !a.rejected);
+      const tooltipTitle = pendingAdmins?.length
+          ? `Pending approval from ${pendingAdmins.map(a => `${a.firstName} ${a.lastName}`).join(', ')}`
+          : 'Pending approval';
+
+      return (
+          <Tooltip title={tooltipTitle}>
+            <Chip label="Pending" color="warning" size="small" />
+          </Tooltip>
+      );
     }
 
     return <Chip label="Submitted" color="default" size="small" />;
@@ -293,9 +326,9 @@ const ManageLeaveRequests = () => {
                         <TableCell>To Date</TableCell>
                         <TableCell>Type</TableCell>
                         <TableCell>Days</TableCell>
-                        <TableCell>Description</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Actions</TableCell>
+                        <TableCell>Details</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -312,52 +345,145 @@ const ManageLeaveRequests = () => {
                             }
 
                             const isRequestNonSelectable = isNonSelectable(request);
+                            const isExpanded = expandedRequest === request.publicId;
 
                             return (
-                                <TableRow key={request.publicId || index}>
-                                  <TableCell padding="checkbox">
-                                    <Checkbox
-                                        checked={selected.includes(request.publicId)}
-                                        onChange={() => handleSelect(request.publicId)}
-                                        disabled={isRequestNonSelectable}
-                                    />
-                                  </TableCell>
-                                  <TableCell>{request.employeeID ? request.employeeID.substring(0, 8) + '...' : 'N/A'}</TableCell>
-                                  <TableCell>{formatDate(request.submitDate)}</TableCell>
-                                  <TableCell>{formatDate(request.fromDate)}</TableCell>
-                                  <TableCell>{formatDate(request.toDate)}</TableCell>
-                                  <TableCell>
-                                    {getLeaveTypeText(request)}
-                                    {request.halfDay && " (Half Day)"}
-                                    {request.isNoPay === 1 && " (No Pay)"}
-                                  </TableCell>
-                                  <TableCell>{request.numOfDays}</TableCell>
-                                  <TableCell sx={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {request.description || "N/A"}
-                                  </TableCell>
-                                  <TableCell>{getStatusChip(request)}</TableCell>
-                                  <TableCell>
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        size="small"
-                                        sx={{ mr: 1, mb: 1 }}
-                                        disabled={isRequestNonSelectable || loading}
-                                        onClick={() => handleApprove(request.publicId)}
-                                    >
-                                      Approve
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        size="small"
-                                        disabled={isRequestNonSelectable || loading}
-                                        onClick={() => handleReject(request.publicId)}
-                                    >
-                                      Reject
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
+                                <React.Fragment key={request.publicId || index}>
+                                  <TableRow>
+                                    <TableCell padding="checkbox">
+                                      <Checkbox
+                                          checked={selected.includes(request.publicId)}
+                                          onChange={() => handleSelect(request.publicId)}
+                                          disabled={isRequestNonSelectable}
+                                      />
+                                    </TableCell>
+                                    <TableCell>{request.employeeID || 'N/A'}</TableCell>
+                                    <TableCell>{formatDate(request.submitDate)}</TableCell>
+                                    <TableCell>{formatDate(request.fromDate)}</TableCell>
+                                    <TableCell>{formatDate(request.toDate)}</TableCell>
+                                    <TableCell>
+                                      {getLeaveTypeText(request)}
+                                      {request.halfDay && " (Half Day)"}
+                                      {request.isNoPay === 1 && " (No Pay)"}
+                                    </TableCell>
+                                    <TableCell>{request.numOfDays}</TableCell>
+                                    <TableCell>{getStatusChip(request)}</TableCell>
+                                    <TableCell>
+                                      {request.adminsTra?.some(a => a.accepted) ? (
+                                          <Typography variant="caption" color="textSecondary">
+                                            Partially approved
+                                          </Typography>
+                                      ) : (
+                                          <>
+                                            <Button
+                                                variant="contained"
+                                                color="primary"
+                                                size="small"
+                                                sx={{ mr: 1, mb: 1 }}
+                                                disabled={isRequestNonSelectable || loading}
+                                                onClick={() => handleApprove(request.publicId)}
+                                            >
+                                              Approve
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                size="small"
+                                                disabled={isRequestNonSelectable || loading}
+                                                onClick={() => handleReject(request.publicId)}
+                                            >
+                                              Reject
+                                            </Button>
+                                          </>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <IconButton
+                                          aria-label="expand row"
+                                          size="small"
+                                          onClick={() => toggleExpandRequest(request.publicId)}
+                                      >
+                                        {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                                      </IconButton>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
+                                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                        <Box sx={{ margin: 1 }}>
+                                          <Typography variant="subtitle1" gutterBottom>
+                                            Leave Request Details
+                                          </Typography>
+                                          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                                            <div>
+                                              <Typography variant="body2">
+                                                <strong>Submitted:</strong> {formatDate(request.submitDate)}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>From:</strong> {formatDate(request.fromDate)}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>To:</strong> {formatDate(request.toDate)}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Duration:</strong> {request.numOfDays} day(s)
+                                              </Typography>
+                                            </div>
+                                            <div>
+                                              <Typography variant="body2">
+                                                <strong>Type:</strong> {getLeaveTypeText(request)}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Behavior:</strong> {request.componentBehaviorString || 'N/A'}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Description:</strong> {request.description || 'N/A'}
+                                              </Typography>
+                                            </div>
+                                          </Box>
+
+                                          {request.adminsTra && request.adminsTra.length > 0 && (
+                                              <>
+                                                <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                                                  Approval Process
+                                                </Typography>
+                                                <Table size="small" sx={{ mt: 1 }}>
+                                                  <TableHead>
+                                                    <TableRow>
+                                                      <TableCell>Administrator</TableCell>
+                                                      <TableCell>Email</TableCell>
+                                                      <TableCell>Status</TableCell>
+                                                      <TableCell>Action Date</TableCell>
+                                                    </TableRow>
+                                                  </TableHead>
+                                                  <TableBody>
+                                                    {request.adminsTra.map((admin) => (
+                                                        <TableRow key={admin.id}>
+                                                          <TableCell>{admin.firstName} {admin.lastName}</TableCell>
+                                                          <TableCell>{admin.email}</TableCell>
+                                                          <TableCell>
+                                                            {admin.accepted ? (
+                                                                <Chip label="Approved" color="success" size="small" />
+                                                            ) : admin.rejected ? (
+                                                                <Chip label="Rejected" color="error" size="small" />
+                                                            ) : (
+                                                                <Chip label="Pending" color="warning" size="small" />
+                                                            )}
+                                                          </TableCell>
+                                                          <TableCell>
+                                                            {admin.approvedDate ? formatDate(admin.approvedDate) : 'N/A'}
+                                                          </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                  </TableBody>
+                                                </Table>
+                                              </>
+                                          )}
+                                        </Box>
+                                      </Collapse>
+                                    </TableCell>
+                                  </TableRow>
+                                </React.Fragment>
                             );
                           })
                       )}

@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface AccessLogRepository extends MongoRepository<AccessLog, String> {
-    List<AccessLog> findByEmployeeIDAndLogDate(String employeeID, String logDate);
+    List<AccessLog> findByEmployeeIdAndLogDate(String employeeID, String logDate);
     List<AccessLog> findByLogDate(String logDate);
 }

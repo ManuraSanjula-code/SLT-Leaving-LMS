@@ -1,163 +1,119 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 const API_BASE_URL = 'http://localhost:8080/api';
-const handleApiError = (response, fallbackMessage) => {
-    if (!response.ok) {
-        throw new Error(`${fallbackMessage}. Status: ${response.status}`);
-    }
-};
 
+// Helper function to process team data
+const processTeamData = (data, teamId) => ({
+    id: data?.id || teamId,
+    name: data?.name || 'Unknown Team',
+    shortName: data?.shortName || 'UT',
+    active: data?.active ?? true
+});
+
+// Helper function to process employee data
+const processEmployeeData = (data, id) => ({
+    id: data?.id || id,
+    employeeId: data?.employeeId || 'N/A',
+    name: data?.name || 'Unknown Employee',
+    shortName: data?.shortName || 'UE',
+    mobileNo: data?.mobileNo || '',
+    teamId: data?.teamId || null,
+    active: data?.active ?? true
+});
+
+// Thunk for fetching roster data
 export const fetchRosterData = createAsyncThunk(
     'rosterManagement/fetchRosterData',
     async ({ month, year }, { rejectWithValue }) => {
         try {
             const response = await fetch(`${API_BASE_URL}/roster/${month}/${year}`);
-            handleApiError(response, 'Failed to fetch roster data');
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
 
             const data = await response.json();
 
             if (!data?.teams?.length) {
-                return rejectWithValue("No roster data found for the selected period");
+                return rejectWithValue({
+                    message: `No roster data for ${month}/${year}`,
+                    isEmpty: true
+                });
             }
 
             return data;
         } catch (error) {
-            console.error('Error fetching roster data:', error);
-            return rejectWithValue(error.message || "Failed to fetch roster data");
+            return rejectWithValue({
+                message: error.message,
+                isEmpty: false
+            });
         }
     }
 );
 
+// Thunk for fetching team details
 export const fetchTeamDetails = createAsyncThunk(
     'rosterManagement/fetchTeamDetails',
-    async (teamIds, { rejectWithValue }) => {
-        try {
-            const teamPromises = teamIds.map(async (teamId) => {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/teams/${teamId}`);
-                    handleApiError(response, `Failed to fetch team details for ${teamId}`);
-                    return await response.json();
-                } catch (error) {
-                    console.error(`Error fetching team ${teamId}:`, error);
-                    return {
-                        id: teamId,
-                        name: 'Team Data Unavailable',
-                        shortName: 'Error'
-                    };
-                }
-            });
-
-            return await Promise.all(teamPromises);
-        } catch (error) {
-            console.error('Error fetching team details:', error);
-            return rejectWithValue(error.message || "Failed to fetch team details");
-        }
+    async (teamIds) => {
+        const teamPromises = teamIds.map(async (teamId) => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teams/${teamId}`);
+                if (!response.ok) return processTeamData(null, teamId);
+                const data = await response.json();
+                return processTeamData(data, teamId);
+            } catch {
+                return processTeamData(null, teamId);
+            }
+        });
+        return await Promise.all(teamPromises);
     }
 );
 
+// Thunk for fetching employee details
 export const fetchEmployeeDetails = createAsyncThunk(
     'rosterManagement/fetchEmployeeDetails',
-    async (employeeIds, { rejectWithValue }) => {
-        try {
-            const employeePromises = employeeIds.map(async (id) => {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/employees/${id}`);
-                    handleApiError(response, `Failed to fetch employee details for ${id}`);
-                    return await response.json();
-                } catch (error) {
-                    console.error(`Error fetching employee ${id}:`, error);
-                    return {
-                        id,
-                        name: 'Employee Data Unavailable',
-                        employeeId: 'Error',
-                        shortName: 'Error'
-                    };
-                }
-            });
-
-            const employeeResults = await Promise.all(employeePromises);
-
-            return employeeResults.reduce((acc, emp) => {
-                acc[emp.id] = emp;
-                return acc;
-            }, {});
-        } catch (error) {
-            console.error('Error fetching employee details:', error);
-            return rejectWithValue(error.message || "Failed to fetch employee details");
-        }
+    async (employeeIds) => {
+        const employeePromises = employeeIds.map(async (id) => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/employees/${id}`);
+                if (!response.ok) return processEmployeeData(null, id);
+                const data = await response.json();
+                return processEmployeeData(data, id);
+            } catch {
+                return processEmployeeData(null, id);
+            }
+        });
+        const results = await Promise.all(employeePromises);
+        return results.reduce((acc, emp) => ({ ...acc, [emp.id]: emp }), {});
     }
 );
 
-export const updateEmployeeRoster = createAsyncThunk(
-    'rosterManagement/updateEmployeeRoster',
-    async (payload, { rejectWithValue }) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/roster/employee`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            handleApiError(response, 'Failed to update employee data');
-
-            return {
-                teamId: payload.teamId,
-                employeeId: payload.employeeId,
-                updates: {
-                    totalShift: payload.totalShift,
-                    rotShift: payload.rotShift,
-                    offDay: payload.offDay,
-                    dduty: payload.dduty
-                }
-            };
-        } catch (error) {
-            console.error('Error updating employee data:', error);
-            return rejectWithValue(error.message || "Failed to update employee data");
-        }
-    }
-);
-
+// Filter function for teams
 const filterTeams = (teams, teamDetails, employees, searchTerm) => {
     if (!searchTerm) return teams;
-
-    const searchValue = searchTerm.toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
 
     return teams.filter(team => {
-        // Check team name match
-        const teamDetail = teamDetails.find(t => t.id === team.teamId);
-        if (teamDetail && (
-            teamDetail.name.toLowerCase().includes(searchValue) ||
-            teamDetail.shortName.toLowerCase().includes(searchValue)
-        )) {
-            return true;
-        }
+        const teamDetail = teamDetails.find(t => t.id === team.teamId) ||
+            processTeamData(null, team.teamId);
 
-        // Check employee match
-        return team.employees.some(emp => {
-            const employeeDetail = employees[emp.employeeId];
-            return employeeDetail && (
-                employeeDetail.name.toLowerCase().includes(searchValue) ||
-                employeeDetail.employeeId.toLowerCase().includes(searchValue) ||
-                employeeDetail.shortName.toLowerCase().includes(searchValue)
-            );
-        });
+        return (
+            teamDetail.name.toLowerCase().includes(searchLower) ||
+            teamDetail.shortName.toLowerCase().includes(searchLower) ||
+            team.employees.some(emp => {
+                const employee = employees[emp.employeeId] ||
+                    processEmployeeData(null, emp.employeeId);
+                return (
+                    employee.name.toLowerCase().includes(searchLower) ||
+                    employee.employeeId.toLowerCase().includes(searchLower) ||
+                    employee.shortName.toLowerCase().includes(searchLower)
+                );
+            })
+        );
     });
 };
 
-const updateTeamEmployees = (teamsList, teamId, employeeId, updates) => {
-    return teamsList.map(team => {
-        if (team.teamId === teamId) {
-            return {
-                ...team,
-                employees: team.employees.map(emp =>
-                    emp.employeeId === employeeId ? { ...emp, ...updates } : emp
-                )
-            };
-        }
-        return team;
-    });
-};
-
+// Initial state
 const initialState = {
     roster: null,
     teams: [],
@@ -168,16 +124,14 @@ const initialState = {
     searchTerm: '',
     loading: false,
     error: null,
-    editMode: false,
-    editingEmployee: null,
-    editData: {},
     notification: {
         open: false,
-        message: "",
-        severity: "info"
+        message: '',
+        severity: 'info'
     }
 };
 
+// Create slice
 const rosterManagementSlice = createSlice({
     name: 'rosterManagement',
     initialState,
@@ -207,40 +161,19 @@ const rosterManagementSlice = createSlice({
                 state.currentMonth += 1;
             }
         },
-        startEditingEmployee: (state, action) => {
-            const { teamId, employeeId } = action.payload;
-            const team = state.roster.teams.find(t => t.teamId === teamId);
-            const employee = team?.employees.find(emp => emp.employeeId === employeeId);
-
-            if (employee) {
-                state.editingEmployee = { teamId, employeeId };
-                state.editData = {
-                    totalShift: employee.totalShift,
-                    rotShift: employee.rotShift,
-                    offDay: employee.offDay,
-                    dduty: employee.dduty
-                };
-                state.editMode = true;
-            }
+        navigateToCurrentMonth: (state) => {
+            const now = new Date();
+            state.currentMonth = now.getMonth() + 1;
+            state.currentYear = now.getFullYear();
         },
-        cancelEditing: (state) => {
-            state.editMode = false;
-            state.editingEmployee = null;
-            state.editData = {};
-        },
-        updateEditData: (state, action) => {
-            const { field, value } = action.payload;
-            state.editData[field] = parseInt(value) || 0;
+        clearRosterData: (state) => {
+            state.roster = null;
+            state.teams = [];
+            state.employees = {};
+            state.filteredTeams = [];
         },
         closeNotification: (state) => {
             state.notification.open = false;
-        },
-        setNotification: (state, action) => {
-            state.notification = {
-                open: true,
-                message: action.payload.message,
-                severity: action.payload.severity || "info"
-            };
         },
         clearError: (state) => {
             state.error = null;
@@ -248,12 +181,14 @@ const rosterManagementSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // Roster data handlers
             .addCase(fetchRosterData.pending, (state) => {
                 state.loading = true;
                 state.error = null;
+                state.roster = null;
+                state.filteredTeams = [];
             })
             .addCase(fetchRosterData.fulfilled, (state, action) => {
+                state.loading = false;
                 state.roster = action.payload;
                 state.filteredTeams = filterTeams(
                     action.payload.teams,
@@ -261,90 +196,46 @@ const rosterManagementSlice = createSlice({
                     state.employees,
                     state.searchTerm
                 );
-                state.loading = false;
             })
             .addCase(fetchRosterData.rejected, (state, action) => {
-                state.error = action.payload;
                 state.loading = false;
+                state.error = action.payload;
                 state.roster = null;
                 state.filteredTeams = [];
             })
-
-            // Team details handlers
             .addCase(fetchTeamDetails.fulfilled, (state, action) => {
                 state.teams = action.payload;
-                // Reapply search filter with new team data
-                state.filteredTeams = filterTeams(
-                    state.roster?.teams || [],
-                    action.payload,
-                    state.employees,
-                    state.searchTerm
-                );
-            })
-            .addCase(fetchTeamDetails.rejected, (state, action) => {
-                console.error("Error fetching team details:", action.payload);
-            })
-
-            // Employee details handlers
-            .addCase(fetchEmployeeDetails.fulfilled, (state, action) => {
-                state.employees = action.payload;
-                // Reapply search filter with new employee data
-                state.filteredTeams = filterTeams(
-                    state.roster?.teams || [],
-                    state.teams,
-                    action.payload,
-                    state.searchTerm
-                );
-            })
-            .addCase(fetchEmployeeDetails.rejected, (state, action) => {
-                console.error("Error fetching employee details:", action.payload);
-            })
-
-            .addCase(updateEmployeeRoster.pending, (state) => {
-                state.loading = true;
-            })
-            .addCase(updateEmployeeRoster.fulfilled, (state, action) => {
-                const { teamId, employeeId, updates } = action.payload;
-
                 if (state.roster) {
-                    state.roster.teams = updateTeamEmployees(
-                        state.roster.teams, teamId, employeeId, updates
+                    state.filteredTeams = filterTeams(
+                        state.roster.teams,
+                        action.payload,
+                        state.employees,
+                        state.searchTerm
                     );
                 }
-                state.filteredTeams = updateTeamEmployees(
-                    state.filteredTeams, teamId, employeeId, updates
-                );
-
-                state.editMode = false;
-                state.editingEmployee = null;
-                state.editData = {};
-                state.notification = {
-                    open: true,
-                    message: "Employee data updated successfully",
-                    severity: "success"
-                };
-                state.loading = false;
             })
-            .addCase(updateEmployeeRoster.rejected, (state, action) => {
-                state.notification = {
-                    open: true,
-                    message: action.payload,
-                    severity: "error"
-                };
-                state.loading = false;
+            .addCase(fetchEmployeeDetails.fulfilled, (state, action) => {
+                state.employees = action.payload;
+                if (state.roster) {
+                    state.filteredTeams = filterTeams(
+                        state.roster.teams,
+                        state.teams,
+                        action.payload,
+                        state.searchTerm
+                    );
+                }
             });
     }
 });
 
+// Export actions and reducer
 export const {
     setSearchTerm,
     navigateToPreviousMonth,
     navigateToNextMonth,
-    startEditingEmployee,
-    cancelEditing,
-    updateEditData,
+    navigateToCurrentMonth,
+    clearRosterData,
     closeNotification,
-    setNotification,
     clearError
 } = rosterManagementSlice.actions;
 

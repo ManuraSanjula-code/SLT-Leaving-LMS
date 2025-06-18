@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from 'date-fns';
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -87,6 +88,8 @@ import {
     clearError,
     handleFormChange
 } from "../../../../lib/redux/redux-lms/employee-activities/employeeActivitiesSlice";
+import { useRouter } from 'next/navigation';
+import {MovementType} from "../../../../lib/redux/redux-lms/movement/req/movementRequestSlice";
 
 const theme = createTheme({
     palette: {
@@ -314,49 +317,98 @@ const StatusChip = ({ activity }) => {
 
 const TypeBadge = ({ activity }) => {
     const getTypeProps = () => {
-        const attendanceType = activity.attendanceType;
-        const leaveStatus = activity.leaveStatus;
-
-        if (attendanceType === 'ABSENT') {
+        if (activity.isUnauthorized) {
             return {
-                bgcolor: '#ffcdd2',
+                bgcolor: '#ffebee',
                 color: '#c62828',
-                label: 'Absent'
+                label: 'Unauthorized'
             };
         }
-        if (attendanceType === 'HALF_DAY') {
+        if (activity.isUnSuccessful) {
             return {
-                bgcolor: '#c8e6c9',
-                color: '#1b5e20',
-                label: 'Half Day'
-            };
-        }
-        if (leaveStatus === 'FULL_LEAVE') {
-            return {
-                bgcolor: '#bbdefb',
-                color: '#0d47a1',
-                label: 'Full Leave'
-            };
-        }
-        if (leaveStatus === 'SHORT_LEAVE') {
-            return {
-                bgcolor: '#e1bee7',
-                color: '#4a148c',
-                label: 'Short Leave'
+                bgcolor: '#fff3e0',
+                color: '#e65100',
+                label: 'Swipe Error'
             };
         }
         if (activity.isLate) {
             return {
                 bgcolor: '#fff9c4',
                 color: '#f57f17',
-                label: 'Late'
+                label: activity.isLateCovered ? 'Late Covered' : 'Late'
+            };
+        }
+
+        if (activity.attendanceType === 'ABSENT') {
+            return {
+                bgcolor: '#ffcdd2',
+                color: '#c62828',
+                label: 'Absent'
+            };
+        }
+        if (activity.attendanceType === 'HALF_DAY') {
+            return {
+                bgcolor: '#c8e6c9',
+                color: '#1b5e20',
+                label: 'Half Day'
+            };
+        }
+        if (activity.attendanceType === 'FULL_DAY') {
+            return {
+                bgcolor: '#e8f5e9',
+                color: '#2e7d32',
+                label: 'Full Day'
+            };
+        }
+
+        if (activity.leaveStatus === 'FULL_LEAVE') {
+            return {
+                bgcolor: '#bbdefb',
+                color: '#0d47a1',
+                label: 'Full Leave'
+            };
+        }
+        if (activity.leaveStatus === 'SHORT_LEAVE') {
+            return {
+                bgcolor: '#e1bee7',
+                color: '#4a148c',
+                label: 'Short Leave'
+            };
+        }
+        if (activity.leaveStatus === 'LEAVE_REQUESTED') {
+            return {
+                bgcolor: '#fff8e1',
+                color: '#ff8f00',
+                label: 'Leave Requested'
+            };
+        }
+        if (activity.leaveStatus === 'LEAVE_APPROVED') {
+            return {
+                bgcolor: '#e8f5e9',
+                color: '#2e7d32',
+                label: 'Leave Approved'
+            };
+        }
+
+        if (activity.hasIssues) {
+            return {
+                bgcolor: '#fff3e0',
+                color: '#e65100',
+                label: 'Has Issues'
+            };
+        }
+        if (activity.isHoliday) {
+            return {
+                bgcolor: '#e3f2fd',
+                color: '#01579b',
+                label: 'Holiday'
             };
         }
 
         return {
-            bgcolor: '#e8f5e9',
-            color: '#2e7d32',
-            label: 'Full Day'
+            bgcolor: '#f5f5f5',
+            color: '#424242',
+            label: 'Not Recorded'
         };
     };
 
@@ -369,7 +421,9 @@ const TypeBadge = ({ activity }) => {
             sx={{
                 bgcolor,
                 color,
-                fontWeight: 500
+                fontWeight: 500,
+                minWidth: 100,
+                justifyContent: 'center'
             }}
         />
     );
@@ -377,6 +431,7 @@ const TypeBadge = ({ activity }) => {
 
 const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
     if (userId == null) userId = sessionStorage.getItem('userId');
+    const router = useRouter();
 
     // Use Redux state and dispatch
     const dispatch = useDispatch();
@@ -462,13 +517,11 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         setAnchorEl(true);
     };
 
-    // Function to handle confirmation dialog close
     const handleCloseDeleteDialog = () => {
         dispatch(setOpenDeleteDialog(false));
         dispatch(setIdToDelete(null));
     };
 
-    // Function to open the modal for creating a new record
     const handleAddNew = () => {
         dispatch(resetFormData());
         dispatch(setEditMode(false));
@@ -476,7 +529,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(setShowModal(true));
     };
 
-    // Function to close the modal and reset form
     const handleCloseModal = () => {
         dispatch(setShowModal(false));
         dispatch(setEditMode(false));
@@ -484,7 +536,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         dispatch(resetFormData());
     };
 
-    // Function to handle form submission (create or update)
     const handleSubmit = () => {
         if (isEditMode && editId) {
             dispatch(updateEmployeeActivity({ id: editId, formData }));
@@ -493,7 +544,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         }
     };
 
-    // Function to delete an attendance record
     const deleteAttendance = () => {
         if (anchorEl) {
             dispatch(deleteEmployeeDeActivity(idToDelete));
@@ -502,49 +552,44 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         }
     };
 
-    // Handle search input change
     const handleSearchChange = (event) => {
         dispatch(setSearchTerm(event.target.value));
     };
 
-    // Handle type filter change
     const handleTypeFilterChange = (event) => {
         dispatch(setFilterType(event.target.value));
     };
 
-    // Handle status filter change
     const handleStatusFilterChange = (event) => {
         dispatch(setFilterStatus(event.target.value));
     };
 
-    // Handle active filter change
     const handleActiveFilterChange = (event) => {
         dispatch(setFilterActive(event.target.value));
     };
 
-    // Handle page change
     const handleChangePage = (event, newPage) => {
         dispatch(setPage(newPage));
     };
 
-    // Handle rows per page change
     const handleChangeRowsPerPage = (event) => {
         dispatch(setRowsPerPage(parseInt(event.target.value, 10)));
     };
 
-    // Determine activity type based on new structure
     const getActivityType = (activity) => {
+        if (activity.isUnauthorized) return "Unauthorized";
+        if (activity.isUnSuccessful) return "Unsuccessful";
+        if (activity.isLate) return "Late";
         if (activity.attendanceType === 'ABSENT') return "Absent";
         if (activity.leaveStatus === 'FULL_LEAVE') return "Full Leave";
         if (activity.leaveStatus === 'SHORT_LEAVE') return "Short Leave";
         if (activity.attendanceType === 'HALF_DAY') return "Half Day";
-        if (activity.isLate) return "Late";
-        if (activity.isUnSuccessful) return "Swipe error";
-        if (activity.isUnauthorized) return "Swipe error";
-        return "Full Day";
+        if (activity.attendanceType === 'FULL_DAY') return "Full Day";
+        if (activity.leaveStatus === 'LEAVE_REQUESTED') return "Leave Requested";
+        if (activity.leaveStatus === 'LEAVE_APPROVED') return "Leave Approved";
+        return "Not Specified";
     };
 
-    // Determine activity status based on new structure
     const getActivityStatus = (activity) => {
         if (activity.isUnauthorized) return "Unauthorized";
         if (activity.isUnSuccessful) return "Unsuccessful";
@@ -555,7 +600,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         return "Normal";
     };
 
-    // Filter activities based on search term, type, status, active status, and date range
     const filteredActivities = activities.filter((activity) => {
         const activityType = getActivityType(activity);
         const activityStatus = getActivityStatus(activity);
@@ -567,7 +611,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
             (filterActive === "active" && activity.isActive !== false) ||
             (filterActive === "inactive" && activity.isActive === false);
 
-        // Convert date strings to Date objects for comparison
         const activityDate = activity.date ? new Date(activity.date).toISOString().split('T')[0] : "";
         const startDate = startDateFilter || "";
         const endDate = endDateFilter || "";
@@ -578,15 +621,42 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         return matchesSearch && matchesType && matchesStatus && matchesActive && matchesStartDate && matchesEndDate;
     });
 
-    // Get current page of data
     const paginatedActivities = filteredActivities.slice(
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
     );
 
+    const handleResolveViaMovement = (activity) => {
+        const happenDate = activity.date ? format(new Date(activity.date), 'yyyy-MM-dd') : '';
+        const logTime = activity.date ? format(new Date(activity.date), 'yyyy-MM-dd\'T\'HH:mm') : '';
+
+        const params = new URLSearchParams();
+        params.set('employeeId', activity.employeeId || '');
+        params.set('userId', activity.userId || '');
+        params.set('happenDate', happenDate);
+        params.set('logTime', logTime);
+        params.set('inTime', activity.arrivalTime || '');
+        params.set('outTime', activity.leftTime || '');
+        params.set('terminalId', activity.terminalId || '');
+        params.set('comment', activity.issueDescription || '');
+        params.set('isLate', activity.isLate ? 'true' : 'false');
+        params.set('isUnauthorized', activity.isUnauthorized ? 'true' : 'false');
+        params.set('hasIssues', activity.hasIssues ? 'true' : 'false');
+
+        let movementType = MovementType.FULLDAY;
+        if(activity.isUnauthorized && activity.arrivalTime == null) {
+            movementType = MovementType.HOME_TO_OFFICE;
+        } else if(activity.isUnauthorized && activity.leftTime == null) {
+            movementType = MovementType.OFFICE_TO_HOME;
+        }
+
+        params.set('movementType', movementType);
+
+        router.push(`/request-movement?${params.toString()}`);
+    };
+
     return (
         <>
-            {/* Delete Confirmation Dialog */}
             <Dialog
                 open={openDeleteDialog}
                 onClose={handleCloseDeleteDialog}
@@ -1275,6 +1345,19 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                                                     >
                                                                         <X size={18} />
                                                                     </IconButton>
+                                                                </Box>
+                                                            )}
+                                                            {!isAdmin && !activity.isManual && activity.isActive && activity.hasIssues && (
+                                                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                                                    <Button
+                                                                        variant="contained"
+                                                                        color="primary"
+                                                                        size="small"
+                                                                        onClick={() => handleResolveViaMovement(activity)}
+                                                                        sx={{ textTransform: 'none' }}
+                                                                    >
+                                                                        Resolve via Movement
+                                                                    </Button>
                                                                 </Box>
                                                             )}
                                                         </TableCell>

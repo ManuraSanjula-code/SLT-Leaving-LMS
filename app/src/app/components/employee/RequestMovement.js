@@ -4,13 +4,13 @@ import {
   submitMovementRequest,
   updateFormField,
   setUserId,
-  setComponentBehavior,
   clearError,
   clearSuccessMessage,
   selectMovementRequestForm,
   selectMovementRequestStatus,
   selectMovementRequestError,
-  selectMovementRequestSuccess
+  selectMovementRequestSuccess,
+  MovementType
 } from '../../../../lib/redux/redux-lms/movement/req/movementRequestSlice';
 import {
   Container,
@@ -30,23 +30,18 @@ import {
   FormHelperText,
   Divider
 } from '@mui/material';
+import { useSearchParams } from 'next/navigation';
 
 const MOVEMENT_TYPES = {
-  ABSENT: 'Absent',
-  UNSUCCESSFUL: 'Unsuccessful',
-  REMOTEWORK: 'Remote Work',
-  UNAUTHORIZED: 'Unauthorized'
-};
-
-const COMPONENT_BEHAVIORS = {
-  UNSUCCESSFUL: 'Unsuccessful',
-  UNAUTHORIZED: 'Unauthorized',
-  ABSENT: 'Absent'
+  [MovementType.FULLDAY]: 'Full Day',
+  [MovementType.OFFICE_TO_HOME]: 'Office to Home',
+  [MovementType.HOME_TO_OFFICE]: 'Home to Office',
+  [MovementType.REMOTEWORK]: 'Remote Work'
 };
 
 const RequestMovement = () => {
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
-
   const formData = useSelector(selectMovementRequestForm);
   const status = useSelector(selectMovementRequestStatus);
   const error = useSelector(selectMovementRequestError);
@@ -59,118 +54,113 @@ const RequestMovement = () => {
   const showError = Boolean(error);
   const showSuccess = Boolean(successMessage);
 
-  const DEFAULT_LOG_TIME = '1990-01-01T00:00';
-  const DEFAULT_TIME = '00:00';
-
   useEffect(() => {
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
       dispatch(setUserId(storedUserId));
     }
-
-    if (!formData.logTime) {
-      dispatch(updateFormField({ name: 'logTime', value: DEFAULT_LOG_TIME }));
-    }
-    if (!formData.inTime) {
-      dispatch(updateFormField({ name: 'inTime', value: DEFAULT_TIME }));
-    }
-    if (!formData.outTime) {
-      dispatch(updateFormField({ name: 'outTime', value: DEFAULT_TIME }));
-    }
   }, [dispatch]);
+
+  useEffect(() => {
+    if (searchParams) {
+      const mappedData = {
+        employeeId: searchParams.get('employeeId') || '',
+        movementType: searchParams.get('movementType') || MovementType.FULLDAY,
+        happenDate: searchParams.get('happenDate') || '',
+        logTime: searchParams.get('logTime') || '',
+        inTime: searchParams.get('inTime') || '',
+        outTime: searchParams.get('outTime') || '',
+        comment: searchParams.get('comment') || '',
+      };
+
+      Object.entries(mappedData).forEach(([field, value]) => {
+        dispatch(updateFormField({ name: field, value }));
+      });
+
+      const terminalId = searchParams.get('terminalId');
+      if (terminalId) {
+        dispatch(updateFormField({
+          name: 'comment',
+          value: `${mappedData.comment}\nTerminal ID: ${terminalId}`
+        }));
+      }
+
+      // Add context about the issue if present
+      const issueContext = [];
+      if (searchParams.get('isLate') === 'true') {
+        issueContext.push('Late arrival');
+      }
+      if (searchParams.get('isUnauthorized') === 'true') {
+        issueContext.push('Unauthorized absence');
+      }
+      if (searchParams.get('hasIssues') === 'true') {
+        issueContext.push('Swipe issues');
+      }
+
+      if (issueContext.length > 0) {
+        dispatch(updateFormField({
+          name: 'comment',
+          value: `${mappedData.comment}\nIssue: ${issueContext.join(', ')}`
+        }));
+      }
+    }
+  }, [searchParams, dispatch]);
 
   const validateField = (name, value) => {
     switch (name) {
       case 'employeeId':
-        if (!value || value.trim() === '') {
-          return 'Employee ID is required';
-        }
-        if (value.length < 3) {
-          return 'Employee ID must be at least 3 characters';
-        }
+        if (!value || value.trim() === '') return 'Employee ID is required';
+        if (value.length < 3) return 'Employee ID must be at least 3 characters';
         return '';
 
       case 'movementType':
-        if (!value || value === '') {
-          return 'Movement Type is required';
-        }
-        return '';
-
-      case 'componentBehavior':
-        if (!value || value === '') {
-          return 'Component Behavior is required';
-        }
+        if (!value) return 'Movement Type is required';
         return '';
 
       case 'happenDate':
-        if (!value || value === '') {
-          return 'Date is required';
-        }
+        if (!value) return 'Date is required';
         const selectedDate = new Date(value);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        if (selectedDate > today) {
-          return 'Date cannot be in the future';
-        }
+        if (selectedDate > today) return 'Date cannot be in the future';
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        if (selectedDate < thirtyDaysAgo) {
-          return 'Date cannot be more than 30 days ago';
-        }
+        if (selectedDate < thirtyDaysAgo) return 'Date cannot be more than 30 days ago';
         return '';
 
       case 'comment':
-        if (!value || value.trim() === '') {
-          return 'Reason/Comment is required';
-        }
-        if (value.trim().length < 10) {
-          return 'Comment must be at least 10 characters';
-        }
-        if (value.length > 500) {
-          return 'Comment cannot exceed 500 characters';
-        }
+        if (!value || value.trim() === '') return 'Reason/Comment is required';
+        if (value.trim().length < 10) return 'Comment must be at least 10 characters';
+        if (value.length > 500) return 'Comment cannot exceed 500 characters';
         return '';
 
       case 'destination':
-        if (!value || value.trim() === '') {
-          return 'Destination is required';
-        }
-        if (value.trim().length < 2) {
-          return 'Destination must be at least 2 characters';
-        }
-        if (value.length > 100) {
-          return 'Destination cannot exceed 100 characters';
-        }
+        if (!value || value.trim() === '') return 'Destination is required';
+        if (value.trim().length < 2) return 'Destination must be at least 2 characters';
+        if (value.length > 100) return 'Destination cannot exceed 100 characters';
         return '';
 
       case 'category':
-        if (value && value.trim() !== '') {
-          if (value.trim().length < 2) {
-            return 'Category must be at least 2 characters';
-          }
-          if (value.length > 50) {
-            return 'Category cannot exceed 50 characters';
-          }
-        }
+        if (!value || value.trim() === '') return 'Category is required';
+        if (value.trim().length < 2) return 'Category must be at least 2 characters';
+        if (value.length > 50) return 'Category cannot exceed 50 characters';
         return '';
 
       case 'logTime':
-        if (value && value !== DEFAULT_LOG_TIME) {
-          const logDate = new Date(value);
-          if (isNaN(logDate.getTime())) {
-            return 'Invalid log time format';
-          }
-        }
+        if (!value) return 'Log time is required';
+        const logDate = new Date(value);
+        if (isNaN(logDate.getTime())) return 'Invalid log time format';
         return '';
 
       case 'inTime':
+        if (!value) return 'In time is required';
+        // if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]?$/.test(value)) return 'Invalid time format (HH:MM)';
+        return '';
+
       case 'outTime':
-        if (value && value !== DEFAULT_TIME) {
-          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-          if (!timeRegex.test(value)) {
-            return 'Invalid time format (HH:MM)';
-          }
-        }
+        if (!value) return 'Out time is required';
+        // if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]?$/.test(value)) return 'Invalid time format (HH:MM)';
+        if (formData.inTime && value <= formData.inTime) return 'Out time must be after in time';
         return '';
 
       default:
@@ -180,95 +170,56 @@ const RequestMovement = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = ['employeeId', 'movementType', 'happenDate', 'comment', 'destination', 'componentBehavior'];
+    const fields = [
+      'employeeId', 'movementType', 'happenDate', 'comment',
+      'destination', 'category', 'logTime', 'inTime', 'outTime'
+    ];
 
-    requiredFields.forEach(field => {
+    fields.forEach(field => {
       const error = validateField(field, formData[field]);
-      if (error) {
-        newErrors[field] = error;
-      }
+      if (error) newErrors[field] = error;
     });
-
-    const optionalFields = ['category', 'logTime', 'inTime', 'outTime'];
-    optionalFields.forEach(field => {
-      const error = validateField(field, formData[field]);
-      if (error) {
-        newErrors[field] = error;
-      }
-    });
-
-    if (formData.inTime && formData.outTime &&
-        formData.inTime !== DEFAULT_TIME && formData.outTime !== DEFAULT_TIME) {
-      const inTime = new Date(`1970-01-01T${formData.inTime}`);
-      const outTime = new Date(`1970-01-01T${formData.outTime}`);
-      if (outTime <= inTime) {
-        newErrors.outTime = 'Out time must be after in time';
-      }
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (event) => {
-    const { name, value, checked, type } = event.target;
-    const newValue = type === 'checkbox' ? checked : value;
-
-    dispatch(updateFormField({
-      name,
-      value: newValue
-    }));
-
+    const { name, value } = event.target;
+    dispatch(updateFormField({ name, value }));
     setTouched(prev => ({ ...prev, [name]: true }));
 
-    if (touched[name] || type !== 'checkbox') {
-      const error = validateField(name, newValue);
-      setErrors(prev => ({
-        ...prev,
-        [name]: error
-      }));
-    }
-  };
-
-  const handleComponentBehaviorChange = (event) => {
-    const behavior = event.target.value;
-    dispatch(setComponentBehavior(behavior));
-
-    setTouched(prev => ({ ...prev, componentBehavior: true }));
-    const error = validateField('componentBehavior', behavior);
-    setErrors(prev => ({ ...prev, componentBehavior: error }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleBlur = (event) => {
     const { name, value } = event.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-
     const error = validateField(name, value);
-    setErrors(prev => ({
-      ...prev,
-      [name]: error
-    }));
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    const allFields = ['employeeId', 'movementType', 'happenDate', 'comment', 'destination', 'category', 'componentBehavior', 'logTime', 'inTime', 'outTime'];
-    const newTouched = {};
-    allFields.forEach(field => {
-      newTouched[field] = true;
-    });
+    const newTouched = {
+      employeeId: true,
+      movementType: true,
+      happenDate: true,
+      comment: true,
+      destination: true,
+      category: true,
+      logTime: true,
+      inTime: true,
+      outTime: true
+    };
     setTouched(newTouched);
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     const submissionData = {
       ...formData,
-      logTime: formData.logTime || DEFAULT_LOG_TIME,
-      inTime: formData.inTime || DEFAULT_TIME,
-      outTime: formData.outTime || DEFAULT_TIME,
       employeeId: formData.employeeId?.trim(),
       comment: formData.comment?.trim(),
       destination: formData.destination?.trim(),
@@ -278,17 +229,9 @@ const RequestMovement = () => {
     dispatch(submitMovementRequest(submissionData));
   };
 
-  const handleCloseError = () => {
-    dispatch(clearError());
-  };
-
-  const handleCloseSuccess = () => {
-    dispatch(clearSuccessMessage());
-  };
-
-  const shouldShowError = (fieldName) => {
-    return touched[fieldName] && errors[fieldName];
-  };
+  const handleCloseError = () => dispatch(clearError());
+  const handleCloseSuccess = () => dispatch(clearSuccessMessage());
+  const shouldShowError = (fieldName) => touched[fieldName] && errors[fieldName];
 
   return (
       <Container component="main" maxWidth="md">
@@ -316,60 +259,19 @@ const RequestMovement = () => {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <FormControl
-                    fullWidth
-                    margin="normal"
-                    error={shouldShowError('movementType')}
-                    required
-                >
-                  <InputLabel id="movement-type-label">Movement Type*</InputLabel>
+                <FormControl fullWidth margin="normal" error={shouldShowError('movementType')} required>
+                  <InputLabel>Movement Type*</InputLabel>
                   <Select
-                      labelId="movement-type-label"
-                      id="movementType"
                       name="movementType"
                       value={formData.movementType || ''}
-                      label="Movement Type*"
                       onChange={handleChange}
                       onBlur={handleBlur}
                   >
                     {Object.entries(MOVEMENT_TYPES).map(([key, value]) => (
-                        <MenuItem key={key} value={key}>
-                          {value}
-                        </MenuItem>
+                        <MenuItem key={key} value={key}>{value}</MenuItem>
                     ))}
                   </Select>
-                  {shouldShowError('movementType') && (
-                      <FormHelperText>{errors.movementType}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl
-                    fullWidth
-                    margin="normal"
-                    error={shouldShowError('componentBehavior')}
-                    required
-                >
-                  <InputLabel id="component-behavior-label">Component Behavior*</InputLabel>
-                  <Select
-                      labelId="component-behavior-label"
-                      id="componentBehavior"
-                      name="componentBehavior"
-                      value={formData.componentBehavior || ''}
-                      label="Component Behavior*"
-                      onChange={handleComponentBehaviorChange}
-                      onBlur={handleBlur}
-                  >
-                    {Object.entries(COMPONENT_BEHAVIORS).map(([key, value]) => (
-                        <MenuItem key={key} value={key}>
-                          {value}
-                        </MenuItem>
-                    ))}
-                  </Select>
-                  {shouldShowError('componentBehavior') && (
-                      <FormHelperText>{errors.componentBehavior}</FormHelperText>
-                  )}
+                  {shouldShowError('movementType') && <FormHelperText>{errors.movementType}</FormHelperText>}
                 </FormControl>
               </Grid>
 
@@ -378,7 +280,6 @@ const RequestMovement = () => {
                     margin="normal"
                     required
                     fullWidth
-                    id="happenDate"
                     label="Date"
                     name="happenDate"
                     type="date"
@@ -386,39 +287,38 @@ const RequestMovement = () => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('happenDate')}
-                    helperText={shouldShowError('happenDate') ? errors.happenDate : 'Cannot be future date or more than 30 days ago'}
+                    helperText={shouldShowError('happenDate') ? errors.happenDate : ''}
                     InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              {/*<Grid item xs={12} sm={6}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
-                    id="category"
                     label="Category"
                     name="category"
                     value={formData.category || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('category')}
-                    helperText={shouldShowError('category') ? errors.category : 'Optional (max 50 characters)'}
+                    helperText={shouldShowError('category') ? errors.category : ''}
                 />
-              </Grid>
+              </Grid>*/}
 
               <Grid item xs={12}>
                 <TextField
                     margin="normal"
                     required
                     fullWidth
-                    id="destination"
                     label="Destination"
                     name="destination"
                     value={formData.destination || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('destination')}
-                    helperText={shouldShowError('destination') ? errors.destination : 'Required (min 2 characters, max 100 characters)'}
+                    helperText={shouldShowError('destination') ? errors.destination : ''}
                 />
               </Grid>
 
@@ -427,7 +327,6 @@ const RequestMovement = () => {
                     margin="normal"
                     required
                     fullWidth
-                    id="comment"
                     label="Reason/Comment"
                     name="comment"
                     multiline
@@ -436,31 +335,29 @@ const RequestMovement = () => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('comment')}
-                    helperText={shouldShowError('comment') ? errors.comment : `${(formData.comment || '').length}/500 characters (min 10 required)`}
+                    helperText={shouldShowError('comment') ? errors.comment : `${formData.comment?.length || 0}/500 characters`}
                 />
               </Grid>
 
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Time Details (Optional)
-                  </Typography>
+                  <Typography variant="body2">Time Details</Typography>
                 </Divider>
               </Grid>
 
               <Grid item xs={12} sm={4}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
-                    id="logTime"
                     label="Log Time"
                     name="logTime"
                     type="datetime-local"
-                    value={formData.logTime || DEFAULT_LOG_TIME}
+                    value={formData.logTime || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('logTime')}
-                    helperText={shouldShowError('logTime') ? errors.logTime : "Optional - defaults to 1990-01-01 00:00"}
+                    helperText={shouldShowError('logTime') ? errors.logTime : ''}
                     InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -468,16 +365,16 @@ const RequestMovement = () => {
               <Grid item xs={12} sm={4}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
-                    id="inTime"
                     label="In Time"
                     name="inTime"
                     type="time"
-                    value={formData.inTime || DEFAULT_TIME}
+                    value={formData.inTime || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('inTime')}
-                    helperText={shouldShowError('inTime') ? errors.inTime : "Optional - work start time"}
+                    helperText={shouldShowError('inTime') ? errors.inTime : ''}
                     InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -485,41 +382,20 @@ const RequestMovement = () => {
               <Grid item xs={12} sm={4}>
                 <TextField
                     margin="normal"
+                    required
                     fullWidth
-                    id="outTime"
                     label="Out Time"
                     name="outTime"
                     type="time"
-                    value={formData.outTime || DEFAULT_TIME}
+                    value={formData.outTime || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={shouldShowError('outTime')}
-                    helperText={shouldShowError('outTime') ? errors.outTime : "Optional - work end time"}
+                    helperText={shouldShowError('outTime') ? errors.outTime : ''}
                     InputLabelProps={{ shrink: true }}
                 />
               </Grid>
             </Grid>
-
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="body2" color="textSecondary">
-                <strong>Selected Behavior:</strong> {COMPONENT_BEHAVIORS[formData.componentBehavior] || 'None'}
-              </Typography>
-              {formData.componentBehavior === 'ABSENT' && (
-                  <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-                    For absent requests - specify the reason and destination.
-                  </Typography>
-              )}
-              {formData.componentBehavior === 'UNSUCCESSFUL' && (
-                  <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-                    For unsuccessful attendance requests.
-                  </Typography>
-              )}
-              {formData.componentBehavior === 'UNAUTHORIZED' && (
-                  <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-                    For unauthorized absence requests.
-                  </Typography>
-              )}
-            </Box>
 
             <Button
                 type="submit"
@@ -531,14 +407,12 @@ const RequestMovement = () => {
               {isLoading ? <CircularProgress size={24} /> : 'Submit Movement Request'}
             </Button>
 
-            {Object.keys(errors).length > 0 && Object.values(touched).some(t => t) && (
+            {Object.keys(errors).length > 0 && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   Please fix the following errors:
                   <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                     {Object.entries(errors).map(([field, error]) => (
-                        error && touched[field] && (
-                            <li key={field}>{error}</li>
-                        )
+                        error && <li key={field}>{error}</li>
                     ))}
                   </ul>
                 </Alert>
@@ -546,24 +420,12 @@ const RequestMovement = () => {
           </Box>
         </Box>
 
-        <Snackbar
-            open={showError}
-            autoHideDuration={6000}
-            onClose={handleCloseError}
-        >
-          <Alert onClose={handleCloseError} severity="error">
-            {error}
-          </Alert>
+        <Snackbar open={showError} autoHideDuration={6000} onClose={handleCloseError}>
+          <Alert onClose={handleCloseError} severity="error">{error}</Alert>
         </Snackbar>
 
-        <Snackbar
-            open={showSuccess}
-            autoHideDuration={6000}
-            onClose={handleCloseSuccess}
-        >
-          <Alert onClose={handleCloseSuccess} severity="success">
-            {successMessage}
-          </Alert>
+        <Snackbar open={showSuccess} autoHideDuration={6000} onClose={handleCloseSuccess}>
+          <Alert onClose={handleCloseSuccess} severity="success">{successMessage}</Alert>
         </Snackbar>
       </Container>
   );

@@ -18,9 +18,9 @@ public class Sync {
     private final Check_Service check_Service;
     private final AccessLogService accessLogService;
 
-    @Scheduled(cron = "00 58 22  * * ?")
+    @Scheduled(cron = "00 37 08  * * ?")
     public void getLogs() throws ParseException {
-        /*check_Service.getAllTheInOutRecordsFromSLT();*/
+        check_Service.getAllTheInOutRecordsFromSLT();
         accessLogService.main();
         check_Service.main();
     }

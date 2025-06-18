@@ -11,7 +11,9 @@ import java.util.Date;
 
 
 @Entity
-@Table(name = "in_out",uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "punch_time", "punch_type_time","terminalId"}))
+@Table(name = "in_out",
+        uniqueConstraints =
+        @UniqueConstraint(columnNames = {"employee_id", "punch_time", "punch_type_time","terminalId"}))
 @Getter
 @Setter
 @Builder

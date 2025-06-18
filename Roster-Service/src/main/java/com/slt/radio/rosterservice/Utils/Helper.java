@@ -15,7 +15,7 @@ public class Helper {
         return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    private Date stripTimeFromDate(Date dateWithTime) {
+    public Date stripTimeFromDate(Date dateWithTime) {
         if (dateWithTime == null) {
             return null;
         }

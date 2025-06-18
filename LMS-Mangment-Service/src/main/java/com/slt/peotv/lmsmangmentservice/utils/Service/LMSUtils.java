@@ -52,29 +52,63 @@ public class LMSUtils {
     @Autowired
     private InOutRepo inOutRepo;
 
-    public AccessLogRest toRest(AccessLogEntity employee) {
-        if (employee == null) return null;
-        AccessLogRest rest = new AccessLogRest();
-        rest.setEmployeeID(employee.getEmployeeId());
-        rest.setId(employee.getId());
-        rest.setLogDate(employee.getLogDate());
-        rest.setLogTime(employee.getLogTime());
-        rest.setTerminalID(employee.getTerminalId());
-        rest.setInOut(employee.getInOut());
-        rest.setReadStatus(employee.getReadStatus());
-        rest.setProcessed(employee.getProcessed());
-        rest.setEtlRunTime(employee.getEtlRunTime());
-        return rest;
+    public AccessLogRest toRest(AccessLogEntity accessLog) {
+        if (accessLog == null) return null;
+
+        return AccessLogRest.builder()
+                .employeeId(accessLog.getEmployeeId())
+                .logDate(accessLog.getLogDate())
+                .logTime(accessLog.getLogTime())
+                .terminalId(accessLog.getTerminalId())
+                .inOut(accessLog.getInOut())
+                .readStatus(accessLog.getReadStatus())
+                .processed(accessLog.getProcessed())
+                .etlRunTime(accessLog.getEtlRunTime())
+                .isManual(accessLog.getIsManual())
+                .createdDate(accessLog.getCreatedDate())
+                .updatedDate(accessLog.getUpdatedDate())
+                .isActive(accessLog.getIsActive())
+                .build();
+    }
+
+    public AccessLogDTO accessLogToDTO(AccessLogEntity accessLogEntity) {
+        AccessLogDTO accessLogDTO = new AccessLogDTO();
+        accessLogDTO.setId(accessLogEntity.getId());
+        accessLogDTO.setEmployeeID(accessLogEntity.getEmployeeId());
+        accessLogDTO.setLogDate(accessLogEntity.getLogDate());
+        accessLogDTO.setLogTime(accessLogEntity.getLogTime());
+        accessLogDTO.setTerminalID(accessLogEntity.getTerminalId());
+        accessLogDTO.setInOut(accessLogEntity.getInOut());
+        accessLogDTO.setReadStatus(accessLogEntity.getReadStatus());
+        accessLogDTO.setProcessed(accessLogEntity.getProcessed());
+        accessLogDTO.setEtlRunTime(accessLogEntity.getEtlRunTime());
+        accessLogDTO.setIsManual(accessLogEntity.getIsManual());
+        accessLogDTO.setCreatedDate(accessLogEntity.getCreatedDate());
+        accessLogDTO.setUpdatedDate(accessLogEntity.getUpdatedDate());
+        accessLogDTO.setIsActive(accessLogEntity.getIsActive());
+        return accessLogDTO;
     }
 
     public InOutDTO inOutDTO(InOutEntity inOutEntity) {
         InOutDTO inOutDTO = new InOutDTO();
+        inOutDTO.setId(inOutEntity.getId());
         inOutDTO.setEmployeeID(inOutEntity.getEmployeeId());
         inOutDTO.setDate(inOutEntity.getDate());
-        inOutDTO.setPucnhTime(inOutEntity.getPunchTypeTime());
-        inOutDTO.setPucnhTime(inOutEntity.getPunchTypeTime());
-        inOutDTO.setInOut(inOutEntity.getInOutValue());
+        inOutDTO.setPunchTime(inOutEntity.getPunchTime());
+        inOutDTO.setPunchTypeTime(inOutEntity.getPunchTypeTime());
+        inOutDTO.setInOutType(inOutEntity.getInOutType());
         inOutDTO.setTerminalID(inOutEntity.getTerminalId());
+        inOutDTO.setInOutValue(inOutEntity.getInOutValue());
+        inOutDTO.setIsManual(inOutEntity.getIsManual());
+        inOutDTO.setEtlRunTime(inOutEntity.getEtlRunTime());
+        inOutDTO.setCreatedDate(inOutEntity.getCreatedDate());
+        inOutDTO.setUpdatedDate(inOutEntity.getUpdatedDate());
+        inOutDTO.setIsActive(inOutEntity.getIsActive());
+
+        if (inOutEntity.getAccessLog() != null) {
+            inOutDTO.setAccessLog(accessLogToDTO(inOutEntity.getAccessLog()));
+        }
+
         return inOutDTO;
     }
 
@@ -218,7 +252,6 @@ public class LMSUtils {
         dto.setMovementType(entity.getMovementType());
         dto.setAttSync(entity.getAttSync());
         dto.setHappenDate(entity.getHappenDate());
-        dto.setComponentBehavior(entity.getComponentBehavior());
         dto.setRequestStatus(entity.getRequestStatus());
         dto.setCreateDate(entity.getCreateDate());
         dto.setUpdateDate(entity.getUpdateDate());

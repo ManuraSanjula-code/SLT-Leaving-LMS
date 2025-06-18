@@ -28,13 +28,12 @@ public class MovementDTO {
 
     private Integer attSync = 0;
     private Date happenDate;
-    private ComponentBehavior componentBehavior;
     private RequestStatus requestStatus;
     private Date createDate;
     private Date updateDate;
     private Boolean isEdited = false;
 
-    private String attendance; // attendance public ID
+    private String attendance;
 
     @JsonIgnore
     private List<MovementAdminsDTO> movementAdmins = new ArrayList<>();
@@ -154,14 +153,6 @@ public class MovementDTO {
         this.happenDate = happenDate;
     }
 
-    public ComponentBehavior getComponentBehavior() {
-        return componentBehavior;
-    }
-
-    public void setComponentBehavior(ComponentBehavior componentBehavior) {
-        this.componentBehavior = componentBehavior;
-    }
-
     public RequestStatus getRequestStatus() {
         return requestStatus;
     }
@@ -251,78 +242,6 @@ public class MovementDTO {
             this.requestStatus = RequestStatus.REJECTED;
         }
     }
-
-
-    public Boolean getHalfDay() {
-        return componentBehavior == ComponentBehavior.HALF_DAY;
-    }
-
-
-    public void setHalfDay(Boolean halfDay) {
-        if (Boolean.TRUE.equals(halfDay)) {
-            this.componentBehavior = ComponentBehavior.HALF_DAY;
-        }
-    }
-
-
-    public Boolean getAbsent() {
-        return componentBehavior == ComponentBehavior.ABSENT;
-    }
-
-    public void setAbsent(Boolean absent) {
-        if (Boolean.TRUE.equals(absent)) {
-            this.componentBehavior = ComponentBehavior.ABSENT;
-        }
-    }
-
-
-    public Boolean getUnSuccessfulAttdate() {
-        return componentBehavior == ComponentBehavior.UNSUCCESSFUL;
-    }
-
-
-    public void setUnSuccessfulAttdate(Boolean unSuccessfulAttdate) {
-        if (Boolean.TRUE.equals(unSuccessfulAttdate)) {
-            this.componentBehavior = ComponentBehavior.UNSUCCESSFUL;
-        }
-    }
-
-
-    public Boolean getUnAuthorized() {
-        return componentBehavior == ComponentBehavior.UNAUTHORIZED;
-    }
-
-    public void setUnAuthorized(Boolean unAuthorized) {
-        if (Boolean.TRUE.equals(unAuthorized)) {
-            this.componentBehavior = ComponentBehavior.UNAUTHORIZED;
-        }
-    }
-
-
-    public Boolean getLate() {
-        return componentBehavior == ComponentBehavior.LATE;
-    }
-
-
-    public Boolean getLateCover() {
-        return componentBehavior == ComponentBehavior.LATE_COVER;
-    }
-
-
-    public String getMovementStatusString() {
-        if (requestStatus != null) {
-            return requestStatus.getDescription();
-        }
-        return "Unknown";
-    }
-
-    public String getComponentBehaviorString() {
-        if (componentBehavior != null) {
-            return componentBehavior.getDisplayName();
-        }
-        return "Unknown";
-    }
-
 
     public int getMovementDurationMinutes() {
         if (this.inTime != null && this.outTime != null) {

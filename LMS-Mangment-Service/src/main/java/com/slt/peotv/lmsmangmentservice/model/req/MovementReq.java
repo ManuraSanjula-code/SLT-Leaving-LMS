@@ -47,9 +47,6 @@ public class MovementReq {
     @NotBlank(message = "Out time is required")
     private String outTime = "00:00";
 
-    @NotNull(message = "Component behavior is required")
-    private ComponentBehavior componentBehavior;
-
     private RequestStatus requestStatus = RequestStatus.DRAFT;
 
     private Date reqDate;
@@ -59,13 +56,6 @@ public class MovementReq {
     private Date updateDate;
     private Boolean isEdited = false;
 
-    private static final Set<ComponentBehavior> ATTENDANCE_REQUIRED_BEHAVIORS = Set.of(
-            ComponentBehavior.UNAUTHORIZED,
-            ComponentBehavior.ABSENT,
-            ComponentBehavior.UNSUCCESSFUL,
-            ComponentBehavior.LATE,
-            ComponentBehavior.LATE_COVER
-    );
 
 
     public boolean validateMovementReq() {
@@ -102,11 +92,6 @@ public class MovementReq {
             return false;
         }
 
-        if (Objects.isNull(this.componentBehavior)) {
-            return false;
-        }
-
-        // Business logic validations
         if (!validateTimeFormat()) {
             return false;
         }
@@ -119,9 +104,6 @@ public class MovementReq {
             return false;
         }
 
-        if (!validateComponentBehavior()) {
-            return false;
-        }
 
         return true;
     }
@@ -163,32 +145,6 @@ public class MovementReq {
     }
 
 
-    private boolean validateComponentBehavior() {
-        if (this.componentBehavior == null) {
-            return false;
-        }
-
-        switch (this.componentBehavior) {
-            case ABSENT:
-                return this.logTime != null;
-
-            case LATE:
-            case LATE_COVER:
-                return this.inTime != null && !this.inTime.equals("00:00");
-
-            case UNAUTHORIZED:
-                return this.happenDate != null;
-
-            case HALF_DAY:
-            case FULL_DAY:
-                return this.inTime != null && this.outTime != null;
-
-            default:
-                return true;
-        }
-    }
-
-
     private boolean isValidTimeFormat(String time) {
         if (time == null || time.trim().isEmpty()) {
             return false;
@@ -223,13 +179,7 @@ public class MovementReq {
                 Objects.nonNull(this.happenDate) &&
                 Objects.nonNull(this.logTime) &&
                 Objects.nonNull(this.inTime) && !this.inTime.trim().isEmpty() &&
-                Objects.nonNull(this.outTime) && !this.outTime.trim().isEmpty() &&
-                Objects.nonNull(this.componentBehavior);
-    }
-
-
-    public boolean requiresAttendanceRecord() {
-        return ATTENDANCE_REQUIRED_BEHAVIORS.contains(this.componentBehavior);
+                Objects.nonNull(this.outTime) && !this.outTime.trim().isEmpty();
     }
 
 
@@ -264,13 +214,6 @@ public class MovementReq {
     }
 
 
-    public String getComponentBehaviorString() {
-        if (this.componentBehavior != null) {
-            return this.componentBehavior.getDisplayName();
-        }
-        return "Unknown";
-    }
-
     public boolean canBeEdited() {
         return this.requestStatus != RequestStatus.APPROVED &&
                 this.requestStatus != RequestStatus.REJECTED &&
@@ -299,32 +242,6 @@ public class MovementReq {
         }
 
         return true;
-    }
-
-
-    public Boolean getAbsent() {
-        return componentBehavior == ComponentBehavior.ABSENT;
-    }
-
-    public Boolean getUnSuccessfulAttdate() {
-        return componentBehavior == ComponentBehavior.UNSUCCESSFUL;
-    }
-
-
-    public Boolean getHalfDay() {
-        return componentBehavior == ComponentBehavior.HALF_DAY;
-    }
-
-    public Boolean getUnAuthorized() {
-        return componentBehavior == ComponentBehavior.UNAUTHORIZED;
-    }
-
-    public Boolean getLate() {
-        return componentBehavior == ComponentBehavior.LATE;
-    }
-
-    public Boolean getLateCover() {
-        return componentBehavior == ComponentBehavior.LATE_COVER;
     }
 
     public Boolean getAccepted() {

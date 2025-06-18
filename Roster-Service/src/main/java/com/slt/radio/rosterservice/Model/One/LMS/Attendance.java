@@ -1,14 +1,15 @@
 package com.slt.radio.rosterservice.Model.One.LMS;
 
+import com.slt.radio.rosterservice.Model.Enum.AttendanceType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.Date;
 
 @Data
@@ -21,80 +22,45 @@ public class Attendance {
     private String id;
     private String publicId;
     private Date date;
-    private String employeeID;
-    private String teamId;
-    private String shiftCode;
-    private String shiftTime;
-    private String terminalID;
     private Date arrivalDate;
-    private String arrivalTime;
-    private String leftTime;
 
-    @Builder.Default
-    private Boolean isFullDay = false;
+    private LocalTime arrivalTime;
+    private LocalTime leftTime;
+
+    private String terminalId;
+    private String employeeId;
+
+    private String teamId;
+    private AttendanceType attendanceType;
 
     @Builder.Default
     private Boolean isLate = false;
-
     @Builder.Default
-    private Boolean lateCover = false;
-
+    private Boolean isLateCovered = false;
     @Builder.Default
-    private Boolean isHalfDay = false;
-
-    @Builder.Default
-    private Boolean isFullLeave = false;
-
-    @Builder.Default
-    private Boolean isShortLeave = false;
-
-    @Builder.Default
-    private Boolean isAbsent = false;
-
+    private Boolean isUnauthorized = false;
     @Builder.Default
     private Boolean isUnSuccessful = false;
-
     @Builder.Default
-    private Boolean isNoPay = false;
-
+    private Boolean isHoliday = false;
     @Builder.Default
-    private Boolean issues = false;
-
+    private Boolean isResolved = false;
     @Builder.Default
-    private Boolean isUnAuthorized = false;
-
+    private Boolean hasIssues = false;
     @Builder.Default
-    private Boolean resolve = false;
-
-    @Builder.Default
-    private Boolean leaveSuccess = false;
-
-    @Builder.Default
-    private Boolean leaveReq = false;
-
+    private Boolean isManual = false;
     private String issueDescription;
     private Date dueDateForUA;
 
-    @Builder.Default
-    private Boolean active = true;
+    private Date etlRunTime = new Date();
 
     @Builder.Default
-    private Boolean noPay = false;
-
-    private String userId;
+    private Date createdDate = new Date();
+    @Builder.Default
+    private Date updatedDate = new Date();
 
     @Builder.Default
-    private Boolean viaMovement = false;
-
-    @Builder.Default
-    private Boolean viaLeave = false;
-
-    @Builder.Default
-    private Boolean isOvertimeShift = false; // For ROT shifts
-
-    @CreatedDate
-    private Date createdAt;
-
-    @LastModifiedDate
-    private Date updatedAt;
+    private Boolean isActive = true;
+    private Boolean viaMovement;
+    private Boolean viaLeave;
 }

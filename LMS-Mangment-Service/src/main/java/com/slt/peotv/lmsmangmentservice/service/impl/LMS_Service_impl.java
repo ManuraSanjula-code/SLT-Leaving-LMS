@@ -289,9 +289,6 @@ public class LMS_Service_impl implements LMS_Service {
         if (req.getIsEdited() != null) {
             movementsEntity.setIsEdited(req.getIsEdited());
         }
-        if (req.getComponentBehavior() != null)
-            movementsEntity.setComponentBehavior(req.getComponentBehavior());
-
         if (req.getRequestStatus() != null)
             movementsEntity.setRequestStatus(req.getRequestStatus());
 

@@ -3,14 +3,27 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 import java.util.Date;
 
 public class AccessLogDTO {
+    private Long id;
     private String employeeID;
     private String logDate;
     private String logTime;
     private String terminalID;
     private String inOut;
     private String readStatus;
-    private int processed;
+    private Integer processed;
     private Date etlRunTime;
+    private Boolean isManual = false;
+    private Date createdDate;
+    private Date updatedDate;
+    private Boolean isActive = true;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getEmployeeID() {
         return employeeID;
@@ -60,11 +73,11 @@ public class AccessLogDTO {
         this.readStatus = readStatus;
     }
 
-    public int getProcessed() {
+    public Integer getProcessed() {
         return processed;
     }
 
-    public void setProcessed(int processed) {
+    public void setProcessed(Integer processed) {
         this.processed = processed;
     }
 
@@ -74,5 +87,37 @@ public class AccessLogDTO {
 
     public void setEtlRunTime(Date etlRunTime) {
         this.etlRunTime = etlRunTime;
+    }
+
+    public Boolean getIsManual() {
+        return isManual;
+    }
+
+    public void setIsManual(Boolean isManual) {
+        this.isManual = isManual;
+    }
+
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Date getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Date updatedDate) {
+        this.updatedDate = updatedDate;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

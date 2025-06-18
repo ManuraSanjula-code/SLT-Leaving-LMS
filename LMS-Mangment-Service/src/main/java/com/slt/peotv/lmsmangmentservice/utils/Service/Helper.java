@@ -16,10 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class Helper {
@@ -104,7 +101,20 @@ public class Helper {
             userLeaveTypeRemainingRepo.save(remaining_short_Leaves);
         }
 
-        attendanceRepo.save(attendanceEntity);
+        AttendanceEntity save = attendanceRepo.save(attendanceEntity);
+        List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(employee.getEmployeeId());
+        boolean nopay =
+                userLeaveCategoryRemaining.stream()
+                        .allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
+
+        if (nopay) {
+            check_Service.saveNoPayEntity(employee, attendanceEntity,
+                    check_Service.createNoPayRequest(save.getAttendanceType().equals(AttendanceType.HALF_DAY),
+                            save.getIsUnSuccessful(), save.getIsUnauthorized(),
+                            save.getIsLate(), save.getIsLateCovered(),
+                            save.getAttendanceType().equals(AttendanceType.ABSENT))
+                    , save.getDate());
+        }
     }
 
     public EmployeeEntity getEmployeeById(String employee_id) {

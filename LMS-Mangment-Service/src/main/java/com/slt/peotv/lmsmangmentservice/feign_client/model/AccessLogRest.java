@@ -11,13 +11,16 @@ import java.util.Date;
 @Builder
 @ToString
 public class AccessLogRest {
-    private Long id;
-    private String employeeID;
+    private String employeeId;
     private String logDate;
     private String logTime;
-    private String terminalID;
+    private String terminalId;
     private String inOut;
     private String readStatus;
-    private int processed;
+    private Integer processed;
     private Date etlRunTime;
+    private Boolean isManual = false;
+    private Date createdDate = new Date();
+    private Date updatedDate;
+    private Boolean isActive = true;
 }

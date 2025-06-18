@@ -25,7 +25,7 @@ export const fetchMovementRequests = createAsyncThunk(
             }
 
             const data = await response.json();
-
+            console.log(data)
             const filteredContent = data.content.filter(item => item !== null);
 
             return {

@@ -27,12 +27,11 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 @Service
-public class UpdateUtils {
-    private static final Logger logger = LoggerFactory.getLogger(UpdateUtils.class);
+public class UpdateUtils_ {
+    private static final Logger logger = LoggerFactory.getLogger(UpdateUtils_.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -58,14 +57,73 @@ public class UpdateUtils {
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    @Transactional
-    public UserDto updateUser(String userId, UserReq userReq) {
+    /*@Deprecated
+    public UserDto updateUser(String userId, UserDto userDto) {
+        // Find the user entity by userId
         UserEntity userEntity = userRepository.findByUserId(userId);
 
         if (userEntity == null) {
             throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         }
 
+        // Update basic user details
+        updateFieldIfNotNull(userDto.getFirstName(), userEntity::setFirstName);
+        updateFieldIfNotNull(userDto.getLastName(), userEntity::setLastName);
+        updateFieldIfNotNull(userDto.getEmail(), userEntity::setEmail);
+        updateFieldIfNotNull(userDto.getPhone(), userEntity::setPhone);
+        updateFieldIfNotNull(userDto.getGender(), userEntity::setGender);
+        updateFieldIfNotNull(userDto.getIsSltEmp(), userEntity::setIsSltEmp);
+        updateFieldIfNotNull(userDto.getIsSltIntern(), userEntity::setIsSltIntern);
+        updateFieldIfNotNull(userDto.getSltId(), userEntity::setSltId);
+        updateFieldIfNotNull(userDto.getEmployeeId(), userEntity::setEmployeeId);
+        updateFieldIfNotNull(userDto.getActive(), userEntity::setActive);
+        updateFieldIfNotNull(userDto.getRoaster(), userEntity::setRoaster);
+
+        updateFieldIfNotNull(bCryptPasswordEncoder.encode(userDto.getPassword()), userEntity::setEncryptedPassword);
+        
+        // Handle addresses
+        updateAddresses(userDto.getAddresses(), userEntity, null);
+
+        // Update roles, sections, and profiles
+        updateCollectionField(userDto.getRoles(), roleRepository::findByName, userEntity.getRoles(), userEntity::setRoles);
+        updateCollectionField(userDto.getSections(), sectionRepo::findBySection, userEntity.getSections(), userEntity::setSections);
+        updateCollectionField(userDto.getProfiles(), profilesRepo::findByName, userEntity.getProfiles(), userEntity::setProfiles);
+
+        // Save the updated user entity
+        UserEntity updatedUserEntity = userRepository.save(userEntity);
+
+        // Log updated fields
+        logFieldIfNotNull("Email", updatedUserEntity.getEmail(), Object::toString);
+
+        // Update relationships in roles, sections, and profiles
+        updateRelationships(updatedUserEntity);
+
+        LMSUser lmsUser = new LMSUser();
+        lmsUser.setEmail(updatedUserEntity.getEmail());
+        lmsUser.setFirstName(updatedUserEntity.getFirstName());
+        lmsUser.setLastName(updatedUserEntity.getLastName());
+        lmsUser.setEmployeeId(updatedUserEntity.getEmployeeId());
+        lmsUser.setSltId(updatedUserEntity.getSltId());
+        lmsUser.setPublicId(updatedUserEntity.getUserId());
+        lmsUser.setRoaster(updatedUserEntity.getRoaster());
+        messageProducerService.sendMessage("user.queue", lmsUser);
+        messageProducerService.sendMessage("user.queue.roster", lmsUser);
+        redisService.setValue(userEntity.getEmail(), userDto.getPassword());
+
+        // Return the updated user as a DTO
+        return UserMapper.mapToUserDto(updatedUserEntity);
+    }*/
+
+    @Transactional
+    public UserDto updateUser(String userId, UserReq userReq) {
+        // Find the user entity by userId
+        UserEntity userEntity = userRepository.findByUserId(userId);
+
+        if (userEntity == null) {
+            throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+        }
+
+        // Update basic user details
         updateFieldIfNotNull(userReq.getFirstName(), userEntity::setFirstName);
         updateFieldIfNotNull(userReq.getLastName(), userEntity::setLastName);
         updateFieldIfNotNull(userReq.getEmail(), userEntity::setEmail);
@@ -77,22 +135,25 @@ public class UpdateUtils {
         updateFieldIfNotNull(userReq.getEmployeeId(), userEntity::setEmployeeId);
         updateFieldIfNotNull(userReq.getActive(), userEntity::setActive);
         updateFieldIfNotNull(userReq.getJoiningDate(), userEntity::setJoin_date);
+        updateFieldIfNotNull(bCryptPasswordEncoder.encode(userReq.getPassword()), userEntity::setEncryptedPassword);
         updateFieldIfNotNull(userReq.getRoaster(), userEntity::setRoaster);
 
-        if (userReq.getPassword() != null && !userReq.getPassword().trim().isEmpty()) {
-            updateFieldIfNotNull(bCryptPasswordEncoder.encode(userReq.getPassword()), userEntity::setEncryptedPassword);
-        }
 
+        // Handle addresses
         updateAddresses(userReq.getAddresses(), userEntity, userReq);
 
+        // Update roles, sections, and profiles
         updateCollectionField(userReq.getRoles(), roleRepository::findByName, userEntity.getRoles(), userEntity::setRoles);
         updateCollectionField(userReq.getSections(), sectionRepo::findBySection, userEntity.getSections(), userEntity::setSections);
         updateCollectionField(userReq.getProfiles(), profilesRepo::findByName, userEntity.getProfiles(), userEntity::setProfiles);
 
+        // Save the updated user entity
         UserEntity updatedUserEntity = userRepository.save(userEntity);
 
+        // Log updated fields
         logFieldIfNotNull("Email", updatedUserEntity.getEmail(), Object::toString);
-
+        
+        // Update relationships in roles, sections, and profiles
         updateRelationships(updatedUserEntity);
         updateAdditionalRelationships(updatedUserEntity, userReq);
         handleAdminUpdates(updatedUserEntity, userReq);
@@ -109,11 +170,8 @@ public class UpdateUtils {
 
         messageProducerService.sendMessage("user.queue", lmsUser);
         messageProducerService.sendMessage("user.queue.roster", lmsUser);
-
-        if (userReq.getPassword() != null && !userReq.getPassword().trim().isEmpty()) {
-            redisService.setValue(userEntity.getEmployeeId(), userReq.getPassword());
-        }
-
+        redisService.setValue(userEntity.getEmployeeId(), userReq.getPassword());
+        // Return the updated user as a DTO
         return UserMapper.mapToUserDto(updatedUserEntity);
     }
 
@@ -134,6 +192,8 @@ public class UpdateUtils {
         }
     }
 
+
+
     @Transactional
     public synchronized void handleAdminUpdates(UserEntity currentUser, UserReq userReq) throws UserServiceException {
         // Check if both lists are null/empty
@@ -142,15 +202,19 @@ public class UpdateUtils {
             return;
         }
 
+        // Refresh current user from database to ensure we have the latest state
         currentUser = userRepository.findByUserId(currentUser.getUserId());
 
+        // Handle added admins
         if (userReq.getAddedAdmins() != null && !userReq.getAddedAdmins().isEmpty()) {
             for (String adminUserId : userReq.getAddedAdmins()) {
+                // Find the admin user in DB
                 UserEntity adminUser = userRepository.findByUserId(adminUserId);
                 if (adminUser == null) {
                     throw new UserServiceException("Admin user with ID " + adminUserId + " not found");
                 }
 
+                // Check if the admin is already assigned to this user to avoid duplicates
                 boolean adminAlreadyAssigned = false;
                 for (UserEntity existingAdmin : currentUser.getMyAdmins()) {
                     if (existingAdmin.getUserId().equals(adminUserId)) {
@@ -159,26 +223,31 @@ public class UpdateUtils {
                     }
                 }
 
+                // If not already assigned, add the admin using the helper method
                 if (!adminAlreadyAssigned) {
                     currentUser.addAdmin(adminUser);
                 }
             }
         }
 
+        // Handle deleted admins - use a copy of the list to avoid ConcurrentModificationException
         if (userReq.getDeletedAdmins() != null && !userReq.getDeletedAdmins().isEmpty()) {
             List<UserEntity> adminsToRemove = new ArrayList<>();
 
+            // First identify all admins to remove
             for (UserEntity admin : new ArrayList<>(currentUser.getMyAdmins())) {
                 if (userReq.getDeletedAdmins().contains(admin.getUserId())) {
                     adminsToRemove.add(admin);
                 }
             }
 
+            // Then remove them using the helper method
             for (UserEntity adminToRemove : adminsToRemove) {
                 currentUser.removeAdmin(adminToRemove);
             }
         }
 
+        // Save the updated user - changes to related entities will cascade
         userRepository.save(currentUser);
     }
 
@@ -187,15 +256,18 @@ public class UpdateUtils {
 
         List<AddressEntity> existingAddresses = userEntity.getAddresses();
 
-        if (userReq != null && userReq.getDeleteAddresses() != null && !userReq.getDeleteAddresses().isEmpty()) {
+        // Handle address deletions
+        if (userReq.getDeleteAddresses() != null && !userReq.getDeleteAddresses().isEmpty()) {
             existingAddresses.removeIf(addr ->
                     userReq.getDeleteAddresses().contains(addr.getAddressId())
             );
         }
 
+        // Process all addresses
         for (AddressDTO dto : newAddressDtos) {
             AddressEntity existingAddress = null;
 
+            // Try to find by ID first
             if (dto.getAddressId() != null) {
                 existingAddress = existingAddresses.stream()
                         .filter(addr -> addr.getAddressId().equals(dto.getAddressId()))
@@ -204,30 +276,24 @@ public class UpdateUtils {
             }
 
             if (existingAddress != null) {
+                // Update existing address
                 updateExistingAddress(existingAddress, dto);
-                existingAddress.setDefault(dto.getIsDefault() != null ? dto.getIsDefault() : false);
+                existingAddress.setDefault(dto.isDefault());
             } else {
+                // Create new address
                 AddressEntity newAddress = UserMapper.mapToAddressEntity(dto);
                 newAddress.setUserDetails(userEntity);
                 newAddress.setAddressId(idUtils.generateId(30));
-                newAddress.setDefault(dto.getIsDefault() != null ? dto.getIsDefault() : false);
+                newAddress.setDefault(dto.isDefault());
                 existingAddresses.add(newAddress);
             }
         }
 
+        // Ensure exactly one default address
         long defaultCount = existingAddresses.stream().filter(AddressEntity::isDefault).count();
-        if (defaultCount == 0 && !existingAddresses.isEmpty()) {
-            existingAddresses.get(0).setDefault(true);
-        } else if (defaultCount > 1) {
-            boolean firstDefaultFound = false;
-            for (AddressEntity addr : existingAddresses) {
-                if (addr.isDefault()) {
-                    if (!firstDefaultFound) {
-                        firstDefaultFound = true;
-                    } else {
-                        addr.setDefault(false);
-                    }
-                }
+        if (defaultCount != 1) {
+            if (!existingAddresses.isEmpty()) {
+                existingAddresses.get(0).setDefault(true);
             }
         }
     }
@@ -243,6 +309,7 @@ public class UpdateUtils {
     }
 
     private AddressEntity findExistingDefault(AddressDTO dto, List<AddressEntity> existingAddresses) {
+        // First try by ID
         if (dto.getAddressId() != null) {
             return existingAddresses.stream()
                     .filter(addr -> dto.getAddressId().equals(addr.getAddressId()))
@@ -250,6 +317,7 @@ public class UpdateUtils {
                     .orElse(null);
         }
 
+        // Fall back to content matching
         return findAddressByContent(dto, existingAddresses);
     }
 
@@ -282,38 +350,35 @@ public class UpdateUtils {
 
     private void updateRelationships(UserEntity userEntity) {
         userEntity.getSections().forEach(section -> {
-            if (!section.getUsers().contains(userEntity)) {
-                section.getUsers().add(userEntity);
-                sectionRepo.save(section);
-            }
+            section.getUsers().add(userEntity);
+            sectionRepo.save(section);
         });
 
         userEntity.getProfiles().forEach(profile -> {
-            if (!profile.getUsers().contains(userEntity)) {
-                profile.getUsers().add(userEntity);
-                profilesRepo.save(profile);
-            }
+            profile.getUsers().add(userEntity);
+            profilesRepo.save(profile);
         });
 
         userEntity.getRoles().forEach(role -> {
-            if (!role.getUsers().contains(userEntity)) {
-                role.getUsers().add(userEntity);
-                roleRepository.save(role);
-            }
+            role.getUsers().add(userEntity);
+            roleRepository.save(role);
         });
     }
-
     private synchronized void updateAdditionalRelationships(UserEntity userEntity, UserReq userReq) {
         if (userReq.getAdditional() != null) {
             logger.info("Processing additional relationships for user: {}", userEntity.getUserId());
 
+            // Refresh the user entity to ensure we have the latest version
             UserEntity refreshedUser = userRepository.findById(userEntity.getId())
                     .orElseThrow(() -> new UserServiceException("User not found during update"));
 
+            // Process additions first
             processAdditions(refreshedUser, userReq.getAdditional());
 
+            // Then process deletions
             processDeletions(refreshedUser, userReq.getAdditional());
 
+            // Save the changes
             userRepository.save(refreshedUser);
             logger.info("Successfully updated additional relationships for user: {}", refreshedUser.getUserId());
         }
@@ -387,6 +452,7 @@ public class UpdateUtils {
         userEntity.setRoles(currentRoles);
     }
 
+    // Section operations
     private synchronized void addSectionsByName(UserEntity userEntity, List<String> sectionNames) {
         List<SectionEntity> currentSections = new ArrayList<>(userEntity.getSections());
 
@@ -424,6 +490,7 @@ public class UpdateUtils {
         userEntity.setSections(currentSections);
     }
 
+    // Profile operations
     private synchronized void addProfilesByName(UserEntity userEntity, List<String> profileNames) {
         List<ProfilesEntity> currentProfiles = new ArrayList<>(userEntity.getProfiles());
 

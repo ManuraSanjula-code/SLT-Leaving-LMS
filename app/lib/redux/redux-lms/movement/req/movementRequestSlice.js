@@ -1,5 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
+export const MovementType = {
+    FULLDAY: 'FULLDAY',
+    OFFICE_TO_HOME: 'OFFICE_TO_HOME',
+    HOME_TO_OFFICE: 'HOME_TO_OFFICE',
+    REMOTEWORK: 'REMOTEWORK',
+};
+
 const initialState = {
     userId: '',
     formData: {
@@ -7,12 +14,11 @@ const initialState = {
         movementType: '',
         comment: '',
         destination: '',
-        category: '',
+        category: 'UN-AUTHORIZED',
         happenDate: '',
         logTime: '',
-        inTime: '00:00',
-        outTime: '00:00',
-        componentBehavior: 'FULL_DAY',
+        inTime: '',
+        outTime: '',
         requestStatus: 'DRAFT'
     },
     status: 'idle',
@@ -34,20 +40,19 @@ export const submitMovementRequest = createAsyncThunk(
             return rejectWithValue('User ID not found. Please login again.');
         }
 
-        if (!submissionData.movementType) {
-            return rejectWithValue('Movement Type is required');
+        const requiredFields = [
+            'employeeId', 'movementType', 'comment', 'destination',
+            'category', 'happenDate', 'logTime', 'inTime', 'outTime'
+        ];
+
+        for (const field of requiredFields) {
+            if (!submissionData[field]) {
+                return rejectWithValue(`${field.replace(/([A-Z])/g, ' $1').trim()} is required`);
+            }
         }
-        if (!submissionData.happenDate) {
-            return rejectWithValue('Date is required');
-        }
-        if (!submissionData.comment) {
-            return rejectWithValue('Comment/Reason is required');
-        }
-        if (!submissionData.destination) {
-            return rejectWithValue('Destination is required');
-        }
-        if (!submissionData.componentBehavior) {
-            return rejectWithValue('Component Behavior is required');
+
+        if (submissionData.inTime >= submissionData.outTime) {
+            return rejectWithValue('Out time must be after in time');
         }
 
         const requestData = {
@@ -56,12 +61,11 @@ export const submitMovementRequest = createAsyncThunk(
             movementType: submissionData.movementType,
             comment: submissionData.comment?.trim(),
             destination: submissionData.destination?.trim(),
-            category: submissionData.category?.trim() || '',
-            happenDate: submissionData.happenDate ? new Date(submissionData.happenDate).toISOString() : null,
-            logTime: submissionData.logTime ? new Date(submissionData.logTime).toISOString() : new Date('1990-01-01T00:00:00').toISOString(),
-            inTime: submissionData.inTime || '00:00',
-            outTime: submissionData.outTime || '00:00',
-            componentBehavior: submissionData.componentBehavior,
+            category: submissionData.category?.trim(),
+            happenDate: new Date(submissionData.happenDate).toISOString(),
+            logTime: new Date(submissionData.logTime).toISOString(),
+            inTime: submissionData.inTime,
+            outTime: submissionData.outTime,
             requestStatus: 'DRAFT'
         };
 
@@ -101,50 +105,19 @@ const movementRequestSlice = createSlice({
         setUserId: (state, action) => {
             state.userId = action.payload;
         },
-
         updateFormField: (state, action) => {
             const { name, value } = action.payload;
             state.formData[name] = value;
-
-            if (name === 'movementType') {
-                switch (value) {
-                    case 'ABSENT':
-                        state.formData.componentBehavior = 'ABSENT';
-                        break;
-                    case 'LATEWORK':
-                        state.formData.componentBehavior = 'LATE';
-                        break;
-                    case 'UNSUCCESSFUL':
-                        state.formData.componentBehavior = 'UNSUCCESSFUL';
-                        break;
-                    case 'UNAUTHORIZED':
-                        state.formData.componentBehavior = 'UNAUTHORIZED';
-                        break;
-                    case 'REMOTEWORK':
-                        state.formData.componentBehavior = 'FULL_DAY';
-                        break;
-                    default:
-                        state.formData.componentBehavior = 'FULL_DAY';
-                        break;
-                }
-            }
         },
-
-        setComponentBehavior: (state, action) => {
-            state.formData.componentBehavior = action.payload;
-        },
-
         resetForm: (state) => {
             state.formData = initialState.formData;
             state.status = 'idle';
             state.error = null;
             state.successMessage = '';
         },
-
         clearError: (state) => {
             state.error = null;
         },
-
         clearSuccessMessage: (state) => {
             state.successMessage = '';
         }
@@ -158,7 +131,6 @@ const movementRequestSlice = createSlice({
             .addCase(submitMovementRequest.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.successMessage = action.payload;
-                // Reset the form data on success
                 state.formData = initialState.formData;
             })
             .addCase(submitMovementRequest.rejected, (state, action) => {
@@ -171,7 +143,6 @@ const movementRequestSlice = createSlice({
 export const {
     setUserId,
     updateFormField,
-    setComponentBehavior,
     resetForm,
     clearError,
     clearSuccessMessage

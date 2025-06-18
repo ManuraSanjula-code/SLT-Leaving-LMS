@@ -44,7 +44,7 @@ public class AccessLogServiceImpl implements AccessLogService {
     @Transactional
     public void processLogEntry() throws ParseException {
         logger.info("Processing log entries from archive");
-        List<AccessLogEntity> logs = accessLogRepository.findAll();
+        List<AccessLogEntity> logs = accessLogRepository.findByYesterdayLogs();
 
         for (AccessLogEntity log : logs) {
             try {
@@ -102,7 +102,8 @@ public class AccessLogServiceImpl implements AccessLogService {
         }
     }
 
-    private Time parseTime(String timeString) throws ParseException {
+    @Override
+    public Time parseTime(String timeString) throws ParseException {
         try {
             return new Time(timeFormat.parse(timeString).getTime());
         } catch (ParseException e) {
@@ -150,11 +151,11 @@ public class AccessLogServiceImpl implements AccessLogService {
                 case "OUT":
                     inOut.setInOutValue(0);
                     if (isMorning) {
-                        inOut.setInOutType(InOutType.MORNING_OUT);
+                        inOut.setInOutType(InOutType.EVENING_IN);
                         inOut.setPunchTypeTime(punchTime);
                         inOut.setPunchTime(date);
                     } else {
-                        inOut.setInOutType(InOutType.MORNING_IN);
+                        inOut.setInOutType(InOutType.EVENING_OUT);
                         inOut.setPunchTypeTime(punchTime);
                         inOut.setPunchTime(date);
                     }
@@ -167,10 +168,9 @@ public class AccessLogServiceImpl implements AccessLogService {
                     throw new IllegalArgumentException("Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
             }
 
-            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIdAndDateAndPunchTime(
+            List<InOutEntity> existingEntries = inOutRepository.findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
                     inOut.getEmployeeId(),
-                    inOut.getDate(),
-                    inOut.getPunchTime());
+                    inOut.getPunchTime(), inOut.getPunchTypeTime(), inOut.getTerminalId());
 
             boolean shouldSave = true;
 
@@ -196,12 +196,10 @@ public class AccessLogServiceImpl implements AccessLogService {
 
         } catch (ParseException e) {
             logger.error("Failed to parse date while saving InOut record for employee {}: {}",
-                    employeeID, logDate, e);
-            throw e;
+                    employeeID, logDate, e);;
         } catch (Exception e) {
             logger.error("Unexpected error while saving InOut record for employee {}: {}",
                     employeeID, e.getMessage(), e);
-            throw new RuntimeException("Failed to save InOut record", e);
         }
     }
 }

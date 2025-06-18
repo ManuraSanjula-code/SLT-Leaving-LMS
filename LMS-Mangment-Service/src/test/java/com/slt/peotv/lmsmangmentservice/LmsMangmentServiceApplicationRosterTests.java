@@ -29,7 +29,7 @@ public class LmsMangmentServiceApplicationRosterTests {
         String todayDate = dateFormat.format(helper.getYesterdayDate());
 
         // Target employee IDs
-        String[] TARGET_EMPLOYEES = {"A00316", "A00516", "A0230", "A9098", "A0040","A1900", "A9099", "A1209", "A0230"};
+        String[] TARGET_EMPLOYEES = {"A00316", "A00516", "A0230", "A9098", "A0040","A1900", "A9099", "A1209"};
 
         // Shift types
         enum ShiftType {

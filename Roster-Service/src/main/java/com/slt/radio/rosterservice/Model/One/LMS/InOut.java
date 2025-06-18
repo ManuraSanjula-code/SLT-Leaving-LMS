@@ -1,11 +1,14 @@
 package com.slt.radio.rosterservice.Model.One.LMS;
 
+import com.slt.radio.rosterservice.Model.Enum.InOutType;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.Date;
 
 @Data
@@ -24,26 +27,24 @@ import java.util.Date;
 public class InOut {
     @Id
     private String id;
+    private String employeeId;
 
-    private String employeeID;
-    private String terminalID;
     private Date date;
-    private Date etl_RunTime;
-    private Date punchInMoa; // earliest morning time -- date
-    private Date punchInEv; // earliest evening time -- date
+    private Date punchTime;
+    private LocalTime punchTypeTime;
 
-    private String timeMoa; // earliest morning time -- time (as string)
-    private String timeEve; // earliest evening time -- time (as string)
+    private String terminalId;
 
     @Builder.Default
-    private Integer inOut = 0;
+    private Integer inOutValue = -1;
 
     @Builder.Default
-    private Boolean isMorning = false;
+    private Boolean isManual = false;
 
-    @Builder.Default
-    private Boolean isEvening = false;
+    private InOutType inOutType;
 
-    @Builder.Default
-    private Boolean isPast = false;
+    private Date createdDate = new Date();
+    private Date updatedDate;
+    private Boolean isActive = true;
+    private Date etlRunTime;
 }

@@ -28,6 +28,7 @@ import {
     FilterList,
     Refresh
 } from '@mui/icons-material';
+
 const formatDate = (date) => {
     const d = new Date(date);
     let month = '' + (d.getMonth() + 1);
@@ -42,14 +43,10 @@ const formatDate = (date) => {
 
 const AttendanceComponent = () => {
     const [dateInput, setDateInput] = useState(formatDate(new Date()));
-
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-
     const [employeeFilter, setEmployeeFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [shiftFilter, setShiftFilter] = useState('all');
-
     const [attendanceData, setAttendanceData] = useState(null);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -90,24 +87,17 @@ const AttendanceComponent = () => {
 
         if (employeeFilter) {
             result = result.filter(record =>
-                record.employeeID.toLowerCase().includes(employeeFilter.toLowerCase())
+                record.employeeId.toLowerCase().includes(employeeFilter.toLowerCase())
             );
         }
 
         if (statusFilter !== 'all') {
             result = result.filter(record => {
-                if (statusFilter === 'present') return !record.isAbsent && !record.isFullLeave && !record.isHalfDay;
-                if (statusFilter === 'absent') return record.isAbsent;
-                if (statusFilter === 'leave') return record.isFullLeave;
-                if (statusFilter === 'halfday') return record.isHalfDay;
+                if (statusFilter === 'present') return record.attendanceType === 'FULL_DAY';
+                if (statusFilter === 'absent') return record.attendanceType === 'ABSENT';
+                if (statusFilter === 'halfday') return record.attendanceType === 'HALF_DAY';
                 return true;
             });
-        }
-
-        if (shiftFilter !== 'all') {
-            result = result.filter(record =>
-                record.shiftCode.toLowerCase().includes(shiftFilter.toLowerCase())
-            );
         }
 
         setFilteredData(result);
@@ -117,7 +107,6 @@ const AttendanceComponent = () => {
     const resetFilters = () => {
         setEmployeeFilter('');
         setStatusFilter('all');
-        setShiftFilter('all');
         if (attendanceData) {
             setFilteredData(attendanceData.content);
         }
@@ -130,7 +119,7 @@ const AttendanceComponent = () => {
 
     useEffect(() => {
         applyFilters();
-    }, [employeeFilter, statusFilter, shiftFilter]);
+    }, [employeeFilter, statusFilter]);
 
     const handleDateChange = (e) => {
         setDateInput(e.target.value);
@@ -151,11 +140,23 @@ const AttendanceComponent = () => {
     };
 
     const getStatusChip = (record) => {
-        if (record.isAbsent) return <Chip label="Absent" color="error" size="small" />;
-        if (record.isFullLeave) return <Chip label="Full Leave" color="warning" size="small" />;
-        if (record.isHalfDay) return <Chip label="Half Day" color="info" size="small" />;
-        if (record.isShortLeave) return <Chip label="Short Leave" color="info" size="small" variant="outlined" />;
-        return <Chip label="Present" color="success" size="small" />;
+        switch (record.attendanceType) {
+            case 'ABSENT':
+                return <Chip label="Absent" color="error" size="small" />;
+            case 'HALF_DAY':
+                return <Chip label="Half Day" color="warning" size="small" />;
+            case 'FULL_DAY':
+                return <Chip label="Present" color="success" size="small" />;
+            default:
+                return <Chip label={record.attendanceType} color="default" size="small" />;
+        }
+    };
+
+    const getIssueChip = (record) => {
+        if (record.hasIssues || record.isLate || record.isUnauthorized) {
+            return <Chip label="Yes" color="error" size="small" />;
+        }
+        return <Chip label="No" color="success" size="small" />;
     };
 
     const paginatedData = filteredData.slice(
@@ -236,7 +237,7 @@ const AttendanceComponent = () => {
                         <FilterList sx={{ mr: 1 }} /> Filters
                     </Typography>
                     <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid item xs={12} sm={6} md={4}>
                             <TextField
                                 fullWidth
                                 label="Search Employee ID"
@@ -256,7 +257,7 @@ const AttendanceComponent = () => {
                                 }}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
+                        <Grid item xs={12} sm={6} md={4}>
                             <FormControl fullWidth>
                                 <InputLabel>Status</InputLabel>
                                 <Select
@@ -270,30 +271,11 @@ const AttendanceComponent = () => {
                                     <MenuItem value="all">All Status</MenuItem>
                                     <MenuItem value="present">Present</MenuItem>
                                     <MenuItem value="absent">Absent</MenuItem>
-                                    <MenuItem value="leave">Full Leave</MenuItem>
                                     <MenuItem value="halfday">Half Day</MenuItem>
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <FormControl fullWidth>
-                                <InputLabel>Shift</InputLabel>
-                                <Select
-                                    value={shiftFilter}
-                                    label="Shift"
-                                    onChange={(e) => setShiftFilter(e.target.value)}
-                                    sx={{
-                                        backgroundColor: '#ffffff !important'
-                                    }}
-                                >
-                                    <MenuItem value="all">All Shifts</MenuItem>
-                                    <MenuItem value="T 1">T 1</MenuItem>
-                                    <MenuItem value="T 2">T 2</MenuItem>
-                                    <MenuItem value="T 3">T 3</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Grid item xs={12} sm={6} md={4} sx={{ display: 'flex', alignItems: 'center' }}>
                             <Button
                                 variant="outlined"
                                 startIcon={<Refresh />}
@@ -360,11 +342,10 @@ const AttendanceComponent = () => {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Employee ID</TableCell>
-                                        <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Shift</TableCell>
-                                        <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Shift Time</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Arrival Time</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Left Time</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Status</TableCell>
+                                        <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Late</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Issues</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -381,27 +362,28 @@ const AttendanceComponent = () => {
                                                     }
                                                 }}
                                             >
-                                                <TableCell sx={{ color: '#000000 !important' }}>{record.employeeID}</TableCell>
-                                                <TableCell sx={{ color: '#000000 !important' }}>{record.shiftCode}</TableCell>
-                                                <TableCell sx={{ color: '#000000 !important' }}>{record.shiftTime}</TableCell>
+                                                <TableCell sx={{ color: '#000000 !important' }}>{record.employeeId}</TableCell>
                                                 <TableCell sx={{ color: '#000000 !important' }}>{record.arrivalTime || '--'}</TableCell>
                                                 <TableCell sx={{ color: '#000000 !important' }}>{record.leftTime || '--'}</TableCell>
                                                 <TableCell>
                                                     {getStatusChip(record)}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {record.issues ? (
+                                                    {record.isLate ? (
                                                         <Chip label="Yes" color="error" size="small" />
                                                     ) : (
                                                         <Chip label="No" color="success" size="small" />
                                                     )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {getIssueChip(record)}
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow sx={{ backgroundColor: '#ffffff !important' }}>
                                             <TableCell
-                                                colSpan={7}
+                                                colSpan={6}
                                                 align="center"
                                                 sx={{ color: '#000000 !important' }}
                                             >

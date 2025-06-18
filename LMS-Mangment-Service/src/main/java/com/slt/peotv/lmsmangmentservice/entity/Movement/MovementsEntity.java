@@ -70,10 +70,6 @@ public class MovementsEntity {
     private Date happenDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "component_behavior")
-    private ComponentBehavior componentBehavior;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "request_status")
     private RequestStatus requestStatus;
 
