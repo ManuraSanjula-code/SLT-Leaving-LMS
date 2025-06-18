@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Container,
     Typography,
@@ -80,7 +80,7 @@ const AttendanceComponent = () => {
         }
     };
 
-    const applyFilters = () => {
+    const applyFilters = useCallback(() => {
         if (!attendanceData) return;
 
         let result = [...attendanceData.content];
@@ -102,7 +102,7 @@ const AttendanceComponent = () => {
 
         setFilteredData(result);
         setPage(1);
-    };
+    }, [attendanceData, employeeFilter, statusFilter]);
 
     const resetFilters = () => {
         setEmployeeFilter('');
@@ -119,7 +119,7 @@ const AttendanceComponent = () => {
 
     useEffect(() => {
         applyFilters();
-    }, [employeeFilter, statusFilter]);
+    }, [applyFilters]);
 
     const handleDateChange = (e) => {
         setDateInput(e.target.value);

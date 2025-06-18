@@ -1449,7 +1449,7 @@ public class Check_Service_Impl implements Check_Service {
     @Override
     public void getAllTheInOutRecordsFromSLT() {
         String url = "jdbc:mysql://192.168.3.20:3306/attendance";
-        String username = "spring";
+        String username = "root";
         String password = "User@123";
 
         SimpleDateFormat dbDateFormat = new SimpleDateFormat("dd/MM/yyyy");

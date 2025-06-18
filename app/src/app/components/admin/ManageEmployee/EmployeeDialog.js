@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Button,
     Checkbox,
@@ -83,12 +83,10 @@ const EmployeeDialog = React.memo(({
                                        sections,
                                        profiles,
                                        saveLoading,
-
                                        paginatedAdmins,
                                        currentAdminPage,
                                        adminPageSize,
                                        isLoading
-
                                    }) => {
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState({});
@@ -98,10 +96,11 @@ const EmployeeDialog = React.memo(({
     const [otherEmployeeDialogOpen, setOtherEmployeeDialogOpen] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // Memoized employee data for comparison
-    const memoizedEmployee = useMemo(() => employee, [JSON.stringify(employee)]);
-
     const dispatch = useDispatch();
+
+    // Memoized values
+    const employeeString = JSON.stringify(employee);
+    const memoizedEmployee = useMemo(() => employee, [employeeString]);
 
     const handlePageChange = useCallback((newPage) => {
         dispatch(setCurrentAdminPage(newPage));
@@ -137,7 +136,7 @@ const EmployeeDialog = React.memo(({
 
                     return addresses.map((addr, index) => ({
                         ...addr,
-                        id: addr.addressId || addr.id || `temp-${Date.now()}`, // Use string IDs
+                        id: addr.addressId || addr.id || `temp-${Date.now()}`,
                         isDefault: shouldResetDefaults ? false : addr.isDefault
                     }));
                 })() || [],
@@ -162,7 +161,7 @@ const EmployeeDialog = React.memo(({
     const handleChange = useCallback((field, value) => {
         setFormData(prev => {
             if (prev[field] === value) return prev;
-            return {...prev, [field]: value};
+            return { ...prev, [field]: value };
         });
         setIsFormDirty(true);
     }, []);
@@ -170,7 +169,6 @@ const EmployeeDialog = React.memo(({
     const handleChangeForNonBoolean = useCallback((field, newValue) => {
         setFormData(prev => {
             const previousSelection = prev[field] || [];
-
             const netAdded = newValue.filter(item => !previousSelection.includes(item));
             const netRemoved = previousSelection.filter(item => !newValue.includes(item));
 
@@ -198,14 +196,14 @@ const EmployeeDialog = React.memo(({
         setIsFormDirty(true);
     }, []);
 
-    const capitalizeFirstLetter = (str) => {
+    const capitalizeFirstLetter = useCallback((str) => {
         return str.charAt(0).toUpperCase() + str.slice(1);
-    };
+    }, []);
 
     const handleSelectHod = useCallback((hod) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedHod, hod)) return prev;
-            return {...prev, selectedHod: hod};
+            return { ...prev, selectedHod: hod };
         });
         setHodDialogOpen(false);
         setIsFormDirty(true);
@@ -214,7 +212,7 @@ const EmployeeDialog = React.memo(({
     const handleSelectSupervisor = useCallback((supervisor) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedSupervisor, supervisor)) return prev;
-            return {...prev, selectedSupervisor: supervisor};
+            return { ...prev, selectedSupervisor: supervisor };
         });
         setSupervisorDialogOpen(false);
         setIsFormDirty(true);
@@ -223,7 +221,7 @@ const EmployeeDialog = React.memo(({
     const handleSelectOtherEmployee = useCallback((employee) => {
         setFormData(prev => {
             if (deepEqual(prev.selectedOtherEmployee, employee)) return prev;
-            return {...prev, selectedOtherEmployee: employee};
+            return { ...prev, selectedOtherEmployee: employee };
         });
         setOtherEmployeeDialogOpen(false);
         setIsFormDirty(true);
@@ -240,11 +238,10 @@ const EmployeeDialog = React.memo(({
                 country: 'LK',
                 isDefault: false,
             };
-            return {...prev, addresses: [...prev.addresses, newAddress]};
+            return { ...prev, addresses: [...prev.addresses, newAddress] };
         });
         setIsFormDirty(true);
     }, []);
-
 
     const handleRemoveAddress = useCallback((id) => {
         setFormData(prev => {
@@ -270,16 +267,15 @@ const EmployeeDialog = React.memo(({
             }
 
             const newAddresses = [...prev.addresses];
-            newAddresses[addressIndex] = {...newAddresses[addressIndex], [field]: value};
+            newAddresses[addressIndex] = { ...newAddresses[addressIndex], [field]: value };
 
-            return {...prev, addresses: newAddresses};
+            return { ...prev, addresses: newAddresses };
         });
         setIsFormDirty(true);
     }, []);
 
     const handleSetDefaultAddress = useCallback((id) => {
         setFormData(prev => {
-            // First set all addresses to non-default
             const resetAddresses = prev.addresses.map(addr => ({
                 ...addr,
                 isDefault: false
@@ -293,12 +289,11 @@ const EmployeeDialog = React.memo(({
                 };
             }
 
-            return {...prev, addresses: resetAddresses};
+            return { ...prev, addresses: resetAddresses };
         });
         setIsFormDirty(true);
     }, []);
 
-    // Password generation
     const generateTemporaryPassword = useCallback(() => {
         const length = 10;
         const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
@@ -312,7 +307,7 @@ const EmployeeDialog = React.memo(({
 
     const handleGenerateTemporaryPassword = useCallback(() => {
         const tempPassword = generateTemporaryPassword();
-        setFormData(prev => ({...prev, password: tempPassword}));
+        setFormData(prev => ({ ...prev, password: tempPassword }));
         setIsFormDirty(true);
     }, [generateTemporaryPassword]);
 
@@ -361,10 +356,6 @@ const EmployeeDialog = React.memo(({
             !compareArrays(formData.admins, memoizedEmployee.admins || []) ||
             !compareArrays(formData.addedAdmins, memoizedEmployee.addedAdmins || []) ||
             !compareArrays(formData.deletedAdmins, memoizedEmployee.deletedAdmins || []) ||
-
-            // !compareObjects(formData.selectedHod, memoizedEmployee.hod || {}) ||
-            // !compareObjects(formData.selectedSupervisor, memoizedEmployee.supervisor || {}) ||
-            // !compareObjects(formData.selectedOtherEmployee, memoizedEmployee.other || {}) ||
             !compareAddresses(formData.addresses, memoizedEmployee.addresses?.map(a => ({
                 ...a,
                 id: a.id || 0,
@@ -373,7 +364,28 @@ const EmployeeDialog = React.memo(({
         );
     }, [formData, memoizedEmployee, isFormDirty]);
 
-    // Form submission with enhanced validation
+    const formatDateForInput = useCallback((date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, []);
+
+    const hasDuplicateAddresses = useMemo(() => {
+        return formData.addresses.some((addr, index) => {
+            return formData.addresses.some((otherAddr, otherIndex) => {
+                if (index === otherIndex) return false;
+                return (
+                    addr.city === otherAddr.city &&
+                    addr.streetName === otherAddr.streetName &&
+                    addr.postalCode === otherAddr.postalCode
+                );
+            });
+        });
+    }, [formData.addresses]);
+
     const handleSave = useCallback(async () => {
         if (!hasChanges) {
             onClose();
@@ -383,13 +395,13 @@ const EmployeeDialog = React.memo(({
         const newErrors = {};
 
         if (hasDuplicateAddresses) {
-            setErrors({...errors, addresses: "Duplicate addresses found"});
+            setErrors(prev => ({ ...prev, addresses: "Duplicate addresses found" }));
             return;
         }
 
         const defaultCount = formData.addresses.filter(addr => addr.isDefault).length;
         if (defaultCount !== 1) {
-            setErrors({...errors, addresses: "Exactly one address must be set as default"});
+            setErrors(prev => ({ ...prev, addresses: "Exactly one address must be set as default" }));
             return;
         }
 
@@ -446,7 +458,7 @@ const EmployeeDialog = React.memo(({
                 roles: formData.selectedRoles || [],
                 sections: formData.selectedSections || [],
                 profiles: formData.selectedProfiles.map(profile =>
-                    typeof profile === 'string' ? profile : profile.id // or profile.name, depending on your structure
+                    typeof profile === 'string' ? profile : profile.id
                 ) || [],
                 isSltEmp: formData.isSltEmp || 0,
                 isSltIntern: formData.isSltIntern || 0,
@@ -454,9 +466,6 @@ const EmployeeDialog = React.memo(({
                 roaster: formData.isRoaster || 0,
                 phone: formData.phone.trim(),
                 gender: formData.gender,
-                // hod: formData.selectedHod ? formData.selectedHod.employeeId || '' : '',
-                // supervisor: formData.selectedHod ? formData.selectedSupervisor.employeeId || '' : '',
-                // other: formData.selectedHod ? formData.selectedOtherEmployee.employeeId || '' : '',
                 profilePic: formData.profilePic || '',
                 Authorities: formData.authorities || [],
                 deleteAddresses: formData.deleteAddresses || [],
@@ -471,27 +480,34 @@ const EmployeeDialog = React.memo(({
         } catch (error) {
             console.error("Error saving employee:", error);
         }
-    }, [formData, memoizedEmployee, hasChanges, onSave, onClose]);
+    }, [
+        formData,
+        memoizedEmployee,
+        hasChanges,
+        onSave,
+        onClose,
+        hasDuplicateAddresses,
+        setErrors
+    ]);
 
-    const formatDateForInput = (date) => {
-        if (!date) return '';
-        const d = new Date(date);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
+    const effectiveAdmins = useMemo(() => {
+        const backendAdmins = employee?.administrativesDto || [];
+        const addedAdmins = formData?.addedAdmins || [];
+        const deletedAdmins = formData?.deletedAdmins || [];
 
-    const hasDuplicateAddresses = formData.addresses.some((addr, index) => {
-        return formData.addresses.some((otherAddr, otherIndex) => {
-            if (index === otherIndex) return false;
-            return (
-                addr.city === otherAddr.city &&
-                addr.streetName === otherAddr.streetName &&
-                addr.postalCode === otherAddr.postalCode
-            );
-        });
-    });
+        const filteredBackendAdmins = backendAdmins.filter(
+            admin => !deletedAdmins.includes(admin.userId)
+        );
+
+        const newAdmins = addedAdmins
+            .filter(userId => !backendAdmins.some(admin => admin.userId === userId))
+            .map(userId => {
+                const user = paginatedAdmins?.content?.find(u => u.userId === userId);
+                return user || { userId, firstName: "New", lastName: "User" };
+            });
+
+        return [...filteredBackendAdmins, ...newAdmins];
+    }, [employee?.administrativesDto, formData?.addedAdmins, formData?.deletedAdmins, paginatedAdmins?.content]);
 
     const renderBasicInfoSection = useMemo(() => (
         <>
@@ -522,7 +538,7 @@ const EmployeeDialog = React.memo(({
                 />
             </Grid>
         </>
-    ), [formData.firstName, formData.lastName, errors.firstName, errors.lastName, saveLoading]);
+    ), [formData.firstName, formData.lastName, errors.firstName, errors.lastName, saveLoading, handleChange]);
 
     const renderContactInfoSection = useMemo(() => (
         <>
@@ -554,7 +570,7 @@ const EmployeeDialog = React.memo(({
                 />
             </Grid>
         </>
-    ), [formData.email, formData.phone, errors.email, errors.phone, saveLoading]);
+    ), [formData.email, formData.phone, errors.email, errors.phone, saveLoading, handleChange]);
 
     const renderIdSection = useMemo(() => (
         <>
@@ -585,7 +601,7 @@ const EmployeeDialog = React.memo(({
                 />
             </Grid>
         </>
-    ), [formData.sltId, formData.employeeId, errors.sltId, errors.employeeId, saveLoading]);
+    ), [formData.sltId, formData.employeeId, errors.sltId, errors.employeeId, saveLoading, handleChange]);
 
     const renderPasswordSection = useMemo(() => (
         <Grid item xs={12} sm={6}>
@@ -608,7 +624,7 @@ const EmployeeDialog = React.memo(({
                     <Button
                         variant="outlined"
                         onClick={handleGenerateTemporaryPassword}
-                        sx={{mt: 2}}
+                        sx={{ mt: 2 }}
                         disabled={saveLoading}
                     >
                         Generate
@@ -616,7 +632,7 @@ const EmployeeDialog = React.memo(({
                 </Grid>
             </Grid>
         </Grid>
-    ), [formData.password, errors.password, memoizedEmployee, saveLoading, handleGenerateTemporaryPassword]);
+    ), [formData.password, errors.password, memoizedEmployee, saveLoading, handleChange, handleGenerateTemporaryPassword]);
 
     const renderGenderSection = useMemo(() => (
         <Grid item xs={11} sm={6}>
@@ -633,7 +649,7 @@ const EmployeeDialog = React.memo(({
                 {errors.gender && <FormHelperText>{errors.gender}</FormHelperText>}
             </FormControl>
         </Grid>
-    ), [formData.gender, errors.gender, saveLoading]);
+    ), [formData.gender, errors.gender, saveLoading, handleChange]);
 
     const renderRolesSection = useMemo(() => (
         <Grid item xs={12} sm={6}>
@@ -655,7 +671,7 @@ const EmployeeDialog = React.memo(({
                 {errors.roles && <FormHelperText>{errors.roles}</FormHelperText>}
             </FormControl>
         </Grid>
-    ), [formData.selectedRoles, errors.roles, roles, saveLoading]);
+    ), [formData.selectedRoles, errors.roles, roles, saveLoading, handleChangeForNonBoolean]);
 
     const renderSectionsSection = useMemo(() => (
         <Grid item xs={12} sm={6}>
@@ -677,7 +693,7 @@ const EmployeeDialog = React.memo(({
                 {errors.sections && <FormHelperText>{errors.sections}</FormHelperText>}
             </FormControl>
         </Grid>
-    ), [formData.selectedSections, errors.sections, sections, saveLoading]);
+    ), [formData.selectedSections, errors.sections, sections, saveLoading, handleChangeForNonBoolean]);
 
     const renderProfilesSection = useMemo(() => (
         <Grid item xs={12} sm={6}>
@@ -699,7 +715,7 @@ const EmployeeDialog = React.memo(({
                 {errors.profiles && <FormHelperText>{errors.profiles}</FormHelperText>}
             </FormControl>
         </Grid>
-    ), [formData.selectedProfiles, errors.profiles, profiles, saveLoading]);
+    ), [formData.selectedProfiles, errors.profiles, profiles, saveLoading, handleChangeForNonBoolean]);
 
     const renderCheckboxesSection = useMemo(() => (
         <Grid item xs={12}>
@@ -744,15 +760,15 @@ const EmployeeDialog = React.memo(({
                 label="Active"
             />
         </Grid>
-    ), [formData.isSltEmp, formData.isSltIntern, formData.isRoaster, formData.active, saveLoading]);
+    ), [formData.isSltEmp, formData.isSltIntern, formData.isRoaster, formData.active, saveLoading, handleChange]);
 
     const renderAddressesSection = useMemo(() => (
         <Grid item xs={12}>
-            <Typography variant="h6" sx={{mt: 3}}>
+            <Typography variant="h6" sx={{ mt: 3 }}>
                 Addresses
             </Typography>
             {formData.addresses.map((address, index) => (
-                <Grid container spacing={2} key={address.id} sx={{mt: 2}}>
+                <Grid container spacing={2} key={address.id} sx={{ mt: 2 }}>
                     <Grid item xs={12} sm={6}>
                         <TextField
                             fullWidth
@@ -820,7 +836,7 @@ const EmployeeDialog = React.memo(({
                             variant="outlined"
                             color="error"
                             onClick={() => handleRemoveAddress(address.id)}
-                            sx={{ml: 2}}
+                            sx={{ ml: 2 }}
                             disabled={saveLoading}
                         >
                             Remove Address
@@ -829,14 +845,14 @@ const EmployeeDialog = React.memo(({
                 </Grid>
             ))}
             {errors.addresses && (
-                <Typography color="error" sx={{mt: 2}}>
+                <Typography color="error" sx={{ mt: 2 }}>
                     {errors.addresses}
                 </Typography>
             )}
             <Button
                 variant="outlined"
                 onClick={handleAddAddress}
-                sx={{mt: 2}}
+                sx={{ mt: 2 }}
                 disabled={saveLoading}
             >
                 Add Address
@@ -846,21 +862,21 @@ const EmployeeDialog = React.memo(({
 
     const renderEmployeeAssignmentSection = useMemo(() => (
         <Grid item xs={12}>
-            <Typography variant="h6" sx={{mt: 3}}>
+            <Typography variant="h6" sx={{ mt: 3 }}>
                 Assign Administratives
             </Typography>
             <Grid item xs={19} sm={4}>
                 <Button
                     variant="outlined"
                     onClick={() => setHodDialogOpen(true)}
-                    sx={{mt: 1}}
+                    sx={{ mt: 1 }}
                     disabled={saveLoading}
                 >
                     Select Administratives
                 </Button>
             </Grid>
         </Grid>
-    ), [formData.selectedHod, formData.selectedSupervisor, formData.selectedOtherEmployee, saveLoading]);
+    ), [saveLoading, setHodDialogOpen]);
 
     const renderJoiningDateSection = useMemo(() => (
         <Grid item xs={12} sm={6}>
@@ -868,14 +884,13 @@ const EmployeeDialog = React.memo(({
                 required
                 label="Joining Date"
                 type="date"
-                value={formData.joiningDate ?
-                    formatDateForInput(formData.joiningDate) : ''}
+                value={formData.joiningDate ? formatDateForInput(formData.joiningDate) : ''}
                 onChange={(e) => {
                     if (e.target.value) {
                         const date = new Date(e.target.value);
-                        date.setHours(8, 30, 0, 0); // Set to 8:30 AM
+                        date.setHours(8, 30, 0, 0);
                         handleChange('joiningDate', date);
-                        setErrors(prev => ({...prev, joiningDate: undefined}));
+                        setErrors(prev => ({ ...prev, joiningDate: undefined }));
                     } else {
                         handleChange('joiningDate', null);
                     }
@@ -890,36 +905,13 @@ const EmployeeDialog = React.memo(({
                 disabled={saveLoading}
             />
         </Grid>
-    ), [formData.joiningDate, errors.joiningDate, saveLoading]);
+    ), [formData.joiningDate, errors.joiningDate, saveLoading, handleChange, setErrors, formatDateForInput]);
 
-    const getEffectiveAdmins = () => {
-        const backendAdmins = employee?.administrativesDto || [];
-        const addedAdmins = formData?.addedAdmins || [];
-        const deletedAdmins = formData?.deletedAdmins || [];
-
-        // 1. Filter out deleted admins from backend data
-        const filteredBackendAdmins = backendAdmins.filter(
-            admin => !deletedAdmins.includes(admin.userId)
-        );
-
-        // 2. Add newly added admins (if they aren't already in backend data)
-        const newAdmins = addedAdmins
-            .filter(userId =>
-                !backendAdmins.some(admin => admin.userId === userId)
-            )
-            .map(userId => {
-                // Try to find full user data (from paginatedAdmins or a lookup)
-                const user = paginatedAdmins?.content?.find(u => u.userId === userId);
-                return user || { userId, firstName: "New", lastName: "User" };
-            });
-
-        return [...filteredBackendAdmins, ...newAdmins];
-    };
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle>{memoizedEmployee ? 'Edit Employee' : 'Add Employee'}</DialogTitle>
             <DialogContent>
-                <Grid container spacing={2} sx={{mt: 1}}>
+                <Grid container spacing={2} sx={{ mt: 1 }}>
                     {renderBasicInfoSection}
                     {renderJoiningDateSection}
                     {renderContactInfoSection}
@@ -936,29 +928,19 @@ const EmployeeDialog = React.memo(({
                 <EmployeeSelectionDialog
                     open={hodDialogOpen}
                     onClose={(result) => {
-                        if (result?.selected) {  // Check if selection exists
+                        if (result?.selected) {
                             setFormData(prev => ({
                                 ...prev,
-                                admins: result.selected.map(select=>select.userId),
-                                addedAdmins: result.newlyAdded.map(add=>add.userId),
-                                deletedAdmins: result.deleted.map(del=>del.userId)
+                                admins: result.selected.map(select => select.userId),
+                                addedAdmins: result.newlyAdded.map(add => add.userId),
+                                deletedAdmins: result.deleted.map(del => del.userId)
                             }));
                         }
                         setIsFormDirty(true);
                         setHodDialogOpen(false);
                     }}
-                    // employees={paginatedAdmins?.content?.map(user => ({
-                    //     name: `${user.firstName} ${user.lastName}`,
-                    //     ...user
-                    // })) || []}
-                    initialSelected={getEffectiveAdmins() || []}
+                    initialSelected={effectiveAdmins || []}
                     title="Select Administrative"
-                    // pagination={{
-                    //     currentPage: currentAdminPage,
-                    //     pageSize: adminPageSize,  // Now properly used
-                    //     totalPages: paginatedAdmins?.totalPages || 1
-                    // }}
-                    // onPageChange={handlePageChange}
                     loading={isLoading}
                 />
             </DialogContent>
@@ -978,4 +960,5 @@ const EmployeeDialog = React.memo(({
     );
 });
 
+EmployeeDialog.displayName = 'EmployeeDialog';
 export default EmployeeDialog;

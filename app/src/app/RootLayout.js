@@ -7,13 +7,10 @@ import ClientProtectedRoute from './ClientProtectedRoute';
 import ErrorBoundary from './error-boundary';
 import { BrowserCloseHandler } from './BrowserCloseHandler';
 
-const geistSans = Geist({ /* ... */ });
-const geistMono = Geist_Mono({ /* ... */ });
-
 export default async function RootLayout({ children }) {
   return (
       <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body>
       <ReduxProvider>
         <AuthInitializer />
         <Notification />

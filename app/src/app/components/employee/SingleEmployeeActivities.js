@@ -458,7 +458,6 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
 
     const [anchorEl, setAnchorEl] = React.useState(false);
 
-    // Fetch data on component mount
     useEffect(() => {
         dispatch(fetchEmployeeActivities({
             userId,
@@ -466,7 +465,8 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
             page,
             rowsPerPage,
         }));
-    }, [dispatch, userId]);
+    }, [dispatch, userId, isAdmin, page, rowsPerPage]);
+
 
     // Handle form input changes
     const handleChange = (e) => {

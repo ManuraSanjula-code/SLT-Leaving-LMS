@@ -28,7 +28,7 @@ import {
 import { CameraAlt as CameraIcon } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { putUserProfile } from '../../api';
-import { setUserDetails} from '../../../../lib/redux/redux-user/authSlice';
+import { setUserDetails } from '../../../../lib/redux/redux-user/authSlice';
 import isEqual from 'lodash/isEqual';
 import debounce from 'lodash/debounce';
 import throttle from 'lodash/throttle';
@@ -87,9 +87,6 @@ const UserProfile = () => {
   }, [userDetails, initialProfileState, profile]);
 
   useEffect(() => {
-  }, [profile, originalProfile]);
-
-  useEffect(() => {
     const preview = previewImage;
     return () => {
       if (preview) {
@@ -118,7 +115,6 @@ const UserProfile = () => {
     e.persist();
     debouncedHandleChange(e);
   }, [debouncedHandleChange]);
-
 
   const throttledAddAddress = useMemo(() =>
           throttle(() => {
@@ -155,7 +151,6 @@ const UserProfile = () => {
             setProfile((prev) => ({
               ...prev,
               addresses: prev.addresses.filter((addr) => addr.addressId !== addressId),
-              deleteAddresses: [...prev.deleteAddresses, addressId],
             }));
           }, THROTTLE_DELAY),
       []
@@ -247,7 +242,7 @@ const UserProfile = () => {
     setPreviewImage(null);
     setSelectedFile(null);
     setErrors({});
-    setIsSubmitting(false)
+    setIsSubmitting(false);
   }, []);
 
   const handleFileChange = useCallback((event) => {
@@ -298,14 +293,6 @@ const UserProfile = () => {
     }
   }, [selectedFile, userId, userDetails, dispatch, handleClose, showSuccessDialog, showErrorDialog]);
 
-  if (loading && !userDetails) {
-    return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <CircularProgress size={60} thickness={4} />
-        </Box>
-    );
-  }
-
   const addressList = useMemo(() => (
       profile.addresses.length > 0 ? (
           profile.addresses.map((address) => (
@@ -334,7 +321,7 @@ const UserProfile = () => {
       ) : (
           <Typography>No addresses added yet.</Typography>
       )
-  ), [profile.addresses, handleSetDefaultAddress, handleEditAddress, handleDeleteAddress, isSubmitting]);
+  ), [profile.addresses, handleSetDefaultAddress, handleEditAddress, isSubmitting]);
 
   const personalInfoSection = useMemo(() => (
       <MemoizedCard sx={{ mb: 4 }}>
@@ -454,7 +441,7 @@ const UserProfile = () => {
       <MemoizedCard sx={{ mb: 4 }}>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            Sections & Profiles
+            Sections &amp; Profiles
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <Typography variant="subtitle1" gutterBottom>
@@ -519,9 +506,25 @@ const UserProfile = () => {
           <List>
             {addressList}
           </List>
+          <Button
+              variant="contained"
+              onClick={handleAddAddress}
+              sx={{ mt: 2 }}
+              disabled={isSubmitting}
+          >
+            Add Address
+          </Button>
         </CardContent>
       </MemoizedCard>
   ), [addressList, handleAddAddress, isSubmitting]);
+
+  if (loading && !userDetails) {
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress size={60} thickness={4} />
+        </Box>
+    );
+  }
 
   return (
       <>
@@ -633,7 +636,6 @@ const UserProfile = () => {
             {sectionsProfilesSection}
             {employmentStatusSection}
             {addressesSection}
-
 
             <MemoizedDialog open={openDialog} onClose={() => setOpenDialog(false)}>
               <DialogTitle>{selectedAddress?.addressId ? 'Edit Address' : 'Add Address'}</DialogTitle>

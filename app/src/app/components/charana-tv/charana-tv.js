@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const CharanaTVRosterTable = () => {
     const [rosterData, setRosterData] = useState(null);
@@ -11,7 +11,7 @@ const CharanaTVRosterTable = () => {
         return monday.toISOString().split('T')[0];
     });
 
-    const fetchRosterData = async () => {
+    const fetchRosterData = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -39,11 +39,11 @@ const CharanaTVRosterTable = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedWeekStart]);
 
     useEffect(() => {
         fetchRosterData();
-    }, [selectedWeekStart]);
+    }, [fetchRosterData, selectedWeekStart]);
 
     const handleFetchData = () => {
         fetchRosterData();
@@ -238,7 +238,7 @@ const CharanaTVRosterTable = () => {
                 <table style={styles.table}>
                     <thead style={styles.tableHeader}>
                     <tr>
-                        <th style={styles.tableHeaderCell}>Day & Date</th>
+                        <th style={styles.tableHeaderCell}>Day &amp; Date</th>
                         <th style={styles.tableHeaderCell}>Shift Time</th>
                         <th style={styles.tableHeaderCell}>Shift Type</th>
                         <th style={styles.tableHeaderCell}>Primary Employee</th>
@@ -283,39 +283,39 @@ const CharanaTVRosterTable = () => {
                                 </td>
 
                                 <td style={styles.tableCell}>
-                    <span
-                        style={{
-                            ...styles.chip,
-                            backgroundColor: getShiftTypeChipColor(timeSlot.shiftType),
-                            color: 'white'
-                        }}
-                    >
-                      {timeSlot.shiftType}
-                    </span>
+                                    <span
+                                        style={{
+                                            ...styles.chip,
+                                            backgroundColor: getShiftTypeChipColor(timeSlot.shiftType),
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {timeSlot.shiftType}
+                                    </span>
                                 </td>
 
                                 <td style={styles.tableCell}>
-                    <span
-                        style={{
-                            ...styles.chip,
-                            backgroundColor: timeSlot.primaryEmployee ? '#4caf50' : '#ccc',
-                            color: 'white'
-                        }}
-                    >
-                      {timeSlot.primaryEmployee || 'Not Assigned'}
-                    </span>
+                                    <span
+                                        style={{
+                                            ...styles.chip,
+                                            backgroundColor: timeSlot.primaryEmployee ? '#4caf50' : '#ccc',
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {timeSlot.primaryEmployee || 'Not Assigned'}
+                                    </span>
                                 </td>
 
                                 <td style={styles.tableCell}>
-                    <span
-                        style={{
-                            ...styles.chip,
-                            backgroundColor: timeSlot.secondaryEmployee ? '#2196f3' : '#ccc',
-                            color: 'white'
-                        }}
-                    >
-                      {timeSlot.secondaryEmployee || 'Not Assigned'}
-                    </span>
+                                    <span
+                                        style={{
+                                            ...styles.chip,
+                                            backgroundColor: timeSlot.secondaryEmployee ? '#2196f3' : '#ccc',
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {timeSlot.secondaryEmployee || 'Not Assigned'}
+                                    </span>
                                 </td>
 
                                 <td style={styles.tableCell}>
@@ -334,8 +334,8 @@ const CharanaTVRosterTable = () => {
                                                         textOverflow: 'ellipsis'
                                                     }}
                                                 >
-                            {employee}
-                          </span>
+                                                    {employee}
+                                                </span>
                                             ))
                                         ) : (
                                             <span
@@ -345,8 +345,8 @@ const CharanaTVRosterTable = () => {
                                                     color: 'white'
                                                 }}
                                             >
-                          No Assignments
-                        </span>
+                                                No Assignments
+                                            </span>
                                         )}
                                     </div>
                                 </td>
@@ -430,7 +430,7 @@ const CharanaTVRosterTable = () => {
                 <div style={styles.info}>
                     <h3>No Data</h3>
                     <p>
-                        Please select a week starting date (Monday), then click "Refresh Data" to fetch the weekly roster.
+                        Please select a week starting date (Monday), then click &quot;Refresh Data&quot; to fetch the weekly roster.
                     </p>
                 </div>
             )}
@@ -487,8 +487,8 @@ const CharanaTVRosterTable = () => {
                                     fontSize: '14px'
                                 }}
                             >
-                {shiftType}
-              </span>
+                                {shiftType}
+                            </span>
                         ))}
                     </div>
                 </div>

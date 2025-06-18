@@ -1,6 +1,6 @@
 "use client"
 
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
     Container,
     CssBaseline,
@@ -30,7 +30,7 @@ const Dashboard = () => {
         return sessionUserId || localUserId;
     };
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
             const userId = getUserId();
@@ -61,11 +61,11 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchDashboardData();
-    }, []);
+    }, [fetchDashboardData]);
 
     const getLeaveDistributionData = () => {
         if (!dashboardData?.remainLeaveDistribution) return [];

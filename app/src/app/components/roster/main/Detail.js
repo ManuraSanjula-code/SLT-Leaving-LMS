@@ -273,7 +273,7 @@ const RosterManagement = () => {
         if (filteredTeams.length === 0) {
             return (
                 <Typography variant="h6" sx={{ textAlign: 'center', mt: 5 }}>
-                    No results found for "{searchTerm}"
+                    No results found for &quot;{searchTerm}&quot;
                 </Typography>
             );
         }

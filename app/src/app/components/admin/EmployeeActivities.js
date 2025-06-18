@@ -507,7 +507,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
         </Dialog>
     );
 });
-
+ActivityDetailsDialog.displayName = 'ActivityDetailsDialog';
 const EmployeeActivities = () => {
     const dispatch = useDispatch();
     const router = useRouter();

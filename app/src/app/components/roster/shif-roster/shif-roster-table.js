@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table,
     TableBody,
@@ -31,7 +31,7 @@ const ShiftRosterTable = () => {
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    const fetchRosterData = async () => {
+    const fetchRosterData = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -59,11 +59,11 @@ const ShiftRosterTable = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedYear, selectedMonth]);
 
     useEffect(() => {
         fetchRosterData();
-    }, [selectedYear, selectedMonth]);
+    }, [fetchRosterData]);
 
     const handleFetchData = () => {
         fetchRosterData();
@@ -336,7 +336,7 @@ const ShiftRosterTable = () => {
                 <Alert severity="info" sx={{ textAlign: 'center' }}>
                     <Typography variant="h6">No Data</Typography>
                     <Typography variant="body2">
-                        Please select a month and year, then click "Load Roster" to fetch the shift schedule.
+                        Please select a month and year, then click &quot;Load Roster&quot; to fetch the shift schedule.
                     </Typography>
                 </Alert>
             )}
