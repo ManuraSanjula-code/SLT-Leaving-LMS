@@ -4,7 +4,7 @@ export const fetchRosterData = createAsyncThunk(
     'roster/fetchRosterData',
     async (date, { rejectWithValue }) => {
         try {
-            const apiUrl = `http://localhost:8080/api/attendance/roster/${date}`;
+            const apiUrl = `http://192.168.3.20:8080/api/attendance/roster/${date}`;
             console.log('Fetching from URL:', apiUrl);
 
             const response = await fetch(apiUrl);

@@ -14,7 +14,7 @@ export const fetchAttendanceData = createAsyncThunk(
             const formattedDate = formatDateForApi(date);
             if (!formattedDate) return rejectWithValue('Invalid date');
 
-            const response = await axios.get(`http://localhost:8080/api/attendance/2025-05-06`);
+            const response = await axios.get(`http://192.168.3.20:8080/api/attendance/2025-05-06`);
 
             const responseData = response.data || {};
             let attendanceRecords = [];

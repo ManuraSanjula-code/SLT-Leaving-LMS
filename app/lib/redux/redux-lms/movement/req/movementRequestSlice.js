@@ -70,7 +70,7 @@ export const submitMovementRequest = createAsyncThunk(
         };
 
         try {
-            const response = await fetch('http://localhost:8080/lms/management/movement/create/' + empId, {
+            const response = await fetch('http://192.168.3.20:8080/lms/management/movement/create/' + empId, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {

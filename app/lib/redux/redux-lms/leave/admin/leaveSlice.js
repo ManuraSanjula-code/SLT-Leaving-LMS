@@ -15,7 +15,7 @@ export const fetchLeaveRequests = createAsyncThunk(
             }
 
             // Make API call to fetch leave requests
-            const response = await fetch(`http://localhost:8080/lms/leave/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/leave/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
@@ -58,8 +58,8 @@ export const processLeaveRequest = createAsyncThunk(
             }
 
             const endpoint = approved
-                ? `http://localhost:8080/lms/leave/process/${publicId}/${storedUserId}/${empId}`
-                : `http://localhost:8080/lms/leave/reject/${publicId}/${storedUserId}/${empId}`;
+                ? `http://192.168.3.20:8080/lms/leave/process/${publicId}/${storedUserId}/${empId}`
+                : `http://192.168.3.20:8080/lms/leave/reject/${publicId}/${storedUserId}/${empId}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -114,8 +114,8 @@ export const processBulkLeaveRequests = createAsyncThunk(
             console.log('Sending request:', requestBody);
 
             const endpoint = approved
-                ? `http://localhost:8080/lms/bulk/approved/leave/${empId}`
-                : `http://localhost:8080/lms/bulk/reject/leave/${empId}`;
+                ? `http://192.168.3.20:8080/lms/bulk/approved/leave/${empId}`
+                : `http://192.168.3.20:8080/lms/bulk/reject/leave/${empId}`;
 
             const response = await fetch(
                 endpoint,

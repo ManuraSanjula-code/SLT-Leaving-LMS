@@ -38,8 +38,8 @@ const LoginPage = () => {
     const password = data.get("password");
 
     const loginUrl = isTempLogin 
-        ? "http://localhost:8080/users/login/temp" // Temp endpoint
-        : "http://localhost:8080/users/login"; // Regular endpoint
+        ? "http://192.168.3.20:8080/users/login/temp"
+        : "http://192.168.3.20:8080/users/login";
 
     try {
       // Make a POST request to the login API

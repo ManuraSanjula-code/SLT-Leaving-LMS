@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://192.168.3.20:8080/api';
 
-// Helper function to process team data
 const processTeamData = (data, teamId) => ({
     id: data?.id || teamId,
     name: data?.name || 'Unknown Team',
@@ -10,7 +9,6 @@ const processTeamData = (data, teamId) => ({
     active: data?.active ?? true
 });
 
-// Helper function to process employee data
 const processEmployeeData = (data, id) => ({
     id: data?.id || id,
     employeeId: data?.employeeId || 'N/A',
@@ -131,7 +129,6 @@ const initialState = {
     }
 };
 
-// Create slice
 const rosterManagementSlice = createSlice({
     name: 'rosterManagement',
     initialState,

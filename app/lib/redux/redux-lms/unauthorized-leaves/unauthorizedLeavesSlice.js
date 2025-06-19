@@ -22,8 +22,8 @@ export const fetchUnauthorizedLeaves = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const endpoint = isAdmin
-                ? `http://localhost:8080/lms/un-authorized/${empId}`
-                : `http://localhost:8080/lms/un-authorized/${userId}/${empId}`;
+                ? `http://192.168.3.20:8080/lms/un-authorized/${empId}`
+                : `http://192.168.3.20:8080/lms/un-authorized/${userId}/${empId}`;
 
             const response = await fetch(`${endpoint}?page=${page}&size=${pageSize}`, {
                 credentials: 'include',
@@ -48,7 +48,7 @@ export const resolveUnauthorizedLeave = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -76,7 +76,7 @@ export const approveUnauthorizedLeave = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://localhost:8080/lms/approve-unauthorized/${id}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/approve-unauthorized/${id}/${empId}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -104,7 +104,7 @@ export const bulkResolveUnauthorizedLeaves = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const promises = ids.map(id =>
-                fetch(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {
+                fetch(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
@@ -139,7 +139,7 @@ export const deleteMultipleUnauthorizedLeaves = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://localhost:8080/lms/un-authorized/delete-multiple/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/un-authorized/delete-multiple/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include',
                 headers: {

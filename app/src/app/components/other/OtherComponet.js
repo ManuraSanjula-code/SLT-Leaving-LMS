@@ -59,7 +59,7 @@ const Other = () => {
         const formData = new FormData();
         formData.append('file', rosterFile);
 
-        fetch('http://localhost:8080/api/roster/upload/employee', {
+        fetch('http://192.168.3.20:8080/api/roster/upload/employee', {
             method: 'POST',
             body: formData
         })
@@ -94,7 +94,7 @@ const Other = () => {
         formData.append('rosterName', rosterName);
         formData.append('weekStartingDate', weekStartingDate);
 
-        fetch('http://localhost:8080/api/duty-roster/upload', {
+        fetch('http://192.168.3.20:8080/api/duty-roster/upload', {
             method: 'POST',
             body: formData
         })
@@ -125,7 +125,7 @@ const Other = () => {
         formData.append('file', rosterShiftFile);
 
         // Make the API call to upload roster shift
-        fetch('http://localhost:8080/api/roster/upload', {
+        fetch('http://192.168.3.20:8080/api/roster/upload', {
             method: 'POST',
             body: formData
         })
@@ -149,7 +149,7 @@ const Other = () => {
         const dateOnly = rosterDate.split('T')[0];
 
         // Make the DELETE request to the API (original endpoint)
-        fetch(`http://localhost:8080/api/attendance/${dateOnly}/roster`, {
+        fetch(`http://192.168.3.20:8080/api/attendance/${dateOnly}/roster`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ const Other = () => {
             return;
         }
 
-        fetch(`http://localhost:8080/api/duty-roster/charana-tv/delete/${weekStartingDate}`, {
+        fetch(`http://192.168.3.20:8080/api/duty-roster/charana-tv/delete/${weekStartingDate}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -205,7 +205,7 @@ const Other = () => {
         const dateOnly = rosterShiftDate.split('T')[0];
 
         // Make the DELETE request to the API
-        fetch(`http://localhost:8080/api/attendance/${dateOnly}/roster-shifts`, {
+        fetch(`http://192.168.3.20:8080/api/attendance/${dateOnly}/roster-shifts`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -243,7 +243,7 @@ const Other = () => {
         }
 
         // Form the URL with the dynamic parts
-        const url = `http://localhost:8080/lms/employee/${userId}/excel/${loggedInUserId}`;
+        const url = `http://192.168.3.20:8080/lms/employee/${userId}/excel/${loggedInUserId}`;
 
         // Trigger file download
         fetch(url, {
@@ -302,7 +302,7 @@ const Other = () => {
 
         const dateOnly = startDate.split('T')[0];
 
-        const url = `http://localhost:8080/lms/employee/${userId}/excel/date/${dateOnly}/${loggedInUserId}`;
+        const url = `http://192.168.3.20:8080/lms/employee/${userId}/excel/date/${dateOnly}/${loggedInUserId}`;
 
         fetch(url, {
             method: 'GET',

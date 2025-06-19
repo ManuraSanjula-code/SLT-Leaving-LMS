@@ -19,8 +19,8 @@ export const fetchAbsentEmployees = createAsyncThunk(
                 throw new Error('User ID not found in session storage');
             }
             const baseUrl = isAdmin
-                ? `http://localhost:8080/lms/absent/all/${empId}`
-                : `http://localhost:8080/lms/absent/${empId}/${empId}`
+                ? `http://192.168.3.20:8080/lms/absent/all/${empId}`
+                : `http://192.168.3.20:8080/lms/absent/${empId}/${empId}`
 
             // Add query parameters
             const urlParams = new URLSearchParams({

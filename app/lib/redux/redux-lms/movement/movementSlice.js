@@ -9,7 +9,7 @@ export const fetchMovementRequests = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const response = await fetch(
-                `http://localhost:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}`,
+                `http://192.168.3.20:8080/lms/${isAdmin ? 'movement/all' : `movement/${userId}`}/${empId}?page=${page}&size=${size}`,
                 {credentials: 'include'}
             );
 
@@ -33,7 +33,7 @@ export const deleteMovementRequest = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://localhost:8080/lms/movement/${publicId}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/movement/${publicId}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -91,7 +91,7 @@ export const updateMovementRequest = createAsyncThunk(
             });
 
 
-            const response = await fetch(`http://localhost:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export const fetchInOutData = createAsyncThunk(
             dateObj.setDate(dateObj.getDate() + 1);
             const adjustedDate = dateObj.toISOString().split('T')[0];
 
-            const response = await fetch(`http://localhost:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
                 credentials: 'include'
             });
 

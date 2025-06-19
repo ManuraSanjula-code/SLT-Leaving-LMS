@@ -24,8 +24,8 @@ export const fetchUnsuccessfulLeaves = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const endpoint = isAdmin
-                ? `http://localhost:8080/lms/un-successful/${empId}`
-                : `http://localhost:8080/lms/un-successful/${userId}/${empId}`;
+                ? `http://192.168.3.20:8080/lms/un-successful/${empId}`
+                : `http://192.168.3.20:8080/lms/un-successful/${userId}/${empId}`;
 
             const response = await axios.get(endpoint, {
                 params: {
@@ -49,7 +49,7 @@ export const resolveLeave = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
+            const response = await axios.post(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
                 withCredentials: true
             });
             return { id, resolveType: response.data?.resolveType || 'VIA_MOVEMENT' };
@@ -68,7 +68,7 @@ export const bulkResolveLeaves = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const promises = ids.map(id =>
-                axios.post(`http://localhost:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
+                axios.post(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
                     withCredentials: true
                 })
             );

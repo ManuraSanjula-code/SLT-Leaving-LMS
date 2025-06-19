@@ -10,7 +10,7 @@ export const fetchActivityRecords = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const response = await fetch(
-                `http://localhost:8080/lms/${empId}?page=${page}&size=${rowsPerPage}`,
+                `http://192.168.3.20:8080/lms/${empId}?page=${page}&size=${rowsPerPage}`,
                 { credentials: 'include' }
             );
 

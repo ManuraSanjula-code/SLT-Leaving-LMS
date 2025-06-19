@@ -20,9 +20,9 @@ export const fetchAttendanceData = createAsyncThunk(
 
             let url;
             if (dateRangeMode) {
-                url = `http://localhost:8080/lms/in-out/${startDate}/${endDate}/${userId}/${empId}`;
+                url = `http://192.168.3.20:8080/lms/in-out/${startDate}/${endDate}/${userId}/${empId}`;
             } else {
-                url = `http://localhost:8080/lms/in-out/${startDate}/${userId}/${empId}`;
+                url = `http://192.168.3.20:8080/lms/in-out/${startDate}/${userId}/${empId}`;
             }
 
             const response = await fetch(url, {

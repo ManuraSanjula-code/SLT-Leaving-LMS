@@ -9,8 +9,8 @@ export const fetchNoPayRecords = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             let baseUrl = isAdmin
-                ? "http://localhost:8080/lms/no-pay/" + empId
-                : `http://localhost:8080/lms/no-pay/user/${userId}/${empId}`;
+                ? "http://192.168.3.20:8080/lms/no-pay/" + empId
+                : `http://192.168.3.20:8080/lms/no-pay/user/${userId}/${empId}`;
 
             const queryParams = new URLSearchParams({
                 page: page.toString(),

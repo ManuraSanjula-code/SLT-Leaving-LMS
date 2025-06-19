@@ -13,29 +13,25 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // Allowed origins
-        corsConfig.addAllowedOrigin("https://localhost");  // Web frontend
-        corsConfig.addAllowedOrigin("http://localhost");  // Web frontend
-        corsConfig.addAllowedOrigin("http://10.0.2.2");  // Android Emulator
-        corsConfig.addAllowedOrigin("http://192.168.1.8"); // Local network (Android devices)
-        corsConfig.addAllowedOriginPattern("*"); // Allow all for development
+        /*corsConfig.addAllowedOrigin("https://localhost");
+        corsConfig.addAllowedOrigin("http://localhost");
         corsConfig.addAllowedOrigin("http://localhost:8080");
         corsConfig.addAllowedOrigin("http://localhost:3000");
 
-        // Allowed methods
-        corsConfig.addAllowedMethod("*"); // Allow all HTTP methods
+        corsConfig.addAllowedOrigin("https://192.168.3.20");
+        corsConfig.addAllowedOrigin("http://192.168.3.20");
+        corsConfig.addAllowedOrigin("http://192.168.3.20:8080");
+        corsConfig.addAllowedOrigin("http://192.168.3.20:3000");*/
 
-        // Allowed headers
-        corsConfig.addAllowedHeader("*"); // Allow all headers
+        corsConfig.addAllowedOriginPattern("*");
+        corsConfig.addAllowedMethod("*");
+        corsConfig.addAllowedHeader("*");
 
-        // Expose specific headers (e.g., Authorization)
         corsConfig.addExposedHeader("Authorization");
         corsConfig.addExposedHeader("UserID");
 
-        // Allow credentials (e.g., cookies, authorization headers)
         corsConfig.setAllowCredentials(true);
 
-        // Register CORS configuration for all paths
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
 

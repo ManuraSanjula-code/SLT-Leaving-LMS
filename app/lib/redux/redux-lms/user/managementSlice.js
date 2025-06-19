@@ -1,6 +1,6 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 import fetchWithHeaders from "../../../../utils/utils_fetch"
-const baseUrl = 'http://localhost:8080/users';
+const baseUrl = 'http://192.168.3.20:8080/users';
 
 export const saveEmployee = createAsyncThunk(
     'management/saveEmployee',

@@ -36,7 +36,7 @@ const ShiftRosterTable = () => {
         setError(null);
 
         try {
-            const response = await fetch(`http://localhost:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
+            const response = await fetch(`http://192.168.3.20:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
