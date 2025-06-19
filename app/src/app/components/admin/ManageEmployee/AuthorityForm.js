@@ -26,7 +26,7 @@ const AuthorityForm = () => {
     const resolveRef = useRef(null);
 
     useEffect(() => {
-        fetch('http://localhost:8080/users/authorities')
+        fetch('http://192.168.3.20:8080/users/authorities')
             .then((response) => response.json())
             .then((data) => {
                 const transformedData = data.map((authority) => ({
@@ -100,7 +100,7 @@ const AuthorityForm = () => {
         const userId = sessionStorage.getItem('userId');
         if (!userId) return;
 
-        fetch(`http://localhost:8080/users/auth/${userId}`, {
+        fetch(`http://192.168.3.20:8080/users/auth/${userId}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             credentials: 'include',
@@ -137,7 +137,7 @@ const AuthorityForm = () => {
         const userId = sessionStorage.getItem('userId');
         if (!userId) return;
 
-        fetch(`http://localhost:8080/users/auth/${id}/${userId}`, {
+        fetch(`http://192.168.3.20:8080/users/auth/${id}/${userId}`, {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'},
             credentials: 'include',

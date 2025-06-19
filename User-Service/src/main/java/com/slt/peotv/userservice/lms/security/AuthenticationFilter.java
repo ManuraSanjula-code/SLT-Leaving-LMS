@@ -82,18 +82,18 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", encryptToken)
                 .httpOnly(true) //if set to true, js can't access
-                .secure(true)     // Cookie is sent only over HTTPS
+                .secure(false)     // Cookie is sent only over HTTPS
                 .path("/")        // Cookie is valid for the entire domain
                 .maxAge(7 * 24 * 60 * 60)  // Cookie expires in 7 days
-                .sameSite("None") // Sends the cookie on cross-site requests
+                .sameSite("Lax") // Sends the cookie on cross-site requests
                 .build();
 
         ResponseCookie userIdCookie = ResponseCookie.from("userId", userEntity.getUserId())
                 .httpOnly(true) //if set to true, js can't access
-                .secure(true)     // Cookie is sent only over HTTPS
+                .secure(false)     // Cookie is sent only over HTTPS
                 .path("/")        // Cookie is valid for the entire domain
                 .maxAge(7 * 24 * 60 * 60)  // Cookie expires in 7 days
-                .sameSite("None") // Sends the cookie on cross-site requests
+                .sameSite("Lax") // Sends the cookie on cross-site requests
                 .build();
 
 

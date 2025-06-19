@@ -18,7 +18,7 @@ export const sanitizeState = (state) => {
             if (sanitizedState.auth.errorMessage) {
                 sanitizedState.auth.errorMessage = sanitizedState.auth.errorMessage
                     .replace(/Error: .*/g, 'An error occurred')
-                    .replace(/localhost:[0-9]+/g, '[SERVER]');
+                    .replace(/192.168.3.20:[0-9]+/g, '[SERVER]');
             }
         }
     }

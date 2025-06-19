@@ -73,18 +73,18 @@ public class AuthenticationController {
 
 		ResponseCookie jwtCookie = ResponseCookie.from("jwt", encryptToken)
 				.httpOnly(true)
-				.secure(true)
+				.secure(false)
 				.path("/")
 				.maxAge(7 * 24 * 60 * 60)
-				.sameSite("None")
+				.sameSite("Lax")
 				.build();
 
 		ResponseCookie userIdCookie = ResponseCookie.from("userId", tempUser.getUserId())
 				.httpOnly(true)
-				.secure(true)
+				.secure(false)
 				.path("/")
 				.maxAge(7 * 24 * 60 * 60)
-				.sameSite("None")
+				.sameSite("Lax")
 				.build();
 
 

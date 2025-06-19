@@ -16,7 +16,7 @@ const CharanaTVRosterTable = () => {
         setError(null);
 
         try {
-            const response = await fetch(`http://localhost:8080/api/duty-roster/charana-tv/week/${selectedWeekStart}`);
+            const response = await fetch(`http://192.168.3.20:8080/api/duty-roster/charana-tv/week/${selectedWeekStart}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -416,7 +416,7 @@ const CharanaTVRosterTable = () => {
                     <p>{error}</p>
                     <p style={{ marginTop: '8px' }}>
                         Please check:
-                        <br />• Server is running on localhost:8080
+                        <br />• Server is running on 192.168.3.20:8080
                         <br />• API endpoint is accessible
                         <br />• Selected week starting date has data available
                         <br />• Network connection is stable

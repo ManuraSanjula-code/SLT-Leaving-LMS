@@ -121,8 +121,8 @@ export const processBulkMovementRequests = createAsyncThunk(
 
             console.log(requestBody)
             const endpoint = approved
-                ? `http://localhost:8080/lms/bulk/approved/movement/${empId}`
-                : `http://localhost:8080/lms/bulk/reject/movement/${empId}`;
+                ? `http://192.168.3.20:8080/lms/bulk/approved/movement/${empId}`
+                : `http://192.168.3.20:8080/lms/bulk/reject/movement/${empId}`;
 
             const response = await fetch(
                 endpoint,

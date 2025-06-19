@@ -5,7 +5,7 @@ export const fetchRosterData = createAsyncThunk(
     'rosterManagement/fetchRosterData',
     async ({ month, year }, { rejectWithValue }) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/roster/${month}/${year}`);
+            const response = await fetch(`http://192.168.3.20:8080/api/roster/${month}/${year}`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch roster data. Status: ${response.status}`);
@@ -31,7 +31,7 @@ export const fetchTeamDetails = createAsyncThunk(
     async (teamIds, { rejectWithValue }) => {
         try {
             const teamPromises = teamIds.map(teamId =>
-                fetch(`http://localhost:8080/api/teams/${teamId}`)
+                fetch(`http://192.168.3.20:8080/api/teams/${teamId}`)
                     .then(res => {
                         if (!res.ok) {
                             throw new Error(`Failed to fetch team details for ${teamId}. Status: ${res.status}`);
@@ -59,7 +59,7 @@ export const fetchEmployeeDetails = createAsyncThunk(
     async (employeeIds, { rejectWithValue }) => {
         try {
             const employeePromises = employeeIds.map(id =>
-                fetch(`http://localhost:8080/api/employees/${id}`)
+                fetch(`http://192.168.3.20:8080/api/employees/${id}`)
                     .then(res => {
                         if (!res.ok) {
                             throw new Error(`Failed to fetch employee details for ${id}. Status: ${res.status}`);
@@ -98,7 +98,7 @@ export const updateEmployeeRoster = createAsyncThunk(
     'rosterManagement/updateEmployeeRoster',
     async (payload, { rejectWithValue }) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/roster/employee`, {
+            const response = await fetch(`http://192.168.3.20:8080/api/roster/employee`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'

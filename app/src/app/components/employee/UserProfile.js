@@ -270,7 +270,7 @@ const UserProfile = () => {
     setIsSubmitting(true);
     try {
       await putUserProfile(
-          `http://localhost:8080/users/upload-pic/${userId}`,
+          `http://192.168.3.20:8080/users/upload-pic/${userId}`,
           selectedFile
       );
 
@@ -555,7 +555,7 @@ const UserProfile = () => {
                   disabled={isSubmitting}
               >
                 <MemoizedAvatar
-                    src={`http://localhost:8080/users/image/${userId}` || ''}
+                    src={`http://192.168.3.20:8080/users/image/${userId}` || ''}
                     sx={{ width: 150, height: 150, border: '2px solid #ccc' }}
                     alt="Profile picture"
                 />

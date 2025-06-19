@@ -63,7 +63,7 @@ const LoginPage = () => {
 
       // Fetch user details
       try {
-        const userDetailsRes = await axios.get(`http://localhost:8080/users/${userId}`, {
+        const userDetailsRes = await axios.get(`http://192.168.3.20:8080/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${authorizationHeader}`
           }
