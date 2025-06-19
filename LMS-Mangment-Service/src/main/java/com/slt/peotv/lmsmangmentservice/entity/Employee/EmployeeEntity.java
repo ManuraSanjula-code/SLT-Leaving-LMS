@@ -28,6 +28,7 @@ public class EmployeeEntity {
     private String lastName;
     @Column(unique = true)
     private String email;
+    private String gender;
     private Date join_date;
     private Boolean roaster;
 }

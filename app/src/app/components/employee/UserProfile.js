@@ -506,14 +506,6 @@ const UserProfile = () => {
           <List>
             {addressList}
           </List>
-          <Button
-              variant="contained"
-              onClick={handleAddAddress}
-              sx={{ mt: 2 }}
-              disabled={isSubmitting}
-          >
-            Add Address
-          </Button>
         </CardContent>
       </MemoizedCard>
   ), [addressList, handleAddAddress, isSubmitting]);
@@ -705,13 +697,6 @@ const UserProfile = () => {
                     disabled={isSubmitting}
                 >
                   Cancel
-                </MemoizedButton>
-                <MemoizedButton
-                    onClick={handleSaveAddress}
-                    color="primary"
-                    disabled={isSubmitting}
-                >
-                  Save
                 </MemoizedButton>
               </DialogActions>
             </MemoizedDialog>

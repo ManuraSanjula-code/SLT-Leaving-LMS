@@ -117,8 +117,9 @@ public class LeaveManagementService {
         // Standard allocation for other leave types
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
-        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
         saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
+        if(employee.getGender().equals("F"))
+            saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
     }
 
 
@@ -146,23 +147,27 @@ public class LeaveManagementService {
         // Standard allocation for other leave types
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
-        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+
+        if(employee.getGender().equals("F"))
+            saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
+
         saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
     }
 
 
     private void allocateLeavesForTwoToThreeYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
-        // Same logic as 1-2 years for annual leaves
         allocateLeavesForOneToTwoYears(employee, leaveTypes);
     }
 
 
     private void allocateLeavesForThreeOrMoreYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
-        // Standard allocation regardless of join month
         saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
-        saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180); // 6 months
+
+        if(employee.getGender().equals("F"))
+            saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
+
         saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
     }
 

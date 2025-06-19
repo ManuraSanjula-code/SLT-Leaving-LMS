@@ -121,6 +121,7 @@ public class CommandLine implements CommandLineRunner {
         employee.setLastName(userRest.getLastName());
         employee.setJoin_date(userRest.getJoiningDate());
         employee.setRoaster(userRest.getRoaster());
+        employee.setGender(userRest.getGender());
         return employee;
     }
 }
