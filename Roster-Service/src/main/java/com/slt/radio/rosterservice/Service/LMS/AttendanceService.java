@@ -94,14 +94,32 @@ public class AttendanceService {
                                 employee.get().getSltId(),
                                 processDate
                         );
-
+                        Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
+                                employee.get().getSltId(),
+                                processDate
+                        );
                         if (earliestPunchIn.isEmpty()) {
                             log.debug("No attendance data for employee: {}", cleanEmId);
                             return;
                         }
 
                         InOut inOut = earliestPunchIn.get();
+                        InOut inOutLatest = latestPunchIn.orElse(null);
+
+                        LocalTime time = inOut.getPunchTypeTime();
+                        LocalTime startTime = timeSlot.getStartTime();
+
+                        Duration duration = Duration.between(startTime, time);
+                        long hoursLate = duration.toHours();
+
                         Attendance attendance = new Attendance();
+                        if(startTime.isBefore(time))
+                            attendance.setAttendanceType(AttendanceType.FULL_DAY);
+
+                        if (hoursLate <= 0)
+                            attendance.setAttendanceType(AttendanceType.HALF_DAY);
+
+
                         attendance.setPublicId(UUID.randomUUID().toString());
                         attendance.setEmployeeId(cleanEmId);
                         attendance.setTerminalId(inOut.getTerminalId());
@@ -112,7 +130,9 @@ public class AttendanceService {
                             attendance.setArrivalTime(inOut.getPunchTypeTime());
                         }
 
-                        attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                        if (inOutLatest.getPunchTypeTime() != null)
+                            attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+
                         attendancesToSave.add(attendance);
 
                     } catch (Exception e) {
@@ -498,6 +518,11 @@ public class AttendanceService {
             if (inOut == null) {
                 return createAbsentAttendance(employee, team, processDate, shiftTime, isRotationShift, employeeDetails);
             }
+            Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
+                    employeeArchive.getSltId(),
+                    processDate
+            );
+            InOut inOutLatest = latestPunchIn.orElse(null);
 
             String[] shiftTimeParts = shiftTime.split("-");
             if (shiftTimeParts.length != 2) {
@@ -535,6 +560,8 @@ public class AttendanceService {
                 }
 
                 attendance.setArrivalTime(inOut.getPunchTypeTime());
+                if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+
             } else {
                 attendance.setAttendanceType(AttendanceType.ABSENT);
             }

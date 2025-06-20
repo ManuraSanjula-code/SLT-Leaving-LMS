@@ -73,7 +73,7 @@ public class AccessLogSyncService {
         return formatter.format(date);
     }
 
-    @Scheduled(cron = "00 00 00  * * ?")
+    @Scheduled(cron = "00 00 03  * * ?")
     public void getLogs() throws NoSuchAlgorithmException, JOSEException {
 
         log.info("Starting getting logs form the lms server");
@@ -118,7 +118,7 @@ public class AccessLogSyncService {
         }
     }
 
-    @Scheduled(cron = "00 00 00 * * ?")
+    @Scheduled(cron = "00 30 03 * * ?")
     public void syncAccessLogsAndProcessAttendance() {
         log.info("Starting daily sync of access logs and attendance processing");
 
@@ -127,11 +127,10 @@ public class AccessLogSyncService {
 
         try {
             List<AccessLog> accessLogs = fetchAccessLogsFromSLT(getYesterdayDate());
-            attendanceService.processDutyAttendances();
-
             attendanceService.processAccessLogs(accessLogs);
-
             attendanceService.processAttendanceForDate(yesterdayStr);
+
+            attendanceService.processDutyAttendances();
 
             log.info("Completed daily sync of access logs and attendance processing");
         } catch (Exception e) {

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.Time;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
@@ -31,5 +32,6 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
 
     List<InOutEntity> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
     List<InOutEntity> findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(String employeeId, Date punchTime, Time punchTypeTime, String terminalId);
+    Optional<InOutEntity> findByEmployeeIdAndDateAndPunchTypeTimeAndTerminalId(String employeeId, Date date, Time punchTypeTime, String terminalId);
 }
 

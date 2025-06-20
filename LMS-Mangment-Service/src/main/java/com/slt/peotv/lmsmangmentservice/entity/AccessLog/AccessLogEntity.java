@@ -5,7 +5,9 @@ import lombok.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "access_log")
+@Table(name = "access_log",
+        uniqueConstraints =
+        @UniqueConstraint(columnNames = {"employee_id", "log_date", "log_time","terminal_id"}))
 @Getter
 @Setter
 @Builder

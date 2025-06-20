@@ -106,7 +106,10 @@ public class LMS_Service_impl implements LMS_Service {
                 .filter(leave -> leave.getRemainingLeaves() != null)
                 .mapToInt(UserLeaveTypeRemainingEntity::getRemainingLeaves)
                 .sum();
-        int totL = 215;
+        int sum = leaveTypeTotRepo.findByEmployee(emp).stream()
+                .filter(leave -> leave.getTotalLeaves() != null)
+                .mapToInt(UserLeaveTypeTotalEntity::getTotalLeaves)
+                .sum();
         int total = attedance.stream().map(AttendanceEntity::getIsFullDay).toList().size();
         String name = employee.get().getFirstName() + " " + employee.get().getLastName();
 
@@ -146,7 +149,7 @@ public class LMS_Service_impl implements LMS_Service {
         dashBoardRes.setRemainLeaveDistribution(remainLeaveDistribution);
         dashBoardRes.setMonthlyAttendanceDistribution(monthlyAttendanceDistribution);
         dashBoardRes.setName(name);
-        dashBoardRes.setTotalLeave(totL);
+        dashBoardRes.setTotalLeave(sum);
         dashBoardRes.setLeaveBalance(totalRemainingLeaves);
         return dashBoardRes;
     }

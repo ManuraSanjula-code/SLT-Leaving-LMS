@@ -14,7 +14,10 @@ import java.util.Optional;
 @Repository
 public interface InOutRepository extends MongoRepository<InOut, String> {
     List<InOut> findByEmployeeIdAndDate(String employeeId, Date date);
+
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeAsc(String employeeID, Date date);
+    Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeDesc(String employeeId, Date date);
+
     List<InOut> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
     List<InOut> findByEmployeeIdAndDateAndPunchTimeAndPunchTypeTime(String employeeId, Date date, Date punchTime, LocalTime punchTypeTime);
 }

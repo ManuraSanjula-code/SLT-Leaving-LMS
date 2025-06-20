@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -18,10 +20,17 @@ public class Sync {
     private final Check_Service check_Service;
     private final AccessLogService accessLogService;
 
-    @Scheduled(cron = "00 00 00  * * ?")
+    @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
-        check_Service.getAllTheInOutRecordsFromSLT();
-        accessLogService.main();
-        check_Service.main();
+        LocalDate currentDate = LocalDate.now();
+
+        if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            System.out.println("Today (" + currentDate + ") is Sunday! 🌞");
+        } else {
+            check_Service.getAllTheInOutRecordsFromSLT();
+            accessLogService.main();
+            check_Service.main();
     }
+        }
+        
 }

@@ -14,4 +14,6 @@ public interface AccessLogRepo extends JpaRepository<AccessLogEntity, Long> {
     @Query(value = "SELECT * FROM access_log WHERE log_date = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%d/%m/%Y')",
             nativeQuery = true)
     List<AccessLogEntity> findByYesterdayLogs();
+    boolean existsByEmployeeIdAndLogDateAndLogTimeAndTerminalId(String employeeId, String logDate, String logTime, String terminalId);
+
 }

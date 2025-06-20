@@ -33,11 +33,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataAccessException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.sql.*;
@@ -90,6 +95,7 @@ public class Check_Service_Impl implements Check_Service {
     private LMSUtils lMSUtils;
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
+    private static final int MAX_RETRY_ATTEMPTS = 3;
 
     public static Map<String, UserRest> createUserMap(List<UserRest> users) {
 
@@ -1447,50 +1453,158 @@ public class Check_Service_Impl implements Check_Service {
     }
 
     @Override
+    @Transactional
+    @Retryable(value = {DataAccessException.class},
+            maxAttempts = MAX_RETRY_ATTEMPTS,
+            backoff = @Backoff(delay = 1000))
     public void getAllTheInOutRecordsFromSLT() {
-        String url = "jdbc:mysql://192.168.3.20:3306/attendance";
-        String username = "root";
-        String password = "User@123";
-
-        SimpleDateFormat dbDateFormat = new SimpleDateFormat("dd/MM/yyyy");
-        String yesterdayDateStr = dbDateFormat.format(helper.getYesterdayDate());
-
-        /*String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time FROM accesslog_archive " +
-                "WHERE LogDate = '" + yesterdayDateStr + "'";*/
+        final String methodName = "getAllTheInOutRecordsFromSLT";
+        final String url = "jdbc:mysql://localhost:3306/attendance";
+        final String username = "root";
+        final String password = "User@123";
 
         String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
                 "FROM accesslog_archive " +
                 "WHERE LogDate = DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), '%d/%m/%Y')";
 
         List<AccessLogEntity> accessLogEntities = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
 
-        try (Connection connection = DriverManager.getConnection(url, username, password);
-             PreparedStatement statement = connection.prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            logger.info("{}: Attempting to connect to database", methodName);
+            connection = DriverManager.getConnection(url, username, password);
+            statement = connection.prepareStatement(sql);
+            resultSet = statement.executeQuery();
 
-            System.out.println("Connected to MySQL database successfully!");
+            logger.info("{}: Database connection established successfully", methodName);
 
+            int recordCount = 0;
             while (resultSet.next()) {
-                AccessLogEntity accessLog = AccessLogEntity.builder()
-                        .employeeId(resultSet.getString("EmployeeID"))
-                        .logDate(resultSet.getString("LogDate"))
-                        .logTime(resultSet.getString("LogTime"))
-                        .terminalId(resultSet.getString("TerminalID"))
-                        .inOut(resultSet.getString("InOut"))
-                        .readStatus(resultSet.getString("read"))
-                        .processed(resultSet.getInt("processed"))
-                        .etlRunTime(resultSet.getTimestamp("etl_run_time"))
-                        .build();
-
-                accessLogEntities.add(accessLog);
+                try {
+                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
+                    accessLogEntities.add(accessLog);
+                    recordCount++;
+                } catch (SQLException e) {
+                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
+                } catch (Exception e) {
+                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
+                }
             }
-            accessLogRepo.saveAll(accessLogEntities);
-            System.out.println("Retrieved " + accessLogEntities.size() + " records from SLT database");
+
+            processRetrievedRecords(accessLogEntities, methodName);
 
         } catch (SQLException e) {
-            System.err.println("Database connection failed: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Failed to retrieve records from SLT database", e);
+            logErrorWithStackTrace("Database connection failed", e, methodName);
+        } catch (Exception e) {
+            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
+        } finally {
+            closeDatabaseResources(connection, statement, resultSet, methodName);
+        }
+    }
+
+    private AccessLogEntity buildAccessLogEntity(ResultSet resultSet) throws SQLException {
+        try {
+            return AccessLogEntity.builder()
+                    .employeeId(resultSet.getString("EmployeeID"))
+                    .logDate(resultSet.getString("LogDate"))
+                    .logTime(resultSet.getString("LogTime"))
+                    .terminalId(resultSet.getString("TerminalID"))
+                    .inOut(resultSet.getString("InOut"))
+                    .readStatus(resultSet.getString("read"))
+                    .processed(resultSet.getInt("processed"))
+                    .etlRunTime(resultSet.getTimestamp("etl_run_time"))
+                    .build();
+        } catch (SQLException e) {
+            logger.error("Error building AccessLogEntity from ResultSet");
+            throw e;
+        }
+    }
+
+    private void processRetrievedRecords(List<AccessLogEntity> records, String methodName) {
+        if (records.isEmpty()) {
+            logger.info("{}: No records found for processing", methodName);
+            return;
+        }
+
+        try {
+            logger.info("{}: Attempting to save {} records", methodName, records.size());
+            accessLogRepo.saveAll(records);
+            logger.info("{}: Successfully saved {} records", methodName, records.size());
+        } catch (DataIntegrityViolationException e) {
+            logErrorWithStackTrace("Duplicate records detected. Attempting individual saves", e, methodName);
+            saveRecordsIndividually(records, methodName);
+        } catch (Exception e) {
+            logErrorWithStackTrace("Failed to save records", e, methodName);
+        }
+    }
+
+    private void saveRecordsIndividually(List<AccessLogEntity> records, String methodName) {
+        int successCount = 0;
+        int errorCount = 0;
+        int duplicateCount = 0;
+
+        for (AccessLogEntity record : records) {
+            try {
+                if (!accessLogRepo.existsByEmployeeIdAndLogDateAndLogTimeAndTerminalId(
+                        record.getEmployeeId(),
+                        record.getLogDate(),
+                        record.getLogTime(),
+                        record.getTerminalId())) {
+                    
+                    accessLogRepo.save(record);
+                    successCount++;
+                } else {
+                    duplicateCount++;
+                    logger.debug("{}: Duplicate record skipped - Employee: {}, Date: {}, Time: {}",
+                            methodName, record.getEmployeeId(), record.getLogDate(), record.getLogTime());
+                }
+            } catch (Exception e) {
+                errorCount++;
+                logErrorWithStackTrace(String.format("Failed to save record for employee %s", 
+                    record.getEmployeeId()), e, methodName);
+            }
+        }
+
+        logger.info("{}: Individual save results - Success: {}, Duplicates: {}, Errors: {}",
+                methodName, successCount, duplicateCount, errorCount);
+    }
+
+    private void closeDatabaseResources(Connection connection, PreparedStatement statement, 
+                                    ResultSet resultSet, String methodName) {
+        try {
+            if (resultSet != null) {
+                resultSet.close();
+            }
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Error closing ResultSet", e, methodName);
+        }
+
+        try {
+            if (statement != null) {
+                statement.close();
+            }
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Error closing PreparedStatement", e, methodName);
+        }
+
+        try {
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Error closing Connection", e, methodName);
+        }
+    }
+
+    private void logErrorWithStackTrace(String message, Throwable e, String methodName) {
+        logger.error("{}: {} - Error: {}", methodName, message, e.getMessage());
+        logger.error("Stack trace:", e);  // This will log the full stack trace
+        
+        if (e instanceof SQLException) {
+            SQLException sqlEx = (SQLException) e;
+            logger.error("SQL State: {}, Error Code: {}", sqlEx.getSQLState(), sqlEx.getErrorCode());
         }
     }
 
