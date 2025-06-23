@@ -25,7 +25,7 @@ public class Sync {
         LocalDate currentDate = LocalDate.now();
 
         if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            System.out.println("Today (" + currentDate + ") is Sunday! 🌞 !!!");
+            System.out.println("Today (" + currentDate + ") is Sunday! 🌞");
         } else {
             check_Service.getAllTheInOutRecordsFromSLT();
             accessLogService.main();
