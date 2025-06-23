@@ -111,10 +111,16 @@
 			<version>1.10.0</version>
 		</dependency>
 
-		<dependency>
+		<!--<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-zookeeper-discovery</artifactId>
 			<version>4.2.0</version>
+		</dependency>-->
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+			<version>4.3.0</version>
 		</dependency>
 
 		<dependency>

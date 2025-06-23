@@ -1,13 +1,13 @@
-package com.slt.peotv.datservicelms;
+package com.slt.peotv.discovery_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class DatServiceLmsApplicationTests {
+class DiscoveryServiceApplicationTests {
 
-    @Test
-    void contextLoads() {
-    }
+	@Test
+	void contextLoads() {
+	}
 
 }
