@@ -1,52 +1,25 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from 'next/navigation';
 import {
-    Typography,
-    Box,
-    TextField,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
-    TablePagination,
-    CircularProgress,
-    Chip,
-    Button,
-    IconButton,
-    Menu,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Card,
-    CardContent,
-    List,
-    ListItem,
-    ListItemText,
-    Grid,
-    Divider,
+    Box, Button, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions,
+    DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputLabel,
+    List, ListItem, ListItemText, Menu, MenuItem, Paper, Select, Table, TableBody,
+    TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, Typography
 } from "@mui/material";
-import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
 import {
     MoreHoriz as MoreHorizIcon,
+    Close as CloseIcon,
+    CheckCircle as CheckCircleIcon,
+    Cancel as CancelIcon,
+    Info as InfoIcon,
     Person as PersonIcon,
     Event as EventIcon,
     AccessTime as AccessTimeIcon,
     Description as DescriptionIcon,
-    Info as InfoIcon,
-    CheckCircle as CheckCircleIcon,
-    Cancel as CancelIcon,
-    Close as CloseIcon,
-    Visibility as VisibilityIcon,
+    Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import {
     fetchActivityRecords,
@@ -61,9 +34,6 @@ import {
     selectActivitiesData,
     selectIsFiltering,
 } from "../../../../lib/redux/redux-lms/employee-activities/admin/employeeActivitiesSlice";
-import { useRouter } from 'next/navigation';
-
-const theme = createTheme();
 
 const ATTENDANCE_TYPE_LABELS = {
     'FULL_DAY': 'Full Day',
@@ -88,24 +58,58 @@ const RESOLVE_TYPE_LABELS = {
     'VIA_LEAVE': 'Via Leave'
 };
 
-const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivityType, getStatusText, getStatusColor }) => {
-    if (!open || !activity) return null;
-
-    const formatDate = (dateString) => {
+const ActivityDetailsDialog = React.memo(({
+                                              open,
+                                              onClose,
+                                              activity
+                                          }) => {
+    const formatDate = useCallback((dateString) => {
         if (!dateString) return "-";
-        return new Date(dateString).toLocaleDateString('en-US', {
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? "-" : date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
         });
-    };
+    }, []);
 
-    const formatTime = (timeString) => {
+    const formatTime = useCallback((timeString) => {
         if (!timeString) return "-";
         return timeString;
-    };
+    }, []);
 
-    const booleanFields = [
+    const getStatusColor = useCallback((activity) => {
+        if (!activity) return "default";
+        if (activity.leaveStatus === 'LEAVE_APPROVED') return "success";
+        if (activity.isUnSuccessful || activity.isUnauthorized) return "error";
+        if (activity.hasIssues && !activity.isResolved) return "warning";
+        return "success";
+    }, []);
+
+    const getStatusText = useCallback((activity) => {
+        if (!activity) return "Unknown";
+        if (activity.leaveStatus === 'LEAVE_APPROVED') return "Leave Approved";
+        if (activity.leaveStatus === 'LEAVE_REQUESTED') return "Leave Requested";
+        if (activity.isUnSuccessful) return "Unsuccessful";
+        if (activity.isUnauthorized) return "Unauthorized";
+        if (activity.hasIssues && !activity.isResolved) return "Has Issues";
+        if (activity.isResolved) return "Resolved";
+        return "Normal";
+    }, []);
+
+    const getActivityType = useCallback((activity) => {
+        if (!activity) return "Unknown";
+        if (activity.attendanceType === 'ABSENT') return "Absent";
+        if (activity.leaveStatus === 'FULL_LEAVE') return "Full Leave";
+        if (activity.leaveStatus === 'SHORT_LEAVE') return "Short Leave";
+        if (activity.attendanceType === 'HALF_DAY') return "Half Day";
+        if (activity.isLate && activity.attendanceType === 'FULL_DAY') return "Late (Full Day)";
+        if (activity.isLate) return "Late";
+        if (activity.attendanceType === 'FULL_DAY') return "Present";
+        return "Present";
+    }, []);
+
+    const booleanFields = useMemo(() => [
         { key: 'isLate', label: 'Late' },
         { key: 'isLateCovered', label: 'Late Covered' },
         { key: 'isUnauthorized', label: 'Unauthorized' },
@@ -119,14 +123,16 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
         { key: 'isHalfDay', label: 'Half Day' },
         { key: 'isAbsent', label: 'Absent' },
         { key: 'isNoPay', label: 'No Pay' }
-    ];
+    ], []);
 
-    const enumFields = [
+    const enumFields = useMemo(() => [
         { key: 'attendanceType', label: 'Attendance Type', mapping: ATTENDANCE_TYPE_LABELS },
         { key: 'leaveStatus', label: 'Leave Status', mapping: LEAVE_STATUS_LABELS },
         { key: 'payStatus', label: 'Pay Status', mapping: PAY_STATUS_LABELS },
         { key: 'resolve', label: 'Resolve Type', mapping: RESOLVE_TYPE_LABELS }
-    ];
+    ], []);
+
+    if (!activity) return null;
 
     return (
         <Dialog
@@ -150,7 +156,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <InfoIcon />
-                    Activity Details - {activity.employeeId}
+                    Activity Details - {activity.userId || activity.employeeId || "Unknown"}
                 </Box>
                 <IconButton onClick={onClose} sx={{ color: 'white' }} size="small">
                     <CloseIcon />
@@ -170,7 +176,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                     <ListItem>
                                         <ListItemText
                                             primary="Employee ID"
-                                            secondary={activity.userId || "-"}
+                                            secondary={activity.userId || activity.employeeId || "-"}
                                         />
                                     </ListItem>
                                     <ListItem>
@@ -195,12 +201,6 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                         <ListItemText
                                             primary="Due Date (UA)"
                                             secondary={formatDate(activity.dueDateForUA)}
-                                        />
-                                    </ListItem>
-                                    <ListItem>
-                                        <ListItemText
-                                            primary="Terminal ID"
-                                            secondary={activity.terminalId || "-"}
                                         />
                                     </ListItem>
                                 </List>
@@ -357,7 +357,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                                         Employee ID
                                                     </Typography>
                                                     <Typography variant="body2">
-                                                        {inOut.employeeId || "-"}
+                                                        {inOut.employeeID || "-"}
                                                     </Typography>
                                                 </Grid>
                                                 <Grid item xs={6} md={3}>
@@ -365,9 +365,12 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                                         Type
                                                     </Typography>
                                                     <Chip
-                                                        label={inOut.moaning ? "Morning IN" : inOut.evening ? "Evening OUT" : "Unknown"}
+                                                        label={inOut.inOutType || "Unknown"}
                                                         size="small"
-                                                        color={inOut.moaning ? "success" : inOut.evening ? "error" : "default"}
+                                                        color={
+                                                            inOut.inOutType === 'MORNING_IN' ? "success" :
+                                                                inOut.inOutType === 'EVENING_OUT' ? "error" : "default"
+                                                        }
                                                         variant="outlined"
                                                     />
                                                 </Grid>
@@ -376,7 +379,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                                         Time
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                        {inOut.timeMoa || inOut.timeEve || "-"}
+                                                        {inOut.punchTypeTime || "-"}
                                                     </Typography>
                                                 </Grid>
                                                 <Grid item xs={6} md={3}>
@@ -391,26 +394,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                                                         borderRadius: 0.5,
                                                         display: 'inline-block'
                                                     }}>
-                                                        {inOut.terminalId ? inOut.terminalId.trim() : "-"}
-                                                    </Typography>
-                                                </Grid>
-                                                <Grid item xs={6} md={3}>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        In/Out Status
-                                                    </Typography>
-                                                    <Chip
-                                                        label={inOut.inOut === 1 ? "IN" : "OUT"}
-                                                        size="small"
-                                                        color={inOut.inOut === 1 ? "success" : "error"}
-                                                        variant="filled"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={6} md={3}>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Date
-                                                    </Typography>
-                                                    <Typography variant="body2">
-                                                        {formatDate(inOut.date)}
+                                                        {inOut.terminalID ? inOut.terminalID.trim() : "-"}
                                                     </Typography>
                                                 </Grid>
                                             </Grid>
@@ -420,82 +404,6 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
                             </Card>
                         </Grid>
                     )}
-
-                    <Grid item xs={12}>
-                        <Card variant="outlined">
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom color="primary">
-                                    System Information
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Terminal ID
-                                        </Typography>
-                                        <Typography variant="body2" sx={{
-                                            fontFamily: 'monospace',
-                                            fontSize: '0.8rem',
-                                            bgcolor: 'grey.100',
-                                            p: 0.5,
-                                            borderRadius: 0.5,
-                                            wordBreak: 'break-all'
-                                        }}>
-                                            {activity.terminalId ? activity.terminalId.trim() : "-"}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={6} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Record ID
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                            {activity.id || "-"}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={6} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Entry Type
-                                        </Typography>
-                                        <Chip
-                                            label={activity.isManual ? "Manual" : "Automatic"}
-                                            size="small"
-                                            color={activity.isManual ? "warning" : "info"}
-                                            variant="outlined"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Record Status
-                                        </Typography>
-                                        <Chip
-                                            label={activity.isActive !== false ? "Active" : "Inactive"}
-                                            size="small"
-                                            color={activity.isActive !== false ? "success" : "error"}
-                                            variant="outlined"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Late Cover
-                                        </Typography>
-                                        <Chip
-                                            label={activity.isLateCovered ? "Yes" : "No"}
-                                            size="small"
-                                            color={activity.isLateCovered ? "warning" : "default"}
-                                            variant="outlined"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6} md={4}>
-                                        <Typography variant="body2" color="textSecondary">
-                                            ETL Run Time
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                            {formatDate(activity.etlRunTime)}
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            </CardContent>
-                        </Card>
-                    </Grid>
                 </Grid>
             </DialogContent>
 
@@ -507,7 +415,7 @@ const ActivityDetailsDialog = React.memo(({ open, onClose, activity, getActivity
         </Dialog>
     );
 });
-ActivityDetailsDialog.displayName = 'ActivityDetailsDialog';
+
 const EmployeeActivities = () => {
     const dispatch = useDispatch();
     const router = useRouter();
@@ -523,17 +431,16 @@ const EmployeeActivities = () => {
         page,
         rowsPerPage,
         totalElements,
-        totalPages,
     } = useSelector(selectActivitiesData);
 
     const isFiltering = useSelector(selectIsFiltering);
 
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const [selectedEmployeeId, setSelectedEmployeeId] = React.useState(null);
-    const [selectedActivity, setSelectedActivity] = React.useState(null);
-    const open = Boolean(anchorEl);
+    // State for menu and dialog
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedActivity, setSelectedActivity] = useState(null);
+    const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-    const [detailsDialogOpen, setDetailsDialogOpen] = React.useState(false);
+    const openMenu = Boolean(anchorEl);
 
     useEffect(() => {
         if (!isFiltering) {
@@ -569,53 +476,33 @@ const EmployeeActivities = () => {
         dispatch(clearFilters());
     };
 
-    const handleMenuClick = useCallback((event, activity) => {
+    const handleMenuClick = (event, activity) => {
         setAnchorEl(event.currentTarget);
-        setSelectedEmployeeId(activity.employeeId);
         setSelectedActivity(activity);
-    }, []);
+    };
 
-    const handleMenuClose = useCallback(() => {
+    const handleMenuClose = () => {
         setAnchorEl(null);
-        setSelectedEmployeeId(null);
-        setSelectedActivity(null);
-    }, []);
+    };
 
-    const handleMenuItemClick = useCallback((path) => {
+    const handleViewDetails = () => {
+        setDetailsDialogOpen(true);
         handleMenuClose();
-        router.push(path);
-    }, [router, handleMenuClose]);
+    };
 
-    const handleViewDetails = useCallback(() => {
+    const handleMenuItemClick = (path) => {
         if (selectedActivity) {
-            setDetailsDialogOpen(true);
+            router.push(`${path}/${selectedActivity.userId || selectedActivity.employeeId}`);
         }
         handleMenuClose();
-    }, [selectedActivity, handleMenuClose]);
+    };
 
-    const handleCloseDetailsDialog = useCallback(() => {
+    const handleCloseDetailsDialog = () => {
         setDetailsDialogOpen(false);
-        setSelectedActivity(null);
-    }, []);
-
-    const getStatusColor = (activity) => {
-        if (activity.leaveStatus === 'LEAVE_APPROVED') return "success";
-        if (activity.isUnSuccessful || activity.isUnauthorized) return "error";
-        if (activity.hasIssues && !activity.isResolved) return "warning";
-        return "success";
     };
 
-    const getStatusText = (activity) => {
-        if (activity.leaveStatus === 'LEAVE_APPROVED') return "Leave Approved";
-        if (activity.leaveStatus === 'LEAVE_REQUESTED') return "Leave Requested";
-        if (activity.isUnSuccessful) return "Unsuccessful";
-        if (activity.isUnauthorized) return "Unauthorized";
-        if (activity.hasIssues && !activity.isResolved) return "Has Issues";
-        if (activity.isResolved) return "Resolved";
-        return "Normal";
-    };
-
-    const getActivityType = (activity) => {
+    const getActivityType = useCallback((activity) => {
+        if (!activity) return "Unknown";
         if (activity.attendanceType === 'ABSENT') return "Absent";
         if (activity.leaveStatus === 'FULL_LEAVE') return "Full Leave";
         if (activity.leaveStatus === 'SHORT_LEAVE') return "Short Leave";
@@ -624,9 +511,10 @@ const EmployeeActivities = () => {
         if (activity.isLate) return "Late";
         if (activity.attendanceType === 'FULL_DAY') return "Present";
         return "Present";
-    };
+    }, []);
 
-    const getAttendanceStatus = (activity) => {
+    const getAttendanceStatus = useCallback((activity) => {
+        if (!activity) return "Unknown";
         if (activity.isUnauthorized) return "Unauthorized";
         if (activity.attendanceType === 'ABSENT') return "Absent";
         if (activity.isUnSuccessful) return "Unsuccessful";
@@ -635,267 +523,255 @@ const EmployeeActivities = () => {
         if (activity.leaveStatus === 'FULL_LEAVE' || activity.leaveStatus === 'SHORT_LEAVE') return "On Leave";
         if (activity.isLate) return "Late";
         return "Present";
-    };
+    }, []);
 
-    const getAttendanceStatusColor = (activity) => {
+    const getAttendanceStatusColor = useCallback((activity) => {
+        if (!activity) return "default";
         if (activity.isUnauthorized || activity.attendanceType === 'ABSENT' || activity.isUnSuccessful) return "error";
         if (activity.hasIssues && !activity.isResolved) return "warning";
         if (activity.leaveStatus === 'LEAVE_APPROVED' || activity.leaveStatus === 'FULL_LEAVE' || activity.leaveStatus === 'SHORT_LEAVE') return "info";
         if (activity.isLate) return "warning";
         return "success";
-    };
+    }, []);
 
     if (loading) {
         return (
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                    <CircularProgress />
-                </Box>
-            </ThemeProvider>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
         );
     }
 
     if (error) {
         return (
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <Box sx={{ p: 3 }}>
-                    <Typography color="error">Error: {error}</Typography>
-                    <Button
-                        variant="contained"
-                        onClick={() => dispatch(fetchActivityRecords({ page, rowsPerPage }))}
-                        sx={{ mt: 2 }}
-                    >
-                        Try Again
-                    </Button>
-                </Box>
-            </ThemeProvider>
+            <Box sx={{ p: 3 }}>
+                <Typography color="error">Error: {error}</Typography>
+                <Button
+                    variant="contained"
+                    onClick={() => dispatch(fetchActivityRecords({ page, rowsPerPage }))}
+                    sx={{ mt: 2 }}
+                >
+                    Try Again
+                </Button>
+            </Box>
         );
     }
 
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Box sx={{ p: 3, backgroundColor: "#fff", minHeight: "100vh" }}>
-                <Typography variant="h4" gutterBottom>
-                    Employee Activities
-                </Typography>
+        <Box sx={{ p: 3, backgroundColor: "#fff", minHeight: "100vh" }}>
+            <Typography variant="h4" gutterBottom color="textPrimary">
+                Employee Activities
+            </Typography>
 
-                {/* Action Menu */}
-                <Menu
-                    id="employee-actions-menu"
-                    aria-labelledby="employee-actions-button"
-                    anchorEl={anchorEl}
-                    open={open}
-                    onClose={handleMenuClose}
-                    anchorOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                    }}
-                >
-                    <MenuItem onClick={handleViewDetails}>
-                        <VisibilityIcon sx={{ mr: 1 }} fontSize="small" />
-                        View Details
-                    </MenuItem>
-                    <MenuItem onClick={() => handleMenuItemClick(`/all-movements/${selectedEmployeeId}`)}>
-                        Movements
-                    </MenuItem>
-                    <MenuItem onClick={() => handleMenuItemClick(`/all-leaves/${selectedEmployeeId}`)}>
-                        Leave
-                    </MenuItem>
-                    <MenuItem onClick={() => handleMenuItemClick(`/single-employee-activities/${selectedEmployeeId}`)}>
-                        Attendance
-                    </MenuItem>
-                    <MenuItem onClick={() => handleMenuItemClick(`/in-outs/${selectedEmployeeId}`)}>
-                        In-Outs
-                    </MenuItem>
-                </Menu>
+            {/* Action Menu */}
+            <Menu
+                id="employee-actions-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleMenuClose}
+                anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+            >
+                <MenuItem onClick={handleViewDetails}>
+                    <VisibilityIcon sx={{ mr: 1 }} fontSize="small" />
+                    View Details
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('/all-movements')}>
+                    Movements
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('/all-leaves')}>
+                    Leave
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('/single-employee-activities')}>
+                    Attendance
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('/in-outs')}>
+                    In-Outs
+                </MenuItem>
+            </Menu>
 
-                <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <TextField
-                        label="Search by Employee ID"
+            <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <TextField
+                    label="Search by Employee ID"
+                    variant="outlined"
+                    value={searchTerm}
+                    onChange={handleSearchTermChange}
+                    sx={{ width: 300 }}
+                />
+
+                <FormControl variant="outlined" sx={{ minWidth: 150 }}>
+                    <InputLabel>Attendance Type</InputLabel>
+                    <Select
+                        value={filterType}
+                        onChange={handleFilterTypeChange}
+                        label="Attendance Type"
+                    >
+                        <MenuItem value="all">All Types</MenuItem>
+                        <MenuItem value="fullDay">Present</MenuItem>
+                        <MenuItem value="late">Late</MenuItem>
+                        <MenuItem value="halfDay">Half Day</MenuItem>
+                        <MenuItem value="absent">Absent</MenuItem>
+                        <MenuItem value="fullLeave">Full Leave</MenuItem>
+                        <MenuItem value="shortLeave">Short Leave</MenuItem>
+                    </Select>
+                </FormControl>
+
+                <FormControl variant="outlined" sx={{ minWidth: 150 }}>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                        value={filterStatus}
+                        onChange={handleFilterStatusChange}
+                        label="Status"
+                    >
+                        <MenuItem value="all">All Statuses</MenuItem>
+                        <MenuItem value="Approved">Leave Approved</MenuItem>
+                        <MenuItem value="Pending">Pending</MenuItem>
+                        <MenuItem value="Not Approved">Issues/Unauthorized</MenuItem>
+                    </Select>
+                </FormControl>
+
+                <FormControl variant="outlined" sx={{ minWidth: 150 }}>
+                    <InputLabel>Issue</InputLabel>
+                    <Select
+                        value={filterIssue}
+                        onChange={handleFilterIssueChange}
+                        label="Issue"
+                    >
+                        <MenuItem value="all">All</MenuItem>
+                        <MenuItem value="hasIssue">Has Issue</MenuItem>
+                        <MenuItem value="noIssue">No Issue</MenuItem>
+                    </Select>
+                </FormControl>
+
+                {isFiltering && (
+                    <Button
                         variant="outlined"
-                        value={searchTerm}
-                        onChange={handleSearchTermChange}
-                        sx={{ width: 300 }}
-                    />
-
-                    <FormControl variant="outlined" sx={{ minWidth: 150 }}>
-                        <InputLabel>Attendance Type</InputLabel>
-                        <Select
-                            value={filterType}
-                            onChange={handleFilterTypeChange}
-                            label="Attendance Type"
-                        >
-                            <MenuItem value="all">All Types</MenuItem>
-                            <MenuItem value="fullDay">Present</MenuItem>
-                            <MenuItem value="late">Late</MenuItem>
-                            <MenuItem value="halfDay">Half Day</MenuItem>
-                            <MenuItem value="absent">Absent</MenuItem>
-                            <MenuItem value="fullLeave">Full Leave</MenuItem>
-                            <MenuItem value="shortLeave">Short Leave</MenuItem>
-                        </Select>
-                    </FormControl>
-
-                    <FormControl variant="outlined" sx={{ minWidth: 150 }}>
-                        <InputLabel>Status</InputLabel>
-                        <Select
-                            value={filterStatus}
-                            onChange={handleFilterStatusChange}
-                            label="Status"
-                        >
-                            <MenuItem value="all">All Statuses</MenuItem>
-                            <MenuItem value="Approved">Leave Approved</MenuItem>
-                            <MenuItem value="Pending">Pending</MenuItem>
-                            <MenuItem value="Not Approved">Issues/Unauthorized</MenuItem>
-                        </Select>
-                    </FormControl>
-
-                    <FormControl variant="outlined" sx={{ minWidth: 150 }}>
-                        <InputLabel>Issue</InputLabel>
-                        <Select
-                            value={filterIssue}
-                            onChange={handleFilterIssueChange}
-                            label="Issue"
-                        >
-                            <MenuItem value="all">All</MenuItem>
-                            <MenuItem value="hasIssue">Has Issue</MenuItem>
-                            <MenuItem value="noIssue">No Issue</MenuItem>
-                        </Select>
-                    </FormControl>
-
-                    {isFiltering && (
-                        <Button
-                            variant="outlined"
-                            color="secondary"
-                            onClick={handleClearFilters}
-                        >
-                            Clear Filters
-                        </Button>
-                    )}
-                </Box>
-
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><strong>Employee ID</strong></TableCell>
-                                <TableCell><strong>Date</strong></TableCell>
-                                <TableCell><strong>In Time</strong></TableCell>
-                                <TableCell><strong>Out Time</strong></TableCell>
-                                <TableCell><strong>Attendance</strong></TableCell>
-                                <TableCell><strong>Status</strong></TableCell>
-                                <TableCell align="center"><strong>Actions</strong></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredActivities.map((activity) => (
-                                <TableRow key={activity.id} hover>
-                                    <TableCell>
-                                        <Typography variant="body1" fontWeight="medium">
-                                            {activity.userId}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {new Date(activity.arrivalDate).toLocaleDateString('en-US', {
-                                                weekday: 'short',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" sx={{
-                                            fontFamily: 'monospace',
-                                            color: activity.arrivalTime ? 'text.primary' : 'text.secondary'
-                                        }}>
-                                            {activity.arrivalTime || 'Not Recorded'}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" sx={{
-                                            fontFamily: 'monospace',
-                                            color: activity.leftTime ? 'text.primary' : 'text.secondary'
-                                        }}>
-                                            {activity.leftTime || 'Not Recorded'}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={getActivityType(activity)}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{
-                                                minWidth: '80px',
-                                                fontWeight: 'medium'
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={getAttendanceStatus(activity)}
-                                            color={getAttendanceStatusColor(activity)}
-                                            size="small"
-                                            sx={{
-                                                minWidth: '90px',
-                                                fontWeight: 'medium'
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <IconButton
-                                            onClick={(event) => handleMenuClick(event, activity)}
-                                            aria-label="more actions"
-                                            size="small"
-                                            sx={{
-                                                bgcolor: 'action.hover',
-                                                '&:hover': {
-                                                    bgcolor: 'primary.light',
-                                                    color: 'white'
-                                                }
-                                            }}
-                                        >
-                                            <MoreHorizIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-
-                <TablePagination
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                    component="div"
-                    count={isFiltering ? filteredActivities.length : totalElements}
-                    rowsPerPage={rowsPerPage}
-                    page={isFiltering ? 0 : page}
-                    onPageChange={isFiltering ? null : handleChangePage}
-                    onRowsPerPageChange={isFiltering ? null : handleChangeRowsPerPage}
-                    disabled={isFiltering}
-                    labelDisplayedRows={
-                        isFiltering
-                            ? ({ from, to, count }) => `${from}-${to} of ${count} (filtered)`
-                            : ({ from, to, count }) => `${from}-${to} of ${count}`
-                    }
-                />
-
-                <ActivityDetailsDialog
-                    open={detailsDialogOpen}
-                    onClose={handleCloseDetailsDialog}
-                    activity={selectedActivity}
-                    getActivityType={getActivityType}
-                    getStatusText={getStatusText}
-                    getStatusColor={getStatusColor}
-                />
+                        color="secondary"
+                        onClick={handleClearFilters}
+                    >
+                        Clear Filters
+                    </Button>
+                )}
             </Box>
-        </ThemeProvider>
+
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell><strong>Employee ID</strong></TableCell>
+                            <TableCell><strong>Date</strong></TableCell>
+                            <TableCell><strong>In Time</strong></TableCell>
+                            <TableCell><strong>Out Time</strong></TableCell>
+                            <TableCell><strong>Attendance</strong></TableCell>
+                            <TableCell><strong>Status</strong></TableCell>
+                            <TableCell align="center"><strong>Actions</strong></TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filteredActivities.map((activity) => (
+                            <TableRow key={activity.id} hover>
+                                <TableCell>
+                                    <Typography variant="body1" fontWeight="medium">
+                                        {activity.userId || activity.employeeId}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2">
+                                        {new Date(activity.arrivalDate).toLocaleDateString('en-US', {
+                                            weekday: 'short',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" sx={{
+                                        fontFamily: 'monospace',
+                                        color: activity.arrivalTime ? 'text.primary' : 'text.secondary'
+                                    }}>
+                                        {activity.arrivalTime || 'Not Recorded'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" sx={{
+                                        fontFamily: 'monospace',
+                                        color: activity.leftTime ? 'text.primary' : 'text.secondary'
+                                    }}>
+                                        {activity.leftTime || 'Not Recorded'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={getActivityType(activity)}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                            minWidth: '80px',
+                                            fontWeight: 'medium'
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={getAttendanceStatus(activity)}
+                                        color={getAttendanceStatusColor(activity)}
+                                        size="small"
+                                        sx={{
+                                            minWidth: '90px',
+                                            fontWeight: 'medium'
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell align="center">
+                                    <IconButton
+                                        onClick={(event) => handleMenuClick(event, activity)}
+                                        aria-label="more actions"
+                                        size="small"
+                                        sx={{
+                                            bgcolor: 'action.hover',
+                                            '&:hover': {
+                                                bgcolor: 'primary.light',
+                                                color: 'white'
+                                            }
+                                        }}
+                                    >
+                                        <MoreHorizIcon />
+                                    </IconButton>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={isFiltering ? filteredActivities.length : totalElements}
+                rowsPerPage={rowsPerPage}
+                page={isFiltering ? 0 : page}
+                onPageChange={isFiltering ? null : handleChangePage}
+                onRowsPerPageChange={isFiltering ? null : handleChangeRowsPerPage}
+                disabled={isFiltering}
+                labelDisplayedRows={
+                    isFiltering
+                        ? ({ from, to, count }) => `${from}-${to} of ${count} (filtered)`
+                        : ({ from, to, count }) => `${from}-${to} of ${count}`
+                }
+            />
+
+            <ActivityDetailsDialog
+                open={detailsDialogOpen}
+                onClose={handleCloseDetailsDialog}
+                activity={selectedActivity}
+            />
+        </Box>
     );
 };
 

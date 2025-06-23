@@ -6,7 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
 import java.sql.Time;
 import java.util.Date;
 import java.util.List;
@@ -33,5 +35,14 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
     List<InOutEntity> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
     List<InOutEntity> findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(String employeeId, Date punchTime, Time punchTypeTime, String terminalId);
     Optional<InOutEntity> findByEmployeeIdAndDateAndPunchTypeTimeAndTerminalId(String employeeId, Date date, Time punchTypeTime, String terminalId);
+
+    @Query("SELECT i FROM InOutEntity i " +
+            "WHERE i.employeeId = :employeeId " +
+            "AND i.date = :date " +
+            "AND i.inOutType = 'EVENING_OUT' " +
+            "ORDER BY i.punchTime DESC LIMIT 1")
+    Optional<InOutEntity> findLatestEveningOutPunch(
+            @Param("employeeId") String employeeId,
+            @Param("date") Date date);
 }
 

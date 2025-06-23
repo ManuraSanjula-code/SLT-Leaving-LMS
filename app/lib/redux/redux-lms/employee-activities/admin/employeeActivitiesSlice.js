@@ -10,15 +10,16 @@ export const fetchActivityRecords = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const response = await fetch(
-                `http://192.168.3.20:8080/lms/${empId}?page=${page}&size=${rowsPerPage}`,
+                `http://localhost:8080/lms/${empId}?page=${page}&size=${rowsPerPage}`,
                 { credentials: 'include' }
             );
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            return await response.json();
+            const data =  await response.json()
+            console.log(data)
+            return data;
         } catch (error) {
             return rejectWithValue(error.message);
         }

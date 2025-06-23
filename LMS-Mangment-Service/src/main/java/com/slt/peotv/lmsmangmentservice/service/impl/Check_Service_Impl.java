@@ -773,6 +773,175 @@ public class Check_Service_Impl implements Check_Service {
         LocalDateTime yesterdayBefore830 = LocalDate.now().minusDays(1).atTime(8, 30);
         Time sqlTime830 = Time.valueOf(yesterdayBefore830.toLocalTime());
 
+        LocalTime eveStart = LocalTime.of(17, 0);
+        LocalTime eveEnd = LocalTime.of(23, 59);
+        Time timeEveStart = Time.valueOf(eveStart);
+        Time timeEveEnd = Time.valueOf(eveEnd);
+
+        LocalTime eveStart_ = LocalTime.of(17, 30);
+        Time timeEveStart_ = Time.valueOf(eveStart_);
+
+        LocalDateTime yesterdayAfter830 = LocalDate.now().minusDays(1).atTime(8, 30);
+        Time sqlTime830A = Time.valueOf(yesterdayAfter830.toLocalTime());
+
+        Date yesterdayDate = helper.getYesterdayDate();
+        List<InOutEntity> employeesArrivedBefore830 = inOutRepo.findByDateAndPunchTypeTimeBefore(yesterdayDate,
+                sqlTime830);
+        List<InOutEntity> employeesLeftAfter5 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
+                timeEveStart, timeEveEnd);
+        List<InOutEntity> employeesArrivedAfter830 = inOutRepo.findByDateAndPunchTypeTimeAfter(yesterdayDate,
+                sqlTime830A);
+        List<InOutEntity> employeesLeftAfter5_ = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
+                timeEveStart_, timeEveEnd);
+
+
+        Map<String, InOutEntity> earliestMorningPunchByEmployee = findEarliestMorningPunchByEmployee(
+                employeesArrivedBefore830); /// PUNCH BEFORE 8.30.am
+        Map<String, InOutEntity> earliest830PunchByEmployee = findEarliestMorningPunchByEmployee(
+                employeesArrivedAfter830); /// PUNCH AFTER 8.30.am
+
+        Map<String, InOutEntity> earliestEveningPunchByEmployee = findEarliestEveningPunchByEmployee(
+                employeesLeftAfter5); /// PUNCH BETWEEN 5.00pm - 23.59pm
+        Map<String, InOutEntity> earliestEveningPunchByEmployee_ = findEarliestEveningPunchByEmployee(
+                employeesLeftAfter5_); /// PUNCH BETWEEN 5.03pm - 23.59pm
+
+
+        /// =====================================================================================
+        /// =====================================================================================
+        /// =====================================================================================
+        /// FULL DAY
+
+        Map<String, InOutEntity[]> employeesWithBothPunches = findEmployeesWithBothPunches(
+                earliestMorningPunchByEmployee, earliestEveningPunchByEmployee);
+
+        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunches.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue()[0];
+                InOutEntity eveningPunch = entry.getValue()[1];
+                reportAttendance(morningPunch, eveningPunch, true, false, false, false, false, false, false, false,
+                        false, true, false, false, null);
+            });
+        }
+
+        /// =====================================================================================
+        /// =====================================================================================
+        /// =====================================================================================
+        /// Un-Authorized
+
+        /// ================= Un-Authorized -- 8.30 === > BEFORE
+        Map<String, InOutEntity> employeesWithOnlyMorningPunches = findEmployeesWithOnlyOnePunches(
+                earliestMorningPunchByEmployee, earliestEveningPunchByEmployee);
+
+        for (Map.Entry<String, InOutEntity> entry : employeesWithOnlyMorningPunches.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue();
+                reportAttendance(morningPunch, false,false, true, false, false, false, false, false, false, false, true,
+                        false, false, null);
+            });
+        }
+
+        Map<String, InOutEntity> employeesWithOnlyMorningPunches_ = findEmployeesWithOnlyOnePunches(
+                earliestEveningPunchByEmployee, earliestMorningPunchByEmployee);
+
+        for (Map.Entry<String, InOutEntity> entry : employeesWithOnlyMorningPunches_.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue();
+                reportAttendance(morningPunch, true,false, true, false, false, false, false, false, false, false, true,
+                        false, false, null);
+            });
+        }
+
+        /// ================= Un-Authorized -- 8.30 === > AFTER
+        Map<String, InOutEntity> employeesWithOnly830Punches = findEmployeesWithOnlyOnePunches(
+                earliest830PunchByEmployee, earliestEveningPunchByEmployee);
+
+        for (Map.Entry<String, InOutEntity> entry : employeesWithOnly830Punches.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue();
+                reportAttendance(morningPunch, false,false, true, false, false, false, false, false, false, false, true,
+                        false, false, null);
+            });
+        }
+
+        Map<String, InOutEntity> employeesWithOnly830Punches_ = findEmployeesWithOnlyOnePunches(
+                earliestEveningPunchByEmployee, earliest830PunchByEmployee);
+
+        for (Map.Entry<String, InOutEntity> entry : employeesWithOnly830Punches_.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue();
+                reportAttendance(morningPunch, true,false, true, false, false, false, false, false, false, false, true,
+                        false, false, null);
+            });
+        }
+
+        /// ==============================================================================================
+        /// ==============================================================================================
+        /// ==============================================================================================
+
+        /// Late Arrive 8.30 Am (AFTER) but do the late cover
+
+        Map<String, InOutEntity[]> employeesWithBothPunchesLate = findEmployeesWithBothPunches(earliest830PunchByEmployee,
+                earliestEveningPunchByEmployee_);
+
+        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunchesLate.entrySet()) {
+
+            String employeeId = entry.getKey();
+            InOutEntity morningPunch = entry.getValue()[0];
+            InOutEntity eveningPunch = entry.getValue()[1];
+
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+
+                reportAttendance(morningPunch, eveningPunch, true, false, false, true, true, false, false, false, false,
+                        true, false, false, null);
+            });
+
+        }
+
+        /// =====================================================================================
+        /// =====================================================================================
+        /// =====================================================================================
+
+        /// Late Arrive 8.30 (AFTER) Am but do the did not late cover
+
+        Map<String, InOutEntity> onlyMorningPunchesLate90 = findEmployeesWithOnlyOnePunches(earliest830PunchByEmployee,
+                earliestEveningPunchByEmployee_);
+
+        for (Map.Entry<String, InOutEntity> entry : onlyMorningPunchesLate90.entrySet()) {
+
+            String employeeId = entry.getKey();
+            InOutEntity morningPunch = entry.getValue();
+
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                reportAttendance(morningPunch, false,false, false, true, true, false, false, false, false, false, true,
+                        false, false, null);
+            });
+
+        }
+
+        /// ================================ employee who are absent
+        getAbsentEmployeesToday().forEach(employee -> {
+            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent
+                    .getUserLeaveTypeRemaining(employee);
+            boolean nopay = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
+            reportAttendance(employee, false, false, false, false, false, false, false, false, false, true, nopay, true, helper.getYesterdayDate());
+        });
+    }
+
+    /* @Override
+    public void prerequisite() {
+        try {
+            handleHolidays();
+        } catch (Exception e) {
+
+        }
+        LocalDateTime yesterdayBefore830 = LocalDate.now().minusDays(1).atTime(8, 30);
+        Time sqlTime830 = Time.valueOf(yesterdayBefore830.toLocalTime());
+
         LocalTime eveStart = LocalTime.of(17, 0); // 5:00 PM
         LocalTime eveEnd = LocalTime.of(23, 0); // 11:00 PM
         Time timeEveStart = Time.valueOf(eveStart);
@@ -941,7 +1110,7 @@ public class Check_Service_Impl implements Check_Service {
             boolean nopay = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
             reportAttendance(employee, false, false, false, false, false, false, false, false, false, true, nopay, true, helper.getYesterdayDate());
         });
-    }
+    }*/
 
     public List<String> getAbsentEmployeesToday() {
         List<EmployeeEntity> allEmployees = (List<EmployeeEntity>) employeeRepo.findAll();
