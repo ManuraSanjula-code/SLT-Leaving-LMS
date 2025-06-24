@@ -27,6 +27,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/lms")
@@ -157,6 +158,18 @@ public class LMSController {
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public List<InOutDTO> getEarliestInOutByDate(@PathVariable String date, @PathVariable String userId, @PathVariable String empId) {
         return checkService.getEarliestInOutByDate(userId, convertStringToDate(date));
+    }
+
+    @GetMapping("/in-out/moa/{userId}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    public Optional<InOutDTO> getEarliestInOut(@PathVariable String date, @PathVariable String userId, @PathVariable String empId) {
+        return lmsService.getEarliestInOut(userId);
+    }
+
+    @GetMapping("/in-out/eve/{userId}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    public Optional<InOutDTO> getLatestInOut(@PathVariable String date, @PathVariable String userId, @PathVariable String empId) {
+        return lmsService.getLatestInOut(userId);
     }
 
     @GetMapping("/access-log/{empId}")

@@ -650,4 +650,18 @@ public class LMS_Service_impl implements LMS_Service {
         Pageable pageable = PageRequest.of(page, size);
         return attendanceRepo.findByEmployeeAndAttendanceType(employee, AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
     }
+
+    @Override
+    public Optional<InOutDTO> getEarliestInOut(String employeeID) {
+        EmployeeEntity employeeEntity = helper.getEmployeeById(employeeID);
+        return inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate())
+                .map(lmsUtils::inOutDTO);
+    }
+
+    @Override
+    public Optional<InOutDTO> getLatestInOut(String employeeID) {
+        EmployeeEntity employeeEntity = helper.getEmployeeById(employeeID);
+        return inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate())
+                .map(lmsUtils::inOutDTO);
+    }
 }

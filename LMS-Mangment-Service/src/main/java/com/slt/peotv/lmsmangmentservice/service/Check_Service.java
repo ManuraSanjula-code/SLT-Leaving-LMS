@@ -2,7 +2,6 @@ package com.slt.peotv.lmsmangmentservice.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
@@ -15,7 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 
-import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;

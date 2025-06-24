@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.text.ParseException;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor

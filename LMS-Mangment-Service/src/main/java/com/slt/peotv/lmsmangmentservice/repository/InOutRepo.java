@@ -44,5 +44,22 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
     Optional<InOutEntity> findLatestEveningOutPunch(
             @Param("employeeId") String employeeId,
             @Param("date") Date date);
+
+    @Query("SELECT i FROM InOutEntity i " +
+            "WHERE i.employeeId = :employeeId " +
+            "AND i.date = :date " +
+            "ORDER BY i.punchTypeTime ASC LIMIT 1")
+    Optional<InOutEntity> findEarliestByEmployeeIdAndDate(
+            @Param("employeeId") String employeeId,
+            @Param("date") Date date);
+
+    @Query("SELECT i FROM InOutEntity i " +
+            "WHERE i.employeeId = :employeeId " +
+            "AND i.date = :date " +
+            "ORDER BY i.punchTypeTime DESC LIMIT 1")
+    Optional<InOutEntity> findLatestByEmployeeIdAndDate(
+            @Param("employeeId") String employeeId,
+            @Param("date") Date date);
+
 }
 

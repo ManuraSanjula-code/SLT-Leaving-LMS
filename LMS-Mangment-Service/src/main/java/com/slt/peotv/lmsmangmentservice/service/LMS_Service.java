@@ -11,10 +11,14 @@ import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import org.springframework.data.domain.Page;
 import java.util.List;
+import java.util.Optional;
 
 public interface LMS_Service {
 
     List<InOutDTO> getAllInOuts(String id, boolean swap);
+    Optional<InOutDTO> getEarliestInOut(String userId);
+    Optional<InOutDTO> getLatestInOut(String userId);
+
     public Page<AttendanceDTO> getAllAbsent(int page, int size);
     public Page<AttendanceDTO> getAllAbsentByUser(int page, int size, String user);
     public Page<AttendanceDTO> getAllAttendance(int page, int size);
