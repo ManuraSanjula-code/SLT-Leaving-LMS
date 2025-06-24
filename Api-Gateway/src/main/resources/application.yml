@@ -1,0 +1,36 @@
+server:
+  port: 8080  # API Gateway runs on port 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/users/**
+
+        - id: lms-service
+          uri: lb://LMS-management-service
+          predicates:
+            - Path=/lms/**
+
+        - id: roster-service
+          uri: lb://roster-service
+          predicates:
+            - Path=/api/**
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8010/eureka
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG

@@ -1230,7 +1230,8 @@ public class UserServiceImpl implements UserService {
 
                 if (tempUser == null) {
                     System.out.println("No temporary user found with ID: " + user_id);
-                    throw new UsernameNotFoundException("Temporary user not found with ID: " + user_id);
+                    return null;
+                    /*throw new UsernameNotFoundException("Temporary user not found with ID: " + user_id);*/
                 }
 
 
@@ -1270,7 +1271,8 @@ public class UserServiceImpl implements UserService {
 
                 if (userEntity == null) {
                     System.out.println("No user found with ID: " + user_id);
-                    throw new UsernameNotFoundException("User not found with ID: " + user_id);
+                    return null;
+                    /*throw new UsernameNotFoundException("User not found with ID: " + user_id);*/
                 }
 
                 return new UserPrincipal(userEntity);
@@ -1278,7 +1280,8 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             System.err.println("Error fetching user details for ID: " + user_id);
             e.printStackTrace();
-            throw e;  // Re-throw the exception after logging
+            /*throw e;  // Re-throw the exception after logging*/
+            return null;
         }
     }
 

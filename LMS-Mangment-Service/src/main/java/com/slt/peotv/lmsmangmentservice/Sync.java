@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
 import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -22,7 +21,7 @@ public class Sync {
 
     @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
-        LocalDate currentDate = LocalDate.now();
+        /*LocalDate currentDate = LocalDate.now();
 
         if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
             System.out.println("Today (" + currentDate + ") is Sunday! 🌞");
@@ -30,7 +29,10 @@ public class Sync {
             check_Service.getAllTheInOutRecordsFromSLT();
             accessLogService.main();
             check_Service.main();
+        }*/
+        check_Service.getAllTheInOutRecordsFromSLT();
+        accessLogService.main();
+        check_Service.main();
     }
-        }
         
 }
