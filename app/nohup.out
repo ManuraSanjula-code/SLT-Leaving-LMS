@@ -8,3 +8,13 @@
 
  ✓ Starting...
  ✓ Ready in 1803ms
+
+> app@0.1.0 start
+> next start
+
+   ▲ Next.js 15.2.0
+   - Local:        http://localhost:80
+   - Network:      http://10.96.220.18:80
+
+ ✓ Starting...
+ ✓ Ready in 1502ms

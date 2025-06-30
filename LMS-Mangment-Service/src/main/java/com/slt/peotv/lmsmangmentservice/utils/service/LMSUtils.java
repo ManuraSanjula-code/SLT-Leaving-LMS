@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
+import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AuditLog;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
@@ -12,9 +13,12 @@ import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
+import com.slt.peotv.lmsmangmentservice.model.dto.NopayDTO;
+import com.slt.peotv.lmsmangmentservice.model.dto.NoPayReasonDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.AccessLogReq;
 import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
 import com.slt.peotv.lmsmangmentservice.model.req.InOutReq;
+import com.slt.peotv.lmsmangmentservice.repository.NoPayReasonRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AuditLogRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AuditLogoRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
@@ -50,6 +54,9 @@ public class LMSUtils {
 
     @Autowired
     private InOutRepo inOutRepo;
+
+    @Autowired
+    private NoPayReasonRepo noPayReasonRepo;
 
     public AccessLogRest toRest(AccessLogEntity accessLog) {
         if (accessLog == null) return null;
@@ -277,6 +284,25 @@ public class LMSUtils {
         dto.setComment(entity.getComment());
         dto.setCreatedDate(entity.getCreatedDate());
         dto.setUpdatedDate(entity.getUpdatedDate());
+        dto.setIsActive(entity.getIsActive());
+
+        Optional<NoPayReasonEntity> entities = noPayReasonRepo.findNoPayReasonEntitiesByNoPay(entity);
+        if(entities.isPresent()) {
+            NoPayReasonEntity noPayReasonEntity = entities.get();
+            NoPayReasonDTO noPayReasonDTO = toNoPayReasonDTO(noPayReasonEntity);
+            dto.setReasons(noPayReasonDTO);
+        }
+        return dto;
+    }
+
+    public NoPayReasonDTO toNoPayReasonDTO(NoPayReasonEntity entity) {
+        if (entity == null) return null;
+
+        NoPayReasonDTO dto = new NoPayReasonDTO();
+
+        dto.setId(entity.getId());
+        dto.setReasonCode(entity.getReason() != null ? entity.getReason().name() : null);
+        dto.setCreatedDate(entity.getCreatedDate());
         dto.setIsActive(entity.getIsActive());
 
         return dto;

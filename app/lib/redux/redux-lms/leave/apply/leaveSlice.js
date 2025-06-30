@@ -233,7 +233,7 @@ const leaveApplicationSlice = createSlice({
                 }
             }
 
-            if (state.formData.leaveType && state.formData.numOfDays > 0) {
+            if (state.formData.leaveType && state.formData.leaveType != "Duty Leave" && state.formData.leaveType != "Special Leave" && state.formData.numOfDays > 0) {
                 const selectedType = state.formData.leaveType;
                 const typeBalance = state.leaveBalances.find(
                     balance => balance.leaveTypeName === selectedType
@@ -356,15 +356,15 @@ export const leaveHelpers = {
         return leaveType ? leaveType.remainingLeaves : 0;
     },
 
-    // Leave types configuration
     leaveTypes: [
         { value: "Annual Leave", label: "Annual Leave" },
         { value: "Medical Leave", label: "Medical Leave" },
         { value: "Casual Leave", label: "Casual Leave" },
-        { value: "Maternity Leave", label: "Maternity Leave" }
+        { value: "Maternity Leave", label: "Maternity Leave" },
+        { value: "Duty Leave", label: "Duty Leave" },
+        { value: "Special Leave", label: "Special Leave" }
     ],
 
-    // Component behaviors configuration with category types
     componentBehaviors: [
         { value: "FULL_DAY", label: "Full Day Leave", type: "leave", allowsManualRequest: true },
         { value: "HALF_DAY", label: "Half Day Leave", type: "leave", allowsManualRequest: true },

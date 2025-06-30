@@ -14,11 +14,8 @@ public class NopayDTO {
     private Date createdDate;
     private Date updatedDate;
     private Boolean isActive = true;
+    private NoPayReasonDTO reasons;
 
-    // Related DTOs
-    private List<NoPayReasonDTO> reasons;
-
-    // Constructors
     public NopayDTO() {}
 
     public NopayDTO(Long id, String publicId, String employeeId, Date submissionDate, Date date) {
@@ -110,11 +107,11 @@ public class NopayDTO {
         this.isActive = isActive;
     }
 
-    public List<NoPayReasonDTO> getReasons() {
+    public NoPayReasonDTO getReasons() {
         return reasons;
     }
 
-    public void setReasons(List<NoPayReasonDTO> reasons) {
+    public void setReasons(NoPayReasonDTO reasons) {
         this.reasons = reasons;
     }
 

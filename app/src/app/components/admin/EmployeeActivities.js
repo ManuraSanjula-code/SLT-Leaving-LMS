@@ -415,6 +415,7 @@ const ActivityDetailsDialog = React.memo(({
         </Dialog>
     );
 });
+ActivityDetailsDialog.displayName = 'ActivityDetailsDialog';
 
 const EmployeeActivities = () => {
     const dispatch = useDispatch();
@@ -774,5 +775,5 @@ const EmployeeActivities = () => {
         </Box>
     );
 };
-
+EmployeeActivities.displayName = "EmployeeActivities";
 export default EmployeeActivities;

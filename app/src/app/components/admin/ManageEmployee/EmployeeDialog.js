@@ -246,12 +246,11 @@ const EmployeeDialog = React.memo(({
     const handleRemoveAddress = useCallback((id) => {
         setFormData(prev => {
             const addressToRemove = prev.addresses.find(addr => addr.id === id);
-            const isExistingAddress = addressToRemove && !addressToRemove.id.startsWith('temp-');
-
+            /* const isExistingAddress = addressToRemove && !addressToRemove.id.startsWith('temp-');*/
             return {
                 ...prev,
                 addresses: prev.addresses.filter(addr => addr.id !== id),
-                deleteAddresses: isExistingAddress
+                deleteAddresses: addressToRemove
                     ? [...prev.deleteAddresses, id]
                     : prev.deleteAddresses
             };
@@ -703,7 +702,7 @@ const EmployeeDialog = React.memo(({
                     multiple
                     value={formData.selectedProfiles}
                     onChange={(e) => handleChangeForNonBoolean('selectedProfiles', e.target.value)}
-                    renderValue={(selected) => selected.join(", ")}
+                    renderValue={(selected) => selected.map(selected=> selected.name).join(", ")}
                     label="Profiles"
                 >
                     {profiles.map((profile) => (

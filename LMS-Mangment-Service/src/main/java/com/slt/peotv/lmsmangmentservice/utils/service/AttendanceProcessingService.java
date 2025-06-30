@@ -92,7 +92,7 @@ public class AttendanceProcessingService {
 
             String user = leave.getEmployee().getEmployeeId();
             if (user != null) {
-                List<UserLeaveTypeRemainingEntity> userLeaveTypeRemaining = serviceEvent.getUserLeaveTypeRemaining(employeeId);
+                /*List<UserLeaveTypeRemainingEntity> userLeaveTypeRemaining = serviceEvent.getUserLeaveTypeRemaining(employeeId); */
 
                 /*switch (leaveType.getName()) {
                     case "CASUAL" -> {
@@ -141,19 +141,21 @@ public class AttendanceProcessingService {
                         throw new IllegalArgumentException("Invalid leave type: " + leaveType.getName());
                     }
                 }*/
-                boolean noLeavesRemaining = userLeaveTypeRemaining.stream()
+
+                /*boolean noLeavesRemaining = userLeaveTypeRemaining.stream()
                         .allMatch(leaveType_ -> leaveType_.getRemainingLeaves() < 1);
 
                 if (noLeavesRemaining) {
                     throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-                }
+                }*/
+
                 UserLeaveTypeRemainingEntity currentLeave = getUserLeaveTypeRemaining(leaveType.getName(), user);
                 if (currentLeave.getRemainingLeaves() > 1) {
                     currentLeave.setRemainingLeaves(currentLeave.getRemainingLeaves() - 1);
                     userLeaveTypeRemainingRepo.save(currentLeave);
                 }
                 leaveRepository.save(leave);
-                checkService.reportAttendance(employeeId, false, false, false, false, false, false, false, true, true, true, false, true, helper.getYesterdayDate());
+                checkService.reportAttendance(employeeId,true,false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
 
             }
         }

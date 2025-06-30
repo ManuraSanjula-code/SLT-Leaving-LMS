@@ -123,7 +123,7 @@ const LoginPage = () => {
             required
             fullWidth
             id="email"
-            label="Email Address"
+            label="USER ID"
             name="email"
             autoComplete="email"
             autoFocus

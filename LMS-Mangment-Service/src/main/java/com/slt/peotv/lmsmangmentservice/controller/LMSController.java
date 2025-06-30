@@ -129,9 +129,24 @@ public class LMSController {
 
     @GetMapping("/employee/{id}/excel/date/{actual_date}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
-    public ResponseEntity<byte[]> downloadEmployeeExcelReport(@PathVariable String id, @PathVariable String actual_date, @PathVariable String empId) {
+    public ResponseEntity<byte[]> downloadEmployeeExcelReportByDate(@PathVariable String id, @PathVariable String actual_date, @PathVariable String empId) {
         try {
             byte[] excelFile = exelUtils.generateEmployeeExcelReportByDate(id, createDateFromString(actual_date));
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"employee_report_" + id + ".xlsx\"")
+                    .body(excelFile);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/employee/{id}/excel/month/{month}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
+    public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonth(@PathVariable String id, @PathVariable String month, @PathVariable String empId) {
+        try {
+            byte[] excelFile = exelUtils.generateEmployeeExcelReportByDate(id, createDateFromString(month));
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -162,13 +177,13 @@ public class LMSController {
 
     @GetMapping("/in-out/moa/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Optional<InOutDTO> getEarliestInOut(@PathVariable String date, @PathVariable String userId, @PathVariable String empId) {
+    public Optional<InOutDTO> getEarliestInOut(@PathVariable String userId, @PathVariable String empId) {
         return lmsService.getEarliestInOut(userId);
     }
 
     @GetMapping("/in-out/eve/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Optional<InOutDTO> getLatestInOut(@PathVariable String date, @PathVariable String userId, @PathVariable String empId) {
+    public Optional<InOutDTO> getLatestInOut(@PathVariable String userId, @PathVariable String empId) {
         return lmsService.getLatestInOut(userId);
     }
 

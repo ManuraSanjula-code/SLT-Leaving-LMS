@@ -71,7 +71,7 @@ public class AttendanceService {
         List<Attendance> attendancesToSave = Collections.synchronizedList(new ArrayList<>());
 
         duty.getDailyDuties().forEach(dailyDuty -> {
-            if (!dailyDuty.getDate().equals(today)) return;
+            if (!dailyDuty.getDate().equals(today) || !dailyDuty.getDayOfWeek().equals(today.getDayOfWeek())) return;
 
             dailyDuty.getTimeSlots().forEach(timeSlot -> {
                 timeSlot.getAssignedEmployees().parallelStream().forEach(emId -> {

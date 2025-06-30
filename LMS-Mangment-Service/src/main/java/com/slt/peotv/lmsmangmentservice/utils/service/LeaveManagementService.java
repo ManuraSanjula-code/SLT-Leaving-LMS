@@ -8,7 +8,7 @@ import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveTypeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeTotalRepo;
-
+import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,15 +34,18 @@ public class LeaveManagementService {
     private UserLeaveTypeRemainingRepo remainingRepository;
 
     @Autowired
-
     private UserLeaveTypeTotalRepo totalRepository;
 
-    // Constants for leave types
+    @Autowired
+    private ServiceEvent serviceEvent;
+
     private static final String ANNUAL_LEAVE = "Annual Leave";
     private static final String MEDICAL_LEAVE = "Medical Leave";
     private static final String CASUAL_LEAVE = "Casual Leave";
     private static final String MATERNITY_LEAVE = "Maternity Leave";
     private static final String SHORT_LEAVE = "Short Leave";
+    private static final String DUTY_LEAVE = "Duty Leave";
+    private static final String SPECIAL_LEAVE = "Special Leave";
 
 
     @JmsListener(destination = "employee.new.queue")
@@ -91,7 +94,7 @@ public class LeaveManagementService {
         Map<String, LeaveTypeEntity> leaveTypes = new HashMap<>();
         
         // Define leave types
-        String[] types = {ANNUAL_LEAVE, MEDICAL_LEAVE, CASUAL_LEAVE, MATERNITY_LEAVE,SHORT_LEAVE};
+        String[] types = {ANNUAL_LEAVE, MEDICAL_LEAVE, CASUAL_LEAVE, MATERNITY_LEAVE,SHORT_LEAVE,DUTY_LEAVE,SPECIAL_LEAVE};
         
         for (String type : types) {
             Optional<LeaveTypeEntity> leaveTypeOp = leaveTypeRepository.findByName(type);
@@ -111,13 +114,15 @@ public class LeaveManagementService {
 
 
     private void allocateLeavesForLessThanOneYear(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
-        // No annual leaves
         saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), 0);
         
-        // Standard allocation for other leave types
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
         saveLeaveAllocation(employee, leaveTypes.get(SHORT_LEAVE), 2);
+        
+        saveLeaveAllocation(employee, leaveTypes.get(DUTY_LEAVE), -1);
+        saveLeaveAllocation(employee, leaveTypes.get(SPECIAL_LEAVE), -1);
+
         if(employee.getGender().equals("F"))
             saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
     }
@@ -144,9 +149,11 @@ public class LeaveManagementService {
         
         saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), annualLeaves);
         
-        // Standard allocation for other leave types
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
+
+        saveLeaveAllocation(employee, leaveTypes.get(DUTY_LEAVE), -1);
+        saveLeaveAllocation(employee, leaveTypes.get(SPECIAL_LEAVE), -1);
 
         if(employee.getGender().equals("F"))
             saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
@@ -161,9 +168,13 @@ public class LeaveManagementService {
 
 
     private void allocateLeavesForThreeOrMoreYears(EmployeeEntity employee, Map<String, LeaveTypeEntity> leaveTypes) {
+
         saveLeaveAllocation(employee, leaveTypes.get(ANNUAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(MEDICAL_LEAVE), 14);
         saveLeaveAllocation(employee, leaveTypes.get(CASUAL_LEAVE), 7);
+        
+        saveLeaveAllocation(employee, leaveTypes.get(DUTY_LEAVE), -1);
+        saveLeaveAllocation(employee, leaveTypes.get(SPECIAL_LEAVE), -1); 
 
         if(employee.getGender().equals("F"))
             saveLeaveAllocation(employee, leaveTypes.get(MATERNITY_LEAVE), 180);
@@ -192,7 +203,6 @@ public class LeaveManagementService {
         
         if (remainingEntity == null) {
         	remainingEntity = new UserLeaveTypeRemainingEntity();
-            remainingEntity = new UserLeaveTypeRemainingEntity();
             remainingEntity.setEmployee(employee);
             remainingEntity.setLeaveType(leaveType);
             remainingEntity.setPublicId(UUID.randomUUID().toString());
@@ -227,5 +237,17 @@ public class LeaveManagementService {
                 allocateLeaves(employee);
             }
         }
+    }
+
+    @Scheduled(cron = "0 0 0 ? * 2#1")
+    @Transactional
+    public void monthlyShortLeaveUpdate() {
+        employeeRepository.findAll().forEach(employee -> {
+            UserLeaveTypeRemainingEntity remaining_short_Leaves = serviceEvent.getUserLeaveTypeRemaining("Short Leave", employee.getEmployeeId());
+            if (remaining_short_Leaves.getRemainingLeaves() < 1) {
+                Optional<LeaveTypeEntity> leaveTypeOp = leaveTypeRepository.findByName(SHORT_LEAVE);
+                leaveTypeOp.ifPresent(leaveTypeEntity -> saveLeaveAllocation(employee, leaveTypeEntity, 2));
+            }
+        });
     }
 }

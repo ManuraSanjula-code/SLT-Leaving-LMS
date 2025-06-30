@@ -60,4 +60,6 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
 
     List<AttendanceEntity> findByEmployeeAndDateAndTerminalId(EmployeeEntity employee, Date date, String terminalId);
     long countByEmployeeAndDate(EmployeeEntity employee, Date date);
+
+    List<AttendanceEntity> findByIsManualTrue();
 }

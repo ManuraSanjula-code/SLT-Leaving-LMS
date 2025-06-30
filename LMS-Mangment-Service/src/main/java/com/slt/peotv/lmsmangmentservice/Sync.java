@@ -1,6 +1,5 @@
 package com.slt.peotv.lmsmangmentservice;
 
-
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+
+import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +19,7 @@ public class Sync {
 
     private final Check_Service check_Service;
     private final AccessLogService accessLogService;
+    private final AttendanceRepo attendanceRepo;
 
     @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
@@ -32,5 +36,21 @@ public class Sync {
         accessLogService.main();
         check_Service.main();
     }
-        
+
+    @Scheduled(cron = "0 0 6 1 * ?")
+    public void makeAsInActive() {
+        attendanceRepo.findByIsManualTrue().forEach(attendance -> {
+            Date createdDate = attendance.getCreatedDate();
+            if (createdDate != null) {
+                Calendar oneYearAgo = Calendar.getInstance();
+                oneYearAgo.add(Calendar.YEAR, -1);
+
+                if (createdDate.before(oneYearAgo.getTime())) {
+                    attendance.setIsManual(false);
+                    attendanceRepo.save(attendance);
+                }
+            }
+        });
+    }
+
 }

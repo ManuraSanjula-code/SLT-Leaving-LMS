@@ -147,7 +147,7 @@ const ManageEmployees = React.memo(() => {
                 employee.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 employee.roles?.some((role) => role.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 employee.sections?.some((section) => section.section?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                employee.profiles?.some((profile) => profile?.toLowerCase().includes(searchQuery.toLowerCase()));
+                employee.profiles?.some((profile) => profile.name?.toLowerCase().includes(searchQuery.toLowerCase()));
 
             return matchesRole && matchesSection && matchesProfile && matchesSearch;
         });
@@ -431,6 +431,8 @@ const ManageEmployees = React.memo(() => {
                         <Table>
                             <TableHead>
                                 <TableRow>
+                                    <TableCell>SLT ID</TableCell>
+                                    <TableCell>PEOID</TableCell>
                                     <TableCell>First Name</TableCell>
                                     <TableCell>Last Name</TableCell>
                                     <TableCell>Email</TableCell>
@@ -444,12 +446,14 @@ const ManageEmployees = React.memo(() => {
                                 {filteredEmployees.length > 0 ? (
                                     filteredEmployees.map((employee) => (
                                         <TableRow key={employee.userId}>
+                                            <TableCell>{employee.sltId}</TableCell>
+                                            <TableCell>{employee.employeeId}</TableCell>
                                             <TableCell>{employee.firstName}</TableCell>
                                             <TableCell>{employee.lastName}</TableCell>
                                             <TableCell>{employee.email}</TableCell>
                                             <TableCell>{employee.roles?.map((role) => role.name).join(", ")}</TableCell>
                                             <TableCell>{employee.sections?.map((section) => section.section).join(", ")}</TableCell>
-                                            <TableCell>{employee.profiles?.join(", ")}</TableCell>
+                                            <TableCell>{employee.profiles?.map((profile) => profile.name).join(", ")}</TableCell>
                                             <TableCell>
                                                 <IconButton
                                                     onClick={() => handleOpenDialog(employee)}

@@ -653,7 +653,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                         />
                                                     </TableCell>
                                                     <TableCell>{leave.employeeId || 'N/A'}</TableCell>
-                                                    <TableCell>{leave.type || 'N/A'}</TableCell>
+                                                    <TableCell>{leave.leaveTypeName || 'N/A'}</TableCell>
                                                     <TableCell>{leave.startDate || "N/A"}</TableCell>
                                                     <TableCell>{leave.endDate || "N/A"}</TableCell>
                                                     <TableCell>
@@ -915,7 +915,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                     </TableRow>
                                                     <TableRow>
                                                         <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Leave Type</TableCell>
-                                                        <TableCell>{viewLeaveData.type || 'N/A'}</TableCell>
+                                                        <TableCell>{viewLeaveData.leaveTypeName || 'N/A'}</TableCell>
                                                         <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                                         <TableCell>{viewLeaveData.status || 'N/A'}</TableCell>
                                                     </TableRow>

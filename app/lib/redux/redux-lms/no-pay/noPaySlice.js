@@ -96,17 +96,16 @@ const noPaySlice = createSlice({
                     const transformedData = action.payload.content.map(item => ({
                         id: item.id || 0,
                         publicId: item.publicId || "",
-                        employeeID: item.employeeID || "",
+                        employeeID: item.employeeId || item.employeeID || "", // Handle both cases
                         submissionDate: item.submissionDate ? new Date(item.submissionDate).toISOString().split('T')[0] : "",
-                        acctualDate: item.acctualDate ? new Date(item.acctualDate).toISOString().split('T')[0] : "",
-                        happenDate: item.happenDate ? new Date(item.happenDate).toISOString().split('T')[0] : "",
-                        unSuccessful: item.unSuccessful || false,
-                        attendance: item.attendance || "",
+                        happenDate: item.date ? new Date(item.date).toISOString().split('T')[0] : item.happenDate || "",
+                        attendance: item.attendanceId || item.attendance || "",
                         comment: item.comment || "",
-                        halfDay: item.halfDay || false,
-                        absent: item.absent || false,
-                        late: item.late || false,
-                        lateCover: item.lateCover || false
+                        reasonCode: item.reasons?.reasonCode || "",
+                        absent: item.reasons?.reasonCode === "ABSENT",
+                        halfDay: item.reasons?.reasonCode === "HALF_DAY",
+                        late: item.reasons?.reasonCode === "LATE",
+                        unSuccessful: item.reasons?.reasonCode === "UNSUCCESSFUL"
                     }));
 
                     state.records = transformedData;
