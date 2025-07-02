@@ -18,21 +18,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class DutyRosterService {
+public class DutyRosterService_ {
 
     @Autowired
     private DutyRosterRepository dutyRosterRepository;
 
     public DutyRoster saveRoster(DutyRoster roster) {
-        Optional<DutyRoster> existingRoster = dutyRosterRepository.findByWeekStartingDate(roster.getWeekStartingDate());
-        if (existingRoster.isPresent()) {
-            throw new IllegalStateException("Roster exists for week starting " + roster.getWeekStartingDate());
-        }
         roster.setUpdatedDate(LocalDate.now());
         return dutyRosterRepository.save(roster);
     }
 
-    public DutyRoster getTheDuty(String weekDays) {
+    public DutyRoster getTheDuty(String weekDays){
         LocalDate weekStartingDate = LocalDate.parse(weekDays);
         return dutyRosterRepository.findByWeekStartingDate(weekStartingDate).orElse(null);
     }
@@ -62,74 +58,38 @@ public class DutyRosterService {
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
 
-            List<DailyDuty> dailyDuties;
-            if (isNewFormat(sheet)) {
-                dailyDuties = parseNewFormatExcel(sheet, weekStartingDate);
-            } else {
-                dailyDuties = parseOldFormatExcel(sheet, weekStartingDate);
-            }
+            // Parse the Excel structure similar to your file
+            List<DailyDuty> dailyDuties = parseExcelToDailyDuties(sheet, weekStartingDate);
 
             DutyRoster roster = new DutyRoster(weekStartingDate, rosterName, dailyDuties, true);
-            deactivateAllOtherRosters();
+            dutyRosterRepository.findAll().forEach(r -> {
+                r.setActive(false);
+                saveRoster(r);
+            });
             return saveRoster(roster);
         }
     }
 
-    private void deactivateAllOtherRosters() {
-        dutyRosterRepository.findAll().forEach(r -> {
-            r.setActive(false);
-            saveRoster(r);
-        });
-    }
-
-    private boolean isNewFormat(Sheet sheet) {
-        // Check for indicators of new format:
-        // 1. Look for "This roster is effective from" text
-        // 2. Check if morning shift is in row 1 and evening in row 2 without additional row
-        for (Row row : sheet) {
-            for (Cell cell : row) {
-                if (cell.getCellType() == CellType.STRING && 
-                    cell.getStringCellValue().contains("This roster is effective from")) {
-                    return true;
-                }
-            }
-        }
-        
-        // Additional check based on structure
-        if (sheet.getPhysicalNumberOfRows() >= 3) {
-            Row row3 = sheet.getRow(3);
-            if (row3 == null || isRowEmpty(row3)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isRowEmpty(Row row) {
-        if (row == null) {
-            return true;
-        }
-        for (int i = 0; i < row.getLastCellNum(); i++) {
-            Cell cell = row.getCell(i);
-            if (cell != null && cell.getCellType() != CellType.BLANK) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private List<DailyDuty> parseOldFormatExcel(Sheet sheet, LocalDate weekStart) {
+    private List<DailyDuty> parseExcelToDailyDuties(Sheet sheet, LocalDate weekStart) {
         List<DailyDuty> dailyDuties = new ArrayList<>();
+
+        // Assuming your Excel structure:
+        // Row 0: Headers (Duty Turn, Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+        // Row 1: 06:00-14:00 shift data
+        // Row 2: Additional employees (if any)
+        // Row 3: 14:00-22:00 shift data
 
         Row headerRow = sheet.getRow(0);
         Row morningShiftRow = sheet.getRow(1);
         Row additionalEmployeesRow = sheet.getRow(2);
         Row eveningShiftRow = sheet.getRow(3);
 
-        DayOfWeek[] daysOfWeek = DayOfWeek.values();
+        // Days of week (columns 1-7 represent Mon-Sun)
+        DayOfWeek[] daysOfWeek = {DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY};
 
         for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
-            int columnIndex = dayIndex + 1;
+            int columnIndex = dayIndex + 1; // Skip first column (Duty Turn)
             LocalDate dayDate = weekStart.plusDays(dayIndex);
 
             List<TimeSlot> timeSlots = new ArrayList<>();
@@ -165,75 +125,16 @@ public class DutyRosterService {
         return dailyDuties;
     }
 
-    private List<DailyDuty> parseNewFormatExcel(Sheet sheet, LocalDate weekStart) {
-        List<DailyDuty> dailyDuties = new ArrayList<>();
-
-        Row headerRow = sheet.getRow(0);
-        Row morningShiftRow = sheet.getRow(1);
-        Row eveningShiftRow = sheet.getRow(2);
-
-        DayOfWeek[] daysOfWeek = DayOfWeek.values();
-
-        for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
-            int columnIndex = dayIndex + 1;
-            LocalDate dayDate = weekStart.plusDays(dayIndex);
-
-            List<TimeSlot> timeSlots = new ArrayList<>();
-
-            // Morning shift (06:00-14:00)
-            List<String> morningEmployees = extractEmployeesFromCell(morningShiftRow, columnIndex);
-            if (!morningEmployees.isEmpty()) {
-                List<String> allMorningEmployees = splitEmployeeIds(morningEmployees);
-                timeSlots.add(new TimeSlot(
-                        LocalTime.of(6, 0),
-                        LocalTime.of(14, 0),
-                        allMorningEmployees,
-                        "MORNING"
-                ));
-            }
-
-            // Evening shift (14:00-22:00)
-            List<String> eveningEmployees = extractEmployeesFromCell(eveningShiftRow, columnIndex);
-            if (!eveningEmployees.isEmpty()) {
-                timeSlots.add(new TimeSlot(
-                        LocalTime.of(14, 0),
-                        LocalTime.of(22, 0),
-                        eveningEmployees,
-                        "EVENING"
-                ));
-            }
-
-            if (!timeSlots.isEmpty()) {
-                dailyDuties.add(new DailyDuty(daysOfWeek[dayIndex], dayDate, timeSlots));
-            }
-        }
-
-        return dailyDuties;
-    }
-
-    private List<String> splitEmployeeIds(List<String> employeeCells) {
-        List<String> result = new ArrayList<>();
-        for (String cellValue : employeeCells) {
-            if (cellValue.contains(",")) {
-                String[] parts = cellValue.split("\\s*,\\s*");
-                Collections.addAll(result, parts);
-            } else {
-                result.add(cellValue);
-            }
-        }
-        return result;
-    }
-
     private List<String> extractEmployeesFromCells(Row primaryRow, Row additionalRow, int columnIndex) {
         List<String> employees = new ArrayList<>();
 
-        if (primaryRow != null) {
-            Cell primaryCell = primaryRow.getCell(columnIndex);
-            if (primaryCell != null && !isEmptyCell(primaryCell)) {
-                employees.add(getCellValueAsString(primaryCell));
-            }
+        // Get primary employee
+        Cell primaryCell = primaryRow.getCell(columnIndex);
+        if (primaryCell != null && !isEmptyCell(primaryCell)) {
+            employees.add(getCellValueAsString(primaryCell));
         }
 
+        // Get additional employee (if exists)
         if (additionalRow != null) {
             Cell additionalCell = additionalRow.getCell(columnIndex);
             if (additionalCell != null && !isEmptyCell(additionalCell)) {
@@ -246,48 +147,26 @@ public class DutyRosterService {
 
     private List<String> extractEmployeesFromCell(Row row, int columnIndex) {
         List<String> employees = new ArrayList<>();
-        if (row == null) {
-            return employees;
-        }
-
         Cell cell = row.getCell(columnIndex);
+
         if (cell != null && !isEmptyCell(cell)) {
-            String value = getCellValueAsString(cell);
-            if (value.contains(",")) {
-                Collections.addAll(employees, value.split("\\s*,\\s*"));
-            } else {
-                employees.add(value);
-            }
+            employees.add(getCellValueAsString(cell));
         }
 
         return employees;
     }
 
     private boolean isEmptyCell(Cell cell) {
-        if (cell == null) {
-            return true;
-        }
         return cell.getCellType() == CellType.BLANK ||
                 (cell.getCellType() == CellType.STRING && cell.getStringCellValue().trim().isEmpty());
     }
 
     private String getCellValueAsString(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
-        
         switch (cell.getCellType()) {
             case STRING:
                 return cell.getStringCellValue().trim();
             case NUMERIC:
-                // Check if it's a whole number
-                double numValue = cell.getNumericCellValue();
-                if (numValue == Math.floor(numValue)) {
-                    return String.valueOf((int) numValue);
-                }
-                return String.valueOf(numValue);
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
+                return String.valueOf((int) cell.getNumericCellValue());
             default:
                 return "";
         }
@@ -297,6 +176,7 @@ public class DutyRosterService {
         dutyRosterRepository.deleteById(id);
     }
 
+    // Helper method to get employee schedule for a specific week
     public Map<String, List<TimeSlot>> getEmployeeScheduleForWeek(String employeeId, LocalDate weekStart) {
         Optional<DutyRoster> rosterOpt = dutyRosterRepository.findByWeekStartingDate(weekStart);
         Map<String, List<TimeSlot>> schedule = new HashMap<>();

@@ -9,7 +9,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.sql.Time;
 import java.util.Date;
-
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "attendance",uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "date","arrival_date","arrival_time"}))
@@ -42,7 +44,8 @@ public class AttendanceEntity {
     private Time leftTime;
 
     @Column(name = "terminal_id", nullable = false)
-    private String terminalId;
+    @Builder.Default
+    private String terminalId = "NONE";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "attendance_type")
@@ -100,5 +103,19 @@ public class AttendanceEntity {
 
     public Boolean getIsFullDay() {
         return attendanceType != null && attendanceType.equals(AttendanceType.FULL_DAY);
+    }
+
+
+    public Boolean isArrivalOnWeekend() {
+        if (this.arrivalDate == null) {
+            return false;
+        }
+        
+        LocalDate localArrivalDate = this.arrivalDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        
+        DayOfWeek dayOfWeek = localArrivalDate.getDayOfWeek();
+        return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
     }
 }

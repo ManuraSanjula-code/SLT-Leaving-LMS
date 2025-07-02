@@ -24,15 +24,9 @@ public class InOutFilterHelper {
         for (InOut inOut : inOuts) {
             Date candidateTime = null;
 
-            // Check punchInMoa if it exists and falls within shift time
             if (inOut.getPunchTime() != null && isTimeInShift(inOut.getPunchTime(), startHour, endHour)) {
                 candidateTime = inOut.getPunchTime();
             }
-            // Check punchInEv if it exists and falls within shift time
-            else if (inOut.getPunchTime() != null && isTimeInShift(inOut.getPunchTime(), startHour, endHour)) {
-                candidateTime = inOut.getPunchTime();
-            }
-
             // Update earliest if this record is earlier
             if (candidateTime != null && (earliestTime == null || candidateTime.before(earliestTime))) {
                 earliestTime = candidateTime;

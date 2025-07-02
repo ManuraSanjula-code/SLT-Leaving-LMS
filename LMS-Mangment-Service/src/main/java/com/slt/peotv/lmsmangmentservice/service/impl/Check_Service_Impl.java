@@ -1188,7 +1188,9 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setPayStatus(PayStatus.NO_PAY);
         }
 
-        AttendanceEntity savedAttendance = attendanceRepo.save(attendance);
+        AttendanceEntity savedAttendance = null;
+        if(!attendance.isArrivalOnWeekend())
+            savedAttendance  = attendanceRepo.save(attendance);
 
         inout.setAttendance(savedAttendance);
         inOutRepo.save(inout);
@@ -1266,7 +1268,10 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setPayStatus(PayStatus.NO_PAY);
         }
 
-        AttendanceEntity savedAttendance = attendanceRepo.save(attendance);
+        AttendanceEntity savedAttendance = null;
+        if(!attendance.isArrivalOnWeekend())
+            savedAttendance = attendanceRepo.save(attendance);
+
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
         updateInOutRelationships(moa, eve, savedAttendance);
 
@@ -1324,7 +1329,10 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setPayStatus(PayStatus.NO_PAY);
         }
 
-        AttendanceEntity savedAttendance = attendanceRepo.save(attendance);
+        AttendanceEntity savedAttendance = null;
+        if(!attendance.isArrivalOnWeekend())
+            savedAttendance = attendanceRepo.save(attendance);
+
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
 
         if (nopay)

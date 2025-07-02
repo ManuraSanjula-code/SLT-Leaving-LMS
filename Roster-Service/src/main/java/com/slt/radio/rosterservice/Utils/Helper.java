@@ -28,6 +28,20 @@ public class Helper {
         return calendar.getTime();
     }
 
+    public Date getDueDate() {
+        Calendar calendar = Calendar.getInstance();
+
+        calendar.add(Calendar.MONTH, 1);
+        calendar.add(Calendar.WEEK_OF_YEAR, 1);
+
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTime();
+    }
+    
     public String formatDateToString(Date date) {
         if (date == null) {
             return null;

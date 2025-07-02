@@ -12,7 +12,6 @@ import com.slt.radio.rosterservice.Model.One.Teamm.Team;
 import com.slt.radio.rosterservice.Model.Second.DutyRoster;
 import com.slt.radio.rosterservice.Repo.*;
 import com.slt.radio.rosterservice.Utils.Helper;
-import com.slt.radio.rosterservice.Utils.InOutFilterHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -22,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.slt.radio.rosterservice.messaging.MessageProducerService;
 
 import java.sql.Time;
 import java.text.ParseException;
@@ -61,6 +61,7 @@ public class AttendanceService {
     private final EmployeeArchiveRepository employeeArchiveRepository;
     private final DutyRosterRepository dutyRosterRepository;
     private final Helper helper;
+    private final MessageProducerService messageProducerService;
 
     @Transactional
     public void processDutyAttendances() {
@@ -119,20 +120,24 @@ public class AttendanceService {
                         if (hoursLate <= 0)
                             attendance.setAttendanceType(AttendanceType.HALF_DAY);
 
+                        if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
+                            attendance.setIsUnauthorized(true);
+                            attendance.setHasIssues(true);
+                            attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
+                        }
 
                         attendance.setPublicId(UUID.randomUUID().toString());
                         attendance.setEmployeeId(cleanEmId);
                         attendance.setTerminalId(inOut.getTerminalId());
                         attendance.setDate(processDate);
 
-                        // Store time as string or LocalTime instead of java.sql.Time
-                        if (inOut.getPunchTypeTime() != null) {
-                            attendance.setArrivalTime(inOut.getPunchTypeTime());
+                        attendance.setArrivalDate(inOut.getPunchTime());
+                        attendance.setArrivalTime(inOut.getPunchTypeTime());
+                        if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+                        attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
+                        if(startTime.isAfter(inOut.getPunchTypeTime())){
+                            attendance.setIsLate(true);
                         }
-
-                        if (inOutLatest.getPunchTypeTime() != null)
-                            attendance.setLeftTime(inOutLatest.getPunchTypeTime());
-
                         attendancesToSave.add(attendance);
 
                     } catch (Exception e) {
@@ -157,7 +162,10 @@ public class AttendanceService {
                     .collect(Collectors.toList());
 
             if (!uniqueAttendances.isEmpty()) {
-                attendanceRepository.saveAll(uniqueAttendances);
+                List<Attendance> attendances = attendanceRepository.saveAll(uniqueAttendances);
+                attendances.forEach(attendance -> {
+                    messageProducerService.sendMessage("roster.queue", attendance);
+                });
             }
         }
     }
@@ -383,6 +391,7 @@ public class AttendanceService {
 
             ShiftRoster shiftRoster = shiftRosterOpt.get();
             String dayPart = dateStr.split("-")[2];
+            dayPart = dayPart.replaceFirst("^0+(?!$)", "");
 
             if (!shiftRoster.getDates().contains(dayPart)) {
                 log.error("Date: {} not found in shift roster", dateStr);
@@ -425,6 +434,7 @@ public class AttendanceService {
         shifts.forEach((shiftTime, assignments) -> {
             assignments.forEach(assignment -> {
                 String dayPart = dateStr.split("-")[2];
+                dayPart = dayPart.replaceFirst("^0+(?!$)", "");
 
                 if (!dayPart.equals(assignment.getDate())) return;
 
@@ -456,7 +466,10 @@ public class AttendanceService {
                 });
 
                 if (!attendances.isEmpty()) {
-                    attendanceRepository.saveAll(attendances);
+                    List<Attendance> attendances_save = attendanceRepository.saveAll(attendances);
+                    attendances_save.forEach(attendance -> {
+                        messageProducerService.sendMessage("roster.queue", attendance);
+                    });
                 }
 
                 TeamAttendanceSummary summary = createTeamSummary(team, shiftTime, isRotationShift, attendances, teamEmployees.size());
@@ -511,18 +524,27 @@ public class AttendanceService {
 
             String cleanId = cleanEmployeeId(employeeArchive.getSltId());
 
-            List<InOut> inOuts = inOutRepository.findByEmployeeIdAndDate(cleanId, processDate);
+            /*List<InOut> inOuts = inOutRepository.findByEmployeeIdAndDate(cleanId, processDate);
 
-            InOut inOut = InOutFilterHelper.getEarliestInOutForShift(inOuts, shiftTime);
+            InOut inOut = InOutFilterHelper.getEarliestInOutForShift(inOuts, shiftTime);*/
 
-            if (inOut == null) {
-                return createAbsentAttendance(employee, team, processDate, shiftTime, isRotationShift, employeeDetails);
-            }
+            Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
+                    employeeArchive.getSltId(),
+                    processDate
+            );
+
             Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
                     employeeArchive.getSltId(),
                     processDate
             );
+
+
+            InOut inOut = earliestPunchIn.orElse(null);
             InOut inOutLatest = latestPunchIn.orElse(null);
+
+            if (inOut == null) {
+                return createAbsentAttendance(employee, team, processDate, shiftTime, isRotationShift, employeeDetails);
+            }
 
             String[] shiftTimeParts = shiftTime.split("-");
             if (shiftTimeParts.length != 2) {
@@ -544,27 +566,35 @@ public class AttendanceService {
 
             Attendance attendance = buildBaseAttendance(employee, team, processDate, shiftTime, isRotationShift);
 
-            if (inOut.getPunchTypeTime() != null) {
-                LocalTime actualStartTime = inOut.getPunchTypeTime();
+            if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
+                attendance.setIsUnauthorized(true);
+                attendance.setHasIssues(true);
+                attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
+            }
 
-                long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
-                if (lateMinutes > LATE_THRESHOLD_MINUTES) {
-                    attendance.setIsLate(true);
-                    if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
-                        attendance.setAttendanceType(AttendanceType.HALF_DAY);
-                    } else {
-                        attendance.setAttendanceType(AttendanceType.FULL_DAY);
-                    }
+            attendance.setArrivalDate(inOut.getPunchTime());
+            attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
+
+            LocalTime actualStartTime = inOut.getPunchTypeTime();
+            attendance.setArrivalTime(inOut.getPunchTypeTime());
+
+            long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
+            if (lateMinutes > LATE_THRESHOLD_MINUTES) {
+                attendance.setIsLate(true);
+                if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
+                    attendance.setAttendanceType(AttendanceType.HALF_DAY);
                 } else {
                     attendance.setAttendanceType(AttendanceType.FULL_DAY);
                 }
-
-                attendance.setArrivalTime(inOut.getPunchTypeTime());
-                if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
-
             } else {
-                attendance.setAttendanceType(AttendanceType.ABSENT);
+                attendance.setAttendanceType(AttendanceType.FULL_DAY);
             }
+
+            if(expectedStartTime.isAfter(actualStartTime)){
+                attendance.setIsLate(true);
+            }
+
+            if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
 
             employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, shiftTime, isRotationShift));
             return attendance;
@@ -581,7 +611,9 @@ public class AttendanceService {
                                               List<EmployeeAttendanceDetail> employeeDetails) {
         Attendance attendance = buildBaseAttendance(employee, team, date, shiftTime, isRotationShift);
         attendance.setAttendanceType(AttendanceType.ABSENT);
-
+        attendance.setDueDateForUA(helper.getDueDate());
+        attendance.setHasIssues(true);
+        attendance.setIssueDescription("GOING ABSENT DUE TO NO SYSTEM RECORDS FOUND. PLEASE RESOLVE BEFORE THE DUE DATE.");
         employeeDetails.add(EmployeeAttendanceDetail.builder()
                 .employeeId(employee.getEmployeeId())
                 .employeeName(employee.getName())

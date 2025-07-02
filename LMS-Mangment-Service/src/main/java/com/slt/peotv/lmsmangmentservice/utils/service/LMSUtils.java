@@ -1,6 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Holiday;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.AuditLog;
@@ -18,6 +19,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.NoPayReasonDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.AccessLogReq;
 import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
 import com.slt.peotv.lmsmangmentservice.model.req.InOutReq;
+import com.slt.peotv.lmsmangmentservice.model.req.HolidayReq;
 import com.slt.peotv.lmsmangmentservice.repository.NoPayReasonRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AuditLogRepo;
 import com.slt.peotv.lmsmangmentservice.repository.AuditLogoRepo;
@@ -27,7 +29,7 @@ import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.time.LocalDateTime;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -666,5 +668,26 @@ public class LMSUtils {
         req.setReadStatus(req.getReadStatus());
         req.setProcessed(req.getProcessed());
         return entity;
+    }
+
+    public Holiday mapReqoHoliday(HolidayReq holidayReq) {
+        if (holidayReq == null) throw new IllegalArgumentException("HolidayReq cannot be null");
+        Holiday holiday = new Holiday();
+        holiday.setHolidayDate(holidayReq.getHolidayDate());
+        holiday.setDescription(holidayReq.getDescription());
+        holiday.setRecurring(holidayReq.isRecurring());
+        holiday.setCreatedAt(LocalDateTime.now());
+        return holiday;
+    }
+
+    public HolidayDTO maoHolidayToDTO(Holiday holiday) {
+        if (holiday == null) throw new IllegalArgumentException("Holiday cannot be null");
+        HolidayDTO holidayDTO = new HolidayDTO();
+        holidayDTO.setId(holiday.getId());
+        holidayDTO.setHolidayDate(holiday.getHolidayDate());
+        holidayDTO.setDescription(holiday.getDescription());
+        holidayDTO.setRecurring(holiday.isRecurring());
+        holidayDTO.setCreatedAt(LocalDateTime.now());
+        return holidayDTO;
     }
 }
