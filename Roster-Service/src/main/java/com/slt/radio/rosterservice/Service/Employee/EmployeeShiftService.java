@@ -6,11 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Service for managing EmployeeShift objects
- * This is a new service to specifically handle mapping of EmployeeShiftDto to EmployeeShift
- * to ensure all fields are properly transferred
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

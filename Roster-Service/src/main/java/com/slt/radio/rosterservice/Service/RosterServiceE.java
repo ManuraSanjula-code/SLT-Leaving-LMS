@@ -60,6 +60,9 @@ public class RosterServiceE {
             teamRosters.add(teamRoster);
         }
 
+        Optional<Roster> optional = rosterRepository.findByMonthAndYear(rosterDto.getMonth(), rosterDto.getYear());
+        if(optional.isPresent()) return optional.get();
+
         Roster roster = Roster.builder()
                 .month(rosterDto.getMonth())
                 .createdAt(LocalDateTime.now())

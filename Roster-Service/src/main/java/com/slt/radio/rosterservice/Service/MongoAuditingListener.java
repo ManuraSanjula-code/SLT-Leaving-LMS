@@ -8,9 +8,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
 import org.springframework.data.mongodb.core.mapping.event.BeforeConvertEvent;
 
-/**
- * Listener to audit MongoDB operations
- */
 @Configuration
 @Slf4j
 public class MongoAuditingListener {
