@@ -1,8 +1,8 @@
 package com.slt.radio.rosterservice.Repo;
 
-
 import com.slt.radio.rosterservice.Model.One.LMS.InOut;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query; 
 import org.springframework.stereotype.Repository;
 
 import java.sql.Time;
@@ -14,11 +14,22 @@ import java.util.Optional;
 @Repository
 public interface InOutRepository extends MongoRepository<InOut, String> {
     List<InOut> findByEmployeeIdAndDate(String employeeId, Date date);
-
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeAsc(String employeeID, Date date);
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeDesc(String employeeId, Date date);
-
     List<InOut> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
     List<InOut> findByEmployeeIdAndDateAndPunchTimeAndPunchTypeTime(String employeeId, Date date, Date punchTime, LocalTime punchTypeTime);
+    
+    @Query("{'employeeId': ?0, 'date': ?1, 'punchTypeTime': {$gte: ?2}}")
+    List<InOut> findByEmployeeIdAndDateAndPunchTypeTimeAfter(String employeeId, Date date, LocalTime time);
+    
+    @Query("{'employeeId': ?0, 'date': ?1, 'punchTypeTime': {$lte: ?2}}")
+    List<InOut> findByEmployeeIdAndDateAndPunchTypeTimeBefore(String employeeId, Date date, LocalTime time);
+    
+    @Query(value = "{'employeeId': ?0, 'date': ?1, 'punchTypeTime': {$gte: ?2}}", 
+           sort = "{'punchTime': 1}")
+    Optional<InOut> findEarliestPunchAfterTime(String employeeId, Date date, LocalTime time);
+    
+    @Query(value = "{'employeeId': ?0, 'date': ?1, 'punchTypeTime': {$lte: ?2}}", 
+           sort = "{'punchTime': -1}")
+    Optional<InOut> findLatestPunchBeforeTime(String employeeId, Date date, LocalTime time);
 }
-

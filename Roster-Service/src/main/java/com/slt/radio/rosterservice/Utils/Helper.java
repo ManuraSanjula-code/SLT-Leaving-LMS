@@ -15,6 +15,16 @@ public class Helper {
         return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
+    public Date getYesterdayDate_() {
+        LocalDate yesterday = LocalDate.now().minusDays(2);
+        return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public Date getTomorrowDate() {
+        LocalDate yesterday = LocalDate.now().plusDays(1);
+        return Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
     public Date stripTimeFromDate(Date dateWithTime) {
         if (dateWithTime == null) {
             return null;

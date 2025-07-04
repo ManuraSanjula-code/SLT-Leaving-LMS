@@ -1,4 +1,4 @@
-import React, {use, useState} from 'react';
+import React, { use, useState } from 'react';
 import {
     Button,
     Box,
@@ -9,12 +9,18 @@ import {
     TextField,
     Typography,
     Grid,
-    Paper
+    Paper,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel
 } from '@mui/material';
-import {useSelector, useDispatch} from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import HolidayManagement from './HolidayManagement';
+import EventIcon from "@mui/icons-material/Event";
 
 const Other = () => {
-    const {userDetails, loading} = useSelector((state) => state.auth);
+    const { userDetails, loading } = useSelector((state) => state.auth);
 
     const [rosterFile, setRosterFile] = useState(null);
     const [rosterShiftFile, setRosterShiftFile] = useState(null);
@@ -25,18 +31,42 @@ const Other = () => {
     const [openDeleteRosterShift, setOpenDeleteRosterShift] = useState(false);
     const [openGetAttendance, setOpenGetAttendance] = useState(false);
     const [openGetAttendanceByDate, setOpenGetAttendanceByDate] = useState(false);
+    const [openGetAttendanceByMonth, setOpenGetAttendanceByMonth] = useState(false);
     const [openUploadDutyRoster, setOpenUploadDutyRoster] = useState(false);
     const [openDeleteDutyRoster, setOpenDeleteDutyRoster] = useState(false);
+    const [openHolidayDialog, setOpenHolidayDialog] = useState(false);
 
     const [userId, setUserId] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [rosterDate, setRosterDate] = useState('');
     const [rosterShiftDate, setRosterShiftDate] = useState('');
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
     const [dutyRosterFile, setDutyRosterFile] = useState(null);
     const [rosterName, setRosterName] = useState('CharanaTV_MCR');
     const [weekStartingDate, setWeekStartingDate] = useState('');
+
+    // Generate years for dropdown (current year ± 5 years)
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+
+    // Month names for dropdown
+    const months = [
+        { value: 1, label: 'January' },
+        { value: 2, label: 'February' },
+        { value: 3, label: 'March' },
+        { value: 4, label: 'April' },
+        { value: 5, label: 'May' },
+        { value: 6, label: 'June' },
+        { value: 7, label: 'July' },
+        { value: 8, label: 'August' },
+        { value: 9, label: 'September' },
+        { value: 10, label: 'October' },
+        { value: 11, label: 'November' },
+        { value: 12, label: 'December' }
+    ];
 
     const handleRosterFileChange = (event) => {
         setRosterFile(event.target.files[0]);
@@ -337,14 +367,69 @@ const Other = () => {
             });
     };
 
+    const handleGetAttendanceByMonth = () => {
+        if (!userId) {
+            alert('Please enter a user ID');
+            return;
+        }
+
+        if (!selectedYear || !selectedMonth) {
+            alert('Please select both year and month');
+            return;
+        }
+
+        // Get logged-in user ID from session storage
+        const loggedInUserId = sessionStorage.getItem('userId');
+
+        if (!loggedInUserId) {
+            alert('User session not found. Please log in again.');
+            return;
+        }
+
+        // Form the URL according to the specified pattern: /employee/{id}/excel/month/{year}/{month}/{empId}
+        const url = `http://192.168.3.20:8080/lms/employee/${userId}/excel/month/${selectedYear}/${selectedMonth}/${loggedInUserId}`;
+
+        fetch(url, {
+            method: 'GET',
+            credentials: 'include', // This includes cookies in the request
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch attendance data for the selected month');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const downloadUrl = window.URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `employee_report_${userId}_${selectedYear}_${selectedMonth.toString().padStart(2, '0')}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+
+                setOpenGetAttendanceByMonth(false);
+                setUserId('');
+                setSelectedYear(new Date().getFullYear());
+                setSelectedMonth(new Date().getMonth() + 1);
+            })
+            .catch(error => {
+                console.error('Error downloading monthly attendance report:', error);
+                alert(`Error downloading attendance report: ${error.message}`);
+            });
+    };
+
     return (
-        <Paper elevation={3} sx={{p: 3, m: 2}}>
+        <Paper elevation={3} sx={{ p: 3, m: 2 }}>
             <Typography variant="h5" gutterBottom>
                 Roster Management
             </Typography>
 
-            <Grid container spacing={2} sx={{mt: 2}}>
-                {userDetails.roaster && (userDetails.highestRolePriority > 0  && userDetails.highestRolePriority < 10) && (
+            <Grid container spacing={2} sx={{ mt: 2 }}>
+                {userDetails.roaster && (userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 10) && (
                     <>
                         <Grid item xs={12} sm={6} md={4}>
                             <Button
@@ -432,16 +517,41 @@ const Other = () => {
                         Get All Attendance by UserId and Date
                     </Button>
                 </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        fullWidth
+                        onClick={() => setOpenGetAttendanceByMonth(true)}
+                    >
+                        Get All Attendance by Month
+                    </Button>
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                        onClick={() => setOpenHolidayDialog(true)}
+                        startIcon={<EventIcon />}
+                    >
+                        Holidays
+                    </Button>
+
+                    <HolidayManagement
+                        open={openHolidayDialog}
+                        onClose={() => setOpenHolidayDialog(false)}
+                    />
+                </Grid>
             </Grid>
 
             {/* Upload Roster Dialog */}
             <Dialog open={openUploadRoster} onClose={() => setOpenUploadRoster(false)}>
                 <DialogTitle>Upload Roster</DialogTitle>
                 <DialogContent>
-                    <Box sx={{mt: 2}}>
+                    <Box sx={{ mt: 2 }}>
                         <input
                             accept=".csv,.xlsx,.xls"
-                            style={{display: 'none'}}
+                            style={{ display: 'none' }}
                             id="roster-file-upload"
                             type="file"
                             onChange={handleRosterFileChange}
@@ -452,7 +562,7 @@ const Other = () => {
                             </Button>
                         </label>
                         {rosterFile && (
-                            <Typography variant="body2" sx={{mt: 1}}>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
                                 Selected file: {rosterFile.name}
                             </Typography>
                         )}
@@ -473,13 +583,13 @@ const Other = () => {
             <Dialog open={openUploadDutyRoster} onClose={() => setOpenUploadDutyRoster(false)}>
                 <DialogTitle>Upload Roster For Charana Tv</DialogTitle>
                 <DialogContent>
-                    <Box sx={{mt: 2}}>
+                    <Box sx={{ mt: 2 }}>
                         <TextField
                             label="Roster Name"
                             fullWidth
                             value={rosterName}
                             onChange={(e) => setRosterName(e.target.value)}
-                            sx={{mb: 2}}
+                            sx={{ mb: 2 }}
                         />
 
                         <Typography variant="subtitle2" gutterBottom>
@@ -493,12 +603,12 @@ const Other = () => {
                             }}
                             value={weekStartingDate}
                             onChange={(e) => setWeekStartingDate(e.target.value)}
-                            sx={{mb: 2}}
+                            sx={{ mb: 2 }}
                         />
 
                         <input
                             accept=".csv,.xlsx,.xls"
-                            style={{display: 'none'}}
+                            style={{ display: 'none' }}
                             id="duty-roster-file-upload"
                             type="file"
                             onChange={handleDutyRosterFileChange}
@@ -509,7 +619,7 @@ const Other = () => {
                             </Button>
                         </label>
                         {dutyRosterFile && (
-                            <Typography variant="body2" sx={{mt: 1}}>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
                                 Selected file: {dutyRosterFile.name}
                             </Typography>
                         )}
@@ -530,10 +640,10 @@ const Other = () => {
             <Dialog open={openUploadRosterShift} onClose={() => setOpenUploadRosterShift(false)}>
                 <DialogTitle>Upload Roster Shift</DialogTitle>
                 <DialogContent>
-                    <Box sx={{mt: 2}}>
+                    <Box sx={{ mt: 2 }}>
                         <input
                             accept=".csv,.xlsx,.xls"
-                            style={{display: 'none'}}
+                            style={{ display: 'none' }}
                             id="roster-shift-file-upload"
                             type="file"
                             onChange={handleRosterShiftFileChange}
@@ -544,7 +654,7 @@ const Other = () => {
                             </Button>
                         </label>
                         {rosterShiftFile && (
-                            <Typography variant="body2" sx={{mt: 1}}>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
                                 Selected file: {rosterShiftFile.name}
                             </Typography>
                         )}
@@ -682,7 +792,7 @@ const Other = () => {
                         fullWidth
                         value={userId}
                         onChange={(e) => setUserId(e.target.value)}
-                        sx={{mb: 2}}
+                        sx={{ mb: 2 }}
                     />
 
                     <Typography variant="subtitle2" gutterBottom>
@@ -704,6 +814,62 @@ const Other = () => {
                         onClick={handleGetAttendanceByDate}
                         color="primary"
                         disabled={!userId || !startDate}
+                    >
+                        Get Attendance
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={openGetAttendanceByMonth} onClose={() => setOpenGetAttendanceByMonth(false)}>
+                <DialogTitle>Get All Attendance by User ID and Month</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="User ID"
+                        type="text"
+                        fullWidth
+                        value={userId}
+                        onChange={(e) => setUserId(e.target.value)}
+                        sx={{ mb: 2 }}
+                    />
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <InputLabel>Year</InputLabel>
+                        <Select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            label="Year"
+                        >
+                            {years.map((year) => (
+                                <MenuItem key={year} value={year}>
+                                    {year}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl fullWidth>
+                        <InputLabel>Month</InputLabel>
+                        <Select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            label="Month"
+                        >
+                            {months.map((month) => (
+                                <MenuItem key={month.value} value={month.value}>
+                                    {month.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenGetAttendanceByMonth(false)}>Cancel</Button>
+                    <Button
+                        onClick={handleGetAttendanceByMonth}
+                        color="primary"
+                        disabled={!userId || !selectedYear || !selectedMonth}
                     >
                         Get Attendance
                     </Button>

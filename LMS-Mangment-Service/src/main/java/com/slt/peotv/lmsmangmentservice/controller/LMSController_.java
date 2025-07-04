@@ -22,7 +22,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.YearMonth;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/lms")
-public class LMSController {
+public class LMSController_ {
 
     @Autowired
     public LMS_Service lmsService;
@@ -76,17 +75,6 @@ public class LMSController {
                 return null;
             }
         }
-    }
-
-    private Date[] getMonthDateRange(int year, int month) {
-        YearMonth yearMonth = YearMonth.of(year, month);
-        LocalDate startDate = yearMonth.atDay(1);
-        LocalDate endDate = yearMonth.atEndOfMonth();
-        
-        Date start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        Date end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant());
-        
-        return new Date[]{start, end};
     }
 
     @PostMapping("/bulk/approved/movement/{empId}")
@@ -155,54 +143,15 @@ public class LMSController {
         }
     }
 
-    @GetMapping("/employee/{id}/excel/month/{year}/{month}/{empId}")
+    @GetMapping("/employee/{id}/excel/month/{month}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
-    public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonthYear(
-            @PathVariable String id, 
-            @PathVariable int year, 
-            @PathVariable int month, 
-            @PathVariable String empId) {
+    public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonth(@PathVariable String id, @PathVariable String month, @PathVariable String empId) {
         try {
-            if (month < 1 || month > 12) {
-                return ResponseEntity.badRequest().build();
-            }
+            byte[] excelFile = exelUtils.generateEmployeeExcelReportByDate(id, createDateFromString(month));
 
-            Date[] dateRange = getMonthDateRange(year, month);
-            byte[] excelFile = exelUtils.generateEmployeeExcelReportByDateRange(id, dateRange[0], dateRange[1]);
-
-            String filename = String.format("employee_report_%s_%d_%02d.xlsx", id, year, month);
-            
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .body(excelFile);
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-
-    @GetMapping("/employee/{id}/excel/monthly/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
-    public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonthYearQuery(
-            @PathVariable String id, 
-            @RequestParam int year, 
-            @RequestParam int month, 
-            @PathVariable String empId) {
-        try {
-            // Validate month parameter
-            if (month < 1 || month > 12) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Date[] dateRange = getMonthDateRange(year, month);
-            byte[] excelFile = exelUtils.generateEmployeeExcelReportByDateRange(id, dateRange[0], dateRange[1]);
-
-            String filename = String.format("employee_report_%s_%d_%02d.xlsx", id, year, month);
-            
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"employee_report_" + id + ".xlsx\"")
                     .body(excelFile);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();

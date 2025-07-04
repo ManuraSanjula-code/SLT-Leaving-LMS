@@ -513,6 +513,27 @@ public class AttendanceService {
                 .build();
     }
 
+    public Map<String, InOut> getEarliestAndLatestPunch(String employeeId, Date processDate) {
+
+        InOut earliestPunch = inOutRepository.findEarliestPunchAfterTime(
+                employeeId,
+                stripTimeFromDate(helper.getYesterdayDate_()),
+                LocalTime.of(20, 30)
+        ).orElse(null);
+
+        InOut latestPunch = inOutRepository.findLatestPunchBeforeTime(
+                employeeId,
+                stripTimeFromDate(helper.getTomorrowDate()),
+                LocalTime.of(3, 0)
+        ).orElse(null);
+
+        Map<String, InOut> result = new HashMap<>();
+        result.put("earliest", earliestPunch);
+        result.put("latest", latestPunch);
+
+        return result;
+    }
+
     private Attendance processEmployee(Employee employee, String dateStr, String shiftTime,
                                        Team team, boolean isRotationShift,
                                        List<EmployeeAttendanceDetail> employeeDetails) {
@@ -553,15 +574,30 @@ public class AttendanceService {
             }
 
             LocalTime expectedStartTime;
+            LocalTime expectedEndTime;
+
             try {
                 expectedStartTime = parseTimeString(shiftTimeParts[0].trim());
-                if (expectedStartTime == null) {
+                expectedEndTime = parseTimeString(shiftTimeParts[1].trim());
+                if (expectedStartTime == null || expectedEndTime == null) {
                     log.error("Could not parse expected start time: {}", shiftTimeParts[0]);
                     return null;
                 }
             } catch (Exception e) {
                 log.error("Error parsing expected start time '{}': {}", shiftTimeParts[0], e.getMessage());
                 return null;
+            }
+
+            Map<String, InOut> punchData = getEarliestAndLatestPunch(employeeArchive.getSltId(), processDate);
+
+            if (expectedStartTime.equals(LocalTime.MIDNIGHT)) {
+                InOut firstPunch = punchData.get("earliest");
+                if(firstPunch != null) inOut = firstPunch;
+            }
+
+            if (expectedEndTime.equals(LocalTime.MIDNIGHT)) {
+                InOut lastPunch = punchData.get("latest");
+                if(lastPunch != null) inOutLatest = lastPunch;
             }
 
             Attendance attendance = buildBaseAttendance(employee, team, processDate, shiftTime, isRotationShift);
