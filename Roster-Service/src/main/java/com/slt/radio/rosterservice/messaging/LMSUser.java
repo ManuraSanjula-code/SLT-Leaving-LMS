@@ -16,6 +16,16 @@ public class LMSUser implements Serializable {
     private String publicId;
     private Boolean roaster;
 
+    private String gender;
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
     public Boolean getRoaster() {
         return roaster;
     }

@@ -88,7 +88,8 @@ export const fetchInOutData = createAsyncThunk(
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                const errorText = await response.json();
+                throw new Error(`ERROR : ${errorText.message}`);
             }
 
             return await response.json();

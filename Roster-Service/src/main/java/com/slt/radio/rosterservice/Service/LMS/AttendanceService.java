@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.slt.radio.rosterservice.messaging.MessageProducerService;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.sql.Time;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -62,6 +62,9 @@ public class AttendanceService {
     private final DutyRosterRepository dutyRosterRepository;
     private final Helper helper;
     private final MessageProducerService messageProducerService;
+
+    @Value("${ROSTER_BEYOND_TwentyFour:false}")
+    private boolean roster_beyond;
 
     @Transactional
     public void processDutyAttendances() {
@@ -164,7 +167,8 @@ public class AttendanceService {
             if (!uniqueAttendances.isEmpty()) {
                 List<Attendance> attendances = attendanceRepository.saveAll(uniqueAttendances);
                 attendances.forEach(attendance -> {
-                    messageProducerService.sendMessage("roster.queue", attendance);
+                    if(!roster_beyond)
+                        messageProducerService.sendMessage("roster.queue", attendance);
                 });
             }
         }
@@ -468,7 +472,8 @@ public class AttendanceService {
                 if (!attendances.isEmpty()) {
                     List<Attendance> attendances_save = attendanceRepository.saveAll(attendances);
                     attendances_save.forEach(attendance -> {
-                        messageProducerService.sendMessage("roster.queue", attendance);
+                        if(!roster_beyond)
+                            messageProducerService.sendMessage("roster.queue", attendance);
                     });
                 }
 

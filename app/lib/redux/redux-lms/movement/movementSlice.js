@@ -101,8 +101,8 @@ export const updateMovementRequest = createAsyncThunk(
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+                const errorText = await response.json();
+                throw new Error(`ERROR: ${errorText.message}`);
             }
 
             return updatePayload;

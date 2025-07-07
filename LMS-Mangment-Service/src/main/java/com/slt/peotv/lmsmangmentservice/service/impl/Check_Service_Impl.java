@@ -342,15 +342,15 @@ public class Check_Service_Impl implements Check_Service {
 
             String name = authentication.getName();
             if (name == null || name.trim().isEmpty())
-                throw new RuntimeException("Failed to process movement request");
+                throw new IllegalArgumentException("Failed to process movement request : " + ErrorMessages.MISSING_REQUIRED_FIELD);
 
             if (!employee.getPublicId().equals(req.getUserId()) || !name.equals(req.getUserId()))
-                throw new RuntimeException("Failed to process movement request");
+                throw new IllegalArgumentException("Failed to process movement request : Record with provided id is in-correct");
 
             Optional<MovementsEntity> reqDate = movementsRepo.findAllByEmployeeAndHappenDate(employee, stripTimeFromDate(req.getHappenDate()));
 
             if (reqDate.isPresent())
-                throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
+                throw new IllegalArgumentException("Failed to process movement request : "  + ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
             /*if (!req.validateMovementReq()) {
                 return;
@@ -358,7 +358,7 @@ public class Check_Service_Impl implements Check_Service {
 
             String token = "Bearer " + extractJwtTokenFromCookie(request);
             if (token == null || token.trim().isEmpty())
-                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+                throw new NoSuchElementException("Failed to process movement request : NO ADMINS FOUND ");
 
             final List<UserRest> admins = userClient.getEmployeeAdmins(req.getUserId(), token);
             /*if (admins == null || admins.isEmpty())
@@ -376,12 +376,12 @@ public class Check_Service_Impl implements Check_Service {
                     employee, movementsEntity.getHappenDate());
 
             if (attendanceEntity.isEmpty())
-                throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
+                throw new NoSuchElementException("Failed to process movement request : " + ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
             AttendanceEntity attendance = attendanceEntity.get();
 
             if (!Boolean.TRUE.equals(attendance.getHasIssues()) || Boolean.TRUE.equals(attendance.getIsResolved())) {
-                throw new RuntimeException("Failed to process movement request");
+                throw new IllegalArgumentException("Failed to process movement request : Attendance has no issues OR Attendance is Resolved ");
             }
 
             movementsEntity.setAttendance(attendance);
@@ -397,7 +397,13 @@ public class Check_Service_Impl implements Check_Service {
 
             lmsService.createMovements(movementsEntity);
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e){
+            throw new IllegalArgumentException(e.getMessage());
+        }
+        catch (NoSuchElementException e){
+            throw new NoSuchElementException(e.getMessage());
+        }
+        catch (Exception e) {
             logError("Error in requestMovement", e);
             throw new RuntimeException("Failed to process movement request", e);
         }
@@ -745,7 +751,7 @@ public class Check_Service_Impl implements Check_Service {
         
         allEmployees.parallelStream().forEach(employee -> {
             Date yesterdayDate = helper.getYesterdayDate();
-            if (!attendanceRepo.existsByEmployeeAndDate(employee, yesterdayDate)) {
+            if (!attendanceRepo.existsByEmployeeAndDate(employee, yesterdayDate) && !employee.getRoaster()) {
                 AttendanceEntity attendance = new AttendanceEntity();
                 attendance.setEmployee(employee);
                 attendance.setPublicId(utils.generateId(10));
@@ -1542,14 +1548,14 @@ public class Check_Service_Impl implements Check_Service {
         EmployeeEntity employee = helper.getEmployeeById(userId);
 
         if (leaveRepo.findByEmployeeAndFromDate(employee, helper.removeTimeFromDate(new Date())).isPresent()) {
-            throw new IllegalArgumentException((ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage()));
+            throw new IllegalArgumentException(("Failed to make leave movement request " + ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage()));
         }
 
         String name = authentication.getName();
         String employeeId = employee.getEmployeeId();
 
         if (name == null || name.isEmpty() || employeeId == null || employeeId.isEmpty())
-            throw new IllegalArgumentException("Failed to make leave request");
+            throw new IllegalArgumentException("Failed to make leave movement request " + ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
         if (!req.getUserId().equals(name))
             throw new IllegalArgumentException("Failed to make leave movement request");
@@ -1557,7 +1563,7 @@ public class Check_Service_Impl implements Check_Service {
         UserLeaveTypeRemainingEntity userLeaveTypeRemaining = serviceEvent.getUserLeaveTypeRemaining(req.getLeaveType(), employeeId);
 
         if ((userLeaveTypeRemaining == null || userLeaveTypeRemaining.getRemainingLeaves() == null || userLeaveTypeRemaining.getRemainingLeaves() <= 0 ) && (userLeaveTypeRemaining.getRemainingLeaves() != -1)) {
-            throw new RuntimeException("No remaining leaves available for this leave type");
+            throw new IllegalArgumentException("No remaining leaves available for this leave type");
         }
 
         /* List<UserLeaveTypeRemainingEntity> userLeaveTypeRemaining = serviceEvent.getUserLeaveTypeRemaining(employeeId);
@@ -1596,7 +1602,7 @@ public class Check_Service_Impl implements Check_Service {
         if (req.getIsManualRequest()) {
 
             String token = "Bearer " + extractJwtTokenFromCookie(request);
-            if (token == null || token.isEmpty()) throw new IllegalArgumentException("Failed to process leave request");
+            if (token == null || token.isEmpty()) throw new IllegalArgumentException("Failed to process leave request: TOKEN NOT FOUND");
 
             final List<UserRest> admins;
             synchronized (this) {
@@ -1606,6 +1612,9 @@ public class Check_Service_Impl implements Check_Service {
                 throw new NoSuchElementException(ErrorMessages.ADMIN_NO_RECORD_FOUND.getErrorMessage());*/
 
             Map<String, UserRest> userMap = createUserMap(admins);
+
+            if (userMap == null || userMap.isEmpty())
+                throw new NoSuchElementException("Failed to process movement request : NO ADMINS FOUND ");
 
             final List<ComponetAdminsEntity> adminEntities = Collections.synchronizedList(new ArrayList<>());
 

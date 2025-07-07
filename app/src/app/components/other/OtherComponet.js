@@ -425,7 +425,7 @@ const Other = () => {
     return (
         <Paper elevation={3} sx={{ p: 3, m: 2 }}>
             <Typography variant="h5" gutterBottom>
-                Roster Management
+                Others
             </Typography>
 
             <Grid container spacing={2} sx={{ mt: 2 }}>
@@ -493,55 +493,60 @@ const Other = () => {
                                 Delete Roster (For Charana Tv)
                             </Button>
                         </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <Button
+                                onClick={() => setOpenHolidayDialog(true)}
+                                startIcon={<EventIcon />}
+                            >
+                                Holidays
+                            </Button>
+
+                            <HolidayManagement
+                                open={openHolidayDialog}
+                                onClose={() => setOpenHolidayDialog(false)}
+                            />
+                        </Grid>
                     </>
                 )}
 
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        fullWidth
-                        onClick={() => setOpenGetAttendance(true)}
-                    >
-                        Get All Attendance by UserId
-                    </Button>
-                </Grid>
+                {
+                    (userDetails.highestRolePriority > 10 && userDetails.highestRolePriority < 99) && (
+                        <>
+                            <Grid item xs={12} sm={6} md={4}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    fullWidth
+                                    onClick={() => setOpenGetAttendance(true)}
+                                >
+                                    Get All Attendance by UserId
+                                </Button>
+                            </Grid>
 
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        fullWidth
-                        onClick={() => setOpenGetAttendanceByDate(true)}
-                    >
-                        Get All Attendance by UserId and Date
-                    </Button>
-                </Grid>
+                            <Grid item xs={12} sm={6} md={4}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    fullWidth
+                                    onClick={() => setOpenGetAttendanceByDate(true)}
+                                >
+                                    Get All Attendance by UserId and Date
+                                </Button>
+                            </Grid>
 
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        fullWidth
-                        onClick={() => setOpenGetAttendanceByMonth(true)}
-                    >
-                        Get All Attendance by Month
-                    </Button>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                    <Button
-                        onClick={() => setOpenHolidayDialog(true)}
-                        startIcon={<EventIcon />}
-                    >
-                        Holidays
-                    </Button>
-
-                    <HolidayManagement
-                        open={openHolidayDialog}
-                        onClose={() => setOpenHolidayDialog(false)}
-                    />
-                </Grid>
+                            <Grid item xs={12} sm={6} md={4}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    fullWidth
+                                    onClick={() => setOpenGetAttendanceByMonth(true)}
+                                >
+                                    Get All Attendance by Month
+                                </Button>
+                            </Grid>
+                        </>
+                    )
+                }
             </Grid>
 
             {/* Upload Roster Dialog */}

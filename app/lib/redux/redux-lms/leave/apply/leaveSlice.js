@@ -319,10 +319,11 @@ const leaveApplicationSlice = createSlice({
                 state.isValid = false;
             })
             .addCase(submitLeaveRequest.rejected, (state, action) => {
+                const message_ = action.payload.split('"message":"')[1].split('"')[0];
                 state.loading = false;
                 state.notification = {
                     open: true,
-                    message: `Failed to submit leave request: ${action.payload}`,
+                    message: `${message_ || "Failed to submit leave request: " }`,
                     severity: 'error'
                 };
             });

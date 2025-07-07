@@ -1,4 +1,4 @@
-package com.slt.peotv.lmsmangmentservice.controller;
+/* package com.slt.peotv.lmsmangmentservice.controller;
 
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
@@ -449,4 +449,4 @@ public class LMSController_ {
     public List<HolidayDTO> getAllHolidays(@RequestParam int year, @PathVariable String empId) {
         return holidayService.getHolidays(year);
     }
-}
+} */
