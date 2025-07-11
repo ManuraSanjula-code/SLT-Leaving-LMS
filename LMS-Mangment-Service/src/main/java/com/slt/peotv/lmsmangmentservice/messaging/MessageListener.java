@@ -12,6 +12,8 @@ import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
 import jakarta.jms.JMSException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -24,6 +26,7 @@ import java.util.Optional;
 
 @Component
 public class MessageListener {
+    private static final Logger logger = LoggerFactory.getLogger(MessageListener.class);
 
     @Autowired
     private EmployeeRepo employeeRepo;
@@ -39,7 +42,7 @@ public class MessageListener {
 
     @Autowired
     private LeaveManagementService leaveManagementService;
-    
+
     @JmsListener(destination = "user.queue")
     public void receiveMessage(@Payload LMSUser message) throws JMSException {
         EmployeeEntity employeeEntity = employeeRepo.findByEmail(message.getEmail())
@@ -152,9 +155,9 @@ public class MessageListener {
             if (attendance.getLeftTime() != null) {
                 LocalTime leftTime = attendance.getLeftTime();
                 Time leftSqlTime = new Time(leftTime.getHour(),
-                        leftTime.getMinute(),  // Fixed: using leftTime instead of arrivalTime
+                        leftTime.getMinute(),
                         leftTime.getSecond());
-                attendanceEntity.setLeftTime(leftSqlTime);  // Fixed: was setting arrivalTime instead of leftTime
+                attendanceEntity.setLeftTime(leftSqlTime);
             }
             if (attendance.getTerminalId() != null) {
                 attendanceEntity.setTerminalId(attendance.getTerminalId());
@@ -206,14 +209,14 @@ public class MessageListener {
                 Optional<LeaveEntity> leaveEntityOptional = leaveRepo.findByEmployeeAndFromDate(employeeEntity, attendance.getArrivalDate());
                 if (leaveEntityOptional.isPresent()) {
                     LeaveEntity leaveEntity = leaveEntityOptional.get();
-                    if (leaveEntity.getIsManualRequest() && attendance.getAttendanceType() != null && 
-                        attendance.getAttendanceType().equals(AttendanceType.ABSENT)) {
+                    if (leaveEntity.getIsManualRequest() && attendance.getAttendanceType() != null &&
+                            attendance.getAttendanceType().equals(AttendanceType.ABSENT)) {
                         leaveEntity.setRequestStatus(RequestStatus.SUBMITTED);
                         attendanceEntity.setLeaveStatus(LeaveStatus.LEAVE_REQUESTED);
                         attendanceEntity.setLeaveStatus(LeaveStatus.LEAVE_APPROVED);
                     }
-                    if (leaveEntity.getIsManualRequest() && attendance.getAttendanceType() != null && 
-                        attendance.getAttendanceType().equals(AttendanceType.FULL_DAY)) {
+                    if (leaveEntity.getIsManualRequest() && attendance.getAttendanceType() != null &&
+                            attendance.getAttendanceType().equals(AttendanceType.FULL_DAY)) {
                         leaveEntity.setRequestStatus(RequestStatus.EXPIRED);
                         leaveEntity.setNotUsed(true);
                     }
@@ -221,9 +224,26 @@ public class MessageListener {
                 }
             }
 
+            if((attendanceEntity.getDate() == null) || (attendanceEntity.getArrivalTime() == null)) {
+                return;
+            }
+
+            boolean attendanceExists = attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(
+                    employeeEntity,
+                    attendanceEntity.getDate(),
+                    attendanceEntity.getArrivalTime()
+            );
+
+            if (attendanceExists) {
+                logger.info("Attendance already exists for employee: {} on date: {}. Skipping.",
+                        employeeEntity.getEmployeeId(), attendanceEntity.getDate());
+                return;
+            }
+
             attendanceRepo.save(attendanceEntity);
         }
     }
+
     private void updateEmployeeEntityFromMessage(EmployeeEntity employeeEntity, LMSUser message) {
         employeeEntity.setFirstName(message.getFirstName());
         employeeEntity.setLastName(message.getLastName());
