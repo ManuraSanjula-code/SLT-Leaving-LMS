@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
@@ -37,8 +38,13 @@ public class AttendanceProcessingService {
     private Helper helper;
 
     @Transactional
-    public void processEmployeeLeave(String employeeId, LeaveEntity leave, Date processDate) {
+    public void processEmployeeLeave(EmployeeEntity employee, LeaveEntity leave, Date processDate, boolean swap) {
         System.out.println("Employee Date: " + processDate);
+
+        if(employee == null) return;
+        if(swap && !employee.getRoaster()) return;
+        
+        String employeeId = employee.getEmployeeId();
         if (employeeId.isEmpty())
             return;
 

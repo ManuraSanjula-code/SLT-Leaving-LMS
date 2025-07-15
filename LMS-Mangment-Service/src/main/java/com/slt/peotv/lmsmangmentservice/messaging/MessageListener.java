@@ -143,7 +143,7 @@ public class MessageListener {
                 attendanceEntity.setViaLeave(attendance.getViaLeave());
             }
 
-            if (attendance.getArrivalDate() != null) {
+            /* if (attendance.getArrivalDate() != null) {
                 Optional<LeaveEntity> leaveEntityOptional = leaveRepo.findByEmployeeAndFromDate(employeeEntity, attendance.getArrivalDate());
                 if (leaveEntityOptional.isPresent()) {
                     LeaveEntity leaveEntity = leaveEntityOptional.get();
@@ -160,7 +160,7 @@ public class MessageListener {
                     }
                     leaveRepo.save(leaveEntity);
                 }
-            }
+            } */
 
             if((attendanceEntity.getDate() == null) || (attendanceEntity.getArrivalTime() == null)) {
                 return;

@@ -45,7 +45,32 @@ public class LeaveProcessingJob {
                 continue;
 
             if(trackAttendanceDuringLeave(leave, helper.getDateWithoutTime())){
-                attendanceProcessingService.processEmployeeLeave(leave.getEmployee().getEmployeeId(), leave, helper.getDateWithoutTime());
+                attendanceProcessingService.processEmployeeLeave(leave.getEmployee(), leave, helper.getDateWithoutTime(), false);
+            }
+
+            /*LocalDate startDate = leave.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate endDate = leave.getToDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+            for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+
+                Date processDate = stripTimeFromDate(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+
+                System.out.println("Processing leave for " + leave.getEmployeeID() + " on " + processDate);
+                attendanceProcessingService.processEmployeeLeave(leave.getEmployeeID(), processDate);
+            }*/
+        }
+    }
+
+    @Scheduled(cron = "0 30 04 * * ?")
+    public void processAllPendingLeavesRoster() {
+        List<LeaveEntity> allLeaves = leaveRepository.findAll();
+        for (LeaveEntity leave : allLeaves) {
+
+            if(!leave.getIsManualRequest())
+                continue;
+
+            if(trackAttendanceDuringLeave(leave, helper.getDateWithoutTime())){
+                attendanceProcessingService.processEmployeeLeave(leave.getEmployee(), leave, helper.getDateWithoutTime(), true);
             }
 
             /*LocalDate startDate = leave.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
