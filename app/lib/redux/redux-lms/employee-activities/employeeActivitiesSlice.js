@@ -53,7 +53,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`, {
+            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`, {
                 credentials: 'include',
             });
 
@@ -65,6 +65,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             return data.content || [];
         } catch (err) {
             return rejectWithValue(err.message);
@@ -82,7 +83,7 @@ export const createEmployeeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch('http://192.168.3.20:8080/lms/' + empId, {
+            const response = await fetch('http://localhost:8080/lms/' + empId, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export const updateEmployeeActivity = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
             const submissionData = prepareFormData(formData);
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -141,7 +142,7 @@ export const deleteEmployeeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });
@@ -168,7 +169,7 @@ export const deleteEmployeeDeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/de/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/de/${id}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });

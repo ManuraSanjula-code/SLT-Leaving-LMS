@@ -27,7 +27,7 @@ export const fetchLeaveData = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const url = `http://192.168.3.20:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
+            const url = `http://localhost:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
             const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
@@ -56,7 +56,7 @@ export const fetchLeaveBalances = createAsyncThunk(
                 return rejectWithValue('User ID not found in session storage');
             }
 
-            const url = `http://192.168.3.20:8080/lms/leave-balance/${userId}/${loggedInUserId}`;
+            const url = `http://localhost:8080/lms/leave-balance/${userId}/${loggedInUserId}`;
             const response = await fetch(url, {
                 credentials: 'include'
             });
@@ -85,7 +85,7 @@ export const fetchInOutData = createAsyncThunk(
             dateObj.setDate(dateObj.getDate() + 1);
             const adjustedDate = dateObj.toISOString().split('T')[0];
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
                 credentials: 'include'
             });
 
@@ -108,7 +108,7 @@ export const deleteLeaveRequest = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/leave/${publicId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/leave/${publicId}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });

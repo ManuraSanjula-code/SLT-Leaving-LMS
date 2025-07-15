@@ -40,6 +40,7 @@ public class AttendanceService {
 
     private static final int LATE_THRESHOLD_MINUTES = 15;
     private static final int HALF_DAY_THRESHOLD_HOURS = 4;
+    private static final int FULL_LEAVE_THRESHOLD_HOURS = 5;
 
     private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
             ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
@@ -86,42 +87,67 @@ public class AttendanceService {
                             return;
                         }
 
-                        Optional<EmployeeArchive> employee = employeeArchiveRepository.findByEmployeeId(cleanEmId);
-                        if (employee.isEmpty()) {
+                        Optional<EmployeeArchive> employeeEntityOptional = employeeArchiveRepository.findByEmployeeId(cleanEmId);
+                        if (employeeEntityOptional.isEmpty()) {
                             return;
                         }
 
-                        // Use proper date without time components
+                        EmployeeArchive employeeEntity = employeeEntityOptional.get();
+                        if(!employeeEntity.getRoaster()) return;
+
                         Date processDate = stripTimeFromDate(helper.getYesterdayDate());
 
                         Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
-                                employee.get().getSltId(),
+                                employeeEntity.getSltId(),
                                 processDate
                         );
                         Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
-                                employee.get().getSltId(),
+                                employeeEntity.getSltId(),
                                 processDate
                         );
+                        Attendance attendance = new Attendance();
+
                         if (earliestPunchIn.isEmpty()) {
                             log.debug("No attendance data for employee: {}", cleanEmId);
+                            attendance.setEmployeeId(emId);
+                            attendance.setAttendanceType(AttendanceType.ABSENT);
+                            attendance.setDate(processDate);
+                            attendance.setArrivalDate(processDate);
+                            attendance.setHasIssues(true);
+                            attendancesToSave.add(attendance);
                             return;
                         }
 
                         InOut inOut = earliestPunchIn.get();
                         InOut inOutLatest = latestPunchIn.orElse(null);
 
-                        LocalTime time = inOut.getPunchTypeTime();
+                        LocalTime timeIn = inOut.getPunchTypeTime();
+                        LocalTime timeOut = inOutLatest.getPunchTypeTime();
+
+
                         LocalTime startTime = timeSlot.getStartTime();
+                        LocalTime endTime = timeSlot.getEndTime();
 
-                        Duration duration = Duration.between(startTime, time);
-                        long hoursLate = duration.toHours();
+                        /* Duration duration = Duration.between(startTime, endTime);
+                        long hoursLate = duration.toHours();*/
 
-                        Attendance attendance = new Attendance();
-                        if(startTime.isBefore(time))
+                        if((timeOut != null) && (startTime.isBefore(timeIn) && endTime.isAfter(timeOut)) ) {
                             attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                        }
 
-                        if (hoursLate <= 0)
+                        if (!startTime.isBefore(timeIn)) {
+                            attendance.setIsLate(true);
+                            attendance.setHasIssues(true);
+                        }
+
+                        long lateMinutes = Duration.between(startTime, endTime).toMinutes();
+                        if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
                             attendance.setAttendanceType(AttendanceType.HALF_DAY);
+                            attendance.setIsLate(true);
+                            attendance.setHasIssues(true);
+                        } else {
+                            attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                        }
 
                         if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
                             attendance.setIsUnauthorized(true);
@@ -135,8 +161,9 @@ public class AttendanceService {
                         attendance.setDate(processDate);
 
                         attendance.setArrivalDate(inOut.getPunchTime());
-                        attendance.setArrivalTime(inOut.getPunchTypeTime());
-                        if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+                        attendance.setArrivalTime(timeIn);
+                        attendance.setLeftTime(timeOut);
+
                         attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
                         if(startTime.isAfter(inOut.getPunchTypeTime())){
                             attendance.setIsLate(true);
@@ -167,8 +194,10 @@ public class AttendanceService {
             if (!uniqueAttendances.isEmpty()) {
                 List<Attendance> attendances = attendanceRepository.saveAll(uniqueAttendances);
                 attendances.forEach(attendance -> {
-                    if(!roster_beyond)
+                    if(!roster_beyond){
                         messageProducerService.sendMessage("roster.queue", attendance);
+                        System.out.println(" ************* SENDING roster.queue ***********");
+                    }
                 });
             }
         }
@@ -472,8 +501,11 @@ public class AttendanceService {
                 if (!attendances.isEmpty()) {
                     List<Attendance> attendances_save = attendanceRepository.saveAll(attendances);
                     attendances_save.forEach(attendance -> {
-                        if(!roster_beyond)
+                        if(!roster_beyond){
                             messageProducerService.sendMessage("roster.queue", attendance);
+                            System.out.println(" ************* SENDING roster.queue ***********");
+                        }
+
                     });
                 }
 
@@ -547,12 +579,7 @@ public class AttendanceService {
 
             EmployeeArchive employeeArchive = employeeArchiveRepository.findByEmployeeId(employee.getEmployeeId()).orElse(null);
             if (employeeArchive == null) return null;
-
-            String cleanId = cleanEmployeeId(employeeArchive.getSltId());
-
-            /*List<InOut> inOuts = inOutRepository.findByEmployeeIdAndDate(cleanId, processDate);
-
-            InOut inOut = InOutFilterHelper.getEarliestInOutForShift(inOuts, shiftTime);*/
+            if (!employeeArchive.getRoaster()) return null;
 
             Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
                     employeeArchive.getSltId(),
@@ -607,6 +634,15 @@ public class AttendanceService {
 
             Attendance attendance = buildBaseAttendance(employee, team, processDate, shiftTime, isRotationShift);
 
+            if(inOut == null){
+                attendance.setHasIssues(true);
+                attendance.setAttendanceType(AttendanceType.ABSENT);
+                attendance.setDate(processDate);
+                attendance.setArrivalDate(processDate);
+                employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, shiftTime, isRotationShift));
+                return attendance;
+            }
+
             if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
                 attendance.setIsUnauthorized(true);
                 attendance.setHasIssues(true);
@@ -616,24 +652,33 @@ public class AttendanceService {
             attendance.setArrivalDate(inOut.getPunchTime());
             attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
 
-            LocalTime actualStartTime = inOut.getPunchTypeTime();
-            attendance.setArrivalTime(inOut.getPunchTypeTime());
 
-            long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
-            if (lateMinutes > LATE_THRESHOLD_MINUTES) {
-                attendance.setIsLate(true);
-                if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
-                    attendance.setAttendanceType(AttendanceType.HALF_DAY);
-                } else {
-                    attendance.setAttendanceType(AttendanceType.FULL_DAY);
-                }
-            } else {
-                attendance.setAttendanceType(AttendanceType.FULL_DAY);
-            }
+            LocalTime actualStartTime = inOut.getPunchTypeTime();
+
+            LocalTime actualEndTime = null;
+            if(actualEndTime != null) actualEndTime = inOutLatest.getPunchTypeTime();
+
+            attendance.setArrivalTime(inOut.getPunchTypeTime());
 
             if(expectedStartTime.isAfter(actualStartTime)){
                 attendance.setIsLate(true);
+                attendance.setHasIssues(true);
             }
+
+            if((actualEndTime != null) && (expectedStartTime.isBefore(actualStartTime) && expectedEndTime.isAfter(actualEndTime)) ){
+                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+            }
+
+            long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
+            if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
+                attendance.setAttendanceType(AttendanceType.HALF_DAY);
+                attendance.setIsLate(true);
+                attendance.setHasIssues(true);
+            }
+            /*else{
+                if(expectedEndTime.isAfter(inOutLatest.getPunchTypeTime()))
+                    attendance.setAttendanceType(AttendanceType.FULL_DAY);
+            }*/
 
             if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
 

@@ -12,8 +12,7 @@ import {
     selectFilters,
     selectLoading,
     selectError,
-    selectEmployeeInfo,
-    attendanceHelpers
+    selectEmployeeInfo
 } from '../../../../lib/redux/redux-lms/in-outs/attendanceSlice';
 import {
     Paper,
@@ -52,13 +51,10 @@ const AttendanceTracker = ({ userId }) => {
     const error = useSelector(selectError);
     const { employeeName } = useSelector(selectEmployeeInfo);
 
-    const {
-        formatTime,
-        processAttendanceData,
-        groupInOutPairs,
-        calculateDuration,
-        calculateSummary
-    } = attendanceHelpers;
+    // Debug log to verify data
+    useEffect(() => {
+        console.log('Raw attendance data:', attendanceData);
+    }, [attendanceData]);
 
     if (!userId) {
         userId = sessionStorage.getItem('userId');
@@ -92,6 +88,165 @@ const AttendanceTracker = ({ userId }) => {
             endDate,
             dateRangeMode
         }));
+    };
+
+    // Format time - use punchTypeTime which contains the actual time
+    const formatTime = (timeString) => {
+        if (!timeString) return '--:--';
+        try {
+            // If it's already in HH:MM:SS format, convert to 12-hour format
+            const [hours, minutes, seconds] = timeString.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, minutes, seconds || 0);
+
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        } catch {
+            return timeString; // Return as-is if parsing fails
+        }
+    };
+
+    // Format full date and time using punchTime
+    const formatFullDateTime = (isoString) => {
+        if (!isoString) return '--:--';
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        } catch {
+            return '--:--';
+        }
+    };
+
+    // Group records into in/out pairs
+    const groupInOutPairs = (records) => {
+        const pairs = [];
+        let currentPair = {};
+
+        // Sort records by punchTypeTime (the actual time)
+        const sortedRecords = [...records].sort((a, b) => {
+            const timeA = a.punchTypeTime || '00:00:00';
+            const timeB = b.punchTypeTime || '00:00:00';
+            return timeA.localeCompare(timeB);
+        });
+
+        sortedRecords.forEach(record => {
+            if (record.inOutValue === 1) { // Punch in
+                if (currentPair.in) {
+                    pairs.push({...currentPair, out: null});
+                }
+                currentPair = { in: record, out: null };
+            } else if (record.inOutValue === 0) { // Punch out
+                if (currentPair.in) {
+                    currentPair.out = record;
+                    pairs.push({...currentPair});
+                    currentPair = {};
+                } else {
+                    pairs.push({ in: null, out: record });
+                }
+            }
+        });
+
+        if (currentPair.in) {
+            pairs.push(currentPair);
+        }
+
+        return pairs;
+    };
+
+    // Calculate duration between two time strings (HH:MM:SS format)
+    const calculateDuration = (startTime, endTime) => {
+        if (!startTime || !endTime) return '--:--';
+        try {
+            const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number);
+            const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number);
+
+            let startTotalMinutes = startHours * 60 + startMinutes;
+            let endTotalMinutes = endHours * 60 + endMinutes;
+
+            // Handle overnight shifts
+            if (endTotalMinutes < startTotalMinutes) {
+                endTotalMinutes += 24 * 60;
+            }
+
+            const diffMinutes = endTotalMinutes - startTotalMinutes;
+            const hours = Math.floor(diffMinutes / 60);
+            const minutes = diffMinutes % 60;
+
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        } catch {
+            return '--:--';
+        }
+    };
+
+    // Process attendance data by date
+    const processAttendanceData = (data) => {
+        if (!data || !Array.isArray(data)) return [];
+
+        const groupedByDate = {};
+
+        data.forEach(record => {
+            const date = new Date(record.date);
+            const dateKey = date.toISOString().split('T')[0];
+
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = {
+                    date: dateKey,
+                    records: []
+                };
+            }
+
+            groupedByDate[dateKey].records.push(record);
+        });
+
+        return Object.values(groupedByDate).sort((a, b) =>
+            new Date(b.date) - new Date(a.date)
+        );
+    };
+
+    // Calculate summary statistics
+    const calculateSummary = (data) => {
+        const processed = processAttendanceData(data);
+        let totalWorkingDays = 0;
+        let totalMinutes = 0;
+
+        processed.forEach(day => {
+            const pairs = groupInOutPairs(day.records);
+            let hasValidPair = false;
+
+            pairs.forEach(pair => {
+                if (pair.in && pair.out) {
+                    const duration = calculateDuration(pair.in.punchTypeTime, pair.out.punchTypeTime);
+                    if (duration !== '--:--') {
+                        hasValidPair = true;
+                        const [hours, minutes] = duration.split(':').map(Number);
+                        totalMinutes += hours * 60 + minutes;
+                    }
+                }
+            });
+
+            if (hasValidPair) totalWorkingDays++;
+        });
+
+        const totalHours = (totalMinutes / 60).toFixed(2);
+        const avgHours = totalWorkingDays > 0 ? (totalMinutes / (totalWorkingDays * 60)).toFixed(2) : 0;
+
+        return {
+            totalWorkingDays,
+            totalWorkHours: totalHours,
+            averageDailyHours: avgHours
+        };
     };
 
     const processedData = processAttendanceData(attendanceData);
@@ -339,9 +494,9 @@ const AttendanceTracker = ({ userId }) => {
                                     <TableHead>
                                         <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                                             <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>No.</TableCell>
-                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Punch In</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold', minWidth: '180px' }}>Punch In</TableCell>
                                             <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Type</TableCell>
-                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Punch Out</TableCell>
+                                            <TableCell sx={{ color: '#000000', fontWeight: 'bold', minWidth: '180px' }}>Punch Out</TableCell>
                                             <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Type</TableCell>
                                             <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Duration</TableCell>
                                             <TableCell sx={{ color: '#000000', fontWeight: 'bold' }}>Terminal</TableCell>
@@ -359,25 +514,25 @@ const AttendanceTracker = ({ userId }) => {
                                                 }}
                                             >
                                                 <TableCell sx={{ color: '#000000' }}>{index + 1}</TableCell>
-                                                <TableCell sx={{ color: '#000000' }}>
-                                                    {pair.in ? formatTime(pair.in.pucnhTime) : '--:--'}
+                                                <TableCell sx={{ color: '#000000', whiteSpace: 'nowrap' }}>
+                                                    {pair.in ? formatTime(pair.in.punchTypeTime) : '--:--'}
                                                 </TableCell>
                                                 <TableCell>
                                                     {pair.in ? (
                                                         <Chip
-                                                            label={pair.in.morning ? 'Morning' : 'Evening'}
+                                                            label={pair.in.inOutType}
                                                             size="small"
                                                             color={pair.in.morning ? 'primary' : 'secondary'}
                                                         />
                                                     ) : '-'}
                                                 </TableCell>
-                                                <TableCell sx={{ color: '#000000' }}>
-                                                    {pair.out ? formatTime(pair.out.pucnhTime) : '--:--'}
+                                                <TableCell sx={{ color: '#000000', whiteSpace: 'nowrap' }}>
+                                                    {pair.out ? formatTime(pair.out.punchTypeTime) : '--:--'}
                                                 </TableCell>
                                                 <TableCell>
                                                     {pair.out ? (
                                                         <Chip
-                                                            label={pair.out.morning ? 'Morning' : 'Evening'}
+                                                            label={pair.out.inOutType}
                                                             size="small"
                                                             color={pair.out.morning ? 'primary' : 'secondary'}
                                                         />
@@ -385,7 +540,7 @@ const AttendanceTracker = ({ userId }) => {
                                                 </TableCell>
                                                 <TableCell sx={{ color: '#000000' }}>
                                                     {pair.in && pair.out ?
-                                                        calculateDuration(pair.in.pucnhTime, pair.out.pucnhTime) :
+                                                        calculateDuration(pair.in.punchTypeTime, pair.out.punchTypeTime) :
                                                         '--:--'
                                                     }
                                                 </TableCell>

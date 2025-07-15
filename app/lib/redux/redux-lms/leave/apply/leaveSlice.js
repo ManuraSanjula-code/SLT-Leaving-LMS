@@ -11,7 +11,7 @@ export const fetchLeaveBalances = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/leave-balance/${userId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/leave-balance/${userId}/${empId}`, {
                 credentials: 'include'
             });
 
@@ -60,7 +60,7 @@ export const submitLeaveRequest = createAsyncThunk(
                 adminComment: null
             };
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/management/leave/create/${userId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/management/leave/create/${userId}/${empId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -105,7 +105,7 @@ public class UpdateUtils {
         lmsUser.setSltId(updatedUserEntity.getSltId());
         lmsUser.setPublicId(updatedUserEntity.getUserId());
         lmsUser.setJoin_date(updatedUserEntity.getJoin_date());
-        lmsUser.setRoaster(updatedUserEntity.getRoaster());
+        lmsUser.setRoaster(updatedUserEntity.getRoaster() && (updatedUserEntity.getIsSltEmp() == 0));
         lmsUser.setGender(updatedUserEntity.getGender());
 
         messageProducerService.sendMessage("user.queue", lmsUser);

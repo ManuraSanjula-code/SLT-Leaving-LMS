@@ -19,8 +19,8 @@ export const fetchAbsentEmployees = createAsyncThunk(
                 throw new Error('User ID not found in session storage');
             }
             const baseUrl = isAdmin
-                ? `http://192.168.3.20:8080/lms/absent/all/${empId}`
-                : `http://192.168.3.20:8080/lms/absent/${empId}/${empId}`
+                ? `http://localhost:8080/lms/absent/all/${empId}`
+                : `http://localhost:8080/lms/absent/${empId}/${empId}`
 
             // Add query parameters
             const urlParams = new URLSearchParams({
@@ -60,6 +60,7 @@ export const fetchAbsentEmployees = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             const transformedEmployees = data.content.map((item) => ({
                 id: item.id,
                 publicId: item.publicId,

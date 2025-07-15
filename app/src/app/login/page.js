@@ -38,8 +38,8 @@ const LoginPage = () => {
     const password = data.get("password");
 
     const loginUrl = isTempLogin 
-        ? "http://192.168.3.20:8080/users/login/temp"
-        : "http://192.168.3.20:8080/users/login";
+        ? "http://localhost:8080/users/login/temp"
+        : "http://localhost:8080/users/login";
 
     try {
       // Make a POST request to the login API
@@ -63,7 +63,7 @@ const LoginPage = () => {
 
       // Fetch user details
       try {
-        const userDetailsRes = await axios.get(`http://192.168.3.20:8080/users/${userId}`, {
+        const userDetailsRes = await axios.get(`http://localhost:8080/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${authorizationHeader}`
           }

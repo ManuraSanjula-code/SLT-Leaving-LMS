@@ -11,7 +11,8 @@ public class DashBoardRes {
     private Map<String, Integer> totalLeaveDistribution;
     private Map<String, Integer> remainLeaveDistribution;
     private Map<String, Integer> monthlyAttendanceDistribution;
-
+    private String lastPunch = null;
+    private String nowPunch = null;
     public DashBoardRes() {
         totalLeaveDistribution = new HashMap<>();
         totalLeaveDistribution.put("Casual Leave", 7);
@@ -28,6 +29,22 @@ public class DashBoardRes {
 
     public void setMonthlyAttendanceDistribution(Map<String, Integer> monthlyAttendanceDistribution) {
         this.monthlyAttendanceDistribution = monthlyAttendanceDistribution;
+    }
+
+    public String getLastPunch() {
+        return lastPunch;
+    }
+
+    public void setLastPunch(String lastPunch) {
+        this.lastPunch = lastPunch;
+    }
+
+    public String getNowPunch() {
+        return nowPunch;
+    }
+
+    public void setNowPunch(String nowPunch) {
+        this.nowPunch = nowPunch;
     }
 
     public int getTotalLeave() {

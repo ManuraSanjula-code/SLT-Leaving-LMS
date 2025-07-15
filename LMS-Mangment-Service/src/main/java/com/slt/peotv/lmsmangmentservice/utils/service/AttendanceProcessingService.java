@@ -1,5 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
@@ -37,8 +38,13 @@ public class AttendanceProcessingService {
     private Helper helper;
 
     @Transactional
-    public void processEmployeeLeave(String employeeId, LeaveEntity leave, Date processDate) {
+    public void processEmployeeLeave(EmployeeEntity employee, LeaveEntity leave, Date processDate, boolean swap) {
         System.out.println("Employee Date: " + processDate);
+
+        if(employee == null) return;
+        if(swap && !employee.getRoaster()) return;
+
+        String employeeId = employee.getEmployeeId();
         if (employeeId.isEmpty())
             return;
 
@@ -64,20 +70,20 @@ public class AttendanceProcessingService {
                         leave.setRequestStatus(RequestStatus.CANCELLED);
                         leaveRepository.save(leave);
                         leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME AND WORK FULL DAY");
-                        checkService.reportAttendance(attendanceRecord,false ,true ,false, false, false, false, false, false, false, false, false, false, false, new Date());
+                        checkService.reportAttendance(attendanceRecord,false ,true ,false, false, false, false, false, false, false, true, true, false, false, helper.getYesterdayDate());
 
                     } else if (isHalfDay) {
                         leave.setNotUsed(true);
                         leave.setRequestStatus(RequestStatus.CANCELLED);
                         leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME TO WORK IN FORM OF A HALF DAY");
                         leaveRepository.save(leave);
-                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, false, false, true, false, false, false, false, false, false, new Date());
+                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, false, false, true, false, false, true, true, false, false, helper.getYesterdayDate());
                     } else if (isShortLeave) {
                         System.out.println();
                     } else if (isLate) {
                         leave.setNotUsed(true);
                         leave.setRequestStatus(RequestStatus.CANCELLED);
-                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, true, false, true, false, false, false, false, false, false, new Date());
+                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, true, false, true, false, false, true, true, false, false, helper.getYesterdayDate());
                         /// IF LATE IS COVER SET LATE_COVER TURE
                     }
                 }

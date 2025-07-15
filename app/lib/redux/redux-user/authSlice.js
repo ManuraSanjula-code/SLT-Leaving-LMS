@@ -65,7 +65,7 @@ const authSlice = createSlice({
 
             if (sanitizedDetails.profilePic && typeof sanitizedDetails.profilePic === 'string') {
                 if (!sanitizedDetails.profilePic.startsWith('/') &&
-                    !sanitizedDetails.profilePic.startsWith('http://192.168.3.20')){
+                    !sanitizedDetails.profilePic.startsWith('http://localhost')){
                     sanitizedDetails.profilePic = '';
                 }
             }

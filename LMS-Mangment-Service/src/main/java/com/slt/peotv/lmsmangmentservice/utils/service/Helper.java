@@ -5,17 +5,22 @@ import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
+import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.sql.Time;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -31,6 +36,8 @@ public class Helper {
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired
     private EmployeeRepo employeeRepo;
+    @Autowired
+    private InOutRepo inOutRepo;
 
     public Date removeTimeFromDate(Date dateWithTime) {
         if (dateWithTime == null) {
@@ -75,12 +82,17 @@ public class Helper {
         return removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
     }
 
+    public Time parseToSqlTime(String timeStr) {
+        if (timeStr == null || timeStr.isEmpty()) {
+            return null;
+        }
+        LocalTime localTime = LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
+        return Time.valueOf(localTime);
+    }
+
     public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity) {
 
-        EmployeeEntity employee = employeeRepo.findByEmployeeId(user)
-                .or(() -> employeeRepo.findBySltId(user))
-                .or(() -> employeeRepo.findByPublicId(user))
-                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        EmployeeEntity employee = getEmployeeById(user);
 
         if (attendanceEntity == null)
             return;
@@ -100,6 +112,9 @@ public class Helper {
             remaining_short_Leaves.setRemainingLeaves(remaining_short_Leaves.getRemainingLeaves() - 1);
             userLeaveTypeRemainingRepo.save(remaining_short_Leaves);
         }
+
+        Optional<InOutEntity> latest = inOutRepo.findLatestByEmployeeIdAndDate(employee.getSltId(), getYesterdayDate());
+        latest.ifPresent(inOutEntity -> attendanceEntity.setLeftTime(inOutEntity.getPunchTypeTime()));
 
         AttendanceEntity save = attendanceRepo.save(attendanceEntity);
         List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(employee.getEmployeeId());

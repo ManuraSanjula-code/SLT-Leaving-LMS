@@ -21,7 +21,7 @@ public class Sync {
     private final AccessLogService accessLogService;
     private final AttendanceRepo attendanceRepo;
 
-    @Scheduled(cron = "00 00 02  * * ?")
+    @Scheduled(cron = "00 07 14  * * ?")
     public void getLogs() throws ParseException {
         /*LocalDate currentDate = LocalDate.now();
 
@@ -32,7 +32,6 @@ public class Sync {
             accessLogService.main();
             check_Service.main();
         }*/
-        check_Service.getAllTheInOutRecordsFromSLT();
         accessLogService.main();
         check_Service.main();
     }

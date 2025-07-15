@@ -13,7 +13,7 @@ export const fetchMovementRequests = createAsyncThunk(
                 throw new Error('User ID not found in session storage');
             }
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
+            const response = await fetch(`http://localhost:8080/lms/movement/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
@@ -58,8 +58,8 @@ export const processMovementRequest = createAsyncThunk(
             }
 
             const endpoint = approved
-                ? `http://192.168.3.20:8080/lms/movement/process/${movementId}/${storedUserId}/${empId}`
-                : `http://192.168.3.20:8080/lms/movement/reject/${movementId}/${storedUserId}/${empId}`;
+                ? `http://localhost:8080/lms/movement/process/${movementId}/${storedUserId}/${empId}`
+                : `http://localhost:8080/lms/movement/reject/${movementId}/${storedUserId}/${empId}`;
 
             // Send the approval/rejection request
             const response = await fetch(endpoint, {
@@ -121,8 +121,8 @@ export const processBulkMovementRequests = createAsyncThunk(
 
             console.log(requestBody)
             const endpoint = approved
-                ? `http://192.168.3.20:8080/lms/bulk/approved/movement/${empId}`
-                : `http://192.168.3.20:8080/lms/bulk/reject/movement/${empId}`;
+                ? `http://localhost:8080/lms/bulk/approved/movement/${empId}`
+                : `http://localhost:8080/lms/bulk/reject/movement/${empId}`;
 
             const response = await fetch(
                 endpoint,
@@ -186,8 +186,8 @@ export const processBulkMovementRequests = createAsyncThunk(
             };
 
             const endpoint = approved
-                ? `http://192.168.3.20:8080/lms/bulk/approved/movement/${empId}`
-                : `http://192.168.3.20:8080/lms/bulk/reject/movement/${empId}`;
+                ? `http://localhost:8080/lms/bulk/approved/movement/${empId}`
+                : `http://localhost:8080/lms/bulk/reject/movement/${empId}`;
 
             const response = await fetch(
                 endpoint,

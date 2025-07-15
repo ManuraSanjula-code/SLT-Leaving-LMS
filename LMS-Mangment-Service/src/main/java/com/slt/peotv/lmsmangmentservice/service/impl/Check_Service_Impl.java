@@ -474,14 +474,6 @@ public class Check_Service_Impl implements Check_Service {
         e.printStackTrace();
     }
 
-    private Time parseToSqlTime(String timeStr) {
-        if (timeStr == null || timeStr.isEmpty()) {
-            return null;
-        }
-        LocalTime localTime = LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
-        return Time.valueOf(localTime);
-    }
-
     public void approvedMove(MovementsEntity movement, String userId) {
         if (movement.getRequestStatus().equals(RequestStatus.REJECTED) || movement.getRequestStatus().equals(RequestStatus.APPROVED) || movement.getRequestStatus().equals(RequestStatus.CANCELLED))
             return;
@@ -552,17 +544,18 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setHasIssues(false);
             attendance.setResolve(ResolveType.VIA_MOVEMENT);
             attendance.setAttendanceType(AttendanceType.FULL_DAY);
+            attendance.setIsUnauthorized(false);
 
             switch (movement.getMovementType()) {
                 case HOME_TO_OFFICE:
-                    attendance.setArrivalTime(parseToSqlTime(movement.getInTime()));
+                    attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
                     break;
                 case OFFICE_TO_HOME:
-                    attendance.setLeftTime(parseToSqlTime(movement.getOutTime()));
+                    attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
                     break;
                 default:
-                    attendance.setArrivalTime(parseToSqlTime(movement.getInTime()));
-                    attendance.setLeftTime(parseToSqlTime(movement.getOutTime()));
+                    attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                    attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
             }
 
 
@@ -731,7 +724,7 @@ public class Check_Service_Impl implements Check_Service {
     }
 
     public Map<String, InOutEntity> findEmployeesWithOnlyOnePunches(Map<String, InOutEntity> morningMap,
-                                                                        Map<String, InOutEntity> eveningMap) {
+                                                                    Map<String, InOutEntity> eveningMap) {
 
         Map<String, InOutEntity> employeesWithOnlyMorningPunches = new HashMap<>();
 
@@ -748,7 +741,7 @@ public class Check_Service_Impl implements Check_Service {
     private void handleHolidays() {
         List<EmployeeEntity> allEmployees = (ArrayList<EmployeeEntity>)employeeRepo.findAll();
         ConcurrentLinkedQueue<AttendanceEntity> attendances = new ConcurrentLinkedQueue<>();
-        
+
         allEmployees.parallelStream().forEach(employee -> {
             Date yesterdayDate = helper.getYesterdayDate();
             if (!attendanceRepo.existsByEmployeeAndDate(employee, yesterdayDate) && !employee.getRoaster()) {
@@ -760,7 +753,7 @@ public class Check_Service_Impl implements Check_Service {
                 attendances.add(attendance);
             }
         });
-        
+
         attendanceRepo.saveAll(attendances);
     }
 
@@ -771,184 +764,6 @@ public class Check_Service_Impl implements Check_Service {
         Time halfDayThreshold = new Time(12, 30, 0);
         return morningPunch.after(halfDayThreshold);
     }
-
-    /* @Override
-    public void prerequisite() {
-        try {
-            handleHolidays();
-        } catch (Exception e) {
-
-        }
-        LocalDateTime yesterdayBefore830 = LocalDate.now().minusDays(1).atTime(8, 30);
-        Time sqlTime830 = Time.valueOf(yesterdayBefore830.toLocalTime());
-
-        LocalTime eveStart = LocalTime.of(17, 0); // 5:00 PM
-        LocalTime eveEnd = LocalTime.of(23, 0); // 11:00 PM
-        Time timeEveStart = Time.valueOf(eveStart);
-        Time timeEveEnd = Time.valueOf(eveEnd);
-
-        LocalTime eveStart_ = LocalTime.of(17, 30); // 5:00 PM
-        Time timeEveStart_ = Time.valueOf(eveStart_);
-
-        LocalDateTime yesterdayAfter900 = LocalDate.now().minusDays(1).atTime(9, 0);
-        Time sqlTime900 = Time.valueOf(yesterdayAfter900.toLocalTime());
-
-        LocalTime halfDayTime = LocalTime.of(12, 30); // 12:30 PM
-        Time timeHalfDay = Time.valueOf(halfDayTime);
-
-        Time startTimeLate = Time.valueOf("08:30:00");
-        Time endTimeLate = Time.valueOf("09:00:00");
-
-        Date yesterdayDate = helper.getYesterdayDate();
-
-        // Get employee attendance sets
-        List<InOutEntity> employeesArrivedBefore830 = inOutRepo.findByDateAndPunchTypeTimeBefore(yesterdayDate,
-                sqlTime830);
-        List<InOutEntity> employeesLeftAfter5 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
-                timeEveStart, timeEveEnd);
-        List<InOutEntity> employeesLeftAfter5_ = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
-                timeEveStart_, timeEveEnd);
-        List<InOutEntity> employeesArrivedAfter900 = inOutRepo.findByDateAndPunchTypeTimeAfter(yesterdayDate,
-                sqlTime900);
-        List<InOutEntity> employeesArrivedBetween830And900 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
-                startTimeLate, endTimeLate);
-
-        Map<String, InOutEntity> earliestMorningPunchByEmployee = findEarliestMorningPunchByEmployee(
-                employeesArrivedBefore830);
-        Map<String, InOutEntity> earliestEveningPunchByEmployee = findEarliestEveningPunchByEmployee(
-                employeesLeftAfter5);
-        Map<String, InOutEntity> earliestEveningPunchByEmployee_ = findEarliestEveningPunchByEmployee(
-                employeesLeftAfter5_);
-
-        Map<String, InOutEntity> lateArrivals = processLateArrivals(employeesArrivedAfter900);
-        /// Map<String, InOutEntity> halfDayEmployees = processHalfDayEmployees(employeesHalfDay);
-        Map<String, InOutEntity> arrivedBetween830And900 = processEmployeesArrivedBetween830And900(
-                employeesArrivedBetween830And900);
-
-        /// =====================================================================================
-        /// FULL DAY
-
-        Map<String, InOutEntity[]> employeesWithBothPunches = findEmployeesWithBothPunches(
-                earliestMorningPunchByEmployee, earliestEveningPunchByEmployee);
-
-        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunches.entrySet()) {
-            String employeeId = entry.getKey();
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-                InOutEntity morningPunch = entry.getValue()[0];
-                InOutEntity eveningPunch = entry.getValue()[1];
-                reportAttendance(morningPunch, eveningPunch, true, false, false, false, false, false, false, false,
-                        false, true, false, false, null);
-            });
-        }
-
-        /// =====================================================================================
-        /// Un-Authorized
-
-        Map<String, InOutEntity> employeesWithOnlyMorningPunches = findEmployeesWithOnlyOnePunches(
-                earliestMorningPunchByEmployee, earliestEveningPunchByEmployee);
-
-        for (Map.Entry<String, InOutEntity> entry : employeesWithOnlyMorningPunches.entrySet()) {
-            String employeeId = entry.getKey();
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-                InOutEntity morningPunch = entry.getValue();
-                reportAttendance(morningPunch, false,false, true, false, false, false, false, false, false, false, true,
-                        false, false, null);
-            });
-        }
-
-        Map<String, InOutEntity> employeesWithOnlyMorningPunches_ = findEmployeesWithOnlyOnePunches(
-                earliestEveningPunchByEmployee, earliestMorningPunchByEmployee);
-
-        for (Map.Entry<String, InOutEntity> entry : employeesWithOnlyMorningPunches_.entrySet()) {
-            String employeeId = entry.getKey();
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-                InOutEntity morningPunch = entry.getValue();
-                reportAttendance(morningPunch, true,false, true, false, false, false, false, false, false, false, true,
-                        false, false, null);
-            });
-        }
-
-        /// =====================================================================================
-        /// Late Arrive at 9.00 Am but do the late cover
-
-        Map<String, InOutEntity[]> employeesWithBothPunchesLate = findEmployeesWithBothPunches(lateArrivals,
-                earliestEveningPunchByEmployee_);
-
-        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunchesLate.entrySet()) {
-
-            String employeeId = entry.getKey();
-            InOutEntity morningPunch = entry.getValue()[0];
-            InOutEntity eveningPunch = entry.getValue()[1];
-
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-
-                reportAttendance(morningPunch, eveningPunch, true, false, false, true, true, false, false, false, false,
-                        true, false, false, null);
-            });
-
-        }
-
-        /// =====================================================================================
-        /// Late Arrive at 9.00 Am but do the did not late cover
-
-        Map<String, InOutEntity> onlyMorningPunchesLate90 = findEmployeesWithOnlyOnePunches(lateArrivals,
-                earliestEveningPunchByEmployee_);
-
-        for (Map.Entry<String, InOutEntity> entry : onlyMorningPunchesLate90.entrySet()) {
-
-            String employeeId = entry.getKey();
-            InOutEntity morningPunch = entry.getValue();
-
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-                reportAttendance(morningPunch, false,false, false, true, true, false, false, false, false, false, true,
-                        false, false, null);
-            });
-
-        }
-
-        /// =====================================================================================
-        /// Late Arrive at 8.39 Am - 9.00.Am but did the late cover
-
-        Map<String, InOutEntity[]> employeesWithBothPunchesLate830900 = findEmployeesWithBothPunches(
-                arrivedBetween830And900, earliestEveningPunchByEmployee);
-
-        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunchesLate830900.entrySet()) {
-            String employeeId = entry.getKey();
-
-            InOutEntity morningPunch = entry.getValue()[0];
-            InOutEntity eveningPunch = entry.getValue()[1];
-
-            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
-                reportAttendance(morningPunch, eveningPunch, true, false, false, true, true, false, false, false, false,
-                        true, false, false, null);
-            });
-
-        }
-
-        /// =====================================================================================
-        /// Late Arrive at 8.39 Am - 9.00.Am but did not the late cover
-
-        Map<String, InOutEntity> employeesWithMorPunchesLate830900 = findEmployeesWithOnlyOnePunches(
-                arrivedBetween830And900, earliestEveningPunchByEmployee);
-
-        for (Map.Entry<String, InOutEntity> entry : employeesWithMorPunchesLate830900.entrySet()) {
-            InOutEntity morningPunch = entry.getValue();
-            reportAttendance(morningPunch, false,false, false, true, true, false, false, false, false, false, true, false, false,
-                    null);
-
-        }
-
-        /// ================================ employee who are absent
-        List<String> absentEmployeesToday = getAbsentEmployeesToday();
-        reportAbsent(absentEmployeesToday)
-
-        getAbsentEmployeesToday().forEach(employee -> {
-            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent
-                    .getUserLeaveTypeRemaining(employee);
-            boolean nopay = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
-            reportAttendance(employee, false, false, false, false, false, false, false, false, false, true, nopay, true, helper.getYesterdayDate());
-        });
-    } */
 
     @Override
     public void prerequisite() {
@@ -1275,7 +1090,7 @@ public class Check_Service_Impl implements Check_Service {
         }
 
         AttendanceEntity savedAttendance = null;
-        if(!attendance.isArrivalOnWeekend())
+        if( (!attendance.isArrivalOnWeekend()) || (!attendance.getArrivalTime().equals(attendance.getLeftTime())))
             savedAttendance = attendanceRepo.save(attendance);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
@@ -1326,8 +1141,7 @@ public class Check_Service_Impl implements Check_Service {
         attendance.setIsLateCovered(late_cover);
         attendance.setIsUnSuccessful(unSuccessful);
         attendance.setIsUnauthorized(unAuthorized);
-
-        handleAttendanceTypeAndIssues(null,attendance, fullday, half_day, unAuthorized, unSuccessful, absent, employeeID);
+        attendance.setAttendanceType(AttendanceType.ABSENT);
 
         handleLeaveStatus(attendance, leaveSuccess, leaveReq, isFullLeave);
 
@@ -1353,13 +1167,14 @@ public class Check_Service_Impl implements Check_Service {
         attendance.setPublicId(utils.generateId(10));
         attendance.setEmployee(employee);
         attendance.setDate(helper.getYesterdayDate());
+        attendance.setArrivalDate(date);
         attendance.setEtlRunTime(new Date());
         attendance.setUpdatedDate(new Date());
         return attendance;
     }
 
     private void handleAttendanceTypeAndIssues(InOutEntity inout, AttendanceEntity attendance, Boolean fullday, Boolean half_day,
-                                         Boolean unAuthorized, Boolean unSuccessful, Boolean absent, String employeeId) {
+                                               Boolean unAuthorized, Boolean unSuccessful, Boolean absent, String employeeId) {
 
         if (inout == null || inout.getPunchTypeTime() == null) {
             return;
@@ -1367,17 +1182,14 @@ public class Check_Service_Impl implements Check_Service {
 
         LocalTime punchTime = inout.getPunchTypeTime().toLocalTime();
         LocalTime nineAM = LocalTime.of(9, 0);
-        LocalTime tenAM = LocalTime.of(10, 0);
+        LocalTime twelvePM = LocalTime.of(12, 0);
         LocalTime thirteenPM = LocalTime.of(13, 0);
 
-        if (punchTime.isAfter(nineAM)) {
-            attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
-        }
         if (punchTime.isAfter(thirteenPM)) {
             attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
         }
 
-        if (half_day || punchTime.isAfter(tenAM)) {
+        if (half_day || punchTime.isAfter(twelvePM)) {
             attendance.setAttendanceType(AttendanceType.HALF_DAY);
             attendance.setDueDateForUA(helper.getDueDate());
             attendance.setHasIssues(true);
@@ -1410,16 +1222,12 @@ public class Check_Service_Impl implements Check_Service {
     }
 
     private void handleLeaveStatus(AttendanceEntity attendance, Boolean leaveSuccess, Boolean leaveReq, Boolean isFullLeave) {
-        if (leaveSuccess) {
-            attendance.setLeaveStatus(LeaveStatus.LEAVE_APPROVED);
-        }
-
-        if (leaveReq) {
-            attendance.setLeaveStatus(LeaveStatus.LEAVE_REQUESTED);
-        }
-
         if (isFullLeave) {
             attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
+        } else if (leaveSuccess) {
+            attendance.setLeaveStatus(LeaveStatus.LEAVE_APPROVED);
+        } else if (leaveReq) {
+            attendance.setLeaveStatus(LeaveStatus.LEAVE_REQUESTED);
         }
     }
 
@@ -1445,10 +1253,15 @@ public class Check_Service_Impl implements Check_Service {
                 }
             }
 
-            logger.info("InOut relationships established for attendance: {}", savedAttendance.getId());
+            if (savedAttendance != null)
+                logger.info("InOut relationships established for attendance: {}", savedAttendance.getId());
 
         } catch (Exception e) {
-            logger.error("Error establishing InOut relationships for attendance: {}", savedAttendance.getId(), e);
+            if (savedAttendance != null)
+                logger.error("Error establishing InOut relationships for attendance: {}", savedAttendance.getId(), e);
+
+            logger.error("Error establishing InOut relationships for attendance: " , e);
+
         }
     }
 
@@ -1666,6 +1479,114 @@ public class Check_Service_Impl implements Check_Service {
         }
     }
 
+    @Transactional
+    @Retryable(value = {DataAccessException.class},
+            maxAttempts = MAX_RETRY_ATTEMPTS,
+            backoff = @Backoff(delay = 1000))
+    @Override
+    public AccessLogEntity getTodayEarliestAccessLogsByEmployee(String employeeId) {
+        final String methodName = "getTodayEarliestAccessLogsByEmployee";
+        final String url = "jdbc:mysql://localhost:3306/attendance";
+        final String username = "root";
+        final String password = "User@123";
+
+        String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
+                "FROM accesslog_archive " +
+                "WHERE EmployeeID = ? AND LogDate = DATE_FORMAT(CURRENT_DATE(), '%d/%m/%Y') " +
+                "ORDER BY LogDate ASC, LogTime ASC " +
+                "LIMIT 1";
+
+        List<AccessLogEntity> accessLogEntities = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            logger.info("{}: Attempting to connect to database", methodName);
+            connection = DriverManager.getConnection(url, username, password);
+            statement = connection.prepareStatement(sql);
+            statement.setString(1, employeeId);  // Set the employeeId parameter
+            resultSet = statement.executeQuery();
+            logger.info("{}: Database connection established successfully", methodName);
+
+            int recordCount = 0;
+            while (resultSet.next()) {
+                try {
+                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
+                    accessLogEntities.add(accessLog);
+                    recordCount++;
+                    return accessLog;
+                } catch (SQLException e) {
+                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
+                } catch (Exception e) {
+                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
+                }
+            }
+
+            processRetrievedRecords(accessLogEntities, methodName);
+
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Database connection failed", e, methodName);
+        } catch (Exception e) {
+            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
+        } finally {
+            closeDatabaseResources(connection, statement, resultSet, methodName);
+            return null;
+        }
+    }
+
+    @Transactional
+    @Retryable(value = {DataAccessException.class},
+            maxAttempts = MAX_RETRY_ATTEMPTS,
+            backoff = @Backoff(delay = 1000))
+    @Override
+    public AccessLogEntity getTodayLatestAccessLogsByEmployee(String employeeId) {
+        final String methodName = "getTodayLatestAccessLogsByEmployee";
+        final String url = "jdbc:mysql://localhost:3306/attendance";
+        final String username = "root";
+        final String password = "User@123";
+
+        String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
+                "FROM accesslog_archive " +
+                "WHERE EmployeeID = ? AND LogDate = DATE_FORMAT(CURRENT_DATE(), '%d/%m/%Y') " +
+                "ORDER BY LogDate DESC, LogTime DESC " +
+                "LIMIT 1";
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            logger.info("{}: Attempting to connect to database", methodName);
+            connection = DriverManager.getConnection(url, username, password);
+            statement = connection.prepareStatement(sql);
+            statement.setString(1, employeeId);  // Set the employeeId parameter
+            resultSet = statement.executeQuery();
+            logger.info("{}: Database connection established successfully", methodName);
+
+            int recordCount = 0;
+            while (resultSet.next()) {
+                try {
+                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
+                    recordCount++;
+                    return accessLog;
+                } catch (SQLException e) {
+                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
+                } catch (Exception e) {
+                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
+                }
+            }
+
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Database connection failed", e, methodName);
+        } catch (Exception e) {
+            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
+        } finally {
+            closeDatabaseResources(connection, statement, resultSet, methodName);
+            return null;
+        }
+    }
+
     @Override
     @Transactional
     @Retryable(value = {DataAccessException.class},
@@ -1759,7 +1680,7 @@ public class Check_Service_Impl implements Check_Service {
             logErrorWithStackTrace("Duplicate records detected. Attempting individual saves", e, methodName);
             saveRecordsIndividually(records, methodName);
             System.out.println(" ----------------------------------------------------------------- ");
-            
+
         } catch (Exception e) {
             logErrorWithStackTrace("Failed to save records", e, methodName);
         }
@@ -1777,7 +1698,7 @@ public class Check_Service_Impl implements Check_Service {
                         record.getLogDate(),
                         record.getLogTime(),
                         record.getTerminalId())) {
-                    
+
                     accessLogRepo.save(record);
                     successCount++;
                 } else {
@@ -1787,8 +1708,8 @@ public class Check_Service_Impl implements Check_Service {
                 }
             } catch (Exception e) {
                 errorCount++;
-                logErrorWithStackTrace(String.format("Failed to save record for employee %s", 
-                    record.getEmployeeId()), e, methodName);
+                logErrorWithStackTrace(String.format("Failed to save record for employee %s",
+                        record.getEmployeeId()), e, methodName);
             }
         }
 
@@ -1796,8 +1717,8 @@ public class Check_Service_Impl implements Check_Service {
                 methodName, successCount, duplicateCount, errorCount);
     }
 
-    private void closeDatabaseResources(Connection connection, PreparedStatement statement, 
-                                    ResultSet resultSet, String methodName) {
+    private void closeDatabaseResources(Connection connection, PreparedStatement statement,
+                                        ResultSet resultSet, String methodName) {
         try {
             if (resultSet != null) {
                 resultSet.close();
@@ -1826,7 +1747,7 @@ public class Check_Service_Impl implements Check_Service {
     private void logErrorWithStackTrace(String message, Throwable e, String methodName) {
         logger.error("{}: {} - Error: {}", methodName, message, e.getMessage());
         logger.error("Stack trace:", e);  // This will log the full stack trace
-        
+
         if (e instanceof SQLException) {
             SQLException sqlEx = (SQLException) e;
             logger.error("SQL State: {}, Error Code: {}", sqlEx.getSQLState(), sqlEx.getErrorCode());

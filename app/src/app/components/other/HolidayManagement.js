@@ -52,7 +52,7 @@ const HolidayManagement = ({ open, onClose }) => {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}?year=${year}`,{
+            const response = await fetch(`http://localhost:8080/lms/holiday/${loggedInUserId}?year=${year}`,{
                 method: 'GET',
                 credentials: 'include'
             });
@@ -91,7 +91,7 @@ const HolidayManagement = ({ open, onClose }) => {
                     alert('User session not found. Please log in again.');
                     return;
                 }
-                const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${id}/${loggedInUserId}`, {
+                const response = await fetch(`http://localhost:8080/lms/holiday/${id}/${loggedInUserId}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -127,7 +127,7 @@ const HolidayManagement = ({ open, onClose }) => {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}`, {
+            const response = await fetch(`http://localhost:8080/lms/holiday/${loggedInUserId}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -167,7 +167,7 @@ const HolidayManagement = ({ open, onClose }) => {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${currentHoliday.id}/${loggedInUserId}`, {
+            const response = await fetch(`http://localhost:8080/lms/holiday/${currentHoliday.id}/${loggedInUserId}`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: {

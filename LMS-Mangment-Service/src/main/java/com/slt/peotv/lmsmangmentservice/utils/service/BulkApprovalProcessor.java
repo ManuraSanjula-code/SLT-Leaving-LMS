@@ -2,7 +2,9 @@ package com.slt.peotv.lmsmangmentservice.utils.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
@@ -38,6 +40,8 @@ public class BulkApprovalProcessor {
 
     @Autowired
     private AttendanceRepo attendanceRepo;
+    @Autowired
+    private Helper helper;
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
 
@@ -341,6 +345,22 @@ public class BulkApprovalProcessor {
                 attendance.setIsResolved(true);
                 attendance.setDueDateForUA(null);
                 attendance.setHasIssues(false);
+
+                attendance.setResolve(ResolveType.VIA_MOVEMENT);
+                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+
+                switch (movement.getMovementType()) {
+                    case HOME_TO_OFFICE:
+                        attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                        break;
+                    case OFFICE_TO_HOME:
+                        attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                        break;
+                    default:
+                        attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                        attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                }
+                attendance.setIsUnauthorized(false);
 
                 attendanceRepo.save(attendance);
                 movementsRepo.save(movement);

@@ -568,7 +568,7 @@ public class UserController {
             userRest.setEmployeeId(userDto.getEmployeeId());
             userRest.setSltId(userDto.getSltId());
             userRest.setJoiningDate(userDto.getJoin_date());
-            userRest.setRoaster(userDto.getRoaster());
+            userRest.setRoaster(userDto.getRoaster() && (userDto.getIsSltEmp() == 0));
             // Map AddressDTO to AddressesRest
             if (userDto.getAddresses() != null) {
                 List<AddressesRest> addressesRest = userDto.getAddresses().stream()

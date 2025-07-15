@@ -36,7 +36,7 @@ const ShiftRosterTable = () => {
         setError(null);
 
         try {
-            const response = await fetch(`http://192.168.3.20:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
+            const response = await fetch(`http://localhost:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -322,7 +322,7 @@ const ShiftRosterTable = () => {
                     <Typography variant="body2">{error}</Typography>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                         Please check:
-                        <br />• Server is running on 192.168.3.20:8080
+                        <br />• Server is running on localhost:8080
                         <br />• API endpoint is accessible
                         <br />• Selected month and year have data available
                         <br />• Network connection is stable

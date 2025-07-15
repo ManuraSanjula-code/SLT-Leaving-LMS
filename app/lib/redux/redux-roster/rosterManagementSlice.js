@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API_BASE_URL = 'http://192.168.3.20:8080/api';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const processTeamData = (data, teamId) => ({
     id: data?.id || teamId,

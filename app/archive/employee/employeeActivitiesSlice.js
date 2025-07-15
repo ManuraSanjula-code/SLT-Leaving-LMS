@@ -58,7 +58,7 @@ export const fetchEmployeeActivities = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/${userId}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/${userId}/${empId}`, {
                 credentials: 'include',
             });
 
@@ -88,7 +88,7 @@ export const createEmployeeActivity = createAsyncThunk(
                 return rejectWithValue('Employee ID not found in session storage');
             }
 
-            const response = await fetch('http://192.168.3.20:8080/lms/' + empId, {
+            const response = await fetch('http://localhost:8080/lms/' + empId, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export const updateEmployeeActivity = createAsyncThunk(
             }
             const submissionData = prepareFormData(formData);
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ export const deleteEmployeeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/${id}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });
@@ -175,7 +175,7 @@ export const deleteEmployeeDeActivity = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/attendance/de/${id}/${empId}`, {
+            const response = await fetch(`http://localhost:8080/lms/attendance/de/${id}/${empId}`, {
                 method: 'DELETE',
                 credentials: 'include',
             });

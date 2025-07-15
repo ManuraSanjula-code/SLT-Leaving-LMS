@@ -42,7 +42,7 @@ const AttendanceForm = ({ isVisible, onClose }) => {
 
     const handleSubmit = async () => {
         try {
-            const response = await fetch('http://192.168.3.20:8080/lms', {
+            const response = await fetch('http://localhost:8080/lms', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

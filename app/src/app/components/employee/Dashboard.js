@@ -39,7 +39,7 @@ const Dashboard = () => {
                 throw new Error('User ID not found. Please log in again.');
             }
 
-            const response = await fetch(`http://192.168.3.20:8080/lms/dashboard/${userId}/${userId}`, {
+            const response = await fetch(`http://localhost:8080/lms/dashboard/${userId}/${userId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
