@@ -128,6 +128,7 @@ public class MessageListener {
             }
             if (attendance.getHasIssues() != null) {
                 attendanceEntity.setHasIssues(attendance.getHasIssues());
+                attendanceEntity.setDueDateForUA(helper.getDueDate());
             }
 
             if (attendance.getIssueDescription() != null) {
