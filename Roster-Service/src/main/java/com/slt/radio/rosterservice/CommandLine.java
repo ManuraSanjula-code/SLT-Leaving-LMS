@@ -7,6 +7,7 @@ import com.slt.radio.rosterservice.Utils.TokenCreator;
 import com.slt.radio.rosterservice.feign_client.UserClient;
 import com.slt.radio.rosterservice.feign_client.model.UserRest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import java.util.*;
@@ -22,6 +23,9 @@ public class CommandLine implements CommandLineRunner {
 
     @Autowired
     private TokenCreator tokenCreator;
+
+    @Value("${ROSTER_BEYOND_TwentyFour:false}")
+    private boolean roster_beyond;
 
     @Override
     public void run(String... args) throws Exception {
@@ -47,6 +51,8 @@ public class CommandLine implements CommandLineRunner {
                 }
             });
         }
+
+        System.out.println(" ********** ROSTER_BEYOND_TwentyFour ************* " + roster_beyond);
 
         /*if(accessLogRepository.findAll().isEmpty()){
             List<AccessLogArchiveRest> allAccessLogsToday = lmsClient.getAllAccessLogsToday(helper.getFormattedYesterdayDate(), token);

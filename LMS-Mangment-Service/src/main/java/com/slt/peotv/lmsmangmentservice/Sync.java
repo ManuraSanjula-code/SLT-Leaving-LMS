@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
-
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 
 @Service
@@ -20,6 +19,12 @@ public class Sync {
     private final Check_Service check_Service;
     private final AccessLogService accessLogService;
     private final AttendanceRepo attendanceRepo;
+
+    @Scheduled(cron = "0 0 * * * ?")
+    public void getLogs_() throws ParseException {
+        check_Service.getAllTheInOutRecordsFromSLT();
+        accessLogService.main();
+    }
 
     @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
@@ -32,10 +37,12 @@ public class Sync {
             accessLogService.main();
             check_Service.main();
         }*/
-        check_Service.getAllTheInOutRecordsFromSLT();
-        accessLogService.main();
+        /* check_Service.getAllTheInOutRecordsFromSLT();
+        accessLogService.main(); */
         check_Service.main();
     }
+
+    
 
     @Scheduled(cron = "0 0 6 1 * ?")
     public void makeAsInActive() {

@@ -363,9 +363,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
             if (editValues.logTime) {
                 updatePayload.logTime = new Date(editValues.logTime).toISOString();
             }
-
-            console.log("Sending update payload:", updatePayload);
-
             await dispatch(updateMovementRequest({
                 updatePayload,
                 isAdmin,

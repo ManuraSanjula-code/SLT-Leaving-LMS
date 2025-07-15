@@ -105,7 +105,6 @@ const ActivityDetailsDialog = React.memo(({
         if (activity.attendanceType === 'HALF_DAY') return "Half Day";
         if (activity.isLate && activity.attendanceType === 'FULL_DAY') return "Late (Full Day)";
         if (activity.isLate) return "Late";
-        if (activity.attendanceType === 'FULL_DAY') return "Present";
         return "Present";
     }, []);
 
@@ -516,6 +515,7 @@ const EmployeeActivities = () => {
 
     const getAttendanceStatus = useCallback((activity) => {
         if (!activity) return "Unknown";
+        if (activity.isHoliday) return "HOLIDAY";
         if (activity.isUnauthorized) return "Unauthorized";
         if (activity.attendanceType === 'ABSENT') return "Absent";
         if (activity.isUnSuccessful) return "Unsuccessful";
@@ -718,14 +718,20 @@ const EmployeeActivities = () => {
                                         }}
                                     />
                                 </TableCell>
+
                                 <TableCell>
                                     <Chip
-                                        label={getAttendanceStatus(activity)}
-                                        color={getAttendanceStatusColor(activity)}
+                                        label={activity.leaveStatus ? LEAVE_STATUS_LABELS[activity.leaveStatus] : getAttendanceStatus(activity)}
+                                        color={
+                                            activity.leaveStatus === 'LEAVE_APPROVED' ? 'success' :
+                                                activity.leaveStatus === 'LEAVE_REQUESTED' ? 'warning' :
+                                                    getAttendanceStatusColor(activity)
+                                        }
                                         size="small"
                                         sx={{
                                             minWidth: '90px',
-                                            fontWeight: 'medium'
+                                            fontWeight: 'medium',
+                                            textTransform: activity.leaveStatus ? 'uppercase' : 'none'
                                         }}
                                     />
                                 </TableCell>

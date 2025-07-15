@@ -74,7 +74,6 @@ const authSlice = createSlice({
                 sanitizedDetails.addresses = [];
             }
 
-            console.log('Setting sanitized user details');
             state.userDetails = sanitizedDetails;
             state.loading = false;
             state.successMessage = 'User details fetched successfully!';

@@ -429,7 +429,7 @@ const Other = () => {
             </Typography>
 
             <Grid container spacing={2} sx={{ mt: 2 }}>
-                {userDetails.roaster && (userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 10) && (
+                {(userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 10) && (
                     <>
                         <Grid item xs={12} sm={6} md={4}>
                             <Button

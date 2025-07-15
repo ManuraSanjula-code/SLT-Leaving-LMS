@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
-
 import java.sql.Time;
 import java.time.LocalTime;
 import java.util.Date;
@@ -58,66 +57,6 @@ public class MessageListener {
         updateAttendanceFromMessageNotFull(message);
     }
 
-    private void updateAttendanceFromMessage(Attendance attendance) {
-        AttendanceEntity attendanceEntity = new AttendanceEntity();
-
-        attendanceEntity.setPublicId(attendance.getPublicId());
-        Optional<EmployeeEntity> employeeEntityOptional = employeeRepo.findByEmployeeId(attendance.getEmployeeId());
-
-        if (employeeEntityOptional.isPresent()) {
-            EmployeeEntity employeeEntity = employeeEntityOptional.get();
-            attendanceEntity.setEmployee(employeeEntity);
-            attendanceEntity.setDate(attendance.getDate());
-            attendanceEntity.setArrivalDate(helper.removeTimeFromDate(attendance.getDate()));
-
-            LocalTime arrivalTime = attendance.getArrivalTime();
-            Time arriveSqlTime = new Time(arrivalTime.getHour(),
-                    arrivalTime.getMinute(),
-                    arrivalTime.getSecond());
-            attendanceEntity.setArrivalTime(arriveSqlTime);
-
-            LocalTime leftTime = attendance.getLeftTime();
-            Time leftSqlTime = new Time(leftTime.getHour(),
-                    arrivalTime.getMinute(),
-                    arrivalTime.getSecond());
-
-            attendanceEntity.setTerminalId(attendance.getTerminalId());
-            attendanceEntity.setAttendanceType(attendance.getAttendanceType());
-
-            attendanceEntity.setArrivalTime(leftSqlTime);
-            attendanceEntity.setIsLate(attendance.getLate());
-            attendanceEntity.setIsLateCovered(attendance.getLateCovered());
-            attendanceEntity.setIsUnauthorized(attendance.getUnauthorized());
-            attendanceEntity.setIsUnauthorized(attendance.getUnSuccessful());
-            attendanceEntity.setIsHoliday(attendance.getHoliday());
-            attendanceEntity.setIsResolved(attendance.getResolved());
-            attendanceEntity.setHasIssues(attendance.getHasIssues());
-            attendanceEntity.setIsManual(attendance.getManual());
-            attendanceEntity.setIssueDescription(attendance.getIssueDescription());
-            attendanceEntity.setEtlRunTime(new Date());
-            attendanceEntity.setIsManual(true);
-
-            attendanceEntity.setViaLeave(attendance.getViaLeave());
-            attendanceEntity.setViaMovement(attendance.getViaMovement());
-
-            Optional<LeaveEntity> leaveEntityOptional = leaveRepo.findByEmployeeAndFromDate(employeeEntity, attendance.getArrivalDate());
-            if(leaveEntityOptional.isPresent()){
-                LeaveEntity leaveEntity = leaveEntityOptional.get();
-                if(leaveEntity.getIsManualRequest() && attendance.getAttendanceType().equals(AttendanceType.ABSENT)){
-                    leaveEntity.setRequestStatus(RequestStatus.SUBMITTED);
-                    attendanceEntity.setLeaveStatus(LeaveStatus.LEAVE_REQUESTED);
-                    attendanceEntity.setLeaveStatus(LeaveStatus.LEAVE_APPROVED);
-                }
-                if(leaveEntity.getIsManualRequest() && attendance.getAttendanceType().equals(AttendanceType.FULL_DAY)){
-                    leaveEntity.setRequestStatus(RequestStatus.EXPIRED);
-                    leaveEntity.setNotUsed(true);
-                }
-                leaveRepo.save(leaveEntity);
-            }
-            attendanceRepo.save(attendanceEntity);
-        }
-    }
-
     private void updateAttendanceFromMessageNotFull(Attendance attendance) {
         if (attendance == null) {
             return;
@@ -137,6 +76,8 @@ public class MessageListener {
 
         if (employeeEntityOptional.isPresent()) {
             EmployeeEntity employeeEntity = employeeEntityOptional.get();
+            if(!employeeEntity.getRoaster()) return;
+
             attendanceEntity.setEmployee(employeeEntity);
 
             if (attendance.getDate() != null) {
@@ -188,9 +129,6 @@ public class MessageListener {
             if (attendance.getHasIssues() != null) {
                 attendanceEntity.setHasIssues(attendance.getHasIssues());
             }
-            if (attendance.getManual() != null) {
-                attendanceEntity.setIsManual(attendance.getManual());
-            }
 
             if (attendance.getIssueDescription() != null) {
                 attendanceEntity.setIssueDescription(attendance.getIssueDescription());
@@ -228,6 +166,12 @@ public class MessageListener {
                 return;
             }
 
+            if (attendanceRepo.existsByEmployeeAndDate(employeeEntity, attendanceEntity.getDate())) {
+                logger.info("Attendance already exists for employee: {} on date: {}. Skipping.",
+                        employeeEntity.getEmployeeId(), helper.getYesterdayDate());
+                return;
+            }
+
             boolean attendanceExists = attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(
                     employeeEntity,
                     attendanceEntity.getDate(),
@@ -240,6 +184,7 @@ public class MessageListener {
                 return;
             }
 
+            attendanceEntity.setIsManual(true);
             attendanceRepo.save(attendanceEntity);
         }
     }

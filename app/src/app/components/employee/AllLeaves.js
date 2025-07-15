@@ -226,7 +226,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
     );
 
     const isLeaveEditable = (leave) => {
-        return !(leave.accepted || leave.reject || leave.canceled || leave.expired);
+        return !(leave.accepted || leave.reject || leave.canceled || leave.expired || leave.requestStatus == "SUBMITTED");
     };
 
     const handleSearchChange = (event) => setSearchQuery(event.target.value);

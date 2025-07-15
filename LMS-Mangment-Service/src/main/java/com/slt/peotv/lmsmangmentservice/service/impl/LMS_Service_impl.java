@@ -13,6 +13,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainin
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeTotalEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.exceptions.LMSServiceException_AllReadyExits;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
@@ -30,7 +31,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
@@ -145,6 +146,46 @@ public class LMS_Service_impl implements LMS_Service {
                 ));
 
         DashBoardRes dashBoardRes = new DashBoardRes();
+
+        if (today.getDayOfWeek() == DayOfWeek.MONDAY){
+
+            LocalDate lastFriday = today.minusDays(3);
+            Date fridayDate = Date.from(lastFriday.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+            Optional<InOutEntity> earliestByEmployeeIdAndDateLast = inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), fridayDate);
+            Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), fridayDate);
+
+            earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+            
+        }else{
+
+            Optional<InOutEntity> earliestByEmployeeIdAndDateLast = inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate());
+            Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate());
+
+            earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+        } 
+
+        /* AccessLogEntity todayEarliestAccessLogsByEmployee = check_Service.getTodayEarliestAccessLogsByEmployee(employeeEntity.getSltId());
+        AccessLogEntity todayLatestAccessLogsByEmployee = check_Service.getTodayLatestAccessLogsByEmployee(employeeEntity.getSltId()); */
+
+        /* if(todayEarliestAccessLogsByEmployee != null)
+            dashBoardRes.setNowPunch(todayEarliestAccessLogsByEmployee.getLogTime());
+
+        if(todayLatestAccessLogsByEmployee != null)
+            dashBoardRes.setNowPunch(dashBoardRes.getLastPunch() + " - " + todayLatestAccessLogsByEmployee.getLogTime());
+
+        if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND"); */
+
+        Optional<InOutEntity> earliestByEmployeeIdAndDateLast = inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.removeTimeFromDate(new Date()));
+        Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.removeTimeFromDate(new Date()));
+
+        earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(inOutEntity.getPunchTypeTimeAsString()));
+        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+        
+        if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
+
         dashBoardRes.setTotalAttendance(total);
         dashBoardRes.setRemainLeaveDistribution(remainLeaveDistribution);
         dashBoardRes.setMonthlyAttendanceDistribution(monthlyAttendanceDistribution);
@@ -619,7 +660,6 @@ public class LMS_Service_impl implements LMS_Service {
         AccessLogEntity accessLogEntity = lmsUtils.toAccessLogEntity(req);
         accessLogEntity.setIsManual(true);
         accessLogEntity.setUpdatedDate(new Date());
-        lmsUtils.addAdminCommentToEntity(accessLogEntity, req.getAdminComment(), req.getAdminId());
         AccessLogEntity saved = accessLogRepo.save(accessLogEntity);
     }
 

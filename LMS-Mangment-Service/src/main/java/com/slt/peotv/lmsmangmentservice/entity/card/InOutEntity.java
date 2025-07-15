@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.sql.Time;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 
@@ -72,4 +73,11 @@ public class InOutEntity {
     @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    public String getPunchTypeTimeAsString() {
+        if (punchTypeTime == null) {
+            return null;
+        }
+        return new SimpleDateFormat("HH:mm:ss").format(punchTypeTime);
+    }
 }

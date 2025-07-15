@@ -72,7 +72,6 @@ export const processLeaveRequest = createAsyncThunk(
                     userId: storedUserId
                 })
             });
-            console.log(response)
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -111,7 +110,6 @@ export const processBulkLeaveRequests = createAsyncThunk(
                 approvedIds: leaveIds
             };
 
-            console.log('Sending request:', requestBody);
 
             const endpoint = approved
                 ? `http://192.168.3.20:8080/lms/bulk/approved/leave/${empId}`
@@ -129,7 +127,6 @@ export const processBulkLeaveRequests = createAsyncThunk(
                 }
             );
 
-            console.log(response);
 
             // Check if response is ok
             if (!response.ok) {

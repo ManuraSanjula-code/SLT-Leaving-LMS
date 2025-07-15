@@ -4,7 +4,6 @@ import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Holiday;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
-import com.slt.peotv.lmsmangmentservice.entity.AuditLog;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
@@ -18,19 +17,14 @@ import com.slt.peotv.lmsmangmentservice.model.dto.NopayDTO;
 import com.slt.peotv.lmsmangmentservice.model.dto.NoPayReasonDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.AccessLogReq;
 import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
-import com.slt.peotv.lmsmangmentservice.model.req.InOutReq;
 import com.slt.peotv.lmsmangmentservice.model.req.HolidayReq;
 import com.slt.peotv.lmsmangmentservice.repository.NoPayReasonRepo;
-import com.slt.peotv.lmsmangmentservice.repository.AuditLogRepo;
-import com.slt.peotv.lmsmangmentservice.repository.AuditLogoRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
-import java.lang.reflect.Method;
 import java.util.*;
 
 @Service
@@ -43,16 +37,7 @@ public class LMSUtils {
     private Utils utils;
 
     @Autowired
-    private AuditLogRepo auditLogRepo;
-
-    @Autowired
     private Helper helper;
-
-    @Autowired
-    private Check_Service check_Service;
-
-    @Autowired
-    private AuditLogoRepo auditLogoRepo;
 
     @Autowired
     private InOutRepo inOutRepo;
@@ -170,44 +155,6 @@ public class LMSUtils {
         dto.setInOutDTOs(inOutDTOS);
 
         return dto;
-    }
-
-    public AttendanceDTO toAttendanceDTOAdmin(AttendanceEntity entity) {
-        if (entity == null) return null;
-        AttendanceDTO dto = toAttendanceDTO(entity);
-        return dto;
-    }
-
-    private String getFieldValue(Object obj, String methodName) {
-        try {
-            if (obj == null) return null;
-            Method method = obj.getClass().getMethod(methodName);
-            Object result = method.invoke(obj);
-            return result != null ? result.toString() : null;
-        } catch (Exception e) {
-            // Log the error but don't fail the entire operation
-            System.err.println("Failed to get field value using method: " + methodName + " on " + obj.getClass().getSimpleName() + " - " + e.getMessage());
-            return null;
-        }
-    }
-
-    private Object getEmployeeObject(Object editedByObj, String methodName) {
-        try {
-            if (editedByObj == null) return null;
-            Method method = editedByObj.getClass().getMethod(methodName);
-            Object result = method.invoke(editedByObj);
-
-            // Check if result is a String (employee ID) instead of EmployeeEntity
-            if (result instanceof String) {
-                System.err.println("Warning: getEmployee() returned String instead of EmployeeEntity. This suggests a mapping issue.");
-                return null;
-            }
-
-            return result;
-        } catch (Exception e) {
-            System.err.println("Failed to get employee object using method: " + methodName + " - " + e.getMessage());
-            return null;
-        }
     }
 
     public MovementDTO toMovementDTO(MovementsEntity entity) {
@@ -367,49 +314,10 @@ public class LMSUtils {
 
         return dto;
     }
-
-    public AuditLog createAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment, AuditAction action) {
-        AuditLog auditLog = new AuditLog();
-        auditLog.setEmployee(employee);
-        auditLog.setAction(action);
-        auditLog.setEntityId(entityId);
-        auditLog.setEntityIdentifier(entityIdentifier);
-        auditLog.setComment(comment);
-        return auditLog;
-    }
-
-    public AuditLog createAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.CREATE);
-    }
-
-    public AuditLog updateAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.UPDATE);
-    }
-
-    public AuditLog deleteAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.DELETE);
-    }
-
-    public AuditLog approveAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.APPROVE);
-    }
-
-    public AuditLog rejectAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.REJECT);
-    }
-
-    public AuditLog resolveAuditLog(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, AuditAction.RESOLVE);
-    }
-
-    public AuditLog logAction(EmployeeEntity employee, Long entityId, String entityIdentifier, String comment, AuditAction action) {
-        return createAuditLog(employee, entityId, entityIdentifier, comment, action);
-    }
-
     public AttendanceEntity toAttendanceEntity(AttendanceReq req) {
         if (req == null) return null;
 
-        Optional<EmployeeEntity> employee = employeeRepo.findBySltId(req.getEmployeeID());
+        Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(req.getEmployeeID());
         if (employee.isEmpty()) return null;
 
         EmployeeEntity employeeEntity = employee.get();
@@ -510,61 +418,6 @@ public class LMSUtils {
         entity.setUpdatedDate(new Date());
     }
 
-    public AttendanceReq toAttendanceReq(AttendanceEntity entity) {
-        if (entity == null) return null;
-
-        AttendanceReq req = new AttendanceReq();
-
-        req.setEmployeeID(entity.getEmployee().getSltId());
-        req.setDate(entity.getDate());
-        req.setArrivalDate(entity.getArrivalDate());
-        req.setArrivalTime(entity.getArrivalTime());
-        req.setLeftTime(entity.getLeftTime());
-        req.setTerminalID(entity.getTerminalId());
-        req.setIssueDescription(entity.getIssueDescription());
-        req.setDueDateForUA(entity.getDueDateForUA());
-
-        if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
-        if(req.getPayStatus() != null) entity.setPayStatus(req.getPayStatus());
-        if(req.getResolve() != null) entity.setResolve(req.getResolve());
-        if(req.getAttendanceType() != null) entity.setAttendanceType(req.getAttendanceType());
-
-        req.setIsLate(entity.getIsLate());
-        req.setLateCover(entity.getIsLateCovered());
-        req.setIsUnAuthorized(entity.getIsUnauthorized());
-        req.setIsUnSuccessful(entity.getIsUnSuccessful());
-        req.setIssues(entity.getHasIssues());
-        req.setActive(entity.getIsActive());
-
-        return req;
-    }
-
-    public void addAdminCommentToEntity(Object entity, String adminComment, String adminId) {
-        if (adminComment == null || adminComment.isEmpty() || adminId == null) return;
-        EmployeeEntity employee = employeeRepo.findBySltId(adminId)
-                .or(() -> employeeRepo.findByEmployeeId(adminId))
-                .or(() -> employeeRepo.findByPublicId(adminId))
-                .orElseThrow(() -> new RuntimeException("Employee not found with ID: " + adminId));
-
-        AuditLog auditLog = new AuditLog();
-        auditLog.setComment(adminComment);
-        auditLog.setEmployee(employee);
-        AuditLog savedAuditLog = auditLogRepo.save(auditLog);
-
-
-        /*if (entity instanceof AttendanceEntity) {
-
-        } else if (entity instanceof MovementsEntity) {
-
-        } else if (entity instanceof LeaveEntity) {
-
-        } else if (entity instanceof AccessLogEntity) {
-
-        } else if (entity instanceof InOutEntity) {
-
-        }*/
-    }
-
     public Date stripTimeFromDate(Date dateWithTime) {
         if (dateWithTime == null) return null;
 
@@ -577,87 +430,8 @@ public class LMSUtils {
         return calendar.getTime();
     }
 
-    public void validateInOutReq(InOutReq req) {
-        if (req == null) {
-            throw new IllegalArgumentException("InOutReq cannot be null");
-        }
-
-        // Validate required fields
-        if (req.getEmployeeID() == null || req.getEmployeeID().trim().isEmpty()) {
-            throw new IllegalArgumentException("EmployeeID is required and cannot be null or empty");
-        }
-
-        if (req.getDate() == null) {
-            throw new IllegalArgumentException("Date is required and cannot be null");
-        }
-
-        if (req.getTerminalID() == null || req.getTerminalID().trim().isEmpty()) {
-            throw new IllegalArgumentException("TerminalID is required and cannot be null or empty");
-        }
-
-        // Validate business logic constraints
-        if (req.getPunchInMoa() == null && req.getPunchInEv() == null) {
-            throw new IllegalArgumentException("At least one punch time (morning or evening) must be provided");
-        }
-
-        if (req.getPunchInMoa() != null && req.getTimeMoa() == null) {
-            throw new IllegalArgumentException("TimeMoa is required when PunchInMoa is provided");
-        }
-
-        if (req.getPunchInEv() != null && req.getTimeEve() == null) {
-            throw new IllegalArgumentException("TimeEve is required when PunchInEv is provided");
-        }
-
-        // Validate logical constraints
-        if (req.getMoaning() != null && req.getMoaning() && req.getPunchInMoa() == null) {
-            throw new IllegalArgumentException("PunchInMoa is required when isMoaning is true");
-        }
-
-        if (req.getEvening() != null && req.getEvening() && req.getPunchInEv() == null) {
-            throw new IllegalArgumentException("PunchInEv is required when isEvening is true");
-        }
-
-        // Validate date consistency
-        if (req.getPunchInMoa() != null && req.getPunchInEv() != null) {
-            if (req.getPunchInMoa().after(req.getPunchInEv())) {
-                throw new IllegalArgumentException("Morning punch time cannot be after evening punch time");
-            }
-        }
-
-        // Validate InOut range (assuming it should be non-negative)
-        if (req.getInOut() != null && req.getInOut() < 0) {
-            throw new IllegalArgumentException("InOut value cannot be negative");
-        }
-    }
-
-    public void validateAccessLogEntity(AccessLogReq entity) {
-        if (entity == null) {
-            throw new IllegalArgumentException("AccessLogEntity cannot be null");
-        }
-        if (entity.getEmployeeID() == null || entity.getEmployeeID().trim().isEmpty()) {
-            throw new IllegalArgumentException("EmployeeID is required and cannot be null or empty");
-        }
-        if (entity.getLogDate() == null || entity.getLogDate().trim().isEmpty()) {
-            throw new IllegalArgumentException("LogDate is required and cannot be null or empty");
-        }
-        if (entity.getLogTime() == null || entity.getLogTime().trim().isEmpty()) {
-            throw new IllegalArgumentException("LogTime is required and cannot be null or empty");
-        }
-        if (entity.getTerminalID() == null || entity.getTerminalID().trim().isEmpty()) {
-            throw new IllegalArgumentException("TerminalID is required and cannot be null or empty");
-        }
-        if (entity.getInOut() == null || entity.getInOut().trim().isEmpty()) {
-            throw new IllegalArgumentException("InOut is required and cannot be null or empty");
-        }
-        if (entity.getReadStatus() == null || entity.getReadStatus().trim().isEmpty()) {
-            throw new IllegalArgumentException("ReadStatus is required and cannot be null or empty");
-        }
-    }
-
     public AccessLogEntity toAccessLogEntity(AccessLogReq req) {
         if (req == null) throw new IllegalArgumentException("InOutReq cannot be null");
-
-        validateAccessLogEntity(req);
 
         AccessLogEntity entity = new AccessLogEntity();
         req.setEmployeeID(req.getEmployeeID());

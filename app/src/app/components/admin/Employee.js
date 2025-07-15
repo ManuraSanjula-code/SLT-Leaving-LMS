@@ -85,13 +85,10 @@ const EmployeeList = () => {
     };
 
     const handleDeleteEmployee = (id) => {
-        console.log(`Delete employee with ID: ${id}`);
-        // Add your delete logic here
+    
     };
 
     const handleDeleteAllSelected = () => {
-        console.log(`Delete selected employees: ${selected}`);
-        // Add your delete logic here
         setSelected([]);
     };
 

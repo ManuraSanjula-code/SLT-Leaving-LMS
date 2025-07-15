@@ -25,7 +25,6 @@ export const fetchMovementRequests = createAsyncThunk(
             }
 
             const data = await response.json();
-            console.log(data)
             const filteredContent = data.content.filter(item => item !== null);
 
             return {
@@ -119,7 +118,6 @@ export const processBulkMovementRequests = createAsyncThunk(
                 approvedIds: movementIds
             };
 
-            console.log(requestBody)
             const endpoint = approved
                 ? `http://192.168.3.20:8080/lms/bulk/approved/movement/${empId}`
                 : `http://192.168.3.20:8080/lms/bulk/reject/movement/${empId}`;

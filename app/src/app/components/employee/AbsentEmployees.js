@@ -362,7 +362,6 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
                   <TableCell>Date</TableCell>
                   <TableCell>Issue Description</TableCell>
                   <TableCell>Due Date</TableCell>
-                  <TableCell>Attendance Type</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Resolution</TableCell>
                   {!isAdmin && <TableCell>Action</TableCell>}
@@ -424,13 +423,6 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                                label={formatAttendanceType(employee.attendanceType)}
-                                color={employee.attendanceType === 'ABSENT' ? 'error' : 'default'}
-                                size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
                             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                               {employee.isAbsent && (
                                   <Chip label="Absent" color="error" size="small" />
@@ -447,12 +439,18 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
                               {employee.isResolved && (
                                   <Chip label="Resolved" color="success" size="small" />
                               )}
+                              {employee.leaveStatus === 'LEAVE_REQUESTED' && (
+                                  <Chip label="LEAVE_REQUESTED" color="error" size="small" />
+                              )}
+                              {employee.leaveStatus === 'FULL_LEAVE' && (
+                                  <Chip label="FULL_LEAVE" color="error" size="small" />
+                              )}
                             </Stack>
                           </TableCell>
                           <TableCell>
-                            {employee.resolve ? (
+                            {employee.resolve || employee.leaveStatus === 'FULL_LEAVE'? (
                                 <Chip
-                                    label={formatResolveType(employee.resolve)}
+                                    label={employee.leaveStatus === 'FULL_LEAVE' ? 'FULL_LEAVE' : formatResolveType(employee.resolve)}
                                     color="info"
                                     size="small"
                                 />

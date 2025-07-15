@@ -13,7 +13,7 @@ import com.slt.peotv.lmsmangmentservice.service.impl.Check_Service_Impl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
-
+import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +38,11 @@ public interface Check_Service {
 
     public void prerequisite();
 
-    Map<String, InOutDTO> getEarliestInOut(String userId, Date date);
+    public Map<String, InOutDTO> getEarliestInOut(String userId, Date date);
 
-    List<InOutDTO> getEarliestInOutBetweenDate(String userId, Date date, Date date2);
+    public List<InOutDTO> getEarliestInOutBetweenDate(String userId, Date date, Date date2);
 
-    List<InOutDTO> getEarliestInOutByDate(String userId, Date date);
+    public List<InOutDTO> getEarliestInOutByDate(String userId, Date date);
 
     public void reportAttendance(InOutEntity inOut, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay,Boolean absent, Date date);
 
@@ -58,13 +58,17 @@ public interface Check_Service {
 
     public void getAllTheInOutRecordsFromSLT();
 
-    NoPayEntity saveNoPayEntity(EmployeeEntity employee,
+    public NoPayEntity saveNoPayEntity(EmployeeEntity employee,
                                 AttendanceEntity attendanceEntity,
                                 Check_Service_Impl.NoPayRequest noPayRequest,
                                 Date actualDate);
 
-    Page<InOutDTO> getAllInOut(String employeeID, int pageNumber, int pageSize);
+    public Page<InOutDTO> getAllInOut(String employeeID, int pageNumber, int pageSize);
 
-    List<InOutDTO> getAllInOut(String employeeID, Date date);
+    public List<InOutDTO> getAllInOut(String employeeID, Date date);
+
+    public AccessLogEntity getTodayEarliestAccessLogsByEmployee(String employeeId);
+    public AccessLogEntity getTodayLatestAccessLogsByEmployee(String employeeId);
+
     public Check_Service_Impl.NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
 }

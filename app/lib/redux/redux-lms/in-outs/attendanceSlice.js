@@ -38,7 +38,6 @@ export const fetchAttendanceData = createAsyncThunk(
             }
 
             const data = await response.json();
-            console.log(data)
             return data;
         } catch (error) {
             return rejectWithValue(`Failed to fetch attendance data: ${error.message}`);
