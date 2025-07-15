@@ -131,14 +131,22 @@ public class AttendanceService {
                         /* Duration duration = Duration.between(startTime, endTime);
                         long hoursLate = duration.toHours();*/
 
-                        if((timeOut != null) && (startTime.isBefore(timeIn) && endTime.isAfter(timeOut)) ) {
-                            attendance.setAttendanceType(AttendanceType.FULL_DAY);
-                        }
-
-                        if (!startTime.isBefore(timeIn)) {
+                        if (startTime.isAfter(timeIn)) {
                             attendance.setIsLate(true);
                             attendance.setHasIssues(true);
                         }
+
+                        if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
+                            attendance.setIsUnauthorized(true);
+                            attendance.setHasIssues(true);
+                            attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
+                        }
+
+                        if(timeOut != null) {
+                            if((startTime.isBefore(timeIn) && endTime.isAfter(timeOut)))
+                                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                        }
+
 
                         long lateMinutes = Duration.between(startTime, endTime).toMinutes();
                         if (lateMinutes > HALF_DAY_THRESHOLD_HOURS * 60) {
@@ -149,11 +157,6 @@ public class AttendanceService {
                             attendance.setAttendanceType(AttendanceType.FULL_DAY);
                         }
 
-                        if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
-                            attendance.setIsUnauthorized(true);
-                            attendance.setHasIssues(true);
-                            attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
-                        }
 
                         attendance.setPublicId(UUID.randomUUID().toString());
                         attendance.setEmployeeId(cleanEmId);
@@ -162,12 +165,14 @@ public class AttendanceService {
 
                         attendance.setArrivalDate(inOut.getPunchTime());
                         attendance.setArrivalTime(timeIn);
-                        attendance.setLeftTime(timeOut);
+                        if(timeOut != null)
+                            attendance.setLeftTime(timeOut);
 
-                        attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
-                        if(startTime.isAfter(inOut.getPunchTypeTime())){
-                            attendance.setIsLate(true);
-                        }
+                        attendance.setTerminalId(inOut.getTerminalId());
+
+                        if(inOutLatest != null)
+                            attendance.setTerminalId(attendance.getTerminalId() + " - " + inOutLatest.getTerminalId());
+
                         attendancesToSave.add(attendance);
 
                     } catch (Exception e) {
@@ -634,15 +639,6 @@ public class AttendanceService {
 
             Attendance attendance = buildBaseAttendance(employee, team, processDate, shiftTime, isRotationShift);
 
-            if(inOut == null){
-                attendance.setHasIssues(true);
-                attendance.setAttendanceType(AttendanceType.ABSENT);
-                attendance.setDate(processDate);
-                attendance.setArrivalDate(processDate);
-                employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, shiftTime, isRotationShift));
-                return attendance;
-            }
-
             if((inOut == null && inOutLatest != null) || (inOut != null && inOutLatest == null)){
                 attendance.setIsUnauthorized(true);
                 attendance.setHasIssues(true);
@@ -650,23 +646,24 @@ public class AttendanceService {
             }
 
             attendance.setArrivalDate(inOut.getPunchTime());
-            attendance.setTerminalId(inOut.getTerminalId() + " - " + inOutLatest.getTerminalId());
+            attendance.setArrivalTime(inOut.getPunchTypeTime());
+            attendance.setTerminalId(inOut.getTerminalId());
 
 
             LocalTime actualStartTime = inOut.getPunchTypeTime();
 
             LocalTime actualEndTime = null;
-            if(actualEndTime != null) actualEndTime = inOutLatest.getPunchTypeTime();
+            if(inOutLatest != null) actualEndTime = inOutLatest.getPunchTypeTime();
 
-            attendance.setArrivalTime(inOut.getPunchTypeTime());
 
             if(expectedStartTime.isAfter(actualStartTime)){
                 attendance.setIsLate(true);
                 attendance.setHasIssues(true);
             }
 
-            if((actualEndTime != null) && (expectedStartTime.isBefore(actualStartTime) && expectedEndTime.isAfter(actualEndTime)) ){
-                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+            if((actualEndTime != null)){
+                if((expectedStartTime.isBefore(actualStartTime) && expectedEndTime.isAfter(actualEndTime)))
+                    attendance.setAttendanceType(AttendanceType.FULL_DAY);
             }
 
             long lateMinutes = Duration.between(expectedStartTime, actualStartTime).toMinutes();
@@ -680,7 +677,12 @@ public class AttendanceService {
                     attendance.setAttendanceType(AttendanceType.FULL_DAY);
             }*/
 
-            if(inOutLatest != null) attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+            if(actualEndTime != null)
+                attendance.setLeftTime(inOutLatest.getPunchTypeTime());
+
+            if(inOutLatest != null){
+                attendance.setTerminalId(attendance.getTerminalId() + " - " + inOutLatest.getTerminalId());
+            }
 
             employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, shiftTime, isRotationShift));
             return attendance;
