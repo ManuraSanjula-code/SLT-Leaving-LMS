@@ -931,24 +931,30 @@ public class Check_Service_Impl implements Check_Service {
 
         /// ================================ employee who are absent
         getAbsentEmployeesToday().forEach(employee -> {
-            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent
-                    .getUserLeaveTypeRemaining(employee);
-            boolean nopay = userLeaveCategoryRemaining.stream().allMatch(userLeaveTypeRemaining -> userLeaveTypeRemaining.getRemainingLeaves() < 1);
-            reportAttendance(employee,false,false, false, false, false, false, false, false, false, false, true, nopay, true, helper.getYesterdayDate());
+            reportAttendance(employee,false,false, false, false, false, false, false, false, false, false, true, false, true, helper.getYesterdayDate());
         });
     }
 
     public List<String> getAbsentEmployeesToday() {
+        // Get all employees
         List<EmployeeEntity> allEmployees = (List<EmployeeEntity>) employeeRepo.findAll();
 
+        // Get yesterday's records
         List<InOutEntity> todayRecords = inOutRepo.findByDate(helper.getYesterdayDate());
-        Set<String> presentEmployeeIds = todayRecords.stream().map(InOutEntity::getEmployeeId)
+
+        // Extract present employee IDs (using the correct field name from InOutEntity)
+        Set<String> presentEmployeeIds = todayRecords.stream()
+                .map(InOutEntity::getEmployeeId)
                 .collect(Collectors.toSet());
 
-        return allEmployees.stream().map(EmployeeEntity::getSltId)
-                .filter(presentEmployeeIds::contains)
+        // Return employees whose IDs are NOT in presentEmployeeIds
+        return allEmployees.stream()
+                .filter(employee -> !employee.getRoaster())
+                .map(EmployeeEntity::getSltId)
+                .filter(sltId -> !presentEmployeeIds.contains(sltId))
                 .collect(Collectors.toList());
     }
+
 
     @Override
     public void reportAttendance(InOutEntity inout, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,
@@ -1104,6 +1110,13 @@ public class Check_Service_Impl implements Check_Service {
     }
 
     @Override
+    public void reportAttendanceLeave(String employeeID, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,
+                                      Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess,
+                                      Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent, Date date){
+        reportAttendance(employeeID,true,false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
+    }
+
+    @Override
     public void reportAttendance(String employeeID, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful,
                                  Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess,
                                  Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent, Date date) {
@@ -1117,17 +1130,15 @@ public class Check_Service_Impl implements Check_Service {
                 .or(() -> employeeRepo.findByPublicId(employeeID))
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        Optional<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDate(employee, helper.getYesterdayDate());
-        if(leave.isPresent() || !swap) return;
+        List<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, helper.getYesterdayDate(), helper.getYesterdayDate());
+
+        if (!swap && !leave.isEmpty()) return;
 
         if (attendanceRepo.existsByEmployeeAndDate(employee, helper.getYesterdayDate())) {
-            logger.info("Attendance already exists for employee: {} on date: {}. Skipping.",
-                    employee.getEmployeeId(), helper.getYesterdayDate());
+            logger.info("Attendance already exists for employee: {} on date: {}. Skipping.", employee.getEmployeeId(), helper.getYesterdayDate());
             return;
         }
-        if (Objects.isNull(employee.getRoaster())) {
-            employee.setRoaster(false);
-        }
+
 
         if (employee.getRoaster()) {
             logger.info("Employee {} is on roaster. Skipping attendance reporting.", employee.getEmployeeId());
@@ -1592,8 +1603,8 @@ public class Check_Service_Impl implements Check_Service {
     @Retryable(value = {DataAccessException.class},
             maxAttempts = MAX_RETRY_ATTEMPTS,
             backoff = @Backoff(delay = 1000))
-    public void getAllTheInOutRecordsFromSLT() {
-        final String methodName = "getAllTheInOutRecordsFromSLT";
+    public void getAllTheInOutRecordsFromSLT_YES() {
+        final String methodName = "getAllTheInOutRecordsFromSLT_YES";
         final String url = "jdbc:mysql://localhost:3306/attendance";
         final String username = "root";
         final String password = "User@123";
@@ -1601,6 +1612,58 @@ public class Check_Service_Impl implements Check_Service {
         String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
                 "FROM accesslog_archive " +
                 "WHERE LogDate = DATE_FORMAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), '%d/%m/%Y')";
+
+        List<AccessLogEntity> accessLogEntities = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            logger.info("{}: Attempting to connect to database", methodName);
+            connection = DriverManager.getConnection(url, username, password);
+            statement = connection.prepareStatement(sql);
+            resultSet = statement.executeQuery();
+
+            logger.info("{}: Database connection established successfully", methodName);
+
+            int recordCount = 0;
+            while (resultSet.next()) {
+                try {
+                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
+                    accessLogEntities.add(accessLog);
+                    recordCount++;
+                } catch (SQLException e) {
+                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
+                } catch (Exception e) {
+                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
+                }
+            }
+
+            processRetrievedRecords(accessLogEntities, methodName);
+
+        } catch (SQLException e) {
+            logErrorWithStackTrace("Database connection failed", e, methodName);
+        } catch (Exception e) {
+            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
+        } finally {
+            closeDatabaseResources(connection, statement, resultSet, methodName);
+        }
+    }
+
+    @Override
+    @Transactional
+    @Retryable(value = {DataAccessException.class},
+            maxAttempts = MAX_RETRY_ATTEMPTS,
+            backoff = @Backoff(delay = 1000))
+    public void getAllTheInOutRecordsFromSLT_TOD() {
+        final String methodName = "getAllTheInOutRecordsFromSLT_TOD";
+        final String url = "jdbc:mysql://localhost:3306/attendance";
+        final String username = "root";
+        final String password = "User@123";
+
+        String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
+                "FROM accesslog_archive " +
+                "WHERE LogDate = DATE_FORMAT(CURRENT_DATE(), '%d/%m/%Y')";
 
         List<AccessLogEntity> accessLogEntities = new ArrayList<>();
         Connection connection = null;

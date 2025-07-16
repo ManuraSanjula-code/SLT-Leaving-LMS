@@ -26,10 +26,7 @@ import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -80,7 +77,7 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<AttendanceDTO> getAllAttendance(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findAll(pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
@@ -185,6 +182,7 @@ public class LMS_Service_impl implements LMS_Service {
         latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
 
         if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
+        if(dashBoardRes.getLastPunch() == null) dashBoardRes.setLastPunch("NOT FOUND");
 
         dashBoardRes.setTotalAttendance(total);
         dashBoardRes.setRemainLeaveDistribution(remainLeaveDistribution);
@@ -197,35 +195,35 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByEmployee(helper.getEmployeeById(userId), pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrue(pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrue(pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnByUserId(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrueAndEmployee(helper.getEmployeeById(userId), pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnAByUserId(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrueAndEmployee(helper.getEmployeeById(userId), pageable);
         return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
     }
@@ -264,15 +262,14 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
         Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployee(helper.getEmployeeById(employeeId), pageable);
         return allByUser.map(lmsUtils::toMovementDTO);
     }
 
     @Override
     public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
         Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(userId);
         if (employee.isEmpty()) {
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
@@ -294,7 +291,7 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<MovementDTO> getAllMovements(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
         Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
         return allByUser.map(lmsUtils::toMovementDTO);
     }
@@ -361,15 +358,17 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public Page<NopayDTO> getAllNoPayByUser(String employeeId, int page, int size) {
         EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(employeeId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
-        Pageable pageable = PageRequest.of(page, size);
-        Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate")
+                .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
+        Pageable pageable = PageRequest.of(page, size, sort);        Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
         return byUser.map(lmsUtils::toNopayDTO);
     }
 
     @Override
     public Page<NopayDTO> getAllNoPays(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate")
+                .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
+        Pageable pageable = PageRequest.of(page, size, sort);        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
     }
 
     @Override
@@ -393,16 +392,17 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size) {
         EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(userId)
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
-        Pageable pageable = PageRequest.of(page, size);
-        Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
+                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
+        Pageable pageable = PageRequest.of(page, size, sort);        Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
         return leaveEntityPage.map(lmsUtils::toLeaveDTO);
-
     }
 
     @Override
     public Page<LeaveDTO> getAllLeaves(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
+                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
+        Pageable pageable = PageRequest.of(page, size, sort);        Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
         return leaveEntityPage.map(lmsUtils::toLeaveDTO);
 
     }
@@ -606,8 +606,9 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size) {
         if (userId == null || userId.trim().isEmpty())
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        Pageable pageable = PageRequest.of(page, size);
-        Optional<EmployeeEntity> em = helper.getEmployeeByIdV2(userId);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
+                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
+        Pageable pageable = PageRequest.of(page, size, sort);        Optional<EmployeeEntity> em = helper.getEmployeeByIdV2(userId);
         if (em.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         return em.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(componetAdmins -> {
@@ -680,14 +681,14 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<AttendanceDTO> getAllAbsent(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         return attendanceRepo.findByAttendanceType(AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAbsentByUser(int page, int size, String user) {
         EmployeeEntity employee = helper.getEmployeeById(user);
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         return attendanceRepo.findByEmployeeAndAttendanceType(employee, AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
     }
 

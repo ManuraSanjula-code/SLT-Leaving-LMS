@@ -21,7 +21,7 @@ public class Sync {
     private final AccessLogService accessLogService;
     private final AttendanceRepo attendanceRepo;
 
-    @Scheduled(cron = "00 07 14  * * ?")
+    @Scheduled(cron = "00 23 09  * * ?")
     public void getLogs() throws ParseException {
         /*LocalDate currentDate = LocalDate.now();
 

@@ -82,6 +82,11 @@ public class Helper {
         return removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
     }
 
+    public Date getTodayDate() {
+        LocalDate yesterday = LocalDate.now();
+        return removeTimeFromDate(Date.from(yesterday.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+    }
+
     public Time parseToSqlTime(String timeStr) {
         if (timeStr == null || timeStr.isEmpty()) {
             return null;

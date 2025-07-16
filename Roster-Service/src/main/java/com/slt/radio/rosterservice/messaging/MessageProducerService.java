@@ -17,6 +17,7 @@ public class MessageProducerService {
     }
     
     public void sendMessage(String destination, Attendance attendance) {
+        attendance.setIsManual(true);
         jmsTemplate.convertAndSend(destination, attendance, message -> {
             System.out.println(message);
             message.setStringProperty("_type", "com.slt.peotv.lmsmangmentservice.messaging.Attendance");

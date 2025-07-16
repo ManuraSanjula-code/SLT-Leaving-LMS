@@ -106,6 +106,7 @@ public class AttendanceService {
                                 processDate
                         );
                         Attendance attendance = new Attendance();
+                        attendance.setIsManual(true);
 
                         if (earliestPunchIn.isEmpty()) {
                             log.debug("No attendance data for employee: {}", cleanEmId);
@@ -648,6 +649,7 @@ public class AttendanceService {
             attendance.setArrivalDate(inOut.getPunchTime());
             attendance.setArrivalTime(inOut.getPunchTypeTime());
             attendance.setTerminalId(inOut.getTerminalId());
+            attendance.setIsManual(true);
 
 
             LocalTime actualStartTime = inOut.getPunchTypeTime();

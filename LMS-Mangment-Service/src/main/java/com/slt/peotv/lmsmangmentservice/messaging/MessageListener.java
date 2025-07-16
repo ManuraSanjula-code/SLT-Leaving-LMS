@@ -6,8 +6,10 @@ import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
+import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
@@ -20,8 +22,11 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import java.sql.Time;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Optional;
+import java.util.List;
+import com.slt.peotv.lmsmangmentservice.utils.service.AttendanceProcessingService;
 
 @Component
 public class MessageListener {
@@ -41,6 +46,12 @@ public class MessageListener {
 
     @Autowired
     private LeaveManagementService leaveManagementService;
+
+    @Autowired
+    private AttendanceProcessingService attendanceProcessingService;
+
+    @Autowired
+    private InOutRepo inOutRepo;
 
     @JmsListener(destination = "user.queue")
     public void receiveMessage(@Payload LMSUser message) throws JMSException {
@@ -107,7 +118,9 @@ public class MessageListener {
             if (attendance.getAttendanceType() != null) {
                 attendanceEntity.setAttendanceType(attendance.getAttendanceType());
             }
-
+            if(attendance.getAttendanceType().equals(AttendanceType.ABSENT)){
+                attendanceEntity.setDueDateForUA(helper.getDueDate());
+            }
             if (attendance.getLate() != null) {
                 attendanceEntity.setIsLate(attendance.getLate());
             }
@@ -116,6 +129,7 @@ public class MessageListener {
             }
             if (attendance.getUnauthorized() != null) {
                 attendanceEntity.setIsUnauthorized(attendance.getUnauthorized());
+                attendanceEntity.setDueDateForUA(helper.getDueDate());
             }
             if (attendance.getUnSuccessful() != null) {
                 attendanceEntity.setIsUnSuccessful(attendance.getUnSuccessful());
@@ -134,14 +148,22 @@ public class MessageListener {
             if (attendance.getIssueDescription() != null) {
                 attendanceEntity.setIssueDescription(attendance.getIssueDescription());
             }
-
-            attendanceEntity.setEtlRunTime(new Date());
-
             if (attendance.getViaMovement() != null) {
                 attendanceEntity.setViaMovement(attendance.getViaMovement());
             }
             if (attendance.getViaLeave() != null) {
                 attendanceEntity.setViaLeave(attendance.getViaLeave());
+            }
+
+            if(attendance.getAttendanceType().equals(AttendanceType.ABSENT) && attendance.getArrivalDate() != null) {
+                List<LeaveEntity> leaveEntities = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual
+                        (employeeEntity, attendanceEntity.getArrivalDate(), helper.removeTimeFromDate(new Date()));
+
+                if(leaveEntities != null && !leaveEntities.isEmpty()) {
+                    for (LeaveEntity leave : leaveEntities){
+                        attendanceProcessingService.processEmployeeLeaveRoaster(leave.getEmployee(), leave, helper.getDateWithoutTime());
+                    }
+                }
             }
 
             /* if (attendance.getArrivalDate() != null) {
@@ -167,11 +189,11 @@ public class MessageListener {
                 return;
             }
 
-            if (attendanceRepo.existsByEmployeeAndDate(employeeEntity, attendanceEntity.getDate())) {
+            /* if (attendanceRepo.existsByEmployeeAndDate(employeeEntity, attendanceEntity.getDate())) {
                 logger.info("Attendance already exists for employee: {} on date: {}. Skipping.",
                         employeeEntity.getEmployeeId(), helper.getYesterdayDate());
                 return;
-            }
+            } */
 
             boolean attendanceExists = attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(
                     employeeEntity,
@@ -185,11 +207,45 @@ public class MessageListener {
                 return;
             }
 
+
+
+
+            attendanceEntity.setEtlRunTime(new Date());
             attendanceEntity.setIsManual(true);
-            attendanceRepo.save(attendanceEntity);
+            AttendanceEntity save = attendanceRepo.save(attendanceEntity);
+
+            updateInOutRelationships(employeeEntity.getSltId(), save);
         }
     }
 
+    private void updateInOutRelationships(String employeeId, AttendanceEntity attendance) {
+        try{
+            List<InOutEntity> mo = inOutRepo
+                    .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
+                            employeeId,
+                            attendance.getArrivalDate(),
+                            attendance.getArrivalTime(),
+                            attendance.getTerminalId());
+
+            List<InOutEntity> eve = inOutRepo
+                    .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
+                            employeeId,
+                            attendance.getArrivalDate(),
+                            attendance.getArrivalTime(),
+                            attendance.getTerminalId());
+
+            List<InOutEntity> allInOut = new ArrayList<>();
+            allInOut.addAll(mo);
+            allInOut.addAll(eve);
+
+            for (InOutEntity inOutEntity : allInOut) {
+                inOutEntity.setAttendance(attendance);
+                inOutRepo.save(inOutEntity);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
     private void updateEmployeeEntityFromMessage(EmployeeEntity employeeEntity, LMSUser message) {
         employeeEntity.setFirstName(message.getFirstName());
         employeeEntity.setLastName(message.getLastName());

@@ -30,6 +30,7 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
     Optional<AttendanceEntity> findByPublicId(String publicId);
     boolean existsByEmployeeAndDate(EmployeeEntity Employee, Date date);
     boolean existsByEmployeeAndArrivalDateAndArrivalTime(EmployeeEntity employee, Date arrivalDate, Time arrivalTime);
+    boolean existsByEmployeeAndArrivalDate(EmployeeEntity employee, Date arrivalDate);
     Optional<AttendanceEntity> findByEmployeeAndDate(EmployeeEntity employee, Date date);
 
     @Query("SELECT a FROM AttendanceEntity a WHERE a.employee = :employee AND a.date = :date AND a.isActive = true")

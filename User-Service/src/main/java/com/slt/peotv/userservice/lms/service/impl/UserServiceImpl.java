@@ -188,7 +188,7 @@ public class UserServiceImpl implements UserService {
         lmsUser.setSltId(storedUserDetails.getSltId());
         lmsUser.setJoin_date(storedUserDetails.getJoin_date());
         lmsUser.setPublicId(storedUserDetails.getUserId());
-        lmsUser.setRoaster(storedUserDetails.getRoaster() && (storedUserDetails.getIsSltEmp() == 0));
+        lmsUser.setRoaster(storedUserDetails.getRoaster());
         lmsUser.setGender(storedUserDetails.getGender());
 
         messageProducerService.sendMessage("user.queue", lmsUser);

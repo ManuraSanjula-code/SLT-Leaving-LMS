@@ -49,14 +49,15 @@ public interface Check_Service {
     public void reportAttendance(InOutEntity moa, InOutEntity eve, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay,Boolean absent, Date date);
 
     public void reportAttendance(String employeeID, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent,Date date);
-
+    public void reportAttendanceLeave(String employeeID, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent,Date date);
     public void reportAbsent(List<String> absentEmployeesToday);
 
     public void requestALeave(LeaveReq req, String user, Authentication authentication, HttpServletRequest request);
 
     public void processLeave(String leaveId, String userId);
 
-    public void getAllTheInOutRecordsFromSLT();
+    public void getAllTheInOutRecordsFromSLT_YES();
+    public void getAllTheInOutRecordsFromSLT_TOD();
 
     public NoPayEntity saveNoPayEntity(EmployeeEntity employee,
                                        AttendanceEntity attendanceEntity,
