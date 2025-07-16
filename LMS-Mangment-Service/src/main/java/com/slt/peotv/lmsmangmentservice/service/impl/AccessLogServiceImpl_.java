@@ -1,4 +1,4 @@
-package com.slt.peotv.lmsmangmentservice.service.impl;
+/* package com.slt.peotv.lmsmangmentservice.service.impl;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.InOutType;
@@ -23,10 +23,11 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
-public class AccessLogServiceImpl implements AccessLogService {
+public class AccessLogServiceImpl_ implements AccessLogService {
 
     private static final Logger logger = LoggerFactory.getLogger(AccessLogServiceImpl.class);
     private static final LocalTime NOON = LocalTime.NOON;
@@ -77,10 +78,7 @@ public class AccessLogServiceImpl implements AccessLogService {
                     successCount.get(), failureCount.get());
         } catch (Exception e) {
             logger.error("Unexpected error in processLogEntry", e);
-            /*
-                throw new RuntimeException("Processing failed", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Processing failed", e);
         }
     }
 
@@ -106,10 +104,7 @@ public class AccessLogServiceImpl implements AccessLogService {
             saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(), log.getTerminalId(), log);
         } catch (Exception e) {
             logger.error("Error processing log for employee {}", log.getEmployeeId(), e);
-            /*
-                throw new RuntimeException("Log processing failed", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Log processing failed", e);
         }
     }
 
@@ -124,10 +119,7 @@ public class AccessLogServiceImpl implements AccessLogService {
             logger.info("Main processing completed successfully in {} ms", duration);
         } catch (Exception e) {
             logger.error("Error in main access log processing", e);
-            /*
-                throw new RuntimeException("Main processing failed", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Main processing failed", e);
         }
     }
 
@@ -153,10 +145,7 @@ public class AccessLogServiceImpl implements AccessLogService {
             saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(), log.getTerminalId(), log);
         } catch (Exception e) {
             logger.error("Error processing log entry for employee {}", log.getEmployeeId(), e);
-            /*
-                throw new RuntimeException("Log processing failed", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Log processing failed", e);
         }
     }
 
@@ -222,34 +211,16 @@ public class AccessLogServiceImpl implements AccessLogService {
         }
 
         try {
-            Date date = inputDateFormat.parse(logDate);
-
-            // FIXED: Check for existing records using the correct constraint fields
-            // The unique constraint is on: employee_id, punch_time, punch_type_time, terminalId
-            List<InOutEntity> existingRecords = inOutRepository
-                    .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
-                            employeeID,
-                            date,  // This is punch_time in the constraint
-                            punchTime,  // This is punch_type_time in the constraint
-                            terminalId);
-
-            if (!existingRecords.isEmpty()) {
-                logger.debug("Record already exists for employee: {}, punch_time: {}, punch_type_time: {}, terminal: {}. Skipping save.",
-                        employeeID, date, punchTime, terminalId);
-                return;
-            }
-
             InOutEntity inOut = new InOutEntity();
             inOut.setTerminalId(terminalId);
             LocalTime punchLocalTime = LocalTime.parse(punchTime.toString());
             boolean isMorning = punchLocalTime.isBefore(NOON);
 
+            Date date = inputDateFormat.parse(logDate);
+
             inOut.setEmployeeId(employeeID);
             inOut.setDate(helper.getYesterdayDate());
             inOut.setEtlRunTime(new Date());
-            inOut.setPunchTime(date);  // This becomes punch_time in the constraint
-            inOut.setPunchTypeTime(punchTime);  // This becomes punch_type_time in the constraint
-
             String normalizedInout = inout.trim().toUpperCase();
 
             switch (normalizedInout) {
@@ -260,6 +231,8 @@ public class AccessLogServiceImpl implements AccessLogService {
                     } else {
                         inOut.setInOutType(InOutType.EVENING_IN);
                     }
+                    inOut.setPunchTypeTime(punchTime);
+                    inOut.setPunchTime(date);
                     logger.debug("Prepared IN record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
                     break;
@@ -271,6 +244,8 @@ public class AccessLogServiceImpl implements AccessLogService {
                     } else {
                         inOut.setInOutType(InOutType.EVENING_OUT);
                     }
+                    inOut.setPunchTypeTime(punchTime);
+                    inOut.setPunchTime(date);
                     logger.debug("Prepared OUT record for employee: {}, date: {}, time: {}",
                             employeeID, logDate, punchTime);
                     break;
@@ -282,6 +257,19 @@ public class AccessLogServiceImpl implements AccessLogService {
                     throw iae;
             }
 
+            Optional<InOutEntity> existingRecord = inOutRepository
+                    .findByEmployeeIdAndDateAndPunchTypeTimeAndTerminalId(
+                            employeeID,
+                            inOut.getDate(),
+                            punchTime,
+                            terminalId);
+
+            if (existingRecord.isPresent()) {
+                logger.debug("Record already exists for employee: {}, date: {}, time: {}, terminal: {}. Skipping save.",
+                        employeeID, logDate, punchTime, terminalId);
+                return;
+            }
+
             inOut.setCreatedDate(new Date());
             inOut.setUpdatedDate(new Date());
 
@@ -290,36 +278,23 @@ public class AccessLogServiceImpl implements AccessLogService {
                 logger.debug("Successfully saved InOut record with ID: {} for employee: {}",
                         savedInOut.getId(), employeeID);
             } catch (DataIntegrityViolationException e) {
-                logger.warn("Duplicate entry detected for employee: {}, punch_time: {}, punch_type_time: {}, terminal: {}",
-                        employeeID, date, punchTime, terminalId);
-                // Don't rethrow - this is expected behavior for duplicates
+                logger.warn("Duplicate entry detected for employee: {}, date: {}, time: {}",
+                        employeeID, logDate, punchTime, e);
             } catch (DataAccessException e) {
                 logger.error("Database error while saving record for employee {}", employeeID, e);
                 throw e;
             } catch (Exception e) {
                 logger.error("Unexpected error while saving record for employee {}", employeeID, e);
-                /*
-                    throw new RuntimeException("Record save failed", e);
-                */
-                e.printStackTrace();
+                throw new RuntimeException("Record save failed", e);
             }
-            /*
-                        throw new RuntimeException("Date parsing error", e);
-            */
 
         } catch (ParseException e) {
             logger.error("Failed to parse date while saving InOut record for employee {}: {}",
                     employeeID, logDate, e);
-            /*
-                throw new RuntimeException("Date parsing error", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Date parsing error", e);
         } catch (Exception e) {
             logger.error("Unexpected error while saving InOut record for employee {}", employeeID, e);
-            /*
-                throw new RuntimeException("Failed to save InOut record", e);
-            */
-            e.printStackTrace();
+            throw new RuntimeException("Failed to save InOut record", e);
         }
     }
-}
+} */

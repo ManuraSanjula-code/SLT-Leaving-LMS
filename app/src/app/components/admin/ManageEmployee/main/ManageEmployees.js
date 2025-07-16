@@ -143,8 +143,11 @@ const ManageEmployees = React.memo(() => {
 
             const matchesSearch =
                 searchQuery.trim() === "" ||
+                employee.sltId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 employee.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 employee.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 employee.roles?.some((role) => role.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 employee.sections?.some((section) => section.section?.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 employee.profiles?.some((profile) => profile.name?.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -194,10 +197,10 @@ const ManageEmployees = React.memo(() => {
 
     const renderForm = useCallback(() => {
         switch (dialogType) {
-            case 'section': return <SectionForm onSubmit={handleSubmit}/>;
-            case 'profile': return <ProfilesForm onSubmit={handleSubmit}/>;
-            case 'authority': return <AuthorityForm onSubmit={handleSubmit}/>;
-            case 'role': return <RoleForm onSubmit={handleSubmit}/>;
+            case 'section': return <SectionForm onSubmit={handleSubmit} />;
+            case 'profile': return <ProfilesForm onSubmit={handleSubmit} />;
+            case 'authority': return <AuthorityForm onSubmit={handleSubmit} />;
+            case 'role': return <RoleForm onSubmit={handleSubmit} />;
             default: return null;
         }
     }, [dialogType, handleSubmit]);
@@ -290,10 +293,10 @@ const ManageEmployees = React.memo(() => {
                     horizontal: 'left',
                 }}
             >
-                <MenuItem onClick={()=> handleMenuItemClick(`/all-movements/${userId}`)}>Movements</MenuItem>
-                <MenuItem onClick={()=> handleMenuItemClick(`/all-leaves/${userId}`)}>Leave</MenuItem>
-                <MenuItem onClick={()=> handleMenuItemClick(`/single-employee-activities/${userId}`)}>Attendance</MenuItem>
-                <MenuItem onClick={()=> handleMenuItemClick(`/in-outs/${userId}`)}>In-Outs</MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick(`/all-movements/${userId}`)}>Movements</MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick(`/all-leaves/${userId}`)}>Leave</MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick(`/single-employee-activities/${userId}`)}>Attendance</MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick(`/in-outs/${userId}`)}>In-Outs</MenuItem>
             </Menu>
 
             <ConfirmationDialog
@@ -321,36 +324,36 @@ const ManageEmployees = React.memo(() => {
             </EntityDialog>
 
             <Container>
-                <CssBaseline/>
-                <Box sx={{mt: 4}}>
+                <CssBaseline />
+                <Box sx={{ mt: 4 }}>
                     <Typography variant="h4" gutterBottom>
                         Manage Employees
                     </Typography>
 
                     {isLoading && (
-                        <Box sx={{display: "flex", justifyContent: "center", my: 4}}>
-                            <CircularProgress/>
-                            <Typography variant="body1" sx={{ml: 2}}>
+                        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+                            <CircularProgress />
+                            <Typography variant="body1" sx={{ ml: 2 }}>
                                 Loading employees...
                             </Typography>
                         </Box>
                     )}
 
                     {error && (
-                        <Alert severity="error" sx={{mb: 2}}>
+                        <Alert severity="error" sx={{ mb: 2 }}>
                             {error}
                         </Alert>
                     )}
 
-                    <Grid container spacing={2} justifyContent="flex-end" sx={{mb: 2}}>
+                    <Grid container spacing={2} justifyContent="flex-end" sx={{ mb: 2 }}>
                         <Grid item>
                             <Button
                                 variant="contained"
                                 onClick={handleRefresh}
-                                sx={{mr: 2}}
+                                sx={{ mr: 2 }}
                                 disabled={isLoading}
                             >
-                                <Typography component="span" sx={{fontSize: "30px", lineHeight: 1}}>
+                                <Typography component="span" sx={{ fontSize: "30px", lineHeight: 1 }}>
                                     ⟲
                                 </Typography>
                             </Button>
@@ -359,10 +362,10 @@ const ManageEmployees = React.memo(() => {
                             <Button
                                 variant="contained"
                                 onClick={handleDialogOpen}
-                                sx={{mr: 2}}
+                                sx={{ mr: 2 }}
                                 disabled={isLoading}
                             >
-                                <Typography component="span" sx={{fontSize: "30px", lineHeight: 1}}>
+                                <Typography component="span" sx={{ fontSize: "30px", lineHeight: 1 }}>
                                     +
                                 </Typography>
                             </Button>
@@ -375,11 +378,11 @@ const ManageEmployees = React.memo(() => {
                         fullWidth
                         defaultValue={searchQuery}
                         onChange={handleSearchChange}
-                        sx={{mb: 2}}
+                        sx={{ mb: 2 }}
                         disabled={isLoading}
                     />
 
-                    <Box sx={{display: "flex", justifyContent: "space-between", mb: 2, gap: 2}}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, gap: 2 }}>
                         <FormControl fullWidth disabled={isLoading}>
                             <InputLabel>Roles</InputLabel>
                             <Select
@@ -459,12 +462,12 @@ const ManageEmployees = React.memo(() => {
                                                     onClick={() => handleOpenDialog(employee)}
                                                     disabled={isLoading || deleteLoading}
                                                 >
-                                                    <EditIcon/>
+                                                    <EditIcon />
                                                 </IconButton>
                                                 <IconButton
                                                     onClick={(event) => handleClick(event, employee.userId)}
                                                 >
-                                                    <MoreHorizIcon/>
+                                                    <MoreHorizIcon />
                                                 </IconButton>
                                             </TableCell>
                                         </TableRow>
@@ -480,7 +483,7 @@ const ManageEmployees = React.memo(() => {
                         </Table>
                     </TableContainer>
 
-                    <Box sx={{display: "flex", justifyContent: "space-between", mt: 2}}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
                         <Button
                             variant="contained"
                             onClick={() => dispatch(setCurrentPage(Math.max(currentPage - 1, 0)))}

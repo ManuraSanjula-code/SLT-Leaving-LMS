@@ -56,7 +56,8 @@ public interface Check_Service {
 
     public void processLeave(String leaveId, String userId);
 
-    public void getAllTheInOutRecordsFromSLT();
+    public void getAllTheInOutRecordsFromSLT_YES();
+    public void getAllTheInOutRecordsFromSLT_TOD();
 
     public NoPayEntity saveNoPayEntity(EmployeeEntity employee,
                                 AttendanceEntity attendanceEntity,

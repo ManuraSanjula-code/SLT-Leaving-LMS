@@ -21,8 +21,14 @@ public class Sync {
     private final AttendanceRepo attendanceRepo;
 
     @Scheduled(cron = "0 0 * * * ?")
-    public void getLogs_() throws ParseException {
-        check_Service.getAllTheInOutRecordsFromSLT();
+    public void getLogs_YES_() throws ParseException {
+        check_Service.getAllTheInOutRecordsFromSLT_YES();
+        accessLogService.main();
+    }
+
+    @Scheduled(cron = "0 0 */2 * * ?")
+    public void getLogs_TOD_() throws ParseException {
+        check_Service.getAllTheInOutRecordsFromSLT_TOD();
         accessLogService.main();
     }
 
@@ -42,7 +48,7 @@ public class Sync {
         check_Service.main();
     }
 
-    
+
 
     @Scheduled(cron = "0 0 6 1 * ?")
     public void makeAsInActive() {
