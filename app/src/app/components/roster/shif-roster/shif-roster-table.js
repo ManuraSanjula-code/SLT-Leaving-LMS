@@ -39,7 +39,10 @@ const ShiftRosterTable = () => {
             const response = await fetch(`http://192.168.3.20:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                if (response.status == 404) {
+                    setRosterData(null)
+                    return;
+                }
             }
 
             const data = await response.json();
@@ -333,12 +336,28 @@ const ShiftRosterTable = () => {
             {!loading && !error && rosterData && renderTableContent()}
 
             {!loading && !error && !rosterData && (
-                <Alert severity="info" sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6">No Data</Typography>
-                    <Typography variant="body2">
-                        Please select a month and year, then click &quot;Load Roster&quot; to fetch the shift schedule.
-                    </Typography>
-                </Alert>
+                <Box
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    minHeight="100%"
+                >
+                    <Alert
+                        severity="info"
+                        sx={{
+                            width: '100%',
+                            textAlign: 'center',
+                            '& .MuiAlert-message': {
+                                width: '100%',
+                            }
+                        }}
+                    >
+                        <Typography variant="h6">No Data</Typography>
+                        <Typography variant="body2">
+                            Please select a month and year, then click &quot;Load Roster&quot; to fetch the shift schedule.
+                        </Typography>
+                    </Alert>
+                </Box>
             )}
 
             {/* Legend */}

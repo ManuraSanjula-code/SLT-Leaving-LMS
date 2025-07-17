@@ -101,56 +101,78 @@ export const {
 export const selectFilteredActivities = (state) => {
     const {
         activityRecords: {
-            records,
-            searchTerm,
-            filterType,
-            filterStatus,
-            filterIssue
+            records = [],
+            searchTerm = '',
+            filterType = 'all',
+            filterStatus = 'all',
+            filterIssue = 'all'
         }
     } = state;
 
-    return records ? records.filter((activity) => {
-        // Search by employee ID
-        const matchesSearch = activity.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!records || records.length === 0) return [];
 
-        // Filter by attendance type based on new enum structure
-        let matchesType = true;
-        if (filterType !== "all") {
-            if (filterType === "fullDay") {
-                matchesType = activity.attendanceType === 'FULL_DAY' && !activity.isLate;
-            } else if (filterType === "halfDay") {
-                matchesType = activity.attendanceType === 'HALF_DAY';
-            } else if (filterType === "absent") {
-                matchesType = activity.attendanceType === 'ABSENT';
-            } else if (filterType === "fullLeave") {
-                matchesType = activity.leaveStatus === 'FULL_LEAVE';
-            } else if (filterType === "shortLeave") {
-                matchesType = activity.leaveStatus === 'SHORT_LEAVE';
-            } else if (filterType === "late") {
-                matchesType = activity.isLate;
+    const searchTermLower = searchTerm.toLowerCase();
+
+    return records.filter((activity) => {
+        if (searchTerm) {
+            const idToSearch = (activity.userId || activity.employeeId || '').toLowerCase();
+            if (!idToSearch.includes(searchTermLower)) {
+                return false;
             }
         }
 
-        // Filter by status based on new structure
-        let matchesStatus = true;
-        if (filterStatus !== "all") {
-            if (filterStatus === "Approved") {
-                matchesStatus = activity.leaveStatus === 'LEAVE_APPROVED';
-            } else if (filterStatus === "Pending") {
-                matchesStatus = activity.leaveStatus === 'LEAVE_REQUESTED' ||
-                    (!activity.isUnSuccessful && !activity.isUnauthorized && !activity.hasIssues);
-            } else if (filterStatus === "Not Approved") {
-                matchesStatus = activity.isUnSuccessful || activity.isUnauthorized;
+        if (filterType !== 'all') {
+            switch (filterType) {
+                case 'fullDay':
+                    if (activity.attendanceType !== 'FULL_DAY' || activity.isLate) return false;
+                    break;
+                case 'halfDay':
+                    if (activity.attendanceType !== 'HALF_DAY') return false;
+                    break;
+                case 'absent':
+                    if (activity.attendanceType !== 'ABSENT') return false;
+                    break;
+                case 'fullLeave':
+                    if (activity.leaveStatus !== 'FULL_LEAVE') return false;
+                    break;
+                case 'shortLeave':
+                    if (activity.leaveStatus !== 'SHORT_LEAVE') return false;
+                    break;
+                case 'late':
+                    if (!activity.isLate) return false;
+                    break;
+                default:
+                    break;
             }
         }
 
-        let matchesIssue = true;
-        if (filterIssue !== "all") {
-            matchesIssue = filterIssue === "hasIssue" ? activity.hasIssues : !activity.hasIssues;
+        if (filterStatus !== 'all') {
+            switch (filterStatus) {
+                case 'Approved':
+                    if (activity.leaveStatus !== 'LEAVE_APPROVED') return false;
+                    break;
+                case 'Pending':
+                    if (!(
+                        activity.leaveStatus === 'LEAVE_REQUESTED' ||
+                        (!activity.isUnSuccessful && !activity.isUnauthorized && !activity.hasIssues)
+                    )) return false;
+                    break;
+                case 'Not Approved':
+                    if (!(activity.isUnSuccessful || activity.isUnauthorized)) return false;
+                    break;
+                default:
+                    break;
+            }
         }
 
-        return matchesSearch && matchesType && matchesStatus && matchesIssue;
-    }) : [];
+        if (filterIssue !== 'all') {
+            const hasIssue = activity.hasIssues;
+            if (filterIssue === 'hasIssue' && !hasIssue) return false;
+            if (filterIssue === 'noIssue' && hasIssue) return false;
+        }
+
+        return true;
+    });
 };
 
 export const selectActivitiesData = (state) => state.activityRecords;

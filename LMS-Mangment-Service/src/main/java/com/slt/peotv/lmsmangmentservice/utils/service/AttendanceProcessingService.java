@@ -6,7 +6,6 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
-import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
@@ -18,8 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Time;
 import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 public class AttendanceProcessingService {
@@ -41,79 +38,12 @@ public class AttendanceProcessingService {
     public void processEmployeeLeave(EmployeeEntity employee, LeaveEntity leave, Date processDate) {
         System.out.println("Employee Date: " + processDate);
 
-        if(employee == null) return;
-        
+        if (employee == null) return;
+
         String employeeId = employee.getEmployeeId();
         if (employeeId.isEmpty())
             return;
 
-        List<InOutEntity> attendanceRecords = inOutRepository.findByEmployeeIdAndDate(employeeId, processDate);
-
-        if (!attendanceRecords.isEmpty()) {
-            attendanceRecords.forEach(attendanceRecord -> {
-                if (attendanceRecord != null) {
-                    InOutEntity inOut = attendanceRecord;
-
-                    boolean isLate = checkLateArrival(inOut);
-                    boolean isShortLeave = checkShortLeave(inOut);
-                    boolean isHalfDay = checkHalfDay(inOut);
-                    boolean isFullDayAttendance = checkFullAttendance(inOut);
-
-                    UserLeaveTypeRemainingEntity remaining_half_Day =
-                            serviceEvent.getUserLeaveTypeRemaining("HALF_DAY", employeeId);
-                    UserLeaveTypeRemainingEntity remaining_short_Leaves =
-                            serviceEvent.getUserLeaveTypeRemaining("SHORT_LEAVE", employeeId);
-
-                    if (isFullDayAttendance) {
-                        leave.setNotUsed(true);
-                        leave.setRequestStatus(RequestStatus.CANCELLED);
-                        leaveRepository.save(leave);
-                        leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME AND WORK FULL DAY");
-                        checkService.reportAttendance(attendanceRecord,false ,true ,false, false, false, false, false, false, false, true, true, false, false, helper.getYesterdayDate());
-
-                    } else if (isHalfDay) {
-                        leave.setNotUsed(true);
-                        leave.setRequestStatus(RequestStatus.CANCELLED);
-                        leave.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME TO WORK IN FORM OF A HALF DAY");
-                        leaveRepository.save(leave);
-                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, false, false, true, false, false, true, true, false, false, helper.getYesterdayDate());
-                    } else if (isShortLeave) {
-                        System.out.println();
-                    } else if (isLate) {
-                        leave.setNotUsed(true);
-                        leave.setRequestStatus(RequestStatus.CANCELLED);
-                        checkService.reportAttendance(attendanceRecord,false ,false ,false, false, true, false, true, false, false, true, true, false, false, helper.getYesterdayDate());
-                        /// IF LATE IS COVER SET LATE_COVER TURE
-                    }
-                }
-
-                leaveRepository.save(leave);
-            });
-        } else {
-            leave.setNotUsed(false);
-            leave.setDescription("Absent - Leave Used");
-            LeaveTypeEntity leaveType = leave.getLeaveType();
-            leave.setRequestStatus(RequestStatus.SUBMITTED);
-
-            String user = leave.getEmployee().getEmployeeId();
-            if (user != null) {
-                UserLeaveTypeRemainingEntity currentLeave = getUserLeaveTypeRemaining(leaveType.getName(), user);
-                if (currentLeave.getRemainingLeaves() > 1) {
-                    currentLeave.setRemainingLeaves(currentLeave.getRemainingLeaves() - 1);
-                    userLeaveTypeRemainingRepo.save(currentLeave);
-                }
-                leaveRepository.save(leave);
-                checkService.reportAttendance(employeeId,true,false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
-
-            }
-        }
-    }
-
-    public void processEmployeeLeaveRoaster(EmployeeEntity employee, LeaveEntity leave, Date processDate){
-        System.out.println("Employee Date: " + processDate);
-
-        if(employee == null) return;
-        String employeeId = employee.getEmployeeId();
 
         leave.setNotUsed(false);
         leave.setDescription("Absent - Leave Used");
@@ -122,18 +52,17 @@ public class AttendanceProcessingService {
 
         String user = leave.getEmployee().getEmployeeId();
         if (user != null) {
-
             UserLeaveTypeRemainingEntity currentLeave = getUserLeaveTypeRemaining(leaveType.getName(), user);
+            if(currentLeave == null) return;
             if (currentLeave.getRemainingLeaves() > 1) {
                 currentLeave.setRemainingLeaves(currentLeave.getRemainingLeaves() - 1);
                 userLeaveTypeRemainingRepo.save(currentLeave);
             }
             leaveRepository.save(leave);
-            checkService.reportAttendance(employeeId,true,false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
+            checkService.reportAttendance(employeeId, true, false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
 
         }
     }
-
     private UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String name, String user) {
         return serviceEvent.getUserLeaveTypeRemaining(name, user);
     }

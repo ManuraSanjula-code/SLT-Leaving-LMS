@@ -14,6 +14,7 @@ import java.util.Set;
 @Repository
 public interface AttendanceRepository extends MongoRepository<Attendance, String> {
     List<Attendance> findByEmployeeIdAndDate(String employeeID, Date date);
+    List<Attendance> findByEmployeeIdAndArrivalDate(String employeeId, Date arrivalDate);
     List<Attendance> findByTeamIdAndDate(String teamId, Date date);
     Page<Attendance> findByDate(Date date, Pageable pageable);
     @Query(value = "{'employeeID': {'$in': ?0}, 'date': ?1}", fields = "{'employeeID': 1}")

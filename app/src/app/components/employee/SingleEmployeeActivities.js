@@ -1241,6 +1241,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                 <TableCell>Type</TableCell>
                                                 <TableCell>Status</TableCell>
                                                 <TableCell>Terminal</TableCell>
+                                                <TableCell>Roster Type</TableCell>
                                                 <TableCell>Issue Description</TableCell>
                                                 <TableCell>Actions</TableCell>
                                             </TableRow>
@@ -1280,6 +1281,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                     <StatusChip activity={activity}/>
                                                                 </TableCell>
                                                                 <TableCell>{activity.terminalId || "-"}</TableCell>
+                                                                <TableCell>{activity.rosterType || "NONE"}</TableCell>
                                                                 <TableCell sx={{
                                                                     maxWidth: 300,
                                                                     whiteSpace: 'normal',

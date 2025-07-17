@@ -68,8 +68,5 @@ public interface Check_Service {
 
     public List<InOutDTO> getAllInOut(String employeeID, Date date);
 
-    public AccessLogEntity getTodayEarliestAccessLogsByEmployee(String employeeId);
-    public AccessLogEntity getTodayLatestAccessLogsByEmployee(String employeeId);
-
     public Check_Service_Impl.NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
 }

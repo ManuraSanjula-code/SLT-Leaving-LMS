@@ -493,24 +493,11 @@ const Other = () => {
                                 Delete Roster (For Charana Tv)
                             </Button>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={4}>
-                            <Button
-                                onClick={() => setOpenHolidayDialog(true)}
-                                startIcon={<EventIcon />}
-                            >
-                                Holidays
-                            </Button>
-
-                            <HolidayManagement
-                                open={openHolidayDialog}
-                                onClose={() => setOpenHolidayDialog(false)}
-                            />
-                        </Grid>
                     </>
                 )}
 
                 {
-                    (userDetails.highestRolePriority > 10 && userDetails.highestRolePriority < 99) && (
+                    (userDetails.highestRolePriority > 29 && userDetails.highestRolePriority < 50) && (
                         <>
                             <Grid item xs={12} sm={6} md={4}>
                                 <Button
@@ -543,6 +530,19 @@ const Other = () => {
                                 >
                                     Get All Attendance by Month
                                 </Button>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={4}>
+                                <Button
+                                    onClick={() => setOpenHolidayDialog(true)}
+                                    startIcon={<EventIcon />}
+                                >
+                                    Holidays
+                                </Button>
+
+                                <HolidayManagement
+                                    open={openHolidayDialog}
+                                    onClose={() => setOpenHolidayDialog(false)}
+                                />
                             </Grid>
                         </>
                     )

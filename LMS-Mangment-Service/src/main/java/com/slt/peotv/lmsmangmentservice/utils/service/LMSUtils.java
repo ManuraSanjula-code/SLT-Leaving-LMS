@@ -126,6 +126,7 @@ public class LMSUtils {
         dto.setLeaveStatus(entity.getLeaveStatus());
         dto.setPayStatus(entity.getPayStatus());
         dto.setResolve(entity.getResolve());
+        dto.setRosterType(entity.getRosterType());
 
         dto.setIsLate(entity.getIsLate());
         dto.setIsLateCovered(entity.getIsLateCovered());

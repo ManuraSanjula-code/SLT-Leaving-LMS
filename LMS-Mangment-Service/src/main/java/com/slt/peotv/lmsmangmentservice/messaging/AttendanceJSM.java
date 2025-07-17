@@ -1,10 +1,13 @@
 package com.slt.peotv.lmsmangmentservice.messaging;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.RosterType;
+
 import java.time.LocalTime;
 import java.util.Date;
 
-public class Attendance {
+public class AttendanceJSM {
     private String id;
     private String publicId;
     private Date date;
@@ -15,14 +18,24 @@ public class Attendance {
     private String employeeId;
     private String teamId;
     private AttendanceType attendanceType;
+    private RosterType rosterType;
+    @JsonProperty("isLate")
     private Boolean isLate = false;
+    @JsonProperty("isLateCovered")
     private Boolean isLateCovered = false;
+    @JsonProperty("isUnauthorized")
     private Boolean isUnauthorized = false;
+    @JsonProperty("isUnSuccessful")
     private Boolean isUnSuccessful = false;
+    @JsonProperty("isHoliday")
     private Boolean isHoliday = false;
+    @JsonProperty("isResolved")
     private Boolean isResolved = false;
+    @JsonProperty("hasIssues")
     private Boolean hasIssues = false;
+    @JsonProperty("isManual")
     private Boolean isManual = false;
+    @JsonProperty("issueDescription")
     private String issueDescription;
     private Date dueDateForUA;
     private Date etlRunTime = new Date();
@@ -31,6 +44,14 @@ public class Attendance {
     private Boolean isActive = true;
     private Boolean viaMovement;
     private Boolean viaLeave;
+
+    public RosterType getRosterType() {
+        return rosterType;
+    }
+
+    public void setRosterType(RosterType rosterType) {
+        this.rosterType = rosterType;
+    }
 
     public String getId() {
         return id;
@@ -239,6 +260,7 @@ public class Attendance {
     public void setViaLeave(Boolean viaLeave) {
         this.viaLeave = viaLeave;
     }
+
     @Override
     public String toString() {
         return "Attendance{" +
@@ -252,6 +274,7 @@ public class Attendance {
                 ", employeeId='" + employeeId + '\'' +
                 ", teamId='" + teamId + '\'' +
                 ", attendanceType=" + attendanceType +
+                ", rosterType=" + rosterType +
                 ", isLate=" + isLate +
                 ", isLateCovered=" + isLateCovered +
                 ", isUnauthorized=" + isUnauthorized +

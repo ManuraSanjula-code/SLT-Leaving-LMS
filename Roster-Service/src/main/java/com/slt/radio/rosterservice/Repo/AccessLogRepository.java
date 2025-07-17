@@ -10,4 +10,5 @@ import java.util.List;
 public interface AccessLogRepository extends MongoRepository<AccessLog, String> {
     List<AccessLog> findByEmployeeIdAndLogDate(String employeeID, String logDate);
     List<AccessLog> findByLogDate(String logDate);
+    boolean existsByEmployeeIdAndLogDateAndLogTimeAndTerminalIdAndInOut(String employeeId, String logDate, String logTime, String terminalId, String inOut);
 }

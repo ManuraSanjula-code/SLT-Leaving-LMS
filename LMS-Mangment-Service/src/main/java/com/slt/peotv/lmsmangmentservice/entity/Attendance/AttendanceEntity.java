@@ -1,10 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.entity.Attendance;
 
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
+import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import jakarta.persistence.*;
 import lombok.*;
 import java.sql.Time;
@@ -50,6 +47,9 @@ public class AttendanceEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "attendance_type")
     private AttendanceType attendanceType;
+
+    @Enumerated(EnumType.STRING)
+    private RosterType rosterType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "leave_status")

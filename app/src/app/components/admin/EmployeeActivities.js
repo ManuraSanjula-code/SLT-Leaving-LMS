@@ -186,6 +186,12 @@ const ActivityDetailsDialog = React.memo(({
                                     </ListItem>
                                     <ListItem>
                                         <ListItemText
+                                            primary="Roster Type"
+                                            secondary={activity.rosterType || "NONE"}
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemText
                                             primary="Date"
                                             secondary={formatDate(activity.date)}
                                         />
@@ -671,6 +677,7 @@ const EmployeeActivities = () => {
                             <TableCell><strong>Out Time</strong></TableCell>
                             <TableCell><strong>Attendance</strong></TableCell>
                             <TableCell><strong>Status</strong></TableCell>
+                            <TableCell><strong>Roster Type</strong></TableCell>
                             <TableCell align="center"><strong>Actions</strong></TableCell>
                         </TableRow>
                     </TableHead>
@@ -734,6 +741,13 @@ const EmployeeActivities = () => {
                                             textTransform: activity.leaveStatus ? 'uppercase' : 'none'
                                         }}
                                     />
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" sx={{
+                                        fontFamily: 'monospace',
+                                    }}>
+                                        {activity.rosterType || 'Not Recorded'}
+                                    </Typography>
                                 </TableCell>
                                 <TableCell align="center">
                                     <IconButton

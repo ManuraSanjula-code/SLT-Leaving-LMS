@@ -19,7 +19,7 @@ import java.util.Date;
 @CompoundIndexes({
         @CompoundIndex(
                 name = "unique_inout_record",
-                def = "{'employeeID': 1, 'date': 1, 'punchInMoa': 1, 'punchInEv': 1}",
+                def = "{'employeeID': 1, 'punchTime': 1, 'punchInMoa': 1, 'punchInEv': 1}",
                 unique = true
         )
 })

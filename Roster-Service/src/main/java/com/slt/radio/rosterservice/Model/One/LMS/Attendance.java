@@ -1,6 +1,8 @@
 package com.slt.radio.rosterservice.Model.One.LMS;
 
+import java.io.Serializable;
 import com.slt.radio.rosterservice.Model.Enum.AttendanceType;
+import com.slt.radio.rosterservice.Model.Enum.RosterType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +19,9 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "attendances")
-public class Attendance {
+public class Attendance implements Serializable{
+    private static final long serialVersionUID = 1328292L;
+    
     @Id
     private String id;
     private String publicId;
@@ -32,7 +36,7 @@ public class Attendance {
 
     private String teamId;
     private AttendanceType attendanceType;
-
+    private RosterType rosterType;
     @Builder.Default
     private Boolean isLate = false;
     @Builder.Default

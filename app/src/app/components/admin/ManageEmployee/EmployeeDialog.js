@@ -75,19 +75,19 @@ const INITIAL_FORM_DATA = {
 };
 
 const EmployeeDialog = React.memo(({
-                                       open,
-                                       onClose,
-                                       onSave,
-                                       employee,
-                                       roles,
-                                       sections,
-                                       profiles,
-                                       saveLoading,
-                                       paginatedAdmins,
-                                       currentAdminPage,
-                                       adminPageSize,
-                                       isLoading
-                                   }) => {
+    open,
+    onClose,
+    onSave,
+    employee,
+    roles,
+    sections,
+    profiles,
+    saveLoading,
+    paginatedAdmins,
+    currentAdminPage,
+    adminPageSize,
+    isLoading
+}) => {
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [errors, setErrors] = useState({});
     const [isFormDirty, setIsFormDirty] = useState(false);
@@ -99,9 +99,7 @@ const EmployeeDialog = React.memo(({
     const dispatch = useDispatch();
 
     // Memoized values
-    const employeeString = JSON.stringify(employee);
-    const memoizedEmployee = useMemo(() => employee, [employeeString]);
-
+    const memoizedEmployee = useMemo(() => employee, [employee]);
     const handlePageChange = useCallback((newPage) => {
         dispatch(setCurrentAdminPage(newPage));
     }, [dispatch]);
@@ -166,6 +164,10 @@ const EmployeeDialog = React.memo(({
         setIsFormDirty(true);
     }, []);
 
+    const capitalizeFirstLetter = useCallback((str) => {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }, []);
+    
     const handleChangeForNonBoolean = useCallback((field, newValue) => {
         setFormData(prev => {
             const previousSelection = prev[field] || [];
@@ -194,11 +196,8 @@ const EmployeeDialog = React.memo(({
             };
         });
         setIsFormDirty(true);
-    }, []);
+    }, [capitalizeFirstLetter]);
 
-    const capitalizeFirstLetter = useCallback((str) => {
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }, []);
 
     const handleSelectHod = useCallback((hod) => {
         setFormData(prev => {
@@ -506,7 +505,7 @@ const EmployeeDialog = React.memo(({
             });
 
         return [...filteredBackendAdmins, ...newAdmins];
-    }, [employee?.administrativesDto, formData?.addedAdmins, formData?.deletedAdmins, paginatedAdmins?.content]);
+    }, [employee, formData.addedAdmins, formData.deletedAdmins, paginatedAdmins?.content]);
 
     const renderBasicInfoSection = useMemo(() => (
         <>
@@ -702,7 +701,7 @@ const EmployeeDialog = React.memo(({
                     multiple
                     value={formData.selectedProfiles}
                     onChange={(e) => handleChangeForNonBoolean('selectedProfiles', e.target.value)}
-                    renderValue={(selected) => selected.map(selected=> selected.name).join(", ")}
+                    renderValue={(selected) => selected.map(selected => selected.name).join(", ")}
                     label="Profiles"
                 >
                     {profiles.map((profile) => (

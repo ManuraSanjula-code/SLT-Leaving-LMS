@@ -29,7 +29,10 @@ export const fetchRosterData = createAsyncThunk(
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
             }
-
+            const contentLength = response.headers.get('Content-Length');
+            if (contentLength === '0' || !response.body) {
+                return [];
+            } 
             const data = await response.json();
 
             if (!data?.teams?.length) {

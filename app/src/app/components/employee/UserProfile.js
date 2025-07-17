@@ -104,11 +104,11 @@ const UserProfile = () => {
   }, []);
 
   const debouncedHandleChange = useMemo(() =>
-          debounce((e) => {
-            const { name, value } = e.target;
-            setProfile((prev) => ({ ...prev, [name]: value }));
-          }, DEBOUNCE_DELAY),
-      []
+    debounce((e) => {
+      const { name, value } = e.target;
+      setProfile((prev) => ({ ...prev, [name]: value }));
+    }, DEBOUNCE_DELAY),
+    []
   );
 
   const handleChange = useCallback((e) => {
@@ -117,17 +117,17 @@ const UserProfile = () => {
   }, [debouncedHandleChange]);
 
   const throttledAddAddress = useMemo(() =>
-          throttle(() => {
-            setSelectedAddress({
-              streetName: '',
-              city: '',
-              country: '',
-              postalCode: '',
-              isDefault: false
-            });
-            setOpenDialog(true);
-          }, THROTTLE_DELAY),
-      []
+    throttle(() => {
+      setSelectedAddress({
+        streetName: '',
+        city: '',
+        country: '',
+        postalCode: '',
+        isDefault: false
+      });
+      setOpenDialog(true);
+    }, THROTTLE_DELAY),
+    []
   );
 
   const handleAddAddress = useCallback(() => {
@@ -135,11 +135,11 @@ const UserProfile = () => {
   }, [throttledAddAddress]);
 
   const throttledEditAddress = useMemo(() =>
-          throttle((address) => {
-            setSelectedAddress({ ...address });
-            setOpenDialog(true);
-          }, THROTTLE_DELAY),
-      []
+    throttle((address) => {
+      setSelectedAddress({ ...address });
+      setOpenDialog(true);
+    }, THROTTLE_DELAY),
+    []
   );
 
   const handleEditAddress = useCallback((address) => {
@@ -147,13 +147,13 @@ const UserProfile = () => {
   }, [throttledEditAddress]);
 
   const throttledDeleteAddress = useMemo(() =>
-          throttle((addressId) => {
-            setProfile((prev) => ({
-              ...prev,
-              addresses: prev.addresses.filter((addr) => addr.addressId !== addressId),
-            }));
-          }, THROTTLE_DELAY),
-      []
+    throttle((addressId) => {
+      setProfile((prev) => ({
+        ...prev,
+        addresses: prev.addresses.filter((addr) => addr.addressId !== addressId),
+      }));
+    }, THROTTLE_DELAY),
+    []
   );
 
   const handleDeleteAddress = useCallback((addressId) => {
@@ -161,16 +161,16 @@ const UserProfile = () => {
   }, [throttledDeleteAddress]);
 
   const throttledSetDefaultAddress = useMemo(() =>
-          throttle((addressId) => {
-            setProfile((prev) => ({
-              ...prev,
-              addresses: prev.addresses.map((addr) => ({
-                ...addr,
-                isDefault: addr.addressId === addressId
-              })),
-            }));
-          }, THROTTLE_DELAY),
-      []
+    throttle((addressId) => {
+      setProfile((prev) => ({
+        ...prev,
+        addresses: prev.addresses.map((addr) => ({
+          ...addr,
+          isDefault: addr.addressId === addressId
+        })),
+      }));
+    }, THROTTLE_DELAY),
+    []
   );
 
   const handleSetDefaultAddress = useCallback((addressId) => {
@@ -196,7 +196,7 @@ const UserProfile = () => {
         return {
           ...prev,
           addresses: prev.addresses.map((addr) =>
-              addr.addressId === selectedAddress.addressId ? selectedAddress : addr
+            addr.addressId === selectedAddress.addressId ? selectedAddress : addr
           ),
         };
       } else {
@@ -270,8 +270,8 @@ const UserProfile = () => {
     setIsSubmitting(true);
     try {
       await putUserProfile(
-          `http://192.168.3.20:8080/users/upload-pic/${userId}`,
-          selectedFile
+        `http://192.168.3.20:8080/users/upload-pic/${userId}`,
+        selectedFile
       );
 
       const newProfilePic = URL.createObjectURL(selectedFile);
@@ -294,434 +294,434 @@ const UserProfile = () => {
   }, [selectedFile, userId, userDetails, dispatch, handleClose, showSuccessDialog, showErrorDialog]);
 
   const addressList = useMemo(() => (
-      profile.addresses.length > 0 ? (
-          profile.addresses.map((address) => (
-              <MemoizedListItem key={address.addressId}>
-                <ListItemText
-                    primary={`${address.streetName}, ${address.city}, ${address.country}`}
-                    secondary={`Postal Code: ${address.postalCode}`}
-                />
-                <ListItemSecondaryAction>
-                  <Checkbox
-                      edge="end"
-                      checked={address.isDefault || false}
-                      onChange={() => handleSetDefaultAddress(address.addressId)}
-                      inputProps={{ 'aria-label': 'Set as default address' }}
-                  />
-                  <IconButton
-                      onClick={() => handleEditAddress(address)}
-                      aria-label="View address"
-                      disabled={isSubmitting}
-                  >
-                    View
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </MemoizedListItem>
-          ))
-      ) : (
-          <Typography>No addresses added yet.</Typography>
-      )
+    profile.addresses.length > 0 ? (
+      profile.addresses.map((address) => (
+        <MemoizedListItem key={address.addressId}>
+          <ListItemText
+            primary={`${address.streetName}, ${address.city}, ${address.country}`}
+            secondary={`Postal Code: ${address.postalCode}`}
+          />
+          <ListItemSecondaryAction>
+            <Checkbox
+              edge="end"
+              checked={address.isDefault || false}
+              onChange={() => handleSetDefaultAddress(address.addressId)}
+              inputProps={{ 'aria-label': 'Set as default address' }}
+            />
+            <IconButton
+              onClick={() => handleEditAddress(address)}
+              aria-label="View address"
+              disabled={isSubmitting}
+            >
+              View
+            </IconButton>
+          </ListItemSecondaryAction>
+        </MemoizedListItem>
+      ))
+    ) : (
+      <Typography>No addresses added yet.</Typography>
+    )
   ), [profile.addresses, handleSetDefaultAddress, handleEditAddress, isSubmitting]);
 
   const personalInfoSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Personal Information
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <MemoizedTextField
-              margin="normal"
-              required
-              fullWidth
-              id="firstName"
-              label="First Name"
-              name="firstName"
-              value={profile.firstName}
-              onChange={handleChange}
-              error={!!errors.firstName}
-              helperText={errors.firstName}
-              sx={{ mb: 2 }}
-              disabled={isSubmitting}
-          />
-          <MemoizedTextField
-              margin="normal"
-              required
-              fullWidth
-              id="lastName"
-              label="Last Name"
-              name="lastName"
-              value={profile.lastName}
-              onChange={handleChange}
-              error={!!errors.lastName}
-              helperText={errors.lastName}
-              sx={{ mb: 2 }}
-              disabled={isSubmitting}
-          />
-          <MemoizedTextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              type="email"
-              value={profile.email}
-              onChange={handleChange}
-              error={!!errors.email}
-              helperText={errors.email}
-              sx={{ mb: 2 }}
-              disabled={isSubmitting}
-          />
-          <MemoizedTextField
-              margin="normal"
-              required
-              fullWidth
-              id="phone"
-              label="Phone"
-              name="phone"
-              value={profile.phone}
-              onChange={handleChange}
-              error={!!errors.phone}
-              helperText={errors.phone}
-              sx={{ mb: 2 }}
-              disabled={isSubmitting}
-          />
-          <MemoizedTextField
-              margin="normal"
-              required
-              fullWidth
-              id="gender"
-              label="Gender"
-              name="gender"
-              value={profile.gender}
-              onChange={handleChange}
-              error={!!errors.gender}
-              helperText={errors.gender}
-              disabled={isSubmitting}
-          />
-        </CardContent>
-      </MemoizedCard>
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Personal Information
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <MemoizedTextField
+          margin="normal"
+          required
+          fullWidth
+          id="firstName"
+          label="First Name"
+          name="firstName"
+          value={profile.firstName}
+          onChange={handleChange}
+          error={!!errors.firstName}
+          helperText={errors.firstName}
+          sx={{ mb: 2 }}
+          disabled={isSubmitting}
+        />
+        <MemoizedTextField
+          margin="normal"
+          required
+          fullWidth
+          id="lastName"
+          label="Last Name"
+          name="lastName"
+          value={profile.lastName}
+          onChange={handleChange}
+          error={!!errors.lastName}
+          helperText={errors.lastName}
+          sx={{ mb: 2 }}
+          disabled={isSubmitting}
+        />
+        <MemoizedTextField
+          margin="normal"
+          required
+          fullWidth
+          id="email"
+          label="Email"
+          name="email"
+          type="email"
+          value={profile.email}
+          onChange={handleChange}
+          error={!!errors.email}
+          helperText={errors.email}
+          sx={{ mb: 2 }}
+          disabled={isSubmitting}
+        />
+        <MemoizedTextField
+          margin="normal"
+          required
+          fullWidth
+          id="phone"
+          label="Phone"
+          name="phone"
+          value={profile.phone}
+          onChange={handleChange}
+          error={!!errors.phone}
+          helperText={errors.phone}
+          sx={{ mb: 2 }}
+          disabled={isSubmitting}
+        />
+        <MemoizedTextField
+          margin="normal"
+          required
+          fullWidth
+          id="gender"
+          label="Gender"
+          name="gender"
+          value={profile.gender}
+          onChange={handleChange}
+          error={!!errors.gender}
+          helperText={errors.gender}
+          disabled={isSubmitting}
+        />
+      </CardContent>
+    </MemoizedCard>
   ), [profile, errors, handleChange, isSubmitting]);
 
   const employeeIdentifiersSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Employee Identifiers
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Typography variant="body1">
-            Employee ID: {profile.employeeId || 'Not assigned'}
-          </Typography>
-          <Typography variant="body1" sx={{ mt: 1 }}>
-            SLT ID: {profile.sltId || 'Not assigned'}
-          </Typography>
-        </CardContent>
-      </MemoizedCard>
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Employee Identifiers
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Typography variant="body1">
+          Employee ID: {profile.employeeId || 'Not assigned'}
+        </Typography>
+        <Typography variant="body1" sx={{ mt: 1 }}>
+          SLT ID: {profile.sltId || 'Not assigned'}
+        </Typography>
+      </CardContent>
+    </MemoizedCard>
   ), [profile.employeeId, profile.sltId]);
 
   const rolesSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Roles
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {userDetails?.roles?.map((role, index) => (
-                <Chip key={index} label={role} color="primary" variant="outlined" />
-            ))}
-          </Box>
-        </CardContent>
-      </MemoizedCard>
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Roles
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {userDetails?.roles?.map((role, index) => (
+            <Chip key={index} label={role} color="primary" variant="outlined" />
+          ))}
+        </Box>
+      </CardContent>
+    </MemoizedCard>
   ), [userDetails?.roles]);
 
   const sectionsProfilesSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Sections &amp; Profiles
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Typography variant="subtitle1" gutterBottom>
-            Sections
-          </Typography>
-          {userDetails?.sections?.length > 0 ? (
-              <List>
-                {userDetails.sections.map((section, index) => (
-                    <ListItem key={index}>
-                      <ListItemText primary={section} />
-                    </ListItem>
-                ))}
-              </List>
-          ) : (
-              <Typography>No sections assigned.</Typography>
-          )}
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-            Profiles
-          </Typography>
-          {userDetails?.profiles?.length > 0 ? (
-              <List>
-                {userDetails.profiles.map((profile, index) => (
-                    <ListItem key={index}>
-                      <ListItemText primary={profile} />
-                    </ListItem>
-                ))}
-              </List>
-          ) : (
-              <Typography>No profiles assigned.</Typography>
-          )}
-        </CardContent>
-      </MemoizedCard>
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Sections &amp; Profiles
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Typography variant="subtitle1" gutterBottom>
+          Sections
+        </Typography>
+        {userDetails?.sections?.length > 0 ? (
+          <List>
+            {userDetails.sections.map((section, index) => (
+              <ListItem key={index}>
+                <ListItemText primary={section} />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Typography>No sections assigned.</Typography>
+        )}
+        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+          Profiles
+        </Typography>
+        {userDetails?.profiles?.length > 0 ? (
+          <List>
+            {userDetails.profiles.map((profile, index) => (
+              <ListItem key={index}>
+                <ListItemText primary={profile} />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Typography>No profiles assigned.</Typography>
+        )}
+      </CardContent>
+    </MemoizedCard>
   ), [userDetails?.sections, userDetails?.profiles]);
 
   const employmentStatusSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Employment Status
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Typography variant="body1">
-            SLT Employee: {userDetails?.isSltEmp ? 'Yes' : 'No'}
-          </Typography>
-          <Typography variant="body1">
-            SLT Intern: {userDetails?.isSltIntern ? 'Yes' : 'No'}
-          </Typography>
-          <Typography variant="body1">
-            Account Status: {userDetails?.active ? 'Active' : 'Inactive'}
-          </Typography>
-        </CardContent>
-      </MemoizedCard>
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Employment Status
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Typography variant="body1">
+          SLT Employee: {userDetails?.isSltEmp ? 'Yes' : 'No'}
+        </Typography>
+        <Typography variant="body1">
+          SLT Intern: {userDetails?.isSltIntern ? 'Yes' : 'No'}
+        </Typography>
+        <Typography variant="body1">
+          Account Status: {userDetails?.active ? 'Active' : 'Inactive'}
+        </Typography>
+      </CardContent>
+    </MemoizedCard>
   ), [userDetails?.isSltEmp, userDetails?.isSltIntern, userDetails?.active]);
 
   const addressesSection = useMemo(() => (
-      <MemoizedCard sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            Addresses
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <List>
-            {addressList}
-          </List>
-        </CardContent>
-      </MemoizedCard>
-  ), [addressList, handleAddAddress, isSubmitting]);
+    <MemoizedCard sx={{ mb: 4 }}>
+      <CardContent>
+        <Typography variant="h5" gutterBottom>
+          Addresses
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <List>
+          {addressList}
+        </List>
+      </CardContent>
+    </MemoizedCard>
+  ), [addressList]);
 
   if (loading && !userDetails) {
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <CircularProgress size={60} thickness={4} />
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={60} thickness={4} />
+      </Box>
     );
   }
 
   return (
-      <>
-        <SuccessDialog
-            open={successOpen}
-            onClose={handleSuccessClose}
-            title="Success!"
-            message="Your action was completed successfully."
-        />
+    <>
+      <SuccessDialog
+        open={successOpen}
+        onClose={handleSuccessClose}
+        title="Success!"
+        message="Your action was completed successfully."
+      />
 
-        <ErrorDialog
-            open={errorOpen}
-            onClose={handleErrorClose}
-            title="Oops! Something Went Wrong"
-            message="There was an error processing your request. Please try again."
-        />
+      <ErrorDialog
+        open={errorOpen}
+        onClose={handleErrorClose}
+        title="Oops! Something Went Wrong"
+        message="There was an error processing your request. Please try again."
+      />
 
-        <Container component="main" maxWidth="md" ref={formRef}>
-          <CssBaseline />
-          <Box sx={{ mt: 4 }}>
-            {/* Profile Picture */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-              <IconButton
-                  color="primary"
-                  aria-label="upload picture"
-                  onClick={handleOpen}
-                  sx={{ position: 'relative' }}
-                  disabled={isSubmitting}
-              >
-                <MemoizedAvatar
-                    src={`http://192.168.3.20:8080/users/image/${userId}` || ''}
-                    sx={{ width: 150, height: 150, border: '2px solid #ccc' }}
-                    alt="Profile picture"
-                />
-                <CameraIcon
-                    sx={{
-                      position: 'absolute',
-                      bottom: 0,
-                      right: 0,
-                      backgroundColor: 'white',
-                      borderRadius: '50%',
-                      padding: 1,
-                      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
-                    }}
-                />
-              </IconButton>
+      <Container component="main" maxWidth="md" ref={formRef}>
+        <CssBaseline />
+        <Box sx={{ mt: 4 }}>
+          {/* Profile Picture */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <IconButton
+              color="primary"
+              aria-label="upload picture"
+              onClick={handleOpen}
+              sx={{ position: 'relative' }}
+              disabled={isSubmitting}
+            >
+              <MemoizedAvatar
+                src={`http://192.168.3.20:8080/users/image/${userId}` || ''}
+                sx={{ width: 150, height: 150, border: '2px solid #ccc' }}
+                alt="Profile picture"
+              />
+              <CameraIcon
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  padding: 1,
+                  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
+                }}
+              />
+            </IconButton>
 
-              <MemoizedDialog open={open} onClose={handleClose}>
-                <DialogTitle>Change Profile Picture</DialogTitle>
-                <DialogContent>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                    <input
-                        accept="image/*"
-                        id="profile-picture-input"
-                        type="file"
-                        onChange={handleFileChange}
-                        style={{ display: 'none' }}
-                        ref={fileInputRef}
-                        disabled={isSubmitting}
-                    />
-                    <label htmlFor="profile-picture-input">
-                      <MemoizedButton
-                          variant="contained"
-                          component="span"
-                          fullWidth
-                          disabled={isSubmitting}
-                      >
-                        Select Image
-                      </MemoizedButton>
-                    </label>
-
-                    {previewImage && (
-                        <MemoizedAvatar
-                            src={previewImage}
-                            sx={{
-                              width: 200,
-                              height: 200,
-                              border: '2px solid #ccc',
-                              margin: '0 auto'
-                            }}
-                            alt="Preview"
-                        />
-                    )}
-                    {errors.profilePic && (
-                        <Typography color="error" variant="body2">
-                          {errors.profilePic}
-                        </Typography>
-                    )}
-                  </Box>
-                </DialogContent>
-                <DialogActions>
-                  <MemoizedButton onClick={handleClose} disabled={isSubmitting}>
-                    Cancel
-                  </MemoizedButton>
-                  <MemoizedButton
-                      onClick={handleSaveProfilePic}
-                      variant="contained"
-                      disabled={!selectedFile || isSubmitting}
-                  >
-                    {isSubmitting ? <CircularProgress size={24} /> : 'Save'}
-                  </MemoizedButton>
-                </DialogActions>
-              </MemoizedDialog>
-            </Box>
-
-            {personalInfoSection}
-            {employeeIdentifiersSection}
-            {rolesSection}
-            {sectionsProfilesSection}
-            {employmentStatusSection}
-            {addressesSection}
-
-            <MemoizedDialog open={openDialog} onClose={() => setOpenDialog(false)}>
-              <DialogTitle>{selectedAddress?.addressId ? 'Edit Address' : 'Add Address'}</DialogTitle>
+            <MemoizedDialog open={open} onClose={handleClose}>
+              <DialogTitle>Change Profile Picture</DialogTitle>
               <DialogContent>
-                <MemoizedTextField
-                    autoFocus
-                    margin="dense"
-                    id="streetName"
-                    label="Street Name"
-                    fullWidth
-                    required
-                    value={selectedAddress?.streetName || ''}
-                    onChange={(e) =>
-                        setSelectedAddress((prev) => ({ ...prev, streetName: e.target.value }))
-                    }
-                    error={!!errors.streetName}
-                    helperText={errors.streetName}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                  <input
+                    accept="image/*"
+                    id="profile-picture-input"
+                    type="file"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                    ref={fileInputRef}
                     disabled={isSubmitting}
-                />
-                <MemoizedTextField
-                    margin="dense"
-                    id="city"
-                    label="City"
-                    fullWidth
-                    required
-                    value={selectedAddress?.city || ''}
-                    onChange={(e) =>
-                        setSelectedAddress((prev) => ({ ...prev, city: e.target.value }))
-                    }
-                    error={!!errors.city}
-                    helperText={errors.city}
-                    disabled={isSubmitting}
-                />
-                <MemoizedTextField
-                    margin="dense"
-                    id="country"
-                    label="Country"
-                    fullWidth
-                    required
-                    value={selectedAddress?.country || ''}
-                    onChange={(e) =>
-                        setSelectedAddress((prev) => ({ ...prev, country: e.target.value }))
-                    }
-                    error={!!errors.country}
-                    helperText={errors.country}
-                    disabled={isSubmitting}
-                />
-                <MemoizedTextField
-                    margin="dense"
-                    id="postalCode"
-                    label="Postal Code"
-                    fullWidth
-                    required
-                    value={selectedAddress?.postalCode || ''}
-                    onChange={(e) =>
-                        setSelectedAddress((prev) => ({ ...prev, postalCode: e.target.value }))
-                    }
-                    error={!!errors.postalCode}
-                    helperText={errors.postalCode}
-                    disabled={isSubmitting}
-                />
+                  />
+                  <label htmlFor="profile-picture-input">
+                    <MemoizedButton
+                      variant="contained"
+                      component="span"
+                      fullWidth
+                      disabled={isSubmitting}
+                    >
+                      Select Image
+                    </MemoizedButton>
+                  </label>
+
+                  {previewImage && (
+                    <MemoizedAvatar
+                      src={previewImage}
+                      sx={{
+                        width: 200,
+                        height: 200,
+                        border: '2px solid #ccc',
+                        margin: '0 auto'
+                      }}
+                      alt="Preview"
+                    />
+                  )}
+                  {errors.profilePic && (
+                    <Typography color="error" variant="body2">
+                      {errors.profilePic}
+                    </Typography>
+                  )}
+                </Box>
               </DialogContent>
               <DialogActions>
-                <MemoizedButton
-                    onClick={() => setOpenDialog(false)}
-                    color="primary"
-                    disabled={isSubmitting}
-                >
+                <MemoizedButton onClick={handleClose} disabled={isSubmitting}>
                   Cancel
+                </MemoizedButton>
+                <MemoizedButton
+                  onClick={handleSaveProfilePic}
+                  variant="contained"
+                  disabled={!selectedFile || isSubmitting}
+                >
+                  {isSubmitting ? <CircularProgress size={24} /> : 'Save'}
                 </MemoizedButton>
               </DialogActions>
             </MemoizedDialog>
-
-            {loading && (
-                <Box
-                    sx={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(255,255,255,0.7)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 9999,
-                    }}
-                >
-                  <CircularProgress size={60} thickness={4} />
-                </Box>
-            )}
           </Box>
-        </Container>
-      </>
+
+          {personalInfoSection}
+          {employeeIdentifiersSection}
+          {rolesSection}
+          {sectionsProfilesSection}
+          {employmentStatusSection}
+          {addressesSection}
+
+          <MemoizedDialog open={openDialog} onClose={() => setOpenDialog(false)}>
+            <DialogTitle>{selectedAddress?.addressId ? 'Edit Address' : 'Add Address'}</DialogTitle>
+            <DialogContent>
+              <MemoizedTextField
+                autoFocus
+                margin="dense"
+                id="streetName"
+                label="Street Name"
+                fullWidth
+                required
+                value={selectedAddress?.streetName || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, streetName: e.target.value }))
+                }
+                error={!!errors.streetName}
+                helperText={errors.streetName}
+                disabled={isSubmitting}
+              />
+              <MemoizedTextField
+                margin="dense"
+                id="city"
+                label="City"
+                fullWidth
+                required
+                value={selectedAddress?.city || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, city: e.target.value }))
+                }
+                error={!!errors.city}
+                helperText={errors.city}
+                disabled={isSubmitting}
+              />
+              <MemoizedTextField
+                margin="dense"
+                id="country"
+                label="Country"
+                fullWidth
+                required
+                value={selectedAddress?.country || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, country: e.target.value }))
+                }
+                error={!!errors.country}
+                helperText={errors.country}
+                disabled={isSubmitting}
+              />
+              <MemoizedTextField
+                margin="dense"
+                id="postalCode"
+                label="Postal Code"
+                fullWidth
+                required
+                value={selectedAddress?.postalCode || ''}
+                onChange={(e) =>
+                  setSelectedAddress((prev) => ({ ...prev, postalCode: e.target.value }))
+                }
+                error={!!errors.postalCode}
+                helperText={errors.postalCode}
+                disabled={isSubmitting}
+              />
+            </DialogContent>
+            <DialogActions>
+              <MemoizedButton
+                onClick={() => setOpenDialog(false)}
+                color="primary"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </MemoizedButton>
+            </DialogActions>
+          </MemoizedDialog>
+
+          {loading && (
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 9999,
+              }}
+            >
+              <CircularProgress size={60} thickness={4} />
+            </Box>
+          )}
+        </Box>
+      </Container>
+    </>
   );
 };
 

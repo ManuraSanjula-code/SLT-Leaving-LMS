@@ -1011,6 +1011,9 @@ public class Check_Service_Impl implements Check_Service {
 
         handleLeaveStatus(attendance, leaveSuccess, leaveReq, isFullLeave);
 
+        List<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, helper.getYesterdayDate(), helper.getYesterdayDate());
+        if (!leave.isEmpty()) handleLeave(leave);
+
         if (nopay) {
             attendance.setPayStatus(PayStatus.NO_PAY);
         }
@@ -1091,6 +1094,9 @@ public class Check_Service_Impl implements Check_Service {
 
         handleLeaveStatus(attendance, leaveSuccess, leaveReq, isFullLeave);
 
+        List<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, helper.getYesterdayDate(), helper.getYesterdayDate());
+        if (!leave.isEmpty()) handleLeave(leave);
+
         if (nopay) {
             attendance.setPayStatus(PayStatus.NO_PAY);
         }
@@ -1167,6 +1173,15 @@ public class Check_Service_Impl implements Check_Service {
 
         if (unSuccessful)
             helper.handleLateAndUnsuccessful(employeeID, savedAttendance);
+    }
+
+    public void handleLeave(List<LeaveEntity> leave){
+        for (LeaveEntity leaveEntity : leave){
+            leaveEntity.setNotUsed(true);
+            leaveEntity.setRequestStatus(RequestStatus.CANCELLED);
+            leaveEntity.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME TO WORK IN FORM OF A HALF DAY");
+            leaveRepo.save(leaveEntity);
+        }
     }
 
     private AttendanceEntity createBaseAttendance(EmployeeEntity employee, Date date) {
@@ -1486,114 +1501,6 @@ public class Check_Service_Impl implements Check_Service {
         }
     }
 
-    @Transactional
-    @Retryable(value = {DataAccessException.class},
-            maxAttempts = MAX_RETRY_ATTEMPTS,
-            backoff = @Backoff(delay = 1000))
-    @Override
-    public AccessLogEntity getTodayEarliestAccessLogsByEmployee(String employeeId) {
-        final String methodName = "getTodayEarliestAccessLogsByEmployee";
-        final String url = "jdbc:mysql://localhost:3306/attendance";
-        final String username = "root";
-        final String password = "User@123";
-
-        String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
-                "FROM accesslog_archive " +
-                "WHERE EmployeeID = ? AND LogDate = DATE_FORMAT(CURRENT_DATE(), '%d/%m/%Y') " +
-                "ORDER BY LogDate ASC, LogTime ASC " +
-                "LIMIT 1";
-
-        List<AccessLogEntity> accessLogEntities = new ArrayList<>();
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-
-        try {
-            logger.info("{}: Attempting to connect to database", methodName);
-            connection = DriverManager.getConnection(url, username, password);
-            statement = connection.prepareStatement(sql);
-            statement.setString(1, employeeId);  // Set the employeeId parameter
-            resultSet = statement.executeQuery();
-            logger.info("{}: Database connection established successfully", methodName);
-
-            int recordCount = 0;
-            while (resultSet.next()) {
-                try {
-                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
-                    accessLogEntities.add(accessLog);
-                    recordCount++;
-                    return accessLog;
-                } catch (SQLException e) {
-                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
-                } catch (Exception e) {
-                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
-                }
-            }
-
-            processRetrievedRecords(accessLogEntities, methodName);
-
-        } catch (SQLException e) {
-            logErrorWithStackTrace("Database connection failed", e, methodName);
-        } catch (Exception e) {
-            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
-        } finally {
-            closeDatabaseResources(connection, statement, resultSet, methodName);
-            return null;
-        }
-    }
-
-    @Transactional
-    @Retryable(value = {DataAccessException.class},
-            maxAttempts = MAX_RETRY_ATTEMPTS,
-            backoff = @Backoff(delay = 1000))
-    @Override
-    public AccessLogEntity getTodayLatestAccessLogsByEmployee(String employeeId) {
-        final String methodName = "getTodayLatestAccessLogsByEmployee";
-        final String url = "jdbc:mysql://localhost:3306/attendance";
-        final String username = "root";
-        final String password = "User@123";
-
-        String sql = "SELECT EmployeeID, LogDate, LogTime, TerminalID, `InOut`, `read`, processed, etl_run_time " +
-                "FROM accesslog_archive " +
-                "WHERE EmployeeID = ? AND LogDate = DATE_FORMAT(CURRENT_DATE(), '%d/%m/%Y') " +
-                "ORDER BY LogDate DESC, LogTime DESC " +
-                "LIMIT 1";
-
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-
-        try {
-            logger.info("{}: Attempting to connect to database", methodName);
-            connection = DriverManager.getConnection(url, username, password);
-            statement = connection.prepareStatement(sql);
-            statement.setString(1, employeeId);  // Set the employeeId parameter
-            resultSet = statement.executeQuery();
-            logger.info("{}: Database connection established successfully", methodName);
-
-            int recordCount = 0;
-            while (resultSet.next()) {
-                try {
-                    AccessLogEntity accessLog = buildAccessLogEntity(resultSet);
-                    recordCount++;
-                    return accessLog;
-                } catch (SQLException e) {
-                    logErrorWithStackTrace("Error processing record #" + (recordCount + 1), e, methodName);
-                } catch (Exception e) {
-                    logErrorWithStackTrace("Unexpected error processing record #" + (recordCount + 1), e, methodName);
-                }
-            }
-
-        } catch (SQLException e) {
-            logErrorWithStackTrace("Database connection failed", e, methodName);
-        } catch (Exception e) {
-            logErrorWithStackTrace("Unexpected error in " + methodName, e, methodName);
-        } finally {
-            closeDatabaseResources(connection, statement, resultSet, methodName);
-            return null;
-        }
-    }
-
     @Override
     @Transactional
     @Retryable(value = {DataAccessException.class},
@@ -1723,11 +1630,19 @@ public class Check_Service_Impl implements Check_Service {
         }
 
         try {
+            List<AccessLogEntity> uniqueRecords = records.stream()
+                    .filter(record -> !accessLogRepo.existsByEmployeeIdAndLogDateAndLogTimeAndTerminalId(
+                            record.getEmployeeId(),
+                            record.getLogDate(),
+                            record.getLogTime(),
+                            record.getTerminalId()))
+                    .collect(Collectors.toList());
+
             System.out.println(" **************************************************************** ");
             logger.info("{}: Attempting to save {} records", methodName, records.size());
             System.out.println(" **************************************************************** ");
 
-            accessLogRepo.saveAll(records);
+            accessLogRepo.saveAll(uniqueRecords);
 
             System.out.println(" ================================================================ ");
             logger.info("{}: Successfully saved {} records", methodName, records.size());

@@ -69,7 +69,7 @@ const RoleForm = ({ onSubmit }) => {
         if (saveError) {
             setErrorOpen(true);
         }
-    }, [saveSuccess, saveError, dispatch, currentPage, pageSize]);
+    }, [saveSuccess, saveError, dispatch, currentPage, pageSize, handleCloseDialog]);
 
     const handlePageChange = (event, newPage) => {
         dispatch(fetchManagementData({

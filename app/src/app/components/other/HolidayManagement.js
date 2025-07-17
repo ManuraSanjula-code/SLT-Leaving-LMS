@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import {
     Button,
     Box,
@@ -35,24 +35,16 @@ const HolidayManagement = ({ open, onClose }) => {
     const [description, setDescription] = useState('');
     const [isRecurring, setIsRecurring] = useState(false);
 
-    useEffect(() => {
-        if (open) {
-            fetchHolidays();
-        } else {
-            // Reset state when dialog closes
-            setHolidays([]);
-            setYear(new Date().getFullYear());
-        }
-    }, [open, year]);
 
-    const fetchHolidays = async () => {
+
+    const fetchHolidays = useCallback(async () => {
         try {
             const loggedInUserId = sessionStorage.getItem('userId');
             if (!loggedInUserId) {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}?year=${year}`,{
+            const response = await fetch(`http://localhost:8080/lms/holiday/${loggedInUserId}?year=${year}`, {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -66,7 +58,16 @@ const HolidayManagement = ({ open, onClose }) => {
             console.error('Error fetching holidays:', error);
             alert(`Error fetching holidays: ${error.message}`);
         }
-    };
+    }, [year])
+
+    useEffect(() => {
+        if (open) {
+            fetchHolidays();
+        } else {
+            setHolidays([]);
+            setYear(new Date().getFullYear());
+        }
+    }, [open, year, fetchHolidays]);
 
     const handleAddHoliday = () => {
         setHolidayDate('');
@@ -91,7 +92,7 @@ const HolidayManagement = ({ open, onClose }) => {
                     alert('User session not found. Please log in again.');
                     return;
                 }
-                const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${id}/${loggedInUserId}`, {
+                const response = await fetch(`http://localhost:8080/lms/holiday/${id}/${loggedInUserId}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -127,7 +128,7 @@ const HolidayManagement = ({ open, onClose }) => {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}`, {
+            const response = await fetch(`http://localhost:8080/lms/holiday/${loggedInUserId}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -167,7 +168,7 @@ const HolidayManagement = ({ open, onClose }) => {
                 alert('User session not found. Please log in again.');
                 return;
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${currentHoliday.id}/${loggedInUserId}`, {
+            const response = await fetch(`http://localhost:8080/lms/holiday/${currentHoliday.id}/${loggedInUserId}`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: {
@@ -212,7 +213,7 @@ const HolidayManagement = ({ open, onClose }) => {
 
             <DialogContent>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                    {userDetails.highestRolePriority < 10 && (
+                    {userDetails.highestRolePriority > 29 && userDetails.highestRolePriority < 50 && (
                         <Button
                             variant="contained"
                             startIcon={<Add />}
@@ -230,7 +231,7 @@ const HolidayManagement = ({ open, onClose }) => {
                                 <TableCell>Date</TableCell>
                                 <TableCell>Description</TableCell>
                                 <TableCell>Recurring</TableCell>
-                                {userDetails.highestRolePriority < 10 && (
+                                {userDetails.highestRolePriority > 29 && userDetails.highestRolePriority < 50 && (
                                     <TableCell>Actions</TableCell>
                                 )}
                             </TableRow>
@@ -241,7 +242,7 @@ const HolidayManagement = ({ open, onClose }) => {
                                     <TableCell>{holiday.holidayDate}</TableCell>
                                     <TableCell>{holiday.description}</TableCell>
                                     <TableCell>{holiday.isRecurring ? 'Yes' : 'No'}</TableCell>
-                                    {userDetails.highestRolePriority < 10 && (
+                                    {userDetails.highestRolePriority > 29 && userDetails.highestRolePriority < 50 && (
                                         <TableCell>
                                             <IconButton
                                                 color="primary"

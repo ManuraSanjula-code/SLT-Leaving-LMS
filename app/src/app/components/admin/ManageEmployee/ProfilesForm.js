@@ -29,22 +29,22 @@ import ErrorDialog from '../../ErrorDialog';
 
 const TimeInput = ({ label, value, onChange, error, helperText }) => {
   return (
-      <TextField
-          label={label}
-          type="time"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          fullWidth
-          margin="normal"
-          InputLabelProps={{
-            shrink: true,
-          }}
-          inputProps={{
-            step: 300, // 5 min intervals
-          }}
-          error={error}
-          helperText={helperText}
-      />
+    <TextField
+      label={label}
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      fullWidth
+      margin="normal"
+      InputLabelProps={{
+        shrink: true,
+      }}
+      inputProps={{
+        step: 300,
+      }}
+      error={error}
+      helperText={helperText}
+    />
   );
 };
 
@@ -93,6 +93,33 @@ const ProfileForm = ({ onSubmit }) => {
     dispatch(fetchManagementData({ usersPage: currentPage, usersSize: pageSize }));
   }, [dispatch, currentPage, pageSize]);
 
+  const handleCloseDialog = useCallback(() => {
+    setOpenDialog(false);
+    setCurrentProfile(null);
+    setFormData({
+      name: "",
+      publicId: "",
+      workStart: "08:30",
+      workEnds: "17:00",
+      ignoreSl: false,
+      gracePeriodStart: "08:45",
+      hdStart: "12:00",
+      slStartMorning: "08:30",
+      slStartEvening: "13:30",
+      possibleFpLocations: "Office,Remote",
+      defaultHrs: "8",
+      hdHrs: "4",
+      minHrsForSl: "4",
+      shortLeaveCount: "2",
+      hdEndsMorning: "12:30",
+      flexiDays: "5",
+      flexiHrsStart: "07:00",
+    });
+    setSelectedUsers([]);
+    setDeletedUsers([]);
+    setSearchQuery("");
+  }, []);
+
   useEffect(() => {
     if (saveSuccess) {
       setSuccessOpen(true);
@@ -102,7 +129,7 @@ const ProfileForm = ({ onSubmit }) => {
     if (saveError) {
       setErrorOpen(true);
     }
-  }, [saveSuccess, saveError, dispatch, currentPage, pageSize]);
+  }, [saveSuccess, saveError, dispatch, currentPage, pageSize, handleCloseDialog]);
 
   const handlePageChange = (event, newPage) => {
     dispatch(fetchManagementData({
@@ -145,33 +172,6 @@ const ProfileForm = ({ onSubmit }) => {
     setOpenDialog(true);
   }, []);
 
-  const handleCloseDialog = useCallback(() => {
-    setOpenDialog(false);
-    setCurrentProfile(null);
-    setFormData({
-      name: "",
-      publicId: "",
-      workStart: "08:30",
-      workEnds: "17:00",
-      ignoreSl: false,
-      gracePeriodStart: "08:45",
-      hdStart: "12:00",
-      slStartMorning: "08:30",
-      slStartEvening: "13:30",
-      possibleFpLocations: "Office,Remote",
-      defaultHrs: "8",
-      hdHrs: "4",
-      minHrsForSl: "4",
-      shortLeaveCount: "2",
-      hdEndsMorning: "12:30",
-      flexiDays: "5",
-      flexiHrsStart: "07:00",
-    });
-    setSelectedUsers([]);
-    setDeletedUsers([]);
-    setSearchQuery("");
-  }, []);
-
   const handleChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -187,8 +187,8 @@ const ProfileForm = ({ onSubmit }) => {
   const handleUserSelection = useCallback((userId) => {
     setSelectedUsers(prev => {
       const newSelected = prev.includes(userId)
-          ? prev.filter(id => id !== userId)
-          : [...prev, userId];
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId];
 
       if (currentProfile) {
         setDeletedUsers(prevDeleted => {
@@ -242,8 +242,8 @@ const ProfileForm = ({ onSubmit }) => {
     if (!validateForm()) return;
 
     const addedUsers = selectedUsers
-        .filter(userId => !currentProfile?.users.some(user => user.userId === userId))
-        .map(userId => data.users.content.find(user => user.userId === userId));
+      .filter(userId => !currentProfile?.users.some(user => user.userId === userId))
+      .map(userId => data.users.content.find(user => user.userId === userId));
 
     const profileData = {
       ...formData,
@@ -265,9 +265,9 @@ const ProfileForm = ({ onSubmit }) => {
   const filteredUsers = useMemo(() => {
     if (!data?.users?.content) return [];
     return data.users.content.filter(user =>
-        user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [data?.users?.content, searchQuery]);
 
@@ -286,282 +286,282 @@ const ProfileForm = ({ onSubmit }) => {
     });
 
     const areUsersChanged =
-        selectedUsers.length !== currentProfile.users.length ||
-        !selectedUsers.every(userId =>
-            currentProfile.users.some(user => user.userId === userId)
-        );
+      selectedUsers.length !== currentProfile.users.length ||
+      !selectedUsers.every(userId =>
+        currentProfile.users.some(user => user.userId === userId)
+      );
 
     return isAnyFieldChanged || areUsersChanged;
   }, [currentProfile, formData, selectedUsers]);
 
   return (
-      <>
-        <SuccessDialog
-            open={successOpen}
-            onClose={() => setSuccessOpen(false)}
-            title="Success!"
-            message="Profile saved successfully."
-        />
+    <>
+      <SuccessDialog
+        open={successOpen}
+        onClose={() => setSuccessOpen(false)}
+        title="Success!"
+        message="Profile saved successfully."
+      />
 
-        <ErrorDialog
-            open={errorOpen}
-            onClose={() => setErrorOpen(false)}
-            title="Error"
-            message={saveError || "Failed to save profile"}
-        />
+      <ErrorDialog
+        open={errorOpen}
+        onClose={() => setErrorOpen(false)}
+        title="Error"
+        message={saveError || "Failed to save profile"}
+      />
 
-        <div>
-          <Button variant="contained" onClick={() => handleOpenDialog()}>
-            Add Profile
-          </Button>
+      <div>
+        <Button variant="contained" onClick={() => handleOpenDialog()}>
+          Add Profile
+        </Button>
 
-          <List>
-            {data?.profiles?.map(profile => (
-                <ListItem key={profile.id}>
-                  <ListItemText
-                      primary={profile.name}
-                      secondary={`Work Hours: ${profile.workStart} - ${profile.workEnds}`}
-                  />
-                  <IconButton onClick={() => handleOpenDialog(profile)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(profile.id)}>
-                    <Delete />
-                  </IconButton>
-                </ListItem>
-            ))}
-          </List>
-
-          <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-            <DialogTitle>{currentProfile ? "Edit Profile" : "Add Profile"}</DialogTitle>
-            <DialogContent>
-              <Typography variant="h6" gutterBottom>
-                Profile Details
-              </Typography>
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 2 }}>
-                <TextField
-                    label="Name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.name}
-                    helperText={formErrors.name}
-                />
-                <TextField
-                    disabled
-                    label="Public ID"
-                    name="publicId"
-                    value={formData.publicId}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                />
-
-                <TimeInput
-                    label="Work Start"
-                    value={formData.workStart}
-                    onChange={(value) => handleTimeChange('workStart', value)}
-                    error={!!formErrors.workStart}
-                    helperText={formErrors.workStart}
-                />
-
-                <TimeInput
-                    label="Work Ends"
-                    value={formData.workEnds}
-                    onChange={(value) => handleTimeChange('workEnds', value)}
-                    error={!!formErrors.workEnds}
-                    helperText={formErrors.workEnds}
-                />
-
-                <FormControlLabel
-                    control={
-                      <Switch
-                          checked={formData.ignoreSl}
-                          onChange={handleChange}
-                          name="ignoreSl"
-                          color="primary"
-                      />
-                    }
-                    label="Ignore Short Leave"
-                />
-
-                <TimeInput
-                    label="Grace Period Start"
-                    value={formData.gracePeriodStart}
-                    onChange={(value) => handleTimeChange('gracePeriodStart', value)}
-                    error={!!formErrors.gracePeriodStart}
-                    helperText={formErrors.gracePeriodStart}
-                />
-
-                <TimeInput
-                    label="HD Start"
-                    value={formData.hdStart}
-                    onChange={(value) => handleTimeChange('hdStart', value)}
-                    error={!!formErrors.hdStart}
-                    helperText={formErrors.hdStart}
-                />
-
-                <TimeInput
-                    label="SL Start Morning"
-                    value={formData.slStartMorning}
-                    onChange={(value) => handleTimeChange('slStartMorning', value)}
-                    error={!!formErrors.slStartMorning}
-                    helperText={formErrors.slStartMorning}
-                />
-
-                <TimeInput
-                    label="SL Start Evening"
-                    value={formData.slStartEvening}
-                    onChange={(value) => handleTimeChange('slStartEvening', value)}
-                    error={!!formErrors.slStartEvening}
-                    helperText={formErrors.slStartEvening}
-                />
-
-                <TextField
-                    label="Possible FP Locations"
-                    name="possibleFpLocations"
-                    value={formData.possibleFpLocations}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.possibleFpLocations}
-                    helperText={formErrors.possibleFpLocations}
-                />
-
-                <TextField
-                    label="Default Hours"
-                    name="defaultHrs"
-                    type="number"
-                    value={formData.defaultHrs}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.defaultHrs}
-                    helperText={formErrors.defaultHrs}
-                />
-
-                <TextField
-                    label="HD Hours"
-                    name="hdHrs"
-                    type="number"
-                    value={formData.hdHrs}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.hdHrs}
-                    helperText={formErrors.hdHrs}
-                />
-
-                <TextField
-                    label="Min Hours for SL"
-                    name="minHrsForSl"
-                    type="number"
-                    value={formData.minHrsForSl}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.minHrsForSl}
-                    helperText={formErrors.minHrsForSl}
-                />
-
-                <TextField
-                    label="Short Leave Count"
-                    name="shortLeaveCount"
-                    type="number"
-                    value={formData.shortLeaveCount}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.shortLeaveCount}
-                    helperText={formErrors.shortLeaveCount}
-                />
-
-                <TimeInput
-                    label="HD Ends Morning"
-                    value={formData.hdEndsMorning}
-                    onChange={(value) => handleTimeChange('hdEndsMorning', value)}
-                    error={!!formErrors.hdEndsMorning}
-                    helperText={formErrors.hdEndsMorning}
-                />
-
-                <TextField
-                    label="Flexi Days"
-                    name="flexiDays"
-                    type="number"
-                    value={formData.flexiDays}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.flexiDays}
-                    helperText={formErrors.flexiDays}
-                />
-
-                <TimeInput
-                    label="Flexi Hours Start"
-                    value={formData.flexiHrsStart}
-                    onChange={(value) => handleTimeChange('flexiHrsStart', value)}
-                    error={!!formErrors.flexiHrsStart}
-                    helperText={formErrors.flexiHrsStart}
-                />
-              </Box>
-
-              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                Assigned Users
-              </Typography>
-              <TextField
-                  label="Search Users"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  fullWidth
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                          <Search />
-                        </InputAdornment>
-                    ),
-                  }}
+        <List>
+          {data?.profiles?.map(profile => (
+            <ListItem key={profile.id}>
+              <ListItemText
+                primary={profile.name}
+                secondary={`Work Hours: ${profile.workStart} - ${profile.workEnds}`}
               />
-              <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-                <List>
-                  {filteredUsers.map(user => (
-                      <ListItem key={user.userId}>
-                        <ListItemIcon>
-                          <Checkbox
-                              checked={selectedUsers.includes(user.userId)}
-                              onChange={() => handleUserSelection(user.userId)}
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={`${user.firstName} ${user.lastName}`}
-                            secondary={user.email}
-                        />
-                      </ListItem>
-                  ))}
-                </List>
-                <Pagination
-                    count={data?.users?.totalPages || 1}
-                    page={(data?.users?.pageable?.pageNumber || 0) + 1}
-                    onChange={handlePageChange}
-                    sx={{ mt: 2, display: "flex", justifyContent: "center" }}
-                />
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button
-                  onClick={handleSubmit}
-                  color="primary"
-                  disabled={!isFormDirty || saveLoading}
-              >
-                {saveLoading ? 'Saving...' : currentProfile ? "Update" : "Add"}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </div>
-      </>
+              <IconButton onClick={() => handleOpenDialog(profile)}>
+                <Edit />
+              </IconButton>
+              <IconButton onClick={() => handleDelete(profile.id)}>
+                <Delete />
+              </IconButton>
+            </ListItem>
+          ))}
+        </List>
+
+        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+          <DialogTitle>{currentProfile ? "Edit Profile" : "Add Profile"}</DialogTitle>
+          <DialogContent>
+            <Typography variant="h6" gutterBottom>
+              Profile Details
+            </Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 2 }}>
+              <TextField
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.name}
+                helperText={formErrors.name}
+              />
+              <TextField
+                disabled
+                label="Public ID"
+                name="publicId"
+                value={formData.publicId}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+              />
+
+              <TimeInput
+                label="Work Start"
+                value={formData.workStart}
+                onChange={(value) => handleTimeChange('workStart', value)}
+                error={!!formErrors.workStart}
+                helperText={formErrors.workStart}
+              />
+
+              <TimeInput
+                label="Work Ends"
+                value={formData.workEnds}
+                onChange={(value) => handleTimeChange('workEnds', value)}
+                error={!!formErrors.workEnds}
+                helperText={formErrors.workEnds}
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.ignoreSl}
+                    onChange={handleChange}
+                    name="ignoreSl"
+                    color="primary"
+                  />
+                }
+                label="Ignore Short Leave"
+              />
+
+              <TimeInput
+                label="Grace Period Start"
+                value={formData.gracePeriodStart}
+                onChange={(value) => handleTimeChange('gracePeriodStart', value)}
+                error={!!formErrors.gracePeriodStart}
+                helperText={formErrors.gracePeriodStart}
+              />
+
+              <TimeInput
+                label="HD Start"
+                value={formData.hdStart}
+                onChange={(value) => handleTimeChange('hdStart', value)}
+                error={!!formErrors.hdStart}
+                helperText={formErrors.hdStart}
+              />
+
+              <TimeInput
+                label="SL Start Morning"
+                value={formData.slStartMorning}
+                onChange={(value) => handleTimeChange('slStartMorning', value)}
+                error={!!formErrors.slStartMorning}
+                helperText={formErrors.slStartMorning}
+              />
+
+              <TimeInput
+                label="SL Start Evening"
+                value={formData.slStartEvening}
+                onChange={(value) => handleTimeChange('slStartEvening', value)}
+                error={!!formErrors.slStartEvening}
+                helperText={formErrors.slStartEvening}
+              />
+
+              <TextField
+                label="Possible FP Locations"
+                name="possibleFpLocations"
+                value={formData.possibleFpLocations}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.possibleFpLocations}
+                helperText={formErrors.possibleFpLocations}
+              />
+
+              <TextField
+                label="Default Hours"
+                name="defaultHrs"
+                type="number"
+                value={formData.defaultHrs}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.defaultHrs}
+                helperText={formErrors.defaultHrs}
+              />
+
+              <TextField
+                label="HD Hours"
+                name="hdHrs"
+                type="number"
+                value={formData.hdHrs}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.hdHrs}
+                helperText={formErrors.hdHrs}
+              />
+
+              <TextField
+                label="Min Hours for SL"
+                name="minHrsForSl"
+                type="number"
+                value={formData.minHrsForSl}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.minHrsForSl}
+                helperText={formErrors.minHrsForSl}
+              />
+
+              <TextField
+                label="Short Leave Count"
+                name="shortLeaveCount"
+                type="number"
+                value={formData.shortLeaveCount}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.shortLeaveCount}
+                helperText={formErrors.shortLeaveCount}
+              />
+
+              <TimeInput
+                label="HD Ends Morning"
+                value={formData.hdEndsMorning}
+                onChange={(value) => handleTimeChange('hdEndsMorning', value)}
+                error={!!formErrors.hdEndsMorning}
+                helperText={formErrors.hdEndsMorning}
+              />
+
+              <TextField
+                label="Flexi Days"
+                name="flexiDays"
+                type="number"
+                value={formData.flexiDays}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.flexiDays}
+                helperText={formErrors.flexiDays}
+              />
+
+              <TimeInput
+                label="Flexi Hours Start"
+                value={formData.flexiHrsStart}
+                onChange={(value) => handleTimeChange('flexiHrsStart', value)}
+                error={!!formErrors.flexiHrsStart}
+                helperText={formErrors.flexiHrsStart}
+              />
+            </Box>
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+              Assigned Users
+            </Typography>
+            <TextField
+              label="Search Users"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+              <List>
+                {filteredUsers.map(user => (
+                  <ListItem key={user.userId}>
+                    <ListItemIcon>
+                      <Checkbox
+                        checked={selectedUsers.includes(user.userId)}
+                        onChange={() => handleUserSelection(user.userId)}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`${user.firstName} ${user.lastName}`}
+                      secondary={user.email}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              <Pagination
+                count={data?.users?.totalPages || 1}
+                page={(data?.users?.pageable?.pageNumber || 0) + 1}
+                onChange={handlePageChange}
+                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              color="primary"
+              disabled={!isFormDirty || saveLoading}
+            >
+              {saveLoading ? 'Saving...' : currentProfile ? "Update" : "Add"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
+    </>
   );
 };
 

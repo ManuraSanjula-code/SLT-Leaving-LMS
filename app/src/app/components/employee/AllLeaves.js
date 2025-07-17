@@ -70,7 +70,7 @@ const REQUEST_STATUSES = {
     EXPIRED: "Expired"
 };
 
-const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) => {
+const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) => {
     const dispatch = useDispatch();
 
     const leaveState = useSelector((state) => {
@@ -168,7 +168,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
         );
 
         dispatch(fetchLeaveBalances(userIdToUse));
-    }, [dispatch, isAdmin, userId, currentPage, pageSize]);
+    }, [dispatch, isAdmin, userId, currentPage, pageSize, userAdmin]);
 
     const safeLeaveRequests = Array.isArray(leaveRequests) ? leaveRequests : [];
 
@@ -675,28 +675,28 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Tooltip title={!isEditable ? "This leave cannot be edited" : ""}>
-                                                        <span>
-                                                            <IconButton
-                                                                onClick={() => openEditDialog(leave)}
-                                                                disabled={!isEditable}
-                                                                color="primary"
-                                                                sx={{
-                                                                    opacity: !isEditable ? 0.3 : 1
-                                                                }}
-                                                            >
-                                                                <EditIcon />
-                                                            </IconButton>
-                                                            <IconButton
-                                                                onClick={() => openDeleteDialog(leave)}
-                                                                disabled={!isEditable}
-                                                                color="error"
-                                                                sx={{
-                                                                    opacity: !isEditable ? 0.3 : 1
-                                                                }}
-                                                            >
-                                                                <DeleteIcon />
-                                                            </IconButton>
-                                                        </span>
+                                                            <span>
+                                                                <IconButton
+                                                                    onClick={() => openEditDialog(leave)}
+                                                                    disabled={!isEditable}
+                                                                    color="primary"
+                                                                    sx={{
+                                                                        opacity: !isEditable ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    <EditIcon />
+                                                                </IconButton>
+                                                                <IconButton
+                                                                    onClick={() => openDeleteDialog(leave)}
+                                                                    disabled={!isEditable}
+                                                                    color="error"
+                                                                    sx={{
+                                                                        opacity: !isEditable ? 0.3 : 1
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon />
+                                                                </IconButton>
+                                                            </span>
                                                         </Tooltip>
                                                     </TableCell>
                                                     <TableCell>
@@ -710,7 +710,8 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false ,userId = null }) =>
                                                         </Tooltip>
                                                     </TableCell>
                                                 </TableRow>
-                                            )})}
+                                            )
+                                        })}
                                     </TableBody>
                                 </Table>
                             </TableContainer>

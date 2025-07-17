@@ -22,6 +22,10 @@ const CharanaTVRosterTable = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+                setRosterData(null);
+                return []
+            }
             const data = await response.json();
 
             if (!data || Object.keys(data).length === 0) {

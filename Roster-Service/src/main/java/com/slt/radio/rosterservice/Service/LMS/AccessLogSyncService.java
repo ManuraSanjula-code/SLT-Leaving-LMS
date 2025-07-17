@@ -88,6 +88,7 @@ public class AccessLogSyncService {
                 AccessLog accessLog = new AccessLog(lms);
                 log.info("Created AccessLog: {}", accessLog);
 
+                if(helper.isDuplicateAccessLog(accessLog)) continue;
                 if (accessLog.getEmployeeId() == null || accessLog.getLogDate() == null) {
                     log.warn("Skipping invalid access log - missing required fields: {}", accessLog);
                     continue;
@@ -117,7 +118,7 @@ public class AccessLogSyncService {
         }
     }
 
-    @Scheduled(cron = "00 30 03 * * ?")
+    @Scheduled(cron = "00 30 03  * * ?")
     public void syncAccessLogsAndProcessAttendance() {
         log.info("Starting daily sync of access logs and attendance processing");
 

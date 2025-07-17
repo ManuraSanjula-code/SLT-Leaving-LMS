@@ -1,10 +1,6 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
-
+import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import java.sql.Time;
 import java.util.Date;
 import java.util.List;
@@ -45,6 +41,8 @@ public class AttendanceDTO {
 
     private Boolean viaMovement;
     private Boolean viaLeave;
+
+    private RosterType rosterType;
 
     public AttendanceDTO() {}
 
@@ -295,6 +293,78 @@ public class AttendanceDTO {
         this.viaLeave = viaLeave;
     }
 
+    public Boolean getLate() {
+        return isLate;
+    }
+
+    public void setLate(Boolean late) {
+        isLate = late;
+    }
+
+    public Boolean getLateCovered() {
+        return isLateCovered;
+    }
+
+    public void setLateCovered(Boolean lateCovered) {
+        isLateCovered = lateCovered;
+    }
+
+    public Boolean getUnauthorized() {
+        return isUnauthorized;
+    }
+
+    public void setUnauthorized(Boolean unauthorized) {
+        isUnauthorized = unauthorized;
+    }
+
+    public Boolean getUnSuccessful() {
+        return isUnSuccessful;
+    }
+
+    public void setUnSuccessful(Boolean unSuccessful) {
+        isUnSuccessful = unSuccessful;
+    }
+
+    public Boolean getHoliday() {
+        return isHoliday;
+    }
+
+    public void setHoliday(Boolean holiday) {
+        isHoliday = holiday;
+    }
+
+    public Boolean getResolved() {
+        return isResolved;
+    }
+
+    public void setResolved(Boolean resolved) {
+        isResolved = resolved;
+    }
+
+    public Boolean getManual() {
+        return isManual;
+    }
+
+    public void setManual(Boolean manual) {
+        isManual = manual;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
+
+    public RosterType getRosterType() {
+        return rosterType;
+    }
+
+    public void setRosterType(RosterType rosterType) {
+        this.rosterType = rosterType;
+    }
+
     // Convenience methods
     public Boolean getIsFullDay() {
         return attendanceType != null && attendanceType.equals(AttendanceType.FULL_DAY);
@@ -318,14 +388,34 @@ public class AttendanceDTO {
                 "id=" + id +
                 ", publicId='" + publicId + '\'' +
                 ", employeeId='" + employeeId + '\'' +
+                ", userId='" + userId + '\'' +
                 ", date=" + date +
+                ", arrivalDate=" + arrivalDate +
+                ", arrivalTime=" + arrivalTime +
+                ", leftTime=" + leftTime +
+                ", terminalId='" + terminalId + '\'' +
                 ", attendanceType=" + attendanceType +
                 ", leaveStatus=" + leaveStatus +
                 ", payStatus=" + payStatus +
-                ", arrivalTime=" + arrivalTime +
-                ", leftTime=" + leftTime +
+                ", resolve=" + resolve +
                 ", isLate=" + isLate +
+                ", isLateCovered=" + isLateCovered +
+                ", isUnauthorized=" + isUnauthorized +
+                ", isUnSuccessful=" + isUnSuccessful +
+                ", isHoliday=" + isHoliday +
+                ", isResolved=" + isResolved +
+                ", hasIssues=" + hasIssues +
+                ", isManual=" + isManual +
                 ", isActive=" + isActive +
+                ", issueDescription='" + issueDescription + '\'' +
+                ", dueDateForUA=" + dueDateForUA +
+                ", etlRunTime=" + etlRunTime +
+                ", createdDate=" + createdDate +
+                ", updatedDate=" + updatedDate +
+                ", inOutDTOs=" + inOutDTOs +
+                ", viaMovement=" + viaMovement +
+                ", viaLeave=" + viaLeave +
+                ", rosterType=" + rosterType +
                 '}';
     }
 }

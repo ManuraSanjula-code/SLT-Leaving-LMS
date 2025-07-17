@@ -85,4 +85,6 @@ class AsyncCryptoStorage {
     }
 }
 
-export default new AsyncCryptoStorage();
+const asyncCryptoStorage = new AsyncCryptoStorage();
+
+export default asyncCryptoStorage;

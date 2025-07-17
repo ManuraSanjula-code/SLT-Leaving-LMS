@@ -179,7 +179,7 @@ public class LMS_Service_impl implements LMS_Service {
         Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.removeTimeFromDate(new Date()));
 
         earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(inOutEntity.getPunchTypeTimeAsString()));
-        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(dashBoardRes.getNowPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
 
         if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
         if(dashBoardRes.getLastPunch() == null) dashBoardRes.setLastPunch("NOT FOUND");

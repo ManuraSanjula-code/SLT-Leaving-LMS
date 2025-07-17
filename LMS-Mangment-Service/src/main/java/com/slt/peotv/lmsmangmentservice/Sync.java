@@ -23,13 +23,13 @@ public class Sync {
     @Scheduled(cron = "0 0 * * * ?")
     public void getLogs_YES_() throws ParseException {
         check_Service.getAllTheInOutRecordsFromSLT_YES();
-        accessLogService.main();
+        accessLogService.main(false);
     }
 
     @Scheduled(cron = "0 0 */2 * * ?")
     public void getLogs_TOD_() throws ParseException {
         check_Service.getAllTheInOutRecordsFromSLT_TOD();
-        accessLogService.main();
+        accessLogService.main(true);
     }
 
     @Scheduled(cron = "00 00 02  * * ?")

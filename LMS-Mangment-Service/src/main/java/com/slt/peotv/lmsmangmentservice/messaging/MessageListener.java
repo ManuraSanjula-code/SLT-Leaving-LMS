@@ -6,8 +6,10 @@ import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
+import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
@@ -20,11 +22,11 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import java.sql.Time;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Optional;
 import java.util.List;
 import com.slt.peotv.lmsmangmentservice.utils.service.AttendanceProcessingService;
-import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 
 @Component
 public class MessageListener {
@@ -62,11 +64,11 @@ public class MessageListener {
     }
 
     @JmsListener(destination = "roster.queue", concurrency = "5-10")
-    public void receiveMessage(@Payload Attendance message) throws JMSException {
+    public void receiveMessage(@Payload AttendanceJSM message) throws JMSException {
         updateAttendanceFromMessageNotFull(message);
     }
 
-    private void updateAttendanceFromMessageNotFull(Attendance attendance) {
+    private void updateAttendanceFromMessageNotFull(AttendanceJSM attendance) {
         if (attendance == null) {
             return;
         }
@@ -116,30 +118,16 @@ public class MessageListener {
             if (attendance.getAttendanceType() != null) {
                 attendanceEntity.setAttendanceType(attendance.getAttendanceType());
             }
-            if(attendance.getAttendanceType().equals(AttendanceType.ABSENT)){
-                attendanceEntity.setDueDateForUA(helper.getDueDate());
-            }
-            if (attendance.getLate() != null) {
-                attendanceEntity.setIsLate(attendance.getLate());
-            }
-            if (attendance.getLateCovered() != null) {
-                attendanceEntity.setIsLateCovered(attendance.getLateCovered());
-            }
-            if (attendance.getUnauthorized() != null) {
-                attendanceEntity.setIsUnauthorized(attendance.getUnauthorized());
-                attendanceEntity.setDueDateForUA(helper.getDueDate());
-            }
-            if (attendance.getUnSuccessful() != null) {
-                attendanceEntity.setIsUnSuccessful(attendance.getUnSuccessful());
-            }
-            if (attendance.getHoliday() != null) {
-                attendanceEntity.setIsHoliday(attendance.getHoliday());
-            }
-            if (attendance.getResolved() != null) {
-                attendanceEntity.setIsResolved(attendance.getResolved());
-            }
-            if (attendance.getHasIssues() != null) {
-                attendanceEntity.setHasIssues(attendance.getHasIssues());
+        
+            attendanceEntity.setIsLate(attendance.getLate());
+            attendanceEntity.setIsLateCovered(attendance.getLateCovered());
+            attendanceEntity.setIsResolved(attendance.getResolved());
+            attendanceEntity.setHasIssues(attendance.getHasIssues());
+            attendanceEntity.setIsHoliday(attendance.getHoliday());
+            attendanceEntity.setIsUnSuccessful(attendance.getUnSuccessful());
+            attendanceEntity.setIsUnauthorized(attendance.getUnauthorized());
+
+            if(attendance.getLate() || attendance.getLateCovered() || attendance.getHasIssues() || attendance.getUnSuccessful() || attendance.getUnauthorized()|| attendance.getAttendanceType().equals(AttendanceType.ABSENT)){
                 attendanceEntity.setDueDateForUA(helper.getDueDate());
             }
 
@@ -147,7 +135,9 @@ public class MessageListener {
                 attendanceEntity.setIssueDescription(attendance.getIssueDescription());
             }
 
-            attendanceEntity.setEtlRunTime(new Date());
+            if (attendance.getRosterType() != null) {
+                attendanceEntity.setRosterType(attendance.getRosterType());
+            }
 
             if (attendance.getViaMovement() != null) {
                 attendanceEntity.setViaMovement(attendance.getViaMovement());
@@ -158,11 +148,11 @@ public class MessageListener {
 
             if(attendance.getAttendanceType().equals(AttendanceType.ABSENT) && attendance.getArrivalDate() != null) {
                 List<LeaveEntity> leaveEntities = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual
-                        (employeeEntity, attendanceEntity.getArrivalDate(), helper.removeTimeFromDate(new Date()));
+                        (employeeEntity, attendanceEntity.getArrivalDate(), attendanceEntity.getArrivalDate());
 
                 if(leaveEntities != null && !leaveEntities.isEmpty()) {
                     for (LeaveEntity leave : leaveEntities){
-                        attendanceProcessingService.processEmployeeLeaveRoaster(leave.getEmployee(), leave, helper.getDateWithoutTime());
+                        attendanceProcessingService.processEmployeeLeave(leave.getEmployee(), leave, helper.getDateWithoutTime());
                     }
                 }
             }
@@ -186,15 +176,12 @@ public class MessageListener {
                 }
             } */
 
-            if((attendanceEntity.getDate() == null) || (attendanceEntity.getArrivalTime() == null)) {
-                return;
-            }
 
-            /* if (attendanceRepo.existsByEmployeeAndDate(employeeEntity, attendanceEntity.getDate())) {
+            if (attendanceRepo.existsByEmployeeAndDate(employeeEntity, attendanceEntity.getDate())) {
                 logger.info("Attendance already exists for employee: {} on date: {}. Skipping.",
                         employeeEntity.getEmployeeId(), helper.getYesterdayDate());
                 return;
-            } */
+            }
 
             boolean attendanceExists = attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(
                     employeeEntity,
@@ -208,6 +195,7 @@ public class MessageListener {
                 return;
             }
 
+            attendanceEntity.setEtlRunTime(new Date());
             attendanceEntity.setIsManual(true);
             AttendanceEntity save = attendanceRepo.save(attendanceEntity);
 
@@ -216,30 +204,32 @@ public class MessageListener {
     }
 
     private void updateInOutRelationships(String employeeId, AttendanceEntity attendance) {
-        try{
-            List<InOutEntity> mo = inOutRepo
-                    .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
-                            employeeId,
-                            attendance.getArrivalDate(),
-                            attendance.getArrivalTime(),
-                            attendance.getTerminalId());
+        try {
+            if(attendance == null) return;
 
-            List<InOutEntity> eve = inOutRepo
-                    .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
-                            employeeId,
-                            attendance.getArrivalDate(),
-                            attendance.getArrivalTime(),
-                            attendance.getTerminalId());
+            Date arrivalDate = attendance.getArrivalDate();
+        
+            Optional<InOutEntity> eve = inOutRepo.findLatestByEmployeeIdAndDate(
+                    employeeId,
+                    arrivalDate);
 
-            List<InOutEntity> allInOut = new ArrayList<>();
-            allInOut.addAll(mo);
-            allInOut.addAll(eve);
+            Optional<InOutEntity> mo = inOutRepo.findEarliestByEmployeeIdAndDate(
+                    employeeId,
+                    arrivalDate);
 
-            for (InOutEntity inOutEntity : allInOut) {
+            if(mo.isPresent()){
+                InOutEntity inOutEntity = mo.get();
                 inOutEntity.setAttendance(attendance);
                 inOutRepo.save(inOutEntity);
             }
-        }catch (Exception e){
+
+            if(eve.isPresent()){
+                InOutEntity inOutEntity = eve.get();
+                inOutEntity.setAttendance(attendance);
+                inOutRepo.save(inOutEntity);
+            }
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

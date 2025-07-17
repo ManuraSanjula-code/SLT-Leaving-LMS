@@ -14,8 +14,13 @@ import java.util.Optional;
 @Repository
 public interface InOutRepository extends MongoRepository<InOut, String> {
     List<InOut> findByEmployeeIdAndDate(String employeeId, Date date);
+
+    List<InOut> findByEmployeeIdAndPunchTime(String employeeId, Date punchTime);
+
+
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeAsc(String employeeID, Date date);
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeDesc(String employeeId, Date date);
+
     List<InOut> findByEmployeeIdAndDateAndPunchTime(String employeeId, Date date, Date punchTime);
     List<InOut> findByEmployeeIdAndDateAndPunchTimeAndPunchTypeTime(String employeeId, Date date, Date punchTime, LocalTime punchTypeTime);
     
@@ -32,4 +37,9 @@ public interface InOutRepository extends MongoRepository<InOut, String> {
     @Query(value = "{'employeeId': ?0, 'date': ?1, 'punchTypeTime': {$lte: ?2}}", 
            sort = "{'punchTime': -1}")
     Optional<InOut> findLatestPunchBeforeTime(String employeeId, Date date, LocalTime time);
+
+    boolean existsByEmployeeIdAndDateAndPunchTypeTimeAndInOutValue(String employeeId, Date date, LocalTime punchTypeTime, Integer inOutValue);
+    boolean existsByEmployeeIdAndPunchTimeAndPunchTypeTimeAndInOutValue(String employeeId, Date punchTime, LocalTime punchTypeTime, Integer inOutValue);
+
+
 }

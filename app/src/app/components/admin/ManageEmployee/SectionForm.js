@@ -65,7 +65,7 @@ const SectionForm = ({ onSubmit }) => {
     if (saveError) {
       setErrorOpen(true);
     }
-  }, [saveSuccess, saveError, dispatch, currentPage, pageSize]);
+  }, [saveSuccess, saveError, dispatch, currentPage, pageSize, handleCloseDialog]);
 
   const handlePageChange = (event, newPage) => {
     dispatch(fetchManagementData({
@@ -115,8 +115,8 @@ const SectionForm = ({ onSubmit }) => {
   const handleUserSelection = useCallback((userId) => {
     setSelectedUsers(prev => {
       const newSelected = prev.includes(userId)
-          ? prev.filter(id => id !== userId)
-          : [...prev, userId];
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId];
 
       // If this is an edit of an existing section
       if (currentSection) {
@@ -157,8 +157,8 @@ const SectionForm = ({ onSubmit }) => {
     if (!validateForm()) return;
 
     const addedUsers = selectedUsers
-        .filter(userId => !currentSection?.users.some(user => user.userId === userId))
-        .map(userId => data.users.content.find(user => user.userId === userId));
+      .filter(userId => !currentSection?.users.some(user => user.userId === userId))
+      .map(userId => data.users.content.find(user => user.userId === userId));
 
     const sectionData = {
       section: formData.section,
@@ -189,9 +189,9 @@ const SectionForm = ({ onSubmit }) => {
   const filteredUsers = useMemo(() => {
     if (!data?.users?.content) return [];
     return data.users.content.filter(user =>
-        user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [data?.users?.content, searchQuery]);
 
@@ -200,133 +200,133 @@ const SectionForm = ({ onSubmit }) => {
 
     const isSectionChanged = formData.section !== currentSection.section;
     const areUsersChanged =
-        selectedUsers.length !== currentSection.users.length ||
-        !selectedUsers.every(userId => currentSection.users.some(user => user.userId === userId));
+      selectedUsers.length !== currentSection.users.length ||
+      !selectedUsers.every(userId => currentSection.users.some(user => user.userId === userId));
 
     return isSectionChanged || areUsersChanged;
   }, [currentSection, formData.section, selectedUsers]);
 
   return (
-      <>
-        <SuccessDialog
-            open={successOpen}
-            onClose={() => setSuccessOpen(false)}
-            title="Success!"
-            message="Section saved successfully."
-        />
+    <>
+      <SuccessDialog
+        open={successOpen}
+        onClose={() => setSuccessOpen(false)}
+        title="Success!"
+        message="Section saved successfully."
+      />
 
-        <ErrorDialog
-            open={errorOpen}
-            onClose={() => setErrorOpen(false)}
-            title="Error"
-            message={saveError || "Failed to save section"}
-        />
+      <ErrorDialog
+        open={errorOpen}
+        onClose={() => setErrorOpen(false)}
+        title="Error"
+        message={saveError || "Failed to save section"}
+      />
 
-        <div>
-          <Button variant="contained" onClick={() => handleOpenDialog()}>
-            Add Section
-          </Button>
+      <div>
+        <Button variant="contained" onClick={() => handleOpenDialog()}>
+          Add Section
+        </Button>
 
-          <List>
-            {data?.sections?.map(section => (
-                <ListItem key={section.id}>
-                  <ListItemText
-                      primary={section.section}
-                      secondary={`Public ID: ${section.publicId}`}
-                  />
-                  <IconButton onClick={() => handleOpenDialog(section)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(section.id)}>
-                    <Delete />
-                  </IconButton>
-                </ListItem>
-            ))}
-          </List>
-
-          <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-            <DialogTitle>{currentSection ? "Edit Section" : "Add Section"}</DialogTitle>
-            <DialogContent>
-              <Typography variant="h6" gutterBottom>
-                Section Details
-              </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                <TextField
-                    label="Section Name"
-                    name="section"
-                    value={formData.section}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!formErrors.section}
-                    helperText={formErrors.section}
-                />
-                <TextField
-                    disabled
-                    label="Public ID"
-                    name="publicId"
-                    value={formData.publicId}
-                    onChange={handleChange}
-                    fullWidth
-                    margin="normal"
-                />
-              </Box>
-
-              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                Assigned Users
-              </Typography>
-              <TextField
-                  label="Search Users"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  fullWidth
-                  margin="normal"
-                  InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                          <Search />
-                        </InputAdornment>
-                    ),
-                  }}
+        <List>
+          {data?.sections?.map(section => (
+            <ListItem key={section.id}>
+              <ListItemText
+                primary={section.section}
+                secondary={`Public ID: ${section.publicId}`}
               />
-              <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
-                <List>
-                  {filteredUsers.map(user => (
-                      <ListItem key={user.userId}>
-                        <ListItemIcon>
-                          <Checkbox
-                              checked={selectedUsers.includes(user.userId)}
-                              onChange={() => handleUserSelection(user.userId)}
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={`${user.firstName} ${user.lastName}`}
-                            secondary={user.email}
-                        />
-                      </ListItem>
-                  ))}
-                </List>
-                <Pagination
-                    count={data?.users?.totalPages || 1}
-                    page={(data?.users?.pageable?.pageNumber || 0) + 1}
-                    onChange={handlePageChange}
-                    sx={{ mt: 2, display: "flex", justifyContent: "center" }}
-                />
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button
-                  onClick={handleSubmit}
-                  color="primary"
-                  disabled={!isFormDirty || saveLoading}
-              >
-                {saveLoading ? 'Saving...' : currentSection ? "Update" : "Add"}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </div>
-      </>
+              <IconButton onClick={() => handleOpenDialog(section)}>
+                <Edit />
+              </IconButton>
+              <IconButton onClick={() => handleDelete(section.id)}>
+                <Delete />
+              </IconButton>
+            </ListItem>
+          ))}
+        </List>
+
+        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+          <DialogTitle>{currentSection ? "Edit Section" : "Add Section"}</DialogTitle>
+          <DialogContent>
+            <Typography variant="h6" gutterBottom>
+              Section Details
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+              <TextField
+                label="Section Name"
+                name="section"
+                value={formData.section}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                error={!!formErrors.section}
+                helperText={formErrors.section}
+              />
+              <TextField
+                disabled
+                label="Public ID"
+                name="publicId"
+                value={formData.publicId}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+              />
+            </Box>
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+              Assigned Users
+            </Typography>
+            <TextField
+              label="Search Users"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box sx={{ maxHeight: "300px", overflowY: "auto" }}>
+              <List>
+                {filteredUsers.map(user => (
+                  <ListItem key={user.userId}>
+                    <ListItemIcon>
+                      <Checkbox
+                        checked={selectedUsers.includes(user.userId)}
+                        onChange={() => handleUserSelection(user.userId)}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`${user.firstName} ${user.lastName}`}
+                      secondary={user.email}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              <Pagination
+                count={data?.users?.totalPages || 1}
+                page={(data?.users?.pageable?.pageNumber || 0) + 1}
+                onChange={handlePageChange}
+                sx={{ mt: 2, display: "flex", justifyContent: "center" }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              color="primary"
+              disabled={!isFormDirty || saveLoading}
+            >
+              {saveLoading ? 'Saving...' : currentSection ? "Update" : "Add"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
+    </>
   );
 };
 

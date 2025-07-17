@@ -116,6 +116,18 @@ const ManageEmployees = React.memo(() => {
         dispatch(fetchPaginatedAdmins({ minPriority: 10, maxPriority: 99, page: currentAdminPage, limit: adminPageSize }));
     }, [currentAdminPage, adminPageSize, dispatch]);
 
+    const handleOpenDialog = useCallback((employee = null) => {
+        setCurrentEmployee(employee);
+        setInitialFormData(employee ? { ...employee } : null);
+        setOpenDialog(true);
+    }, []);
+
+    const handleCloseDialog = useCallback(() => {
+        setOpenDialog(false);
+        setCurrentEmployee(null);
+        setInitialFormData(null);
+    }, []);
+    
     useEffect(() => {
         if (saveSuccess || deleteSuccess) {
             setSuccessOpen(true);
@@ -128,7 +140,7 @@ const ManageEmployees = React.memo(() => {
         if (saveError || deleteError) {
             setErrorOpen(true);
         }
-    }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize]);
+    }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize, handleCloseDialog]);
 
     const filteredEmployees = useMemo(() => {
         if (!paginatedUsers?.content) return [];
@@ -205,17 +217,7 @@ const ManageEmployees = React.memo(() => {
         }
     }, [dialogType, handleSubmit]);
 
-    const handleOpenDialog = useCallback((employee = null) => {
-        setCurrentEmployee(employee);
-        setInitialFormData(employee ? { ...employee } : null);
-        setOpenDialog(true);
-    }, []);
 
-    const handleCloseDialog = useCallback(() => {
-        setOpenDialog(false);
-        setCurrentEmployee(null);
-        setInitialFormData(null);
-    }, []);
 
     const handleSaveEmployee = useCallback((employee) => {
         if (initialFormData && isEqual(initialFormData, employee)) {
@@ -232,7 +234,7 @@ const ManageEmployees = React.memo(() => {
     const handleClick = useCallback((event, id) => {
         setAnchorEl(event.currentTarget);
         setUserId(id)
-    }, [userId]);
+    }, []);
 
     const handleConfirmDelete = useCallback(() => {
         if (employeeToDelete) {

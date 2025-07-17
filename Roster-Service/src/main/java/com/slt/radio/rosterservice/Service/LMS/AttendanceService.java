@@ -32,6 +32,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.time.temporal.ChronoUnit;
+import com.slt.radio.rosterservice.Model.Enum.RosterType;
+import com.slt.radio.rosterservice.messaging.AttendanceJSM;
 
 @Service
 @RequiredArgsConstructor
@@ -97,16 +100,28 @@ public class AttendanceService {
 
                         Date processDate = stripTimeFromDate(helper.getYesterdayDate());
 
-                        Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
+                        /* Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
                                 employeeEntity.getSltId(),
                                 processDate
                         );
                         Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
                                 employeeEntity.getSltId(),
                                 processDate
-                        );
+                        ); */
+
+                        Optional<InOut> earliestPunchIn = inOutRepository.findByEmployeeIdAndPunchTime(employeeEntity.getSltId(), processDate).
+                                stream().filter(inOut -> inOut.getInOutValue() == 1).min(Comparator.comparing(InOut::getPunchTypeTime));
+
+                        Optional<InOut> latestPunchIn = inOutRepository.findByEmployeeIdAndPunchTime(
+                                employeeEntity.getSltId(),
+                                processDate
+                        ).stream().filter(inOut -> inOut.getInOutValue() == 0).max(Comparator.comparing(InOut::getPunchTypeTime));
+                        
                         Attendance attendance = new Attendance();
                         attendance.setIsManual(true);
+                        attendance.setRosterType(RosterType.CHARANA_TV);
+                        attendance.setPublicId(UUID.randomUUID().toString());
+                        attendance.setAttendanceType(AttendanceType.NONE);
 
                         if (earliestPunchIn.isEmpty()) {
                             log.debug("No attendance data for employee: {}", cleanEmId);
@@ -159,7 +174,6 @@ public class AttendanceService {
                         }
 
                     
-                        attendance.setPublicId(UUID.randomUUID().toString());
                         attendance.setEmployeeId(cleanEmId);
                         attendance.setTerminalId(inOut.getTerminalId());
                         attendance.setDate(processDate);
@@ -195,14 +209,14 @@ public class AttendanceService {
 
             List<Attendance> uniqueAttendances = safeList.stream()
                     .filter(a -> !existingIds.contains(a.getEmployeeId()))
+                    .filter(a-> !helper.isDuplicateAttendance(a))
                     .collect(Collectors.toList());
 
             if (!uniqueAttendances.isEmpty()) {
                 List<Attendance> attendances = attendanceRepository.saveAll(uniqueAttendances);
                 attendances.forEach(attendance -> {
                     if(!roster_beyond){
-                        messageProducerService.sendMessage("roster.queue", attendance);
-                        System.out.println(" ************* SENDING roster.queue ***********");
+                        messageProducerService.sendMessage("roster.queue", convertToAttendanceJSM(attendance));
                     }
                 });
             }
@@ -376,7 +390,7 @@ public class AttendanceService {
                         .etlRunTime(new Date())
                         .build();
 
-                boolean isDuplicate = checkForDuplicateInOut(inOut);
+                boolean isDuplicate = helper.checkForDuplicateInOut(inOut);
 
                 if (!isDuplicate) {
                     InOut saved = inOutRepository.save(inOut);
@@ -392,7 +406,7 @@ public class AttendanceService {
         }
     }
 
-    private boolean checkForDuplicateInOut(InOut newInOut) {
+    /* private boolean checkForDuplicateInOut(InOut newInOut) {
         try {
             List<InOut> existingEntries = inOutRepository.findByEmployeeIdAndDateAndPunchTime(
                     newInOut.getEmployeeId(),
@@ -406,7 +420,7 @@ public class AttendanceService {
             logger.error("Error checking for duplicate InOut: {}", e.getMessage());
             return false;
         }
-    }
+    } */
 
     @Transactional
     public RosterAttendance processAttendanceForDate(String dateStr) {
@@ -447,18 +461,20 @@ public class AttendanceService {
                         teamSummaries, employeeDetails, true);
             }
 
-            RosterAttendance rosterAttendance = RosterAttendance.builder()
-                    .date(dateStr)
-                    .month(monthNumber)
-                    .year(year)
-                    .teamAttendanceSummary(teamSummaries)
-                    .employeeAttendanceDetails(new ArrayList<>(employeeDetails))
-                    .createdAt(new Date())
-                    .updatedAt(new Date())
-                    .build();
+            if(rosterAttendanceRepository.findByDate(dateStr).isEmpty()) {
+                RosterAttendance rosterAttendance = RosterAttendance.builder()
+                        .date(dateStr)
+                        .month(monthNumber)
+                        .year(year)
+                        .teamAttendanceSummary(teamSummaries)
+                        .employeeAttendanceDetails(new ArrayList<>(employeeDetails))
+                        .createdAt(new Date())
+                        .updatedAt(new Date())
+                        .build();
 
-            return rosterAttendanceRepository.save(rosterAttendance);
-
+                return rosterAttendanceRepository.save(rosterAttendance);
+            }
+            return null;
         } catch (Exception e) {
             log.error("Error processing attendance for date: {}", dateStr, e);
             return null;
@@ -497,19 +513,26 @@ public class AttendanceService {
 
                 List<Attendance> attendances = Collections.synchronizedList(new ArrayList<>());
 
-                teamEmployees.parallelStream().forEach(employee -> {
+                /* teamEmployees.parallelStream().forEach(employee -> {
                     Attendance attendance = processEmployee(employee, dateStr, shiftTime, team, isRotationShift, employeeDetails);
                     if (attendance != null) {
                         attendances.add(attendance);
                     }
                 });
 
+                attendances = attendances.stream().filter(a-> !helper.isDuplicateAttendance(a)); */
+
+                teamEmployees.stream()
+                        .map(employee -> processEmployee(employee, dateStr, shiftTime, team, isRotationShift, employeeDetails))
+                        .filter(Objects::nonNull)
+                        .filter(attendance -> !helper.isDuplicateAttendance(attendance))
+                        .forEach(attendances::add);
+
                 if (!attendances.isEmpty()) {
                     List<Attendance> attendances_save = attendanceRepository.saveAll(attendances);
                     attendances_save.forEach(attendance -> {
                         if(!roster_beyond){
-                            messageProducerService.sendMessage("roster.queue", attendance);
-                            System.out.println(" ************* SENDING roster.queue ***********");
+                            messageProducerService.sendMessage("roster.queue", convertToAttendanceJSM(attendance));
                         }
 
                     });
@@ -519,6 +542,43 @@ public class AttendanceService {
                 teamSummaries.put(team.getId(), summary);
             });
         });
+    }
+
+    public static AttendanceJSM convertToAttendanceJSM(Attendance attendance) {
+        if (attendance == null) {
+            return null;
+        }
+
+        AttendanceJSM attendanceJSM = new AttendanceJSM();
+        attendanceJSM.setId(attendance.getId());
+        attendanceJSM.setPublicId(attendance.getPublicId());
+        attendanceJSM.setDate(attendance.getDate());
+        attendanceJSM.setArrivalDate(attendance.getArrivalDate());
+        attendanceJSM.setArrivalTime(attendance.getArrivalTime());
+        attendanceJSM.setLeftTime(attendance.getLeftTime());
+        attendanceJSM.setTerminalId(attendance.getTerminalId());
+        attendanceJSM.setEmployeeId(attendance.getEmployeeId());
+        attendanceJSM.setTeamId(attendance.getTeamId());
+        attendanceJSM.setAttendanceType(attendance.getAttendanceType());
+        attendanceJSM.setRosterType(attendance.getRosterType());
+        attendanceJSM.setLate(attendance.getIsLate());
+        attendanceJSM.setLateCovered(attendance.getIsLateCovered());
+        attendanceJSM.setUnauthorized(attendance.getIsUnauthorized());
+        attendanceJSM.setUnSuccessful(attendance.getIsUnSuccessful());
+        attendanceJSM.setHoliday(attendance.getIsHoliday());
+        attendanceJSM.setResolved(attendance.getIsResolved());
+        attendanceJSM.setHasIssues(attendance.getHasIssues());
+        attendanceJSM.setManual(attendance.getIsManual());
+        attendanceJSM.setIssueDescription(attendance.getIssueDescription());
+        attendanceJSM.setDueDateForUA(attendance.getDueDateForUA());
+        attendanceJSM.setEtlRunTime(attendance.getEtlRunTime());
+        attendanceJSM.setCreatedDate(attendance.getCreatedDate());
+        attendanceJSM.setUpdatedDate(attendance.getUpdatedDate());
+        attendanceJSM.setActive(attendance.getIsActive());
+        attendanceJSM.setViaMovement(attendance.getViaMovement());
+        attendanceJSM.setViaLeave(attendance.getViaLeave());
+
+        return attendanceJSM;
     }
 
     private TeamAttendanceSummary createTeamSummary(Team team, String shiftTime, boolean isRotationShift,
@@ -587,7 +647,7 @@ public class AttendanceService {
             if (employeeArchive == null) return null;
             if (!employeeArchive.getRoaster()) return null;
 
-            Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
+            /* Optional<InOut> earliestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeAsc(
                     employeeArchive.getSltId(),
                     processDate
             );
@@ -595,7 +655,15 @@ public class AttendanceService {
             Optional<InOut> latestPunchIn = inOutRepository.findTopByEmployeeIdAndDateOrderByPunchTimeDesc(
                     employeeArchive.getSltId(),
                     processDate
-            );
+            ); */
+
+            Optional<InOut> earliestPunchIn = inOutRepository.findByEmployeeIdAndPunchTime(employeeArchive.getSltId(), processDate).
+                                stream().filter(inOut -> inOut.getInOutValue() == 1).min(Comparator.comparing(InOut::getPunchTypeTime));
+
+            Optional<InOut> latestPunchIn = inOutRepository.findByEmployeeIdAndPunchTime(
+                employeeArchive.getSltId(),
+                processDate
+            ).stream().filter(inOut -> inOut.getInOutValue() == 0).max(Comparator.comparing(InOut::getPunchTypeTime));
 
 
             InOut inOut = earliestPunchIn.orElse(null);
@@ -646,14 +714,7 @@ public class AttendanceService {
                 attendance.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
             }
 
-            attendance.setArrivalDate(inOut.getPunchTime());
-            attendance.setArrivalTime(inOut.getPunchTypeTime());
-            attendance.setTerminalId(inOut.getTerminalId());
-            attendance.setIsManual(true);
-
-
             LocalTime actualStartTime = inOut.getPunchTypeTime();
-
             LocalTime actualEndTime = null;
             if(inOutLatest != null) actualEndTime = inOutLatest.getPunchTypeTime();
 
@@ -679,6 +740,12 @@ public class AttendanceService {
                     attendance.setAttendanceType(AttendanceType.FULL_DAY);
             }*/
 
+            attendance.setDate(processDate);
+            attendance.setArrivalDate(inOut.getPunchTime());
+            attendance.setArrivalTime(inOut.getPunchTypeTime());
+            attendance.setTerminalId(inOut.getTerminalId());
+            attendance.setIsManual(true);
+
             if(actualEndTime != null)
                 attendance.setLeftTime(inOutLatest.getPunchTypeTime());
 
@@ -686,7 +753,7 @@ public class AttendanceService {
                 attendance.setTerminalId(attendance.getTerminalId() + " - " + inOutLatest.getTerminalId());
             }
 
-            employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, shiftTime, isRotationShift));
+            employeeDetails.add(createEmployeeDetail(employee, team, attendance, inOut, inOutLatest, shiftTime, isRotationShift));
             return attendance;
 
         } catch (Exception e) {
@@ -700,6 +767,10 @@ public class AttendanceService {
                                               String shiftTime, boolean isRotationShift,
                                               List<EmployeeAttendanceDetail> employeeDetails) {
         Attendance attendance = buildBaseAttendance(employee, team, date, shiftTime, isRotationShift);
+        attendance.setPublicId(UUID.randomUUID().toString());
+        attendance.setDate(helper.getYesterdayDate());
+        attendance.setArrivalDate(helper.getYesterdayDate());
+        attendance.setRosterType(RosterType.NORMAL);
         attendance.setAttendanceType(AttendanceType.ABSENT);
         attendance.setDueDateForUA(helper.getDueDate());
         attendance.setHasIssues(true);
@@ -721,15 +792,20 @@ public class AttendanceService {
                 .publicId(UUID.randomUUID().toString())
                 .date(date)
                 .employeeId(employee.getEmployeeId())
-                .attendanceType(AttendanceType.FULL_DAY)
+                .rosterType(RosterType.NORMAL)
+                .attendanceType(AttendanceType.NONE)
                 .isLate(false)
                 .build();
     }
 
     private EmployeeAttendanceDetail createEmployeeDetail(Employee employee, Team team,
-                                                          Attendance attendance, InOut inOut, String shiftTime, Boolean isRotationShift) {
-        String status = "PRESENT";
-        if (attendance.getAttendanceType() == AttendanceType.ABSENT) {
+                                                          Attendance attendance, InOut inOut, InOut inOutLatest, String shiftTime, Boolean isRotationShift) {
+        String status = "NONE";
+        if (attendance.getAttendanceType() == AttendanceType.FULL_DAY) {
+            status = "FULL_DAY";
+        } else if (attendance.getAttendanceType() == AttendanceType.HALF_DAY) {
+            status = "HALF_DAY";
+        } else if (attendance.getAttendanceType() == AttendanceType.ABSENT) {
             status = "ABSENT";
         } else if (Boolean.TRUE.equals(attendance.getIsLate())) {
             status = attendance.getAttendanceType() == AttendanceType.HALF_DAY ? "HALF_DAY" : "LATE";
@@ -742,6 +818,16 @@ public class AttendanceService {
             arrivalTime = inOut.getPunchTypeTime().toString();
         }
 
+        if (inOutLatest != null && inOutLatest.getPunchTypeTime() != null) {
+            leftTime = inOutLatest.getPunchTypeTime().toString();
+        }
+
+        long late = 0L;
+        if (inOut != null && inOut.getPunchTypeTime() != null && 
+            inOutLatest != null && inOutLatest.getPunchTypeTime() != null) {
+            late = ChronoUnit.MINUTES.between(inOut.getPunchTypeTime(), inOutLatest.getPunchTypeTime());
+        }
+
         return EmployeeAttendanceDetail.builder()
                 .employeeId(employee.getEmployeeId())
                 .employeeName(employee.getName())
@@ -751,6 +837,7 @@ public class AttendanceService {
                 .arrivalTime(arrivalTime)
                 .leftTime(leftTime)
                 .attendanceStatus(status)
+                .lateMinutes(late)
                 .build();
     }
 

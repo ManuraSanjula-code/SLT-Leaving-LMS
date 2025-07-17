@@ -132,17 +132,17 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
     const [viewMovementData, setViewMovementData] = useState(null);
 
     useEffect(() => {
-        if (userId == null) userId = sessionStorage.getItem('userId');
-        if (userId) {
+        const currentUserId = userId || sessionStorage.getItem('userId');
+        if (currentUserId) {
             dispatch(fetchMovementRequests({
                 isAdmin,
-                userId,
+                userId: currentUserId,
                 useAdmin,
                 page: pagination.currentPage,
                 size: pagination.pageSize
             }));
         }
-    }, [dispatch, isAdmin, userId, pagination.currentPage, pagination.pageSize]);
+    }, [dispatch, isAdmin, userId, useAdmin, pagination.currentPage, pagination.pageSize]);
 
     const isApproved = (request) => {
         return request.status === "Approved" || request.accepted === true || request.requestStatus === "APPROVED";
@@ -289,6 +289,24 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
         }
     };
 
+    const handleApplyFilters = () => {
+        const currentUserId = userId || sessionStorage.getItem('userId');
+        if (currentUserId) {
+            dispatch(fetchMovementRequests({
+                isAdmin,
+                userId: currentUserId,
+                useAdmin,
+                page: pagination.currentPage,
+                size: pagination.pageSize,
+                searchQuery,
+                statusFilter,
+                typeFilter,
+                startDateFilter,
+                endDateFilter
+            }));
+        }
+    };
+
     const handleOpenEditDialog = (request) => {
         setCurrentEdit(request);
 
@@ -415,22 +433,6 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
 
     const handleEndDateChange = (e) => {
         dispatch(setEndDateFilter(e.target.value));
-    };
-
-    const handleApplyFilters = () => {
-        dispatch(setCurrentPage(0));
-
-        if (userId == null) userId = sessionStorage.getItem('userId');
-
-        if (userId) {
-            dispatch(fetchMovementRequests({
-                isAdmin,
-                userId,
-                useAdmin,
-                page: 0,
-                size: pagination.pageSize
-            }));
-        }
     };
 
     const handleOpenDialog = (publicId) => {

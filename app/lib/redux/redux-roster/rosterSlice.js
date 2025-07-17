@@ -10,7 +10,10 @@ export const fetchRosterData = createAsyncThunk(
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-
+            const contentLength = response.headers.get('Content-Length');
+            if (contentLength === '0' || !response.body) {
+                return null;
+            } 
             const data = await response.json();
             return data;
         } catch (error) {

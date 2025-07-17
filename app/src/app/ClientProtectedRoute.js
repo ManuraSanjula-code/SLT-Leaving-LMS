@@ -31,7 +31,7 @@ export default function ClientProtectedRoute({ children }) {
     };
 
     resetInvalidAuth();
-  }, [dispatch]);
+  }, [dispatch, reduxUser.errorMessage, reduxUser.userId]); // Added missing dependencies
 
   useEffect(() => {
     const checkAuth = () => {
