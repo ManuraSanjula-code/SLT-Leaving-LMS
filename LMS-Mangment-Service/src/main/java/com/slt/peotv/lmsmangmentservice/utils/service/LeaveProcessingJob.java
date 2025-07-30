@@ -1,13 +1,11 @@
 package com.slt.peotv.lmsmangmentservice.utils.service;
 
+import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -23,47 +21,54 @@ public class LeaveProcessingJob {
     @Autowired
     private Helper helper;
 
-    private Date stripTimeFromDate(Date dateWithTime) {
-        if (dateWithTime == null) {
-            return null;
-        }
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(dateWithTime);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        return calendar.getTime();
-    }
-
     @Scheduled(cron = "0 00 03 * * ?")
     public void processAllPendingLeaves() {
-        List<LeaveEntity> allLeaves = leaveRepository.findAll();
-        for (LeaveEntity leave : allLeaves) {
-
-            if(!leave.getIsManualRequest())
-                continue;
-
-            if(trackAttendanceDuringLeave(leave, helper.getDateWithoutTime())){
-                attendanceProcessingService.processEmployeeLeave(leave.getEmployee(), leave, helper.getDateWithoutTime());
+        try {
+            List<LeaveEntity> allLeaves = leaveRepository.findAll();
+            if (allLeaves == null || allLeaves.isEmpty()) {
+                return;
             }
 
-            /*LocalDate startDate = leave.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            LocalDate endDate = leave.getToDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            Date currentDate = helper.getDateWithoutTime();
+            if (currentDate == null) {
+                System.err.println("Error: Current date is null");
+                return;
+            }
 
-            for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            for (LeaveEntity leave : allLeaves) {
+                try {
+                    if (leave == null || !leave.getIsManualRequest() || leave.getEmployee() == null) {
+                        continue;
+                    }
 
-                Date processDate = stripTimeFromDate(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-
-                System.out.println("Processing leave for " + leave.getEmployeeID() + " on " + processDate);
-                attendanceProcessingService.processEmployeeLeave(leave.getEmployeeID(), processDate);
-            }*/
+                    if (isDateWithinLeavePeriod(leave, currentDate)) {
+                        attendanceProcessingService.processEmployeeLeave(
+                            leave.getEmployee(), 
+                            leave, 
+                            currentDate
+                        );
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error processing leave for employee: " + 
+                        (leave != null && leave.getEmployee() != null ? 
+                        leave.getEmployee().getEmployeeId() : "unknown") + 
+                        " - " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error in leave processing job: " + e.getMessage());
         }
     }
 
-    public Boolean trackAttendanceDuringLeave(LeaveEntity leaveRequest, Date actualAttendanceDate) {
-        // Check if the attendance date falls within the leave period
-        return actualAttendanceDate.compareTo(leaveRequest.getFromDate()) >= 0 &&
-                actualAttendanceDate.compareTo(leaveRequest.getToDate()) <= 0;
+    private boolean isDateWithinLeavePeriod(LeaveEntity leave, Date date) {
+        try {
+            if (leave == null || date == null || leave.getFromDate() == null || leave.getToDate() == null) {
+                return false;
+            }
+            return !date.before(leave.getFromDate()) && !date.after(leave.getToDate());
+        } catch (Exception e) {
+            System.err.println("Error checking leave period: " + e.getMessage());
+            return false;
+        }
     }
 }

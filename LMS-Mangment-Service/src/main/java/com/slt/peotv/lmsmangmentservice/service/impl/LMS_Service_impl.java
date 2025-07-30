@@ -34,6 +34,7 @@ import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 
 @Service
 public class LMS_Service_impl implements LMS_Service {
@@ -69,6 +70,8 @@ public class LMS_Service_impl implements LMS_Service {
     private Helper helper;
     @Autowired
     private Check_Service check_Service;
+    @Autowired
+    private NoPayReasonRepo noPayReasonRepo;
 
     @Override
     public List<InOutDTO> getAllInOuts(String id, boolean swap) {
@@ -153,7 +156,7 @@ public class LMS_Service_impl implements LMS_Service {
             Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), fridayDate);
 
             earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
-            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "": dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
 
         }else{
 
@@ -161,7 +164,7 @@ public class LMS_Service_impl implements LMS_Service {
             Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate());
 
             earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
-            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(dashBoardRes.getLastPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "": dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
         }
 
         /* AccessLogEntity todayEarliestAccessLogsByEmployee = check_Service.getTodayEarliestAccessLogsByEmployee(employeeEntity.getSltId());
@@ -179,7 +182,7 @@ public class LMS_Service_impl implements LMS_Service {
         Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.removeTimeFromDate(new Date()));
 
         earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(inOutEntity.getPunchTypeTimeAsString()));
-        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(dashBoardRes.getNowPunch() + " -" + inOutEntity.getPunchTypeTimeAsString()));
+        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch((dashBoardRes.getNowPunch().isEmpty() || dashBoardRes.getNowPunch() == null ? "": dashBoardRes.getNowPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
 
         if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
         if(dashBoardRes.getLastPunch() == null) dashBoardRes.setLastPunch("NOT FOUND");
@@ -262,14 +265,14 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
+        Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployee(helper.getEmployeeById(employeeId), pageable);
         return allByUser.map(lmsUtils::toMovementDTO);
     }
 
     @Override
     public Page<MovementDTO> getAllMovementByAdmin(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
+        Pageable pageable = PageRequest.of(page, size);
         Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(userId);
         if (employee.isEmpty()) {
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
@@ -291,7 +294,7 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public Page<MovementDTO> getAllMovements(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reqDate"));
+        Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
         return allByUser.map(lmsUtils::toMovementDTO);
     }
@@ -379,6 +382,10 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public void deleteNoPay(String publicId) {
         NoPayEntity noPayEntity = noPayRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+        NoPayReasonEntity noPayReasonEntitiesByNoPay = noPayReasonRepo.findNoPayReasonEntitiesByNoPay(noPayEntity)
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+
+        noPayReasonRepo.delete(noPayReasonEntitiesByNoPay);
         noPayRepo.delete(noPayEntity);
     }
 
@@ -392,17 +399,15 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<LeaveDTO> getAllLeaveByUserByUserId(String userId, int page, int size) {
         EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(userId)
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
-        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
-                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
-        Pageable pageable = PageRequest.of(page, size, sort);        Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
         return leaveEntityPage.map(lmsUtils::toLeaveDTO);
     }
 
     @Override
     public Page<LeaveDTO> getAllLeaves(int page, int size) {
-        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
-                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
-        Pageable pageable = PageRequest.of(page, size, sort);        Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
         return leaveEntityPage.map(lmsUtils::toLeaveDTO);
 
     }
@@ -606,9 +611,9 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(String userId, int page, int size) {
         if (userId == null || userId.trim().isEmpty())
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
-        Sort sort = Sort.by(Sort.Direction.DESC, "createDate")
-                .and(Sort.by(Sort.Direction.DESC, "submitDate"));
-        Pageable pageable = PageRequest.of(page, size, sort);        Optional<EmployeeEntity> em = helper.getEmployeeByIdV2(userId);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Optional<EmployeeEntity> em = helper.getEmployeeByIdV2(userId);
         if (em.isEmpty()) throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         return em.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(componetAdmins -> {

@@ -323,7 +323,7 @@ const leaveApplicationSlice = createSlice({
                 state.loading = false;
                 state.notification = {
                     open: true,
-                    message: `${message_ || "Failed to submit leave request: " }`,
+                    message: `${"Failed to submit leave request " + message_ || "Failed to submit leave request: " }`,
                     severity: 'error'
                 };
             });

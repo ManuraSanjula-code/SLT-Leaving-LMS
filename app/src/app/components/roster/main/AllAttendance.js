@@ -96,6 +96,7 @@ const AttendanceComponent = () => {
                 if (statusFilter === 'present') return record.attendanceType === 'FULL_DAY';
                 if (statusFilter === 'absent') return record.attendanceType === 'ABSENT';
                 if (statusFilter === 'halfday') return record.attendanceType === 'HALF_DAY';
+                if (statusFilter === 'leave') return record.leaveStatus;
                 return true;
             });
         }
@@ -140,6 +141,9 @@ const AttendanceComponent = () => {
     };
 
     const getStatusChip = (record) => {
+        if (record.leaveStatus) {
+            return <Chip label={`Leave (${record.leaveStatus})`} color="info" size="small" />;
+        }
         switch (record.attendanceType) {
             case 'ABSENT':
                 return <Chip label="Absent" color="error" size="small" />;
@@ -148,7 +152,7 @@ const AttendanceComponent = () => {
             case 'FULL_DAY':
                 return <Chip label="Present" color="success" size="small" />;
             default:
-                return <Chip label={record.attendanceType} color="default" size="small" />;
+                return <Chip label={record.attendanceType || '--'} color="default" size="small" />;
         }
     };
 
@@ -157,6 +161,13 @@ const AttendanceComponent = () => {
             return <Chip label="Yes" color="error" size="small" />;
         }
         return <Chip label="No" color="success" size="small" />;
+    };
+
+    const getRosterType = (rosterType) => {
+        if (!rosterType) return '--';
+        return rosterType.split('_').map(word => 
+            word.charAt(0) + word.slice(1).toLowerCase()
+        ).join(' ');
     };
 
     const paginatedData = filteredData.slice(
@@ -272,6 +283,7 @@ const AttendanceComponent = () => {
                                     <MenuItem value="present">Present</MenuItem>
                                     <MenuItem value="absent">Absent</MenuItem>
                                     <MenuItem value="halfday">Half Day</MenuItem>
+                                    <MenuItem value="leave">Leave</MenuItem>
                                 </Select>
                             </FormControl>
                         </Grid>
@@ -345,6 +357,8 @@ const AttendanceComponent = () => {
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Arrival Time</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Left Time</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Status</TableCell>
+                                        <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Leave Status</TableCell>
+                                        <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Roster Type</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Late</TableCell>
                                         <TableCell sx={{ backgroundColor: '#f5f5f5 !important', color: '#000000 !important' }}>Issues</TableCell>
                                     </TableRow>
@@ -368,6 +382,12 @@ const AttendanceComponent = () => {
                                                 <TableCell>
                                                     {getStatusChip(record)}
                                                 </TableCell>
+                                                <TableCell sx={{ color: '#000000 !important' }}>
+                                                    {record.leaveStatus || '--'}
+                                                </TableCell>
+                                                <TableCell sx={{ color: '#000000 !important' }}>
+                                                    {getRosterType(record.rosterType)}
+                                                </TableCell>
                                                 <TableCell>
                                                     {record.isLate ? (
                                                         <Chip label="Yes" color="error" size="small" />
@@ -383,7 +403,7 @@ const AttendanceComponent = () => {
                                     ) : (
                                         <TableRow sx={{ backgroundColor: '#ffffff !important' }}>
                                             <TableCell
-                                                colSpan={6}
+                                                colSpan={8}
                                                 align="center"
                                                 sx={{ color: '#000000 !important' }}
                                             >

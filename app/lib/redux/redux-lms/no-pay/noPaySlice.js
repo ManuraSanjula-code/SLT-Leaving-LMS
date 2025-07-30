@@ -37,6 +37,27 @@ export const fetchNoPayRecords = createAsyncThunk(
     }
 );
 
+export const deleteNoPayRecord = createAsyncThunk(
+    'noPay/deleteNoPayRecord',
+    async ({ nopayid, empId }, { rejectWithValue }) => {
+        try {
+            const response = await fetch(`http://192.168.3.20:8080/lms/no-pay/${nopayid}/${empId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            return nopayid;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
 const noPaySlice = createSlice({
     name: 'noPay',
     initialState: {
@@ -81,6 +102,12 @@ const noPaySlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+            .addCase(deleteNoPayRecord.fulfilled, (state, action) => {
+                state.records = state.records.filter(record => record.publicId !== action.payload);
+            })
+            .addCase(deleteNoPayRecord.rejected, (state, action) => {
+                state.error = action.payload;
+            })
             .addCase(fetchNoPayRecords.pending, (state) => {
                 state.loading = true;
                 state.error = null;

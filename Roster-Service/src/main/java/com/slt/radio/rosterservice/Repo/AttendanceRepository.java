@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
-
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -19,4 +19,8 @@ public interface AttendanceRepository extends MongoRepository<Attendance, String
     Page<Attendance> findByDate(Date date, Pageable pageable);
     @Query(value = "{'employeeID': {'$in': ?0}, 'date': ?1}", fields = "{'employeeID': 1}")
     List<Attendance> findExistingAttendances(List<String> employeeIds, Date date);
+    boolean existsByEmployeeIdAndArrivalDateAndArrivalTime(String employee, Date arrivalDate, LocalTime arrivalTime);
+    boolean existsByEmployeeIdAndArrivalDate(String employee, Date arrivalDate);
+    boolean existsByEmployeeIdAndDate(String employee, Date date);
+
 }

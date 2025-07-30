@@ -12,5 +12,6 @@ public interface EmployeeArchiveRepository extends MongoRepository<EmployeeArchi
     EmployeeArchive findByUserId(String userId);
     Optional<EmployeeArchive> findByEmployeeId(String employeeId);
     Optional<EmployeeArchive> findByEmail(String email);
+    List<EmployeeArchive> findByRoaster(Boolean roaster);
 }
 

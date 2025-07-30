@@ -409,6 +409,11 @@ public class LMSController {
         return lmsService.getAllMovements(page, size);
     }
 
+    @DeleteMapping("/no-pay/{nopayid}/{empId}")
+    public void deleteNoPay(@PathVariable String nopayid, @PathVariable String empId) {
+        lmsService.deleteNoPay(nopayid);
+    }
+
     @GetMapping("/no-pay/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public Page<NopayDTO> getAllNopayByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,

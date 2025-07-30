@@ -2,7 +2,7 @@ package com.slt.radio.rosterservice.messaging;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.slt.radio.rosterservice.Model.Enum.*;
-
+import com.slt.radio.rosterservice.Model.Enum.LeaveStatus;
 import java.time.LocalTime;
 import java.util.Date;
 
@@ -17,6 +17,7 @@ public class AttendanceJSM {
     private String employeeId;
     private String teamId;
     private AttendanceType attendanceType;
+    private LeaveStatus leaveStatus;
     private RosterType rosterType;
     @JsonProperty("isLate")
     private Boolean isLate = false;
@@ -44,6 +45,13 @@ public class AttendanceJSM {
     private Boolean viaMovement;
     private Boolean viaLeave;
 
+    public LeaveStatus getLeaveStatus() {
+        return leaveStatus;
+    }
+
+    public void setLeaveStatus(LeaveStatus leaveStatus) {
+        this.leaveStatus = leaveStatus;
+    }
     public RosterType getRosterType() {
         return rosterType;
     }

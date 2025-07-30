@@ -333,12 +333,19 @@ public class LMSUtils {
         entity.setPublicId(utils.generateId(10));
         entity.setEtlRunTime(new Date());
         entity.setDate(helper.removeTimeFromDate(req.getDate()));
-        entity.setArrivalDate(helper.removeTimeFromDate(req.getArrivalDate()));
+        
+        entity.setArrivalDate(req.getArrivalDate() != null ? 
+            helper.removeTimeFromDate(req.getArrivalDate()) : null);
+        
         entity.setArrivalTime(req.getArrivalTime());
         entity.setLeftTime(req.getLeftTime());
         entity.setIssueDescription(req.getIssueDescription());
         entity.setDueDateForUA(req.getDueDateForUA());
-        entity.setTerminalId(req.getTerminalID());
+        
+        if (req.getTerminalID() != null) {
+            entity.setTerminalId(req.getTerminalID());
+        }
+        
         entity.setUpdatedDate(new Date());
 
         if (Boolean.TRUE.equals(req.getIsFullDay())) {
@@ -360,12 +367,12 @@ public class LMSUtils {
             entity.setResolve(ResolveType.VIA_LEAVE);
         }
 
-        entity.setIsLate(req.getIsLate());
-        entity.setIsLateCovered(req.getLateCover());
-        entity.setIsUnauthorized(req.getIsUnAuthorized());
-        entity.setIsUnSuccessful(req.getIsUnSuccessful());
-        entity.setHasIssues(req.getIssues());
-        entity.setIsActive(req.getActive());
+        entity.setIsLate(Boolean.TRUE.equals(req.getIsLate()));
+        entity.setIsLateCovered(Boolean.TRUE.equals(req.getLateCover()));
+        entity.setIsUnauthorized(Boolean.TRUE.equals(req.getIsUnAuthorized()));
+        entity.setIsUnSuccessful(Boolean.TRUE.equals(req.getIsUnSuccessful()));
+        entity.setHasIssues(Boolean.TRUE.equals(req.getIssues()));
+        entity.setIsActive(Boolean.TRUE.equals(req.getActive()));
 
         return entity;
     }

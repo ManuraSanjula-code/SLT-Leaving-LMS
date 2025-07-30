@@ -126,7 +126,7 @@ public class AccessLogSyncService {
         String yesterdayStr = yesterday.format(DATE_FORMATTER);
 
         try {
-            List<AccessLog> accessLogs = fetchAccessLogsFromSLT(getYesterdayDate());
+            List<AccessLog> accessLogs = fetchAccessLogsFromSLT(helper.getFormattedYesterdayDate());
             attendanceService.processAccessLogs(accessLogs);
             attendanceService.processAttendanceForDate(yesterdayStr);
 
@@ -136,6 +136,11 @@ public class AccessLogSyncService {
         } catch (Exception e) {
             log.error("Error in daily sync process", e);
         }
+    }
+
+    @Scheduled(cron = "00 00 04  * * ?")
+    public void syncAccessLogsAndProcessAbsentAttendance(){
+        attendanceService.processAbsentAttendance();
     }
 
 

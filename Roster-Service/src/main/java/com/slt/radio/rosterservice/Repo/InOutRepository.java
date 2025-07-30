@@ -4,6 +4,8 @@ import com.slt.radio.rosterservice.Model.One.LMS.InOut;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query; 
 import org.springframework.stereotype.Repository;
+import com.slt.radio.rosterservice.Model.One.LMS.InOut;
+import com.slt.radio.rosterservice.Model.Enum.InOutType;
 
 import java.sql.Time;
 import java.time.LocalTime;
@@ -16,6 +18,7 @@ public interface InOutRepository extends MongoRepository<InOut, String> {
     List<InOut> findByEmployeeIdAndDate(String employeeId, Date date);
 
     List<InOut> findByEmployeeIdAndPunchTime(String employeeId, Date punchTime);
+    List<InOut> findByEmployeeIdAndPunchTimeAndInOutType(String employeeId, Date punchTime, InOutType inOutType);
 
 
     Optional<InOut> findTopByEmployeeIdAndDateOrderByPunchTimeAsc(String employeeID, Date date);

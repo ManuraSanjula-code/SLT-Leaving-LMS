@@ -3,6 +3,7 @@ package com.slt.radio.rosterservice.Model.One.LMS;
 import java.io.Serializable;
 import com.slt.radio.rosterservice.Model.Enum.AttendanceType;
 import com.slt.radio.rosterservice.Model.Enum.RosterType;
+import com.slt.radio.rosterservice.Model.Enum.LeaveStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +38,7 @@ public class Attendance implements Serializable{
     private String teamId;
     private AttendanceType attendanceType;
     private RosterType rosterType;
+    private LeaveStatus leaveStatus;
     @Builder.Default
     private Boolean isLate = false;
     @Builder.Default

@@ -14,6 +14,14 @@ import java.util.NoSuchElementException;
 @ControllerAdvice
 public class AppExceptionsHandler {
 
+	@ExceptionHandler(value = {BulkApprovalException.class})
+	public ResponseEntity<Object> handleBulkApprovalException(BulkApprovalException ex, WebRequest request)
+	{
+		ErrorMessage errorMessage = new ErrorMessage(new Date(), ex.getMessage());
+
+		return new ResponseEntity<>(errorMessage, new HttpHeaders(), HttpStatus.BAD_REQUEST);
+	}
+
 	@ExceptionHandler(value = {IllegalArgumentException.class})
 	public ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request)
 	{

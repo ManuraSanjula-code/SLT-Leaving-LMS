@@ -5,8 +5,6 @@ import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
-import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
-import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
@@ -14,8 +12,6 @@ import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.sql.Time;
 import java.util.Date;
 
 @Service
@@ -23,8 +19,6 @@ public class AttendanceProcessingService {
 
     @Autowired
     private LeaveRepo leaveRepository;
-    @Autowired
-    private InOutRepo inOutRepository;
     @Autowired
     private ServiceEvent serviceEvent;
     @Autowired
@@ -36,51 +30,85 @@ public class AttendanceProcessingService {
 
     @Transactional
     public void processEmployeeLeave(EmployeeEntity employee, LeaveEntity leave, Date processDate) {
-        System.out.println("Employee Date: " + processDate);
-
-        if (employee == null) return;
-
-        String employeeId = employee.getEmployeeId();
-        if (employeeId.isEmpty())
-            return;
-
-
-        leave.setNotUsed(false);
-        leave.setDescription("Absent - Leave Used");
-        LeaveTypeEntity leaveType = leave.getLeaveType();
-        leave.setRequestStatus(RequestStatus.SUBMITTED);
-
-        String user = leave.getEmployee().getEmployeeId();
-        if (user != null) {
-            UserLeaveTypeRemainingEntity currentLeave = getUserLeaveTypeRemaining(leaveType.getName(), user);
-            if(currentLeave == null) return;
-            if (currentLeave.getRemainingLeaves() > 1) {
-                currentLeave.setRemainingLeaves(currentLeave.getRemainingLeaves() - 1);
-                userLeaveTypeRemainingRepo.save(currentLeave);
+        try {
+            // Basic validation
+            if (employee == null || leave == null || processDate == null) {
+                System.err.println("Error: Null parameter in processEmployeeLeave");
+                return;
             }
-            leaveRepository.save(leave);
-            checkService.reportAttendance(employeeId, true, false, false, false, false, false, false, true, true, true, true, false, true, helper.getYesterdayDate());
 
+            String employeeId = employee.getEmployeeId();
+            if (employeeId == null || employeeId.isEmpty()) {
+                System.err.println("Error: Empty employee ID");
+                return;
+            }
+
+            // Process leave
+            processLeave(leave, employeeId);
+
+            // Update attendance
+            updateAttendance(employeeId);
+
+        } catch (Exception e) {
+            System.err.println("Error processing leave for employee " +
+                    (employee != null ? employee.getEmployeeId() : "null") +
+                    ": " + e.getMessage());
         }
     }
-    private UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String name, String user) {
-        return serviceEvent.getUserLeaveTypeRemaining(name, user);
+
+    private void processLeave(LeaveEntity leave, String employeeId) {
+        try {
+            LeaveTypeEntity leaveType = leave.getLeaveType();
+            if (leaveType == null) {
+                System.err.println("Error: No leave type for leave ID " + leave.getId());
+                return;
+            }
+
+            String user = leave.getEmployee() != null ? leave.getEmployee().getEmployeeId() : null;
+            if (user == null) {
+                System.err.println("Error: No employee associated with leave ID " + leave.getId());
+                return;
+            }
+
+            UserLeaveTypeRemainingEntity currentLeave = serviceEvent.getUserLeaveTypeRemaining(leaveType.getName(), user);
+            if (currentLeave == null) {
+                System.err.println("Error: No leave balance found for user " + user);
+                return;
+            }
+
+            if (currentLeave.getRemainingLeaves() > 0) {
+                leave.setNotUsed(false);
+                leave.setDescription("Absent - Leave Used");
+                leave.setRequestStatus(RequestStatus.SUBMITTED);
+
+                currentLeave.setRemainingLeaves(currentLeave.getRemainingLeaves() - 1);
+                userLeaveTypeRemainingRepo.save(currentLeave);
+                leaveRepository.save(leave);
+            } else {
+                System.err.println("Warning: No remaining leaves for user " + user);
+            }
+        } catch (Exception e) {
+            System.err.println("Error in processLeave: " + e.getMessage());
+        }
     }
 
+    private void updateAttendance(String employeeId) {
+        try {
+            Date yesterdayDate = helper.getYesterdayDate();
+            if (yesterdayDate == null) {
+                System.err.println("Error: Yesterday date is null");
+                return;
+            }
 
-    private boolean checkLateArrival(InOutEntity inOut) {
-        return inOut.getPunchTime() != null && inOut.getPunchTypeTime().after(Time.valueOf("09:00:00"));
-    }
-
-    private boolean checkShortLeave(InOutEntity inOut) {
-        return inOut.getPunchTime() != null && inOut.getPunchTypeTime().before(Time.valueOf("16:00:00"));
-    }
-
-    private boolean checkHalfDay(InOutEntity inOut) {
-        return (inOut.getPunchTime() != null && inOut.getPunchTypeTime() == null);
-    }
-
-    private boolean checkFullAttendance(InOutEntity inOut) {
-        return inOut.getPunchTime() != null && inOut.getPunchTypeTime() != null;
+            checkService.reportAttendance(
+                    employeeId,
+                    true, false, false, false,
+                    false, false, false, true,
+                    true, true, true, false,
+                    true, yesterdayDate
+            );
+        } catch (Exception e) {
+            System.err.println("Error updating attendance for employee " + employeeId + ": " + e.getMessage());
+        }
     }
 }

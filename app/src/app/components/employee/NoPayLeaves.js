@@ -9,7 +9,8 @@ import {
   setEndDateFilter,
   setUserIdFilter,
   setCurrentPage,
-  setPageSize
+  setPageSize,
+  deleteNoPayRecord
 } from '../../../../lib/redux/redux-lms/no-pay/noPaySlice';
 import {
   Container,
@@ -45,9 +46,11 @@ import {
   Info as InfoIcon,
   FilterAlt as FilterIcon,
 } from "@mui/icons-material";
+import {DeleteIcon} from "lucide-react";
 
-const ManageNoPay = ({ isAdmin = false }) => {
+const ManageNoPay = ({ isAdmin = false, userId = null }) => {
   const dispatch = useDispatch();
+  if (userId == null) userId = sessionStorage.getItem('userId');
 
   const noPayRecords = useSelector(state => state.noPay.records);
   const loading = useSelector(state => state.noPay.loading);
@@ -59,7 +62,7 @@ const ManageNoPay = ({ isAdmin = false }) => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [adminMode, setAdminMode] = useState(isAdmin);
 
-  const userId = typeof window !== 'undefined' ? sessionStorage.getItem('userId') : null;
+   userId = typeof window !== 'undefined' ? sessionStorage.getItem('userId') : null;
 
   useEffect(() => {
     if (userId) {
@@ -163,6 +166,25 @@ const ManageNoPay = ({ isAdmin = false }) => {
     const userRole = typeof window !== 'undefined' ? sessionStorage.getItem('userRole') : null;
     return userRole && userRole.includes("ADMIN");
   };
+
+  const handleDeleteRecord = async (recordId) => {
+    const empId = sessionStorage.getItem('userId');
+    if (window.confirm('Are you sure you want to delete this no pay record?')) {
+      try {
+        await dispatch(deleteNoPayRecord({ nopayid: recordId, empId })).unwrap();
+        // Refresh the records after deletion
+        dispatch(fetchNoPayRecords({
+          isAdmin: adminMode,
+          userId,
+          page: pagination.currentPage,
+          size: pagination.pageSize,
+          userIdFilter: filters.userIdFilter
+        }));
+      } catch (error) {
+        console.error('Failed to delete record:', error);
+      }
+    }
+  }
 
   return (
       <Container maxWidth="lg">
@@ -304,6 +326,16 @@ const ManageNoPay = ({ isAdmin = false }) => {
                                         color="primary"
                                     >
                                       <InfoIcon />
+                                      {adminMode && (
+                                          <Tooltip title="Delete Record">
+                                            <IconButton
+                                                onClick={() => handleDeleteRecord(record.publicId)}
+                                                color="error"
+                                            >
+                                              <DeleteIcon />
+                                            </IconButton>
+                                          </Tooltip>
+                                      )}
                                     </IconButton>
                                   </Tooltip>
                                 </TableCell>

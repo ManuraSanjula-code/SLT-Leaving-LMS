@@ -139,6 +139,10 @@ public class MessageListener {
                 attendanceEntity.setRosterType(attendance.getRosterType());
             }
 
+            if (attendance.getLeaveStatus() != null) {
+                attendanceEntity.setLeaveStatus(attendance.getLeaveStatus());
+            }
+
             if (attendance.getViaMovement() != null) {
                 attendanceEntity.setViaMovement(attendance.getViaMovement());
             }

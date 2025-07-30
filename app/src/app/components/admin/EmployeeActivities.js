@@ -601,6 +601,9 @@ const EmployeeActivities = () => {
                 <MenuItem onClick={() => handleMenuItemClick('/in-outs')}>
                     In-Outs
                 </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('/no-pay-leaves')}>
+                   No-Pay
+                </MenuItem>
             </Menu>
 
             <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>

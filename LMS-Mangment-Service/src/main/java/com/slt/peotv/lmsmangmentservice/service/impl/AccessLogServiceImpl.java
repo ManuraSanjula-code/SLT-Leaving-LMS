@@ -31,11 +31,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class AccessLogServiceImpl implements AccessLogService {
 
     private static final Logger logger = LoggerFactory.getLogger(AccessLogServiceImpl.class);
+    private static final Logger errorLogger = LoggerFactory.getLogger("ERROR_LOGGER");
     private static final LocalTime NOON = LocalTime.NOON;
     private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final String DEFAULT_DATE_FORMAT = "yyyy/MM/dd";
-    private static final String ALTERNATE_DATE_FORMAT = "dd/MM/yyyy";
+    private static final String ALTERNATE_DATE_FORMAT = "yyyy/MM/dd";
+    private static final String DEFAULT_DATE_FORMAT = "dd/MM/yyyy";
     private static final String TIME_FORMAT = "HH:mm:ss";
+    private static final String FALLBACK_TIME = "00:00:00";
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
     private final SimpleDateFormat timeFormat = new SimpleDateFormat(TIME_FORMAT);
@@ -53,21 +55,21 @@ public class AccessLogServiceImpl implements AccessLogService {
     @Override
     @Transactional
     public void processLogEntry(boolean swap) {
-        logger.info("Starting batch log processing");
+        logger.info("Starting batch log processing for {} logs", swap ? "today" : "yesterday");
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 
         try {
-            List<AccessLogEntity> logs = swap ? 
-                accessLogRepository.findByTodayLogs() : 
-                accessLogRepository.findByYesterdayLogs();
+            List<AccessLogEntity> logs = swap ?
+                    accessLogRepository.findByTodayLogs() :
+                    accessLogRepository.findByYesterdayLogs();
 
             if (logs.isEmpty()) {
-                logger.info("No logs found for processing");
+                logger.info("No logs found for {} processing", swap ? "today" : "yesterday");
                 return;
             }
 
-            logger.info("Found {} logs to process", logs.size());
+            logger.info("Found {} logs to process for {}", logs.size(), swap ? "today" : "yesterday");
 
             for (AccessLogEntity log : logs) {
                 try {
@@ -75,15 +77,18 @@ public class AccessLogServiceImpl implements AccessLogService {
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failureCount.incrementAndGet();
-                    logger.error("Failed to process log entry with ID: {}", log.getEmployeeId(), e);
+                    errorLogger.error("Failed to process log entry with ID: {}. Error: {}",
+                            log.getEmployeeId(), e.getMessage());
+                    logger.debug("Stack trace for failed log entry {}:", log.getEmployeeId(), e);
                 }
             }
 
-            logger.info("Batch processing completed. Success: {}, Failures: {}",
-                    successCount.get(), failureCount.get());
+            logger.info("Batch processing completed for {}. Success: {}, Failures: {}",
+                    swap ? "today" : "yesterday", successCount.get(), failureCount.get());
         } catch (Exception e) {
-            logger.error("Unexpected error in processLogEntry", e);
-            throw new RuntimeException("Processing failed", e);
+            errorLogger.error("Unexpected error in processLogEntry for {} logs: {}",
+                    swap ? "today" : "yesterday", e.getMessage());
+            logger.debug("Stack trace for processLogEntry:", e);
         }
     }
 
@@ -93,88 +98,118 @@ public class AccessLogServiceImpl implements AccessLogService {
             backoff = @Backoff(delay = 1000))
     public void processAccessLog(AccessLogEntity log, boolean swap) {
         if (log == null) {
-            IllegalArgumentException iae = new IllegalArgumentException("Log entry cannot be null");
-            logger.error("Null log entry received", iae);
-            throw iae;
+            errorLogger.error("Null log entry received");
+            return;
         }
 
         try {
-            String logDate = StringUtils.isNotBlank(log.getLogDate()) ? 
-                log.getLogDate() : 
-                dateFormat.format(new Date());
-            
-            String logTime = StringUtils.isNotBlank(log.getLogTime()) ?
-                log.getLogTime() :
-                timeFormat.format(new Date());
+            String logDate = getValidLogDate(log);
+            String logTime = getValidLogTime(log);
 
-            Date punchDate = parseDate(logDate);
+            Date punchDate = parseDateSafely(logDate);
             Time punchTime = parseTime(logTime);
 
-            logger.debug("Processing log - Date: {}, Time: {}, EmployeeID: {}, Inout: {}",
-                    punchDate, punchTime, log.getEmployeeId(), log.getInOut());
+            if (punchDate == null || punchTime == null) {
+                errorLogger.error("Invalid date/time for employee {}. Date: {}, Time: {}",
+                        log.getEmployeeId(), logDate, logTime);
+                return;
+            }
 
-            saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(), log.getTerminalId(), log, swap);
+            logger.debug("Processing log - EmployeeID: {}, Date: {}, Time: {}, Inout: {}",
+                    log.getEmployeeId(), punchDate, punchTime, log.getInOut());
+
+            saveInOutRecord(logDate, punchTime, log.getEmployeeId(), log.getInOut(),
+                    log.getTerminalId(), log, swap);
         } catch (Exception e) {
-            logger.error("Error processing log for employee {}", log.getEmployeeId(), e);
-            throw new RuntimeException("Log processing failed for employee: " + log.getEmployeeId(), e);
+            errorLogger.error("Error processing log for employee {}. Error: {}",
+                    log.getEmployeeId(), e.getMessage());
+            logger.debug("Stack trace for employee {}:", log.getEmployeeId(), e);
         }
     }
 
-    @Override
-    public void main(boolean swap) {
-        logger.info("Starting main access log processing");
-        long startTime = System.currentTimeMillis();
-
+    private String getValidLogDate(AccessLogEntity log) {
         try {
-            processLogEntry(swap);
-            long duration = System.currentTimeMillis() - startTime;
-            logger.info("Main processing completed successfully in {} ms", duration);
+            if (StringUtils.isNotBlank(log.getLogDate())) {
+                return log.getLogDate();
+            }
+            logger.warn("Empty log date for employee {}, using fallback date", log.getEmployeeId());
+            return dateFormat.format(getFallbackDate(false)); // Default to current date format
         } catch (Exception e) {
-            logger.error("Error in main access log processing", e);
-            throw new RuntimeException("Main processing failed", e);
+            errorLogger.error("Error getting log date for employee {}, using fallback. Error: {}",
+                    log.getEmployeeId(), e.getMessage());
+            return dateFormat.format(getFallbackDate(false));
         }
     }
 
-    @Override
-    @Transactional
-    @Retryable(value = {DataAccessException.class},
-            maxAttempts = MAX_RETRY_ATTEMPTS,
-            backoff = @Backoff(delay = 1000))
-    public void processLogEntry(AccessLogEntity log) {
-        processAccessLog(log, false);
+    private String getValidLogTime(AccessLogEntity log) {
+        try {
+            if (StringUtils.isNotBlank(log.getLogTime())) {
+                return log.getLogTime();
+            }
+            logger.warn("Empty log time for employee {}, using current time", log.getEmployeeId());
+            return timeFormat.format(new Date());
+        } catch (Exception e) {
+            errorLogger.error("Error getting log time for employee {}, using fallback. Error: {}",
+                    log.getEmployeeId(), e.getMessage());
+            return FALLBACK_TIME;
+        }
     }
 
-    private Date parseDate(String dateString) throws ParseException {
-        if (StringUtils.isBlank(dateString)) {
-            logger.warn("Empty or null date string received, using current date");
+    private Date getFallbackDate(boolean swap) {
+        try {
+            return swap ? helper.removeTimeFromDate(new Date()) : helper.getYesterdayDate();
+        } catch (Exception e) {
+            errorLogger.error("Error getting fallback date, using current date. Error: {}", e.getMessage());
             return new Date();
+        }
+    }
+
+    private Date parseDateSafely(String dateString) {
+        if (StringUtils.isBlank(dateString)) {
+            logger.warn("Empty date string received, using fallback date");
+            return getFallbackDate(false);
         }
 
         try {
             try {
                 return dateFormat.parse(dateString);
             } catch (ParseException e) {
-                logger.debug("Failed to parse date in yyyy/MM/dd format, trying dd/MM/yyyy");
-                return inputDateFormat.parse(dateString);
+                logger.debug("Failed to parse date in primary format, trying alternate format");
+                try {
+                    return inputDateFormat.parse(dateString);
+                } catch (ParseException e2) {
+                    errorLogger.error("Failed to parse date in all formats: {}", dateString);
+                    return getFallbackDate(false);
+                }
             }
-        } catch (ParseException e) {
-            logger.error("Failed to parse date: {}", dateString, e);
-            throw new RuntimeException("Date parsing failed for string: " + dateString, e);
+        } catch (Exception e) {
+            errorLogger.error("Unexpected error parsing date: {}. Using fallback. Error: {}",
+                    dateString, e.getMessage());
+            return getFallbackDate(false);
         }
     }
 
     @Override
-    public Time parseTime(String timeString) throws ParseException {
+    public Time parseTime(String timeString) {
         if (StringUtils.isBlank(timeString)) {
-            logger.warn("Empty or null time string received, using current time");
+            logger.warn("Empty time string received, using fallback time");
             return new Time(new Date().getTime());
         }
 
         try {
             return new Time(timeFormat.parse(timeString).getTime());
         } catch (ParseException e) {
-            logger.error("Failed to parse time: {}", timeString, e);
-            throw new RuntimeException("Time parsing failed for string: " + timeString, e);
+            errorLogger.error("Failed to parse time: {}. Using fallback. Error: {}",
+                    timeString, e.getMessage());
+            try {
+                return new Time(timeFormat.parse(FALLBACK_TIME).getTime());
+            } catch (ParseException e2) {
+                return new Time(new Date().getTime());
+            }
+        } catch (Exception e) {
+            errorLogger.error("Unexpected error parsing time: {}. Using fallback. Error: {}",
+                    timeString, e.getMessage());
+            return new Time(new Date().getTime());
         }
     }
 
@@ -183,27 +218,25 @@ public class AccessLogServiceImpl implements AccessLogService {
             maxAttempts = MAX_RETRY_ATTEMPTS,
             backoff = @Backoff(delay = 1000))
     protected void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout,
-                                 String terminalId, AccessLogEntity log, boolean swap) {
-        if (StringUtils.isBlank(employeeID)) {
-            throw new IllegalArgumentException("Employee ID cannot be null or empty");
-        }
-
-        if (StringUtils.isBlank(inout)) {
-            throw new IllegalArgumentException("Inout value cannot be null or empty");
-        }
-
-        if (StringUtils.isBlank(terminalId)) {
-            throw new IllegalArgumentException("Terminal ID cannot be null or empty");
+                                   String terminalId, AccessLogEntity log, boolean swap) {
+        if (StringUtils.isBlank(employeeID) || StringUtils.isBlank(inout) || StringUtils.isBlank(terminalId)) {
+            errorLogger.error("Missing required fields for employee {}. EmployeeID: {}, Inout: {}, Terminal: {}",
+                    employeeID, employeeID, inout, terminalId);
+            return;
         }
 
         try {
             InOutEntity inOut = new InOutEntity();
             inOut.setTerminalId(terminalId);
-            LocalTime punchLocalTime = punchTime.toLocalTime();
+            LocalTime punchLocalTime = punchTime != null ? punchTime.toLocalTime() : LocalTime.MIDNIGHT;
             boolean isMorning = punchLocalTime.isBefore(NOON);
 
-            Date date = inputDateFormat.parse(logDate);
+            Date date = parseDateSafely(logDate);
+            if (date == null) {
+                date = getFallbackDate(swap);
+            }
 
+            // Check for existing records
             List<InOutEntity> existingRecords = inOutRepository
                     .findByEmployeeIdAndPunchTimeAndPunchTypeTimeAndTerminalId(
                             employeeID,
@@ -212,15 +245,15 @@ public class AccessLogServiceImpl implements AccessLogService {
                             terminalId);
 
             if (!existingRecords.isEmpty()) {
-                logger.debug("Record already exists for employee: {}, punch_time: {}, punch_type_time: {}, terminal: {}. Skipping save.",
-                        employeeID, date, punchTime, terminalId);
+                logger.debug("Duplicate record found for employee: {}, date: {}, terminal: {}",
+                        employeeID, date, terminalId);
                 return;
             }
 
             inOut.setEmployeeId(employeeID);
-            inOut.setDate(swap ? helper.removeTimeFromDate(new Date()) : helper.getYesterdayDate());
+            inOut.setDate(getFallbackDate(swap));
             inOut.setEtlRunTime(new Date());
-            
+
             String normalizedInout = inout.trim().toUpperCase();
 
             switch (normalizedInout) {
@@ -233,46 +266,57 @@ public class AccessLogServiceImpl implements AccessLogService {
                     inOut.setInOutType(isMorning ? InOutType.MORNING_OUT : InOutType.EVENING_OUT);
                     break;
                 default:
-                    throw new IllegalArgumentException(
-                            "Invalid inout value. Expected 'IN' or 'OUT', got: " + inout);
+                    errorLogger.error("Invalid inout value for employee {}. Value: {}", employeeID, inout);
+                    return;
             }
 
-            inOut.setPunchTypeTime(punchTime);
-            inOut.setPunchTime(date);
+            inOut.setPunchTypeTime(punchTime != null ? punchTime : new Time(0));
+            inOut.setPunchTime(date != null ? date : getFallbackDate(swap));
             inOut.setCreatedDate(new Date());
             inOut.setUpdatedDate(new Date());
 
-            Optional<InOutEntity> existingRecord = inOutRepository
-                    .findByEmployeeIdAndDateAndPunchTypeTimeAndTerminalId(
-                            employeeID,
-                            inOut.getDate(),
-                            punchTime,
-                            terminalId);
-
-            if (existingRecord.isPresent()) {
-                logger.debug("Record already exists for employee: {}, date: {}, time: {}, terminal: {}. Skipping save.",
-                        employeeID, logDate, punchTime, terminalId);
-                return;
-            }
-
             try {
                 InOutEntity savedInOut = inOutRepository.save(inOut);
-                logger.debug("Successfully saved InOut record with ID: {} for employee: {}",
-                        savedInOut.getId(), employeeID);
+                logger.debug("Successfully saved InOut record for employee: {}", employeeID);
             } catch (DataIntegrityViolationException e) {
-                logger.warn("Duplicate entry detected for employee: {}, date: {}, time: {}",
-                        employeeID, logDate, punchTime, e);
+                logger.warn("Duplicate entry detected for employee: {}, date: {}", employeeID, date);
             } catch (DataAccessException e) {
-                logger.error("Database error while saving record for employee {}", employeeID, e);
+                errorLogger.error("Database error for employee {}. Error: {}", employeeID, e.getMessage());
                 throw e;
+            } catch (Exception e) {
+                errorLogger.error("Unexpected error saving record for employee {}. Error: {}",
+                        employeeID, e.getMessage());
             }
-        } catch (ParseException e) {
-            logger.error("Failed to parse date while saving InOut record for employee {}: {}",
-                    employeeID, logDate, e);
-            throw new RuntimeException("Date parsing error", e);
         } catch (Exception e) {
-            logger.error("Unexpected error while saving InOut record for employee {}", employeeID, e);
-            throw new RuntimeException("Failed to save InOut record", e);
+            errorLogger.error("Error saving InOut record for employee {}. Error: {}",
+                    employeeID, e.getMessage());
+            logger.debug("Stack trace for employee {}:", employeeID, e);
         }
+    }
+
+    @Override
+    public void main(boolean swap) {
+        logger.info("Starting main access log processing for {} logs", swap ? "today" : "yesterday");
+        long startTime = System.currentTimeMillis();
+
+        try {
+            processLogEntry(swap);
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("Main processing completed for {} in {} ms",
+                    swap ? "today" : "yesterday", duration);
+        } catch (Exception e) {
+            errorLogger.error("Error in main processing for {} logs: {}",
+                    swap ? "today" : "yesterday", e.getMessage());
+            logger.debug("Stack trace for main processing:", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    @Retryable(value = {DataAccessException.class},
+            maxAttempts = MAX_RETRY_ATTEMPTS,
+            backoff = @Backoff(delay = 1000))
+    public void processLogEntry(AccessLogEntity log) {
+        processAccessLog(log, false);
     }
 }
