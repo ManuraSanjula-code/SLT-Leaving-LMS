@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface EmployeeArchiveRepository extends MongoRepository<EmployeeArchive, String> {
     EmployeeArchive findByUserId(String userId);
     Optional<EmployeeArchive> findByEmployeeId(String employeeId);
+    Optional<EmployeeArchive> findBySltId(String sltId);
     Optional<EmployeeArchive> findByEmail(String email);
     List<EmployeeArchive> findByRoaster(Boolean roaster);
 }

@@ -672,7 +672,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                 </DialogActions>
             </Dialog>
 
-            {/* Form Modal Dialog */}
             <Dialog
                 open={showModal}
                 onClose={handleCloseModal}
@@ -686,7 +685,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                 }}
             >
                 <Box sx={{position: 'relative'}}>
-                    {/* Dialog Header */}
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -703,7 +701,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                         </IconButton>
                     </Box>
 
-                    {/* Dialog Content */}
                     <Box sx={{p: 3}}>
                         <Grid container spacing={2}>
                             {/* Date */}
@@ -726,7 +723,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Employee ID */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -744,7 +740,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Terminal ID */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -762,7 +757,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Arrival Date */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -782,7 +776,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Arrival Time */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -802,7 +795,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Left Time */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -822,7 +814,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Attendance Type */}
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Attendance Type</InputLabel>
@@ -835,11 +826,11 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                         <MenuItem value="FULL_DAY">Full Day</MenuItem>
                                         <MenuItem value="HALF_DAY">Half Day</MenuItem>
                                         <MenuItem value="ABSENT">Absent</MenuItem>
+                                        <MenuItem value="NONE">NONE</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Grid>
 
-                            {/* Leave Status */}
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Leave Status</InputLabel>
@@ -859,7 +850,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </FormControl>
                             </Grid>
 
-                            {/* Pay Status */}
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Pay Status</InputLabel>
@@ -875,7 +865,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </FormControl>
                             </Grid>
 
-                            {/* Resolve Type */}
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Resolve Type</InputLabel>
@@ -892,7 +881,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </FormControl>
                             </Grid>
 
-                            {/* Due Date For UA */}
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
@@ -912,7 +900,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Issue Description */}
                             <Grid item xs={12}>
                                 <TextField
                                     fullWidth
@@ -925,7 +912,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 />
                             </Grid>
 
-                            {/* Boolean Options */}
                             <Grid item xs={12}>
                                 <Typography variant="subtitle1" sx={{fontWeight: 500, mb: 1.5}}>
                                     Additional Options
@@ -963,7 +949,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                         </Grid>
                     </Box>
 
-                    {/* Dialog Actions */}
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'flex-end',
@@ -1045,7 +1030,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                         </Box>
                     ) : (
                         <>
-                            {/* Search and Filters Card */}
                             <Card sx={{mb: 4, borderRadius: 2}}>
                                 <CardContent sx={{pb: 2}}>
                                     <Box
@@ -1194,7 +1178,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </CardContent>
                             </Card>
 
-                            {/* Activities Stats */}
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -1208,7 +1191,6 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </Typography>
                             </Box>
 
-                            {/* Table of Employee Activities */}
                             <Card sx={{borderRadius: 2}}>
                                 <TableContainer>
                                     <Table>
@@ -1310,7 +1292,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     {(isAdmin && activity.isManual) ||
-                                                                        (isAdmin && userDetails.highestRolePriority >= 30 && userDetails.highestRolePriority < 50) && (
+                                                                        (isAdmin && userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50) && (
                                                                             <Box sx={{display: 'flex', gap: 1}}>
                                                                                 <IconButton
                                                                                     color="primary"
@@ -1339,7 +1321,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                             </IconButton>
                                                                         </Box>
                                                                     )}
-                                                                    {!isAdmin && !activity.isManual && activity.isActive && activity.hasIssues && (
+                                                                    {!isAdmin && activity.isActive && activity.isUnauthorized && (
                                                                         <Box sx={{display: 'flex', gap: 1}}>
                                                                             <Button
                                                                                 variant="contained"

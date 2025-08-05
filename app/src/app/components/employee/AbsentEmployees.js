@@ -196,8 +196,17 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
     }));
   };
 
-  const handleApplyLeave = () => {
-    router.push('/apply-leave');
+  const handleApplyLeave = (employee) => {
+    const { date, publicId } = employee;
+
+    const params = new URLSearchParams();
+    params.append('fromDate', date);
+    params.append('toDate', date);
+    params.append('happenDate', date);
+    params.append('componentBehavior', 'ABSENT');
+    params.append('publicId', publicId);
+
+    router.push(`/apply-leave?${params.toString()}`);
   };
 
   const handleRetry = () => {
@@ -465,7 +474,7 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
                                         variant="contained"
                                         color="secondary"
                                         size="small"
-                                        onClick={handleApplyLeave}
+                                        onClick={()=> handleApplyLeave(employee)}
                                     >
                                       Apply Leave
                                     </Button>

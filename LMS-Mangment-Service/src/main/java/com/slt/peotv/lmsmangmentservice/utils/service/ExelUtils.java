@@ -5,12 +5,16 @@ import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
+import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -19,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ExelUtils {
@@ -35,6 +40,10 @@ public class ExelUtils {
     private LeaveRepo leaveRepo;
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
+    @Autowired
+    private NoPayRepo noPayRepo;
+    @Autowired
+    private NoPayReasonRepo noPayReasonRepo;
 
     public byte[] generateEmployeeExcelReport(String id) throws IOException {
         Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
@@ -50,12 +59,16 @@ public class ExelUtils {
         List<MovementsEntity> movements = movementsRepo.findAllByEmployee(employee);
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
+        Page<NoPayEntity> noPayPage = noPayRepo.findByEmployee(employee, PageRequest.of(0, Integer.MAX_VALUE));
+        List<NoPayEntity> noPayList = noPayPage.getContent();
+
         try (Workbook workbook = new XSSFWorkbook()) {
             createEmployeeInfoSheet(workbook, employee);
             createAttendanceSheet(workbook, attendance);
             createLeavesSheet(workbook, leaves);
             createMovementsSheet(workbook, movements);
             createRemainingLeavesSheet(workbook, remainingLeaves);
+            createNoPaySheet(workbook, noPayList);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
@@ -77,16 +90,127 @@ public class ExelUtils {
         List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, date, date);
         List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
 
+        Page<NoPayEntity> allNoPayPage = noPayRepo.findByEmployee(employee, PageRequest.of(0, Integer.MAX_VALUE));
+        List<NoPayEntity> noPayList = allNoPayPage.getContent().stream()
+                .filter(noPay -> {
+                    Date noPayDate = noPay.getDate();
+                    return noPayDate != null &&
+                            dateFormat.format(noPayDate).equals(dateFormat.format(date));
+                })
+                .collect(Collectors.toList());
+
         try (Workbook workbook = new XSSFWorkbook()) {
             createEmployeeInfoSheet(workbook, employee);
             createAttendanceSheet(workbook, attendance);
             createLeavesSheet(workbook, leaves);
             createMovementsSheet(workbook, movements);
             createRemainingLeavesSheet(workbook, remainingLeaves);
+            createNoPaySheet(workbook, noPayList);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
+        }
+    }
+
+    public byte[] generateEmployeeExcelReportByDateRange(String id, Date startDate, Date endDate) throws IOException {
+        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
+                .or(() -> employeeRepo.findBySltId(id))
+                .or(() -> employeeRepo.findByPublicId(id));
+
+        if (employeeEntity.isEmpty())
+            throw new RuntimeException("Employee not found with ID: " + id);
+
+        EmployeeEntity employee = employeeEntity.get();
+        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, startDate, endDate);
+        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, startDate, endDate);
+        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, startDate, endDate);
+        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
+
+        Page<NoPayEntity> allNoPayPage = noPayRepo.findByEmployee(employee, PageRequest.of(0, Integer.MAX_VALUE));
+        List<NoPayEntity> noPayList = allNoPayPage.getContent().stream()
+                .filter(noPay -> {
+                    Date noPayDate = noPay.getDate();
+                    return noPayDate != null &&
+                            !noPayDate.before(startDate) &&
+                            !noPayDate.after(endDate);
+                })
+                .collect(Collectors.toList());
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            createEmployeeInfoSheet(workbook, employee);
+            createAttendanceSheet(workbook, attendance);
+            createLeavesSheet(workbook, leaves);
+            createMovementsSheet(workbook, movements);
+            createRemainingLeavesSheet(workbook, remainingLeaves);
+            createNoPaySheet(workbook, noPayList);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
+    }
+
+    private void createNoPaySheet(Workbook workbook, List<NoPayEntity> noPayList) {
+        Sheet sheet = workbook.createSheet("No Pay");
+        CellStyle headerStyle = createHeaderStyle(workbook);
+
+        Row infoRow = sheet.createRow(0);
+        infoRow.createCell(0).setCellValue("Total No Pay Records: " + (noPayList != null ? noPayList.size() : 0));
+
+        Row headerRow = sheet.createRow(1);
+        String[] headers = {
+                "ID", "Public ID", "Employee ID", "Attendance ID", "Submission Date",
+                "Actual Date", "Comment", "Reasons", "Created Date", "Updated Date",
+                "Is Active"
+        };
+
+        for (int i = 0; i < headers.length; i++) {
+            createHeaderCell(headerRow, i, headers[i], headerStyle);
+        }
+
+        if (noPayList == null || noPayList.isEmpty()) {
+            Row row = sheet.createRow(2);
+            row.createCell(0).setCellValue("No pay records found");
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
+        } else {
+            int rowNum = 2;
+            for (NoPayEntity noPay : noPayList) {
+                Row row = sheet.createRow(rowNum++);
+                int colNum = 0;
+
+                createCell(row, colNum++, noPay.getId() != null ? noPay.getId().toString() : "");
+                createCell(row, colNum++, noPay.getPublicId() != null ? noPay.getPublicId() : "");
+                createCell(row, colNum++, noPay.getEmployee() != null ? noPay.getEmployee().getEmployeeId() : "");
+                createCell(row, colNum++, noPay.getAttendance() != null ? noPay.getAttendance().getId().toString() : "");
+                createCell(row, colNum++, noPay.getSubmissionDate() != null ? dateFormat.format(noPay.getSubmissionDate()) : "");
+                createCell(row, colNum++, noPay.getDate() != null ? dateFormat.format(noPay.getDate()) : "");
+                createCell(row, colNum++, noPay.getComment() != null ? noPay.getComment() : "");
+
+                String reasons = getNoPayReasons(noPay);
+                createCell(row, colNum++, reasons);
+
+                createCell(row, colNum++, noPay.getCreatedDate() != null ? dateTimeFormat.format(noPay.getCreatedDate()) : "");
+                createCell(row, colNum++, noPay.getUpdatedDate() != null ? dateTimeFormat.format(noPay.getUpdatedDate()) : "");
+                createCell(row, colNum++, noPay.getIsActive() != null ? (noPay.getIsActive() ? "Yes" : "No") : "No");
+            }
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private String getNoPayReasons(NoPayEntity noPay) {
+        try {
+            Optional<NoPayReasonEntity> reasonEntity = noPayReasonRepo.findNoPayReasonEntitiesByNoPay(noPay);
+            if (reasonEntity.isPresent()) {
+                NoPayReason reason = reasonEntity.get().getReason();
+                return reason != null ? reason.name() : "";
+            }
+            return "";
+        } catch (Exception e) {
+            return "Error retrieving reason";
         }
     }
 
@@ -363,32 +487,5 @@ public class ExelUtils {
     private void createCell(Row row, int column, String value) {
         Cell cell = row.createCell(column);
         cell.setCellValue(value);
-    }
-
-    public byte[] generateEmployeeExcelReportByDateRange(String id, Date startDate, Date endDate) throws IOException {
-        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
-                .or(() -> employeeRepo.findBySltId(id))
-                .or(() -> employeeRepo.findByPublicId(id));
-
-        if (employeeEntity.isEmpty())
-            throw new RuntimeException("Employee not found with ID: " + id);
-
-        EmployeeEntity employee = employeeEntity.get();
-        List<AttendanceEntity> attendance = attendanceRepo.findByEmployeeAndArrivalDateBetween(employee, startDate, endDate);
-        List<LeaveEntity> leaves = leaveRepo.findByEmployeeAndSubmitDateBetween(employee, startDate, endDate);
-        List<MovementsEntity> movements = movementsRepo.findByEmployeeAndReqDateBetween(employee, startDate, endDate);
-        List<UserLeaveTypeRemainingEntity> remainingLeaves = userLeaveTypeRemainingRepo.findByEmployee(employee);
-
-        try (Workbook workbook = new XSSFWorkbook()) {
-            createEmployeeInfoSheet(workbook, employee);
-            createAttendanceSheet(workbook, attendance);
-            createLeavesSheet(workbook, leaves);
-            createMovementsSheet(workbook, movements);
-            createRemainingLeavesSheet(workbook, remainingLeaves);
-
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            workbook.write(outputStream);
-            return outputStream.toByteArray();
-        }
     }
 }

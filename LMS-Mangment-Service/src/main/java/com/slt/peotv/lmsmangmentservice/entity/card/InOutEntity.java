@@ -8,6 +8,7 @@ import lombok.*;
 
 import java.sql.Time;
 import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.Date;
 
 
@@ -79,5 +80,16 @@ public class InOutEntity {
             return null;
         }
         return new SimpleDateFormat("HH:mm:ss").format(punchTypeTime);
+    }
+
+    public boolean isPunchTimeAfter1730() {
+        if (punchTypeTime == null) {
+            return false;
+        }
+
+        LocalTime punchLocalTime = punchTypeTime.toLocalTime();
+        LocalTime targetTime = LocalTime.of(17, 29, 59);
+
+        return targetTime.isAfter(punchLocalTime);
     }
 }

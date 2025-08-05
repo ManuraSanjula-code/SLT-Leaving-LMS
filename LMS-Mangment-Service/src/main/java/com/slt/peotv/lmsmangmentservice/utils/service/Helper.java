@@ -111,7 +111,7 @@ public class Helper {
         }
     }
 
-    public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity) {
+    public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity, boolean swap) {
         try {
             if (user == null || attendanceEntity == null) {
                 System.err.println("Invalid parameters for handleLateAndUnsuccessful");
@@ -127,7 +127,7 @@ public class Helper {
             if(attendanceEntity.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE) || attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT) ||
                     attendanceEntity.getAttendanceType().equals(AttendanceType.HALF_DAY) || attendanceEntity.getAttendanceType().equals(AttendanceType.FULL_DAY) ||
                     attendanceEntity.getIsUnauthorized()) return;
-            
+
             attendanceEntity.setIsUnSuccessful(true);
 
             UserLeaveTypeRemainingEntity remainingShortLeaves =
@@ -139,8 +139,9 @@ public class Helper {
                 handleShortLeaveAvailable(attendanceEntity, remainingShortLeaves);
             }
 
-            updateAttendanceWithLeaveTime(employee, attendanceEntity);
-            
+            if(!swap)
+                updateAttendanceWithLeaveTime(employee, attendanceEntity);
+
         } catch (Exception e) {
             System.err.println("Error in handleLateAndUnsuccessful: " + e.getMessage());
         }
@@ -164,11 +165,19 @@ public class Helper {
     private void updateAttendanceWithLeaveTime(EmployeeEntity employee, AttendanceEntity attendanceEntity) {
         try {
             Optional<InOutEntity> latest = inOutRepo.findLatestByEmployeeIdAndDate(
-                    employee.getSltId(), getYesterdayDate());
-            latest.ifPresent(inOutEntity -> {
+                    employee.getSltId(), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : attendanceEntity.getArrivalDate());
+
+            if (latest.isPresent()) {
+                InOutEntity inOutEntity = latest.get();
                 attendanceEntity.setLeftTime(inOutEntity.getPunchTypeTime());
                 attendanceRepo.save(attendanceEntity);
-            });
+            } else {
+                attendanceEntity.setIsUnauthorized(true);
+                attendanceEntity.setHasIssues(true);
+                attendanceEntity.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
+                attendanceEntity.setDueDateForUA(getDueDate());
+                attendanceRepo.save(attendanceEntity);
+            }
         } catch (Exception e) {
             System.err.println("Error updating attendance with leave time: " + e.getMessage());
         }

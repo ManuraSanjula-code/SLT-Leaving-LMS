@@ -19,8 +19,6 @@ import {
     FormControl,
     InputLabel,
     Checkbox,
-    Button,
-    IconButton,
     Chip,
     CircularProgress,
     Pagination,
@@ -29,8 +27,6 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import {
     fetchUnsuccessfulLeaves,
-    resolveLeave,
-    bulkResolveLeaves,
     setCurrentPage,
     setPageSize,
     clearError
@@ -53,8 +49,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
     const [resolveFilter, setResolveFilter] = useState("All");
     const [startDateFilter, setStartDateFilter] = useState("");
     const [endDateFilter, setEndDateFilter] = useState("");
-    const [selected, setSelected] = useState([]);
-    const reduxUser = useSelector((state) => state.auth);
 
     useEffect(() => {
         const userId = sessionStorage.getItem('userId');
@@ -89,10 +83,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
 
     const handleResolveFilterChange = (event) => {
         setResolveFilter(event.target.value);
-    };
-
-    const handleResolveLeave = (id) => {
-        dispatch(resolveLeave(id));
     };
 
     const filteredLeaves = leaves.content?.filter((leave) => {
@@ -139,26 +129,7 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
         );
     }) || [];
 
-    const handleSelect = (id) => {
-        if (selected.includes(id)) {
-            setSelected((prev) => prev.filter((item) => item !== id));
-        } else {
-            setSelected((prev) => [...prev, id]);
-        }
-    };
 
-    const handleSelectAll = () => {
-        if (selected.length === filteredLeaves.length) {
-            setSelected([]);
-        } else {
-            setSelected(filteredLeaves.map((leave) => leave.id));
-        }
-    };
-
-    const handleBulkResolve = () => {
-        dispatch(bulkResolveLeaves(selected));
-        setSelected([]);
-    };
 
     const formatDate = (dateString) => {
         if (!dateString) return "-";
@@ -360,16 +331,7 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                         />
                     </Box>
 
-                    {!isAdmin && selected.length > 0 && (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleBulkResolve}
-                            sx={{ mb: 2 }}
-                        >
-                            Resolve All Selected ({selected.length})
-                        </Button>
-                    )}
+
 
                     {loading ? (
                         <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
@@ -381,17 +343,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                 <Table>
                                     <TableHead>
                                         <TableRow>
-                                            {isAdmin && (
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox
-                                                        indeterminate={
-                                                            selected.length > 0 && selected.length < filteredLeaves.length
-                                                        }
-                                                        checked={filteredLeaves.length > 0 && selected.length === filteredLeaves.length}
-                                                        onChange={handleSelectAll}
-                                                    />
-                                                </TableCell>
-                                            )}
                                             <TableCell>ID</TableCell>
                                             <TableCell>Employee ID</TableCell>
                                             <TableCell>User ID</TableCell>
@@ -406,22 +357,13 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                     <TableBody>
                                         {filteredLeaves.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={isAdmin ? 10 : 9} align="center">
+                                                <TableCell colSpan={9} align="center">
                                                     No un-successful leaves found
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
                                             filteredLeaves.map((leave) => (
                                                 <TableRow key={leave.id}>
-                                                    {isAdmin && (
-                                                        <TableCell padding="checkbox">
-                                                            <Checkbox
-                                                                checked={selected.includes(leave.id)}
-                                                                onChange={() => handleSelect(leave.id)}
-                                                                disabled={leave.resolve !== null}
-                                                            />
-                                                        </TableCell>
-                                                    )}
                                                     <TableCell>{leave.publicId}</TableCell>
                                                     <TableCell>{leave.employeeId}</TableCell>
                                                     <TableCell>{leave.userId}</TableCell>
@@ -440,7 +382,6 @@ const UnsuccessfulLeaves = ({ isAdmin = false }) => {
                                                     <TableCell sx={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
                                                         {leave.issueDescription}
                                                     </TableCell>
-
                                                 </TableRow>
                                             ))
                                         )}

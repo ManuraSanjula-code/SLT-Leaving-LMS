@@ -49,7 +49,7 @@ export const submitLeaveRequest = createAsyncThunk(
                 leaveType: formData.leaveType,
                 description: formData.description,
                 userId: userId,
-                numOfDays: Math.round(formData.numOfDays * 2),
+                numOfDays: formData.componentBehavior === 'HALF_DAY' ? 0.5 : formData.numOfDays,
                 happenDate: formData.happenDate ? new Date(formData.happenDate).toISOString() : new Date().toISOString(),
                 componentBehavior: formData.componentBehavior,
                 requestStatus: 'DRAFT',
@@ -77,7 +77,7 @@ export const submitLeaveRequest = createAsyncThunk(
                         errorMessage += ` - ${errorText}`;
                     }
                 } catch (e) {
-
+                    console.error('Error parsing error response', e);
                 }
                 throw new Error(errorMessage);
             }
@@ -85,14 +85,11 @@ export const submitLeaveRequest = createAsyncThunk(
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 try {
-                    const result = await response.json();
-                    return result;
+                    return await response.json();
                 } catch (e) {
-                    // JSON parsing failed, but request was successful
                     return { success: true, message: "Leave request created successfully" };
                 }
             } else {
-                // No JSON content, just return success
                 return { success: true, message: "Leave request created successfully" };
             }
         } catch (error) {
@@ -100,6 +97,18 @@ export const submitLeaveRequest = createAsyncThunk(
         }
     }
 );
+
+const calculateDayDifference = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Normalize to midnight to avoid timezone issues
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
 
 const leaveApplicationSlice = createSlice({
     name: 'leaveApplication',
@@ -113,7 +122,7 @@ const leaveApplicationSlice = createSlice({
             numOfDays: 0,
             happenDate: '',
             componentBehavior: 'FULL_DAY',
-            isManualRequest: true // Default to true for FULL_DAY
+            isManualRequest: true
         },
         errors: {},
         isValid: false,
@@ -146,10 +155,10 @@ const leaveApplicationSlice = createSlice({
 
         calculateDays: (state) => {
             if (state.formData.fromDate && state.formData.toDate) {
-                const start = new Date(state.formData.fromDate);
-                const end = new Date(state.formData.toDate);
-                const diffTime = Math.abs(end - start);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                const diffDays = calculateDayDifference(
+                    state.formData.fromDate,
+                    state.formData.toDate
+                );
 
                 switch (state.formData.componentBehavior) {
                     case 'HALF_DAY':
@@ -167,27 +176,20 @@ const leaveApplicationSlice = createSlice({
             const newBehavior = action.payload;
             state.formData.componentBehavior = newBehavior;
 
-            // Categories that don't allow Manual Request
             const restrictedCategories = ['UNAUTHORIZED', 'ABSENT', 'UNSUCCESSFUL'];
-
-            // Categories that allow Manual Request (and should be checked by default)
             const allowedManualCategories = ['FULL_DAY', 'HALF_DAY'];
 
-            // Handle Manual Request logic based on component behavior
             if (restrictedCategories.includes(newBehavior)) {
-                // Uncheck Manual Request for restricted categories
                 state.formData.isManualRequest = false;
             } else if (allowedManualCategories.includes(newBehavior)) {
-                // Check Manual Request by default for allowed categories
                 state.formData.isManualRequest = true;
             }
 
-            // Handle date calculations and restrictions
             if (state.formData.fromDate && state.formData.toDate) {
-                const start = new Date(state.formData.fromDate);
-                const end = new Date(state.formData.toDate);
-                const diffTime = Math.abs(end - start);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                const diffDays = calculateDayDifference(
+                    state.formData.fromDate,
+                    state.formData.toDate
+                );
 
                 switch (newBehavior) {
                     case 'HALF_DAY':
@@ -201,7 +203,6 @@ const leaveApplicationSlice = createSlice({
                 }
             }
 
-            // Reset validation when behavior changes
             state.errors = {};
             state.isValid = false;
         },
@@ -223,17 +224,17 @@ const leaveApplicationSlice = createSlice({
                 }
             }
 
-            if (state.formData.componentBehavior && state.formData.fromDate && state.formData.toDate) {
-                const start = new Date(state.formData.fromDate);
-                const end = new Date(state.formData.toDate);
-                const isSameDay = start.toDateString() === end.toDateString();
-
-                if (state.formData.componentBehavior === 'HALF_DAY' && !isSameDay) {
-                    newErrors.componentBehavior = 'Half day leave must be for the same day';
-                }
+            if (state.formData.componentBehavior === 'HALF_DAY' &&
+                state.formData.fromDate &&
+                state.formData.toDate &&
+                state.formData.fromDate !== state.formData.toDate) {
+                newErrors.componentBehavior = 'Half day leave must be for the same day';
             }
 
-            if (state.formData.leaveType && state.formData.leaveType != "Duty Leave" && state.formData.leaveType != "Special Leave" && state.formData.numOfDays > 0) {
+            if (state.formData.leaveType &&
+                state.formData.leaveType !== "Duty Leave" &&
+                state.formData.leaveType !== "Special Leave" &&
+                state.formData.numOfDays > 0) {
                 const selectedType = state.formData.leaveType;
                 const typeBalance = state.leaveBalances.find(
                     balance => balance.leaveTypeName === selectedType
@@ -244,10 +245,11 @@ const leaveApplicationSlice = createSlice({
                 }
             }
 
-            // Validate Manual Request for restricted categories
             const restrictedCategories = ['UNAUTHORIZED', 'ABSENT', 'UNSUCCESSFUL'];
-            if (restrictedCategories.includes(state.formData.componentBehavior) && state.formData.isManualRequest) {
-                newErrors.isManualRequest = 'Manual Request is not allowed for this category';
+            if (restrictedCategories.includes(state.formData.componentBehavior)) {
+                if (state.formData.isManualRequest) {
+                    newErrors.isManualRequest = 'Manual Request is not allowed for this category';
+                }
             }
 
             state.errors = newErrors;
@@ -263,7 +265,7 @@ const leaveApplicationSlice = createSlice({
                 numOfDays: 0,
                 happenDate: '',
                 componentBehavior: 'FULL_DAY',
-                isManualRequest: true // Default to true for FULL_DAY
+                isManualRequest: true
             };
             state.errors = {};
             state.isValid = false;
@@ -294,7 +296,6 @@ const leaveApplicationSlice = createSlice({
                     severity: 'warning'
                 };
             })
-
             .addCase(submitLeaveRequest.pending, (state) => {
                 state.loading = true;
             })
@@ -313,17 +314,27 @@ const leaveApplicationSlice = createSlice({
                     numOfDays: 0,
                     happenDate: '',
                     componentBehavior: 'FULL_DAY',
-                    isManualRequest: true // Default to true for FULL_DAY
+                    isManualRequest: true
                 };
                 state.errors = {};
                 state.isValid = false;
             })
             .addCase(submitLeaveRequest.rejected, (state, action) => {
-                const message_ = action.payload.split('"message":"')[1].split('"')[0];
                 state.loading = false;
+                let errorMessage = "Failed to submit leave request";
+
+                if (action.payload && typeof action.payload === 'string') {
+                    try {
+                        const message = action.payload.split('"message":"')[1]?.split('"')[0];
+                        if (message) errorMessage = `Failed to submit leave request: ${message}`;
+                    } catch (e) {
+                        console.error('Error parsing error message', e);
+                    }
+                }
+
                 state.notification = {
                     open: true,
-                    message: `${"Failed to submit leave request " + message_ || "Failed to submit leave request: " }`,
+                    message: errorMessage,
                     severity: 'error'
                 };
             });
@@ -351,7 +362,6 @@ export const selectFetchingBalance = state => state.leaveApplication.fetchingBal
 export const selectNotification = state => state.leaveApplication.notification;
 
 export const leaveHelpers = {
-    // Helper function to get remaining leave balance
     getRemainingLeaveBalance: (leaveBalances, typeName) => {
         const leaveType = leaveBalances.find(b => b.leaveTypeName === typeName);
         return leaveType ? leaveType.remainingLeaves : 0;
@@ -374,23 +384,19 @@ export const leaveHelpers = {
         { value: "UNAUTHORIZED", label: "Unauthorized", type: "attendance", allowsManualRequest: false }
     ],
 
-    // Helper function to get category type
     getCategoryType: (componentBehavior) => {
         const behavior = leaveHelpers.componentBehaviors.find(cb => cb.value === componentBehavior);
         return behavior ? behavior.type : 'leave';
     },
 
-    // Helper function to check if manual request is allowed
     isManualRequestAllowed: (componentBehavior) => {
         const behavior = leaveHelpers.componentBehaviors.find(cb => cb.value === componentBehavior);
         return behavior ? behavior.allowsManualRequest : false;
     },
 
-    // Categories that allow Manual Request
     allowedManualCategories: ['FULL_DAY', 'HALF_DAY'],
-
-    // Categories that don't allow Manual Request
-    restrictedCategories: ['UNAUTHORIZED', 'ABSENT', 'UNSUCCESSFUL']
+    restrictedCategories: ['UNAUTHORIZED', 'ABSENT', 'UNSUCCESSFUL'],
+    calculateDayDifference
 };
 
 export default leaveApplicationSlice.reducer;

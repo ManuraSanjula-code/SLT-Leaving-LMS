@@ -69,4 +69,72 @@ public class PrioritySecurity {
                 minPriority, maxPriority, userPriority, result);
         return result;
     }
+
+    public boolean isAdminOrManagementOnly() {
+        Integer userPriority = getCurrentUserPriority();
+        if (userPriority == null) return false;
+
+        boolean isAdmin = userPriority >= PriorityRanges.ADMIN_MIN &&
+                userPriority <= PriorityRanges.ADMIN_MAX;
+
+        boolean isManagement = userPriority >= PriorityRanges.MANAGEMENT_MIN &&
+                userPriority <= PriorityRanges.MANAGEMENT_MAX;
+
+        boolean hasAccess = isAdmin || isManagement;
+
+        logger.debug("User priority: {} | Admin (10-29): {} | Management (50-99): {} | Access granted: {}",
+                userPriority, isAdmin, isManagement, hasAccess);
+
+        return hasAccess;
+    }
+
+
+    public boolean hasAdminOrManagementAccess() {
+        return isAdminOrManagementOnly();
+    }
+
+
+    private Integer getCurrentUserPriority() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+            if (auth == null || !auth.isAuthenticated()) {
+                logger.debug("No authenticated user found");
+                return null;
+            }
+
+            if (!(auth.getPrincipal() instanceof UserPrincipal)) {
+                logger.debug("Principal is not UserPrincipal: {}",
+                        auth.getPrincipal().getClass().getSimpleName());
+                return null;
+            }
+
+            UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+            Integer priority = principal.getHighestRolePriority();
+
+            if (priority == null) {
+                logger.debug("User has no priority assigned");
+            }
+
+            return priority;
+
+        } catch (Exception e) {
+            logger.error("Error getting user priority", e);
+            return null;
+        }
+    }
+
+    public boolean isAdmin() {
+        Integer priority = getCurrentUserPriority();
+        return priority != null &&
+                priority >= PriorityRanges.ADMIN_MIN &&
+                priority <= PriorityRanges.ADMIN_MAX;
+    }
+
+    public boolean isManagement() {
+        Integer priority = getCurrentUserPriority();
+        return priority != null &&
+                priority >= PriorityRanges.MANAGEMENT_MIN &&
+                priority <= PriorityRanges.MANAGEMENT_MAX;
+    }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useCallback } from 'react';
+import React, { useEffect } from 'react';
 import {
     Button,
     Box,
@@ -8,7 +8,6 @@ import {
     DialogActions,
     TextField,
     Typography,
-    Grid,
     Paper,
     Table,
     TableBody,
@@ -18,177 +17,146 @@ import {
     TableRow,
     IconButton,
     FormControlLabel,
-    Checkbox
+    Checkbox,
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+    fetchHolidays,
+    addHoliday,
+    updateHoliday,
+    deleteHoliday,
+    setYear,
+    openAddDialog,
+    closeAddDialog,
+    openEditDialog,
+    closeEditDialog,
+    updateFormData,
+    clearHolidays,
+    clearError
+} from '../../../../lib/redux/redux-lms/other/holidaySlice';
 
 const HolidayManagement = ({ open, onClose }) => {
+    const dispatch = useDispatch();
     const { userDetails } = useSelector((state) => state.auth);
-    const [holidays, setHolidays] = useState([]);
-    const [year, setYear] = useState(new Date().getFullYear());
-    const [openAddDialog, setOpenAddDialog] = useState(false);
-    const [openEditDialog, setOpenEditDialog] = useState(false);
-    const [currentHoliday, setCurrentHoliday] = useState(null);
+    
+    const holidays = useSelector((state) => state.holidays?.holidays || []);
+    const year = useSelector((state) => state.holidays?.year || new Date().getFullYear());
+    const loading = useSelector((state) => state.holidays?.loading || false);
+    const error = useSelector((state) => state.holidays?.error || null);
+    
+    const openAddDialogState = useSelector((state) => state.holidays?.openAddDialog || false);
+    const openEditDialogState = useSelector((state) => state.holidays?.openEditDialog || false);
+    const currentHoliday = useSelector((state) => state.holidays?.currentHoliday || null);
+    const formData = useSelector((state) => state.holidays?.formData || {
+        holidayDate: '',
+        description: '',
+        isRecurring: false
+    });
 
-    const [holidayDate, setHolidayDate] = useState('');
-    const [description, setDescription] = useState('');
-    const [isRecurring, setIsRecurring] = useState(false);
-
-
-
-    const fetchHolidays = useCallback(async () => {
-        try {
-            const loggedInUserId = sessionStorage.getItem('userId');
-            if (!loggedInUserId) {
-                alert('User session not found. Please log in again.');
-                return;
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}?year=${year}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setHolidays(data);
-            } else {
-                throw new Error('Failed to fetch holidays');
-            }
-        } catch (error) {
-            console.error('Error fetching holidays:', error);
-            alert(`Error fetching holidays: ${error.message}`);
+    const getUserId = () => {
+        const userId = sessionStorage.getItem('userId');
+        if (!userId) {
+            alert('User session not found. Please log in again.');
+            return null;
         }
-    }, [year])
+        return userId;
+    };
 
     useEffect(() => {
         if (open) {
-            fetchHolidays();
+            const userId = getUserId();
+            if (userId) {
+                dispatch(fetchHolidays({ userId, year }));
+            }
         } else {
-            setHolidays([]);
-            setYear(new Date().getFullYear());
+            dispatch(clearHolidays());
         }
-    }, [open, year, fetchHolidays]);
+    }, [open, year, dispatch]);
+
+    useEffect(() => {
+        if (error) {
+            alert(`Error: ${error}`);
+            dispatch(clearError());
+        }
+    }, [error, dispatch]);
+
+    const handleYearChange = (e) => {
+        dispatch(setYear(e.target.value));
+    };
 
     const handleAddHoliday = () => {
-        setHolidayDate('');
-        setDescription('');
-        setIsRecurring(false);
-        setOpenAddDialog(true);
+        dispatch(openAddDialog());
     };
 
     const handleEditHoliday = (holiday) => {
-        setCurrentHoliday(holiday);
-        setHolidayDate(holiday.holidayDate);
-        setDescription(holiday.description);
-        setIsRecurring(holiday.isRecurring);
-        setOpenEditDialog(true);
+        dispatch(openEditDialog(holiday));
     };
 
     const handleDeleteHoliday = async (id) => {
         if (window.confirm('Are you sure you want to delete this holiday?')) {
-            try {
-                const loggedInUserId = sessionStorage.getItem('userId');
-                if (!loggedInUserId) {
-                    alert('User session not found. Please log in again.');
-                    return;
-                }
-                const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${id}/${loggedInUserId}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-
-                if (response.ok) {
+            const userId = getUserId();
+            if (userId) {
+                const result = await dispatch(deleteHoliday({ holidayId: id, userId }));
+                if (deleteHoliday.fulfilled.match(result)) {
                     alert('Holiday deleted successfully!');
-                    fetchHolidays();
-                } else {
-                    throw new Error('Failed to delete holiday');
                 }
-            } catch (error) {
-                console.error('Error deleting holiday:', error);
-                alert(`Error deleting holiday: ${error.message}`);
             }
         }
     };
 
     const handleSubmitAdd = async () => {
-        if (!holidayDate || !description) {
+        if (!formData.holidayDate || !formData.description) {
             alert('Please fill all required fields');
             return;
         }
 
-        const holidayData = {
-            holidayDate,
-            description,
-            isRecurring
-        };
-
-        try {
-            const loggedInUserId = sessionStorage.getItem('userId');
-            if (!loggedInUserId) {
-                alert('User session not found. Please log in again.');
-                return;
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${loggedInUserId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(holidayData)
-            });
-
-            if (response.ok) {
+        const userId = getUserId();
+        if (userId) {
+            const result = await dispatch(addHoliday({ userId, holidayData: formData }));
+            if (addHoliday.fulfilled.match(result)) {
                 alert('Holiday added successfully!');
-                setOpenAddDialog(false);
-                fetchHolidays();
-            } else {
-                throw new Error('Failed to add holiday');
+                dispatch(fetchHolidays({ userId, year }));
             }
-        } catch (error) {
-            console.error('Error adding holiday:', error);
-            alert(`Error adding holiday: ${error.message}`);
         }
     };
 
     const handleSubmitEdit = async () => {
-        if (!holidayDate || !description || !currentHoliday) {
+        if (!formData.holidayDate || !formData.description || !currentHoliday) {
             alert('Please fill all required fields');
             return;
         }
 
-        const holidayData = {
-            holidayDate,
-            description,
-            isRecurring
-        };
-
-        try {
-            const loggedInUserId = sessionStorage.getItem('userId');
-            if (!loggedInUserId) {
-                alert('User session not found. Please log in again.');
-                return;
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/holiday/${currentHoliday.id}/${loggedInUserId}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(holidayData)
-            });
-
-            if (response.ok) {
+        const userId = getUserId();
+        if (userId) {
+            const result = await dispatch(updateHoliday({
+                holidayId: currentHoliday.id,
+                userId,
+                holidayData: formData
+            }));
+            if (updateHoliday.fulfilled.match(result)) {
                 alert('Holiday updated successfully!');
-                setOpenEditDialog(false);
-                fetchHolidays();
-            } else {
-                throw new Error('Failed to update holiday');
+                dispatch(fetchHolidays({ userId, year }));
             }
-        } catch (error) {
-            console.error('Error updating holiday:', error);
-            alert(`Error updating holiday: ${error.message}`);
         }
     };
+
+    const handleFormChange = (field, value) => {
+        dispatch(updateFormData({ [field]: value }));
+    };
+
+    const handleCloseAddDialog = () => {
+        dispatch(closeAddDialog());
+    };
+
+    const handleCloseEditDialog = () => {
+        dispatch(closeEditDialog());
+    };
+
+    const canManageHolidays = userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50;
+    const canEditDelete = userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50;
 
     return (
         <Dialog
@@ -204,7 +172,7 @@ const HolidayManagement = ({ open, onClose }) => {
                         label="Year"
                         type="number"
                         value={year}
-                        onChange={(e) => setYear(e.target.value)}
+                        onChange={handleYearChange}
                         size="small"
                         sx={{ width: 120 }}
                     />
@@ -212,60 +180,74 @@ const HolidayManagement = ({ open, onClose }) => {
             </DialogTitle>
 
             <DialogContent>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                    {userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50 && (
+                    {canManageHolidays && (
                         <Button
                             variant="contained"
                             startIcon={<Add />}
                             onClick={handleAddHoliday}
+                            disabled={loading}
                         >
                             Add Holiday
                         </Button>
                     )}
                 </Box>
 
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Date</TableCell>
-                                <TableCell>Description</TableCell>
-                                <TableCell>Recurring</TableCell>
-                                {userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50 && (
-                                    <TableCell>Actions</TableCell>
-                                )}
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {holidays.map((holiday) => (
-                                <TableRow key={holiday.id}>
-                                    <TableCell>{holiday.holidayDate}</TableCell>
-                                    <TableCell>{holiday.description}</TableCell>
-                                    <TableCell>{holiday.isRecurring ? 'Yes' : 'No'}</TableCell>
-                                    {userDetails.highestRolePriority > 29 && userDetails.highestRolePriority < 50 && (
-                                        <TableCell>
-                                            <IconButton
-                                                color="primary"
-                                                onClick={() => handleEditHoliday(holiday)}
-                                            >
-                                                <Edit />
-                                            </IconButton>
-                                            <IconButton
-                                                color="error"
-                                                onClick={() => handleDeleteHoliday(holiday.id)}
-                                            >
-                                                <Delete />
-                                            </IconButton>
-                                        </TableCell>
+                {loading ? (
+                    <Box display="flex" justifyContent="center" p={3}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Date</TableCell>
+                                    <TableCell>Description</TableCell>
+                                    <TableCell>Recurring</TableCell>
+                                    {canManageHolidays && (
+                                        <TableCell>Actions</TableCell>
                                     )}
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {holidays.map((holiday) => (
+                                    <TableRow key={holiday.id}>
+                                        <TableCell>{holiday.holidayDate}</TableCell>
+                                        <TableCell>{holiday.description}</TableCell>
+                                        <TableCell>{holiday.recurring ? 'Yes' : 'No'}</TableCell>
+                                        {canEditDelete && (
+                                            <TableCell>
+                                                <IconButton
+                                                    color="primary"
+                                                    onClick={() => handleEditHoliday(holiday)}
+                                                    disabled={loading}
+                                                >
+                                                    <Edit />
+                                                </IconButton>
+                                                <IconButton
+                                                    color="error"
+                                                    onClick={() => handleDeleteHoliday(holiday.id)}
+                                                    disabled={loading}
+                                                >
+                                                    <Delete />
+                                                </IconButton>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
 
-                {/* Add Holiday Dialog */}
-                <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
+                <Dialog open={openAddDialogState} onClose={handleCloseAddDialog}>
                     <DialogTitle>Add New Holiday</DialogTitle>
                     <DialogContent>
                         <Box sx={{ mt: 2 }}>
@@ -276,22 +258,22 @@ const HolidayManagement = ({ open, onClose }) => {
                                 InputLabelProps={{
                                     shrink: true,
                                 }}
-                                value={holidayDate}
-                                onChange={(e) => setHolidayDate(e.target.value)}
+                                value={formData.holidayDate}
+                                onChange={(e) => handleFormChange('holidayDate', e.target.value)}
                                 sx={{ mb: 2 }}
                             />
                             <TextField
                                 label="Description"
                                 fullWidth
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                value={formData.description}
+                                onChange={(e) => handleFormChange('description', e.target.value)}
                                 sx={{ mb: 2 }}
                             />
                             <FormControlLabel
                                 control={
                                     <Checkbox
-                                        checked={isRecurring}
-                                        onChange={(e) => setIsRecurring(e.target.checked)}
+                                        checked={formData.isRecurring}
+                                        onChange={(e) => handleFormChange('isRecurring', e.target.checked)}
                                     />
                                 }
                                 label="Recurring Holiday"
@@ -299,15 +281,16 @@ const HolidayManagement = ({ open, onClose }) => {
                         </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
-                        <Button onClick={handleSubmitAdd} color="primary">
-                            Add
+                        <Button onClick={handleCloseAddDialog} disabled={loading}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSubmitAdd} color="primary" disabled={loading}>
+                            {loading ? <CircularProgress size={20} /> : 'Add'}
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Edit Holiday Dialog */}
-                <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)}>
+                <Dialog open={openEditDialogState} onClose={handleCloseEditDialog}>
                     <DialogTitle>Edit Holiday</DialogTitle>
                     <DialogContent>
                         <Box sx={{ mt: 2 }}>
@@ -318,22 +301,22 @@ const HolidayManagement = ({ open, onClose }) => {
                                 InputLabelProps={{
                                     shrink: true,
                                 }}
-                                value={holidayDate}
-                                onChange={(e) => setHolidayDate(e.target.value)}
+                                value={formData.holidayDate}
+                                onChange={(e) => handleFormChange('holidayDate', e.target.value)}
                                 sx={{ mb: 2 }}
                             />
                             <TextField
                                 label="Description"
                                 fullWidth
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                value={formData.description}
+                                onChange={(e) => handleFormChange('description', e.target.value)}
                                 sx={{ mb: 2 }}
                             />
                             <FormControlLabel
                                 control={
                                     <Checkbox
-                                        checked={isRecurring}
-                                        onChange={(e) => setIsRecurring(e.target.checked)}
+                                        checked={formData.isRecurring}
+                                        onChange={(e) => handleFormChange('isRecurring', e.target.checked)}
                                     />
                                 }
                                 label="Recurring Holiday"
@@ -341,9 +324,11 @@ const HolidayManagement = ({ open, onClose }) => {
                         </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
-                        <Button onClick={handleSubmitEdit} color="primary">
-                            Update
+                        <Button onClick={handleCloseEditDialog} disabled={loading}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSubmitEdit} color="primary" disabled={loading}>
+                            {loading ? <CircularProgress size={20} /> : 'Update'}
                         </Button>
                     </DialogActions>
                 </Dialog>

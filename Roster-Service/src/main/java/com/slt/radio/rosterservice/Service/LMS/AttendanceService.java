@@ -28,7 +28,7 @@ import com.slt.radio.rosterservice.messaging.MessageProducerService;
 import org.springframework.beans.factory.annotation.Value;
 import com.slt.radio.rosterservice.Model.Enum.LeaveStatus;
 import java.util.concurrent.CopyOnWriteArrayList;
-
+import java.time.temporal.TemporalAdjusters;
 import java.sql.Time;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -101,10 +101,27 @@ public class AttendanceService {
 
     @Transactional
     public void processDutyAttendances() {
-        DutyRoster duty = dutyRosterRepository.findByIsActive(true).orElse(null);
-        if (duty == null) return;
-
         LocalDate today = LocalDate.now().minusDays(1);
+        LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        DutyRoster mainDuty = null;
+        DutyRoster duty_ = dutyRosterRepository.findByWeekStartingDate(startOfWeek).orElse(null);
+        DutyRoster duty = dutyRosterRepository.findByIsActive(true).orElse(null);
+
+        if (duty_ != null){
+            duty_.setActive(true);
+            mainDuty = dutyRosterRepository.save(duty_);
+            dutyRosterRepository.findAll().forEach(dutyRoster -> {
+                dutyRoster.setActive(false);
+                dutyRosterRepository.save(dutyRoster);
+            });
+        }
+        else{
+            mainDuty = duty;
+        };
+
+        if (mainDuty == null) return;
+
         Date processDate = helper.getYesterdayDate();
         List<Attendance> attendancesToSave = new CopyOnWriteArrayList<>();
 
@@ -130,7 +147,7 @@ public class AttendanceService {
 
                         EmployeeArchive employee = employeeOpt.get();
 
-                        List<InOut> morningPunches = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
+                        /* List<InOut> morningPunches = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
                                 employee.getSltId(), processDate, InOutType.MORNING_IN);
                         Optional<InOut> earliestPunchIn = morningPunches.stream()
                                 .min(Comparator.comparing(InOut::getPunchTypeTime));
@@ -138,7 +155,17 @@ public class AttendanceService {
                         List<InOut> eveningPunches = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
                                 employee.getSltId(), processDate, InOutType.EVENING_OUT);
                         Optional<InOut> latestPunchOut = eveningPunches.stream()
-                                .max(Comparator.comparing(InOut::getPunchTypeTime));
+                                .max(Comparator.comparing(InOut::getPunchTypeTime)) */;
+
+                        List<InOut> punches = inOutRepository.findByEmployeeIdAndPunchTime(employee.getSltId(), processDate);
+
+                        Optional<InOut> earliestPunchIn = punches.stream()
+                                .filter(inOut -> inOut.getInOutValue() == 1)
+                                .min(Comparator.comparing(InOut::getPunchTypeTime));
+
+                        Optional<InOut> latestPunchOut = punches.stream()
+                                .filter(inOut -> inOut.getInOutValue() == 0)
+                                .max(Comparator.comparing(InOut::getPunchTypeTime));        
 
                         Attendance attendance = new Attendance();
                         attendance.setIsManual(true);
@@ -659,17 +686,27 @@ public class AttendanceService {
             if (employeeArchive == null) return null;
             if (!employeeArchive.getRoaster()) return null;
 
-            Optional<InOut> earliestPunchIn = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(employeeArchive.getSltId(), processDate, InOutType.MORNING_IN).
+            /* Optional<InOut> earliestPunchIn = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(employeeArchive.getSltId(), processDate, InOutType.MORNING_IN).
                     stream().min(Comparator.comparing(InOut::getPunchTypeTime));
 
             Optional<InOut> latestPunchIn = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
                     employeeArchive.getSltId(),
                     processDate,
                     InOutType.EVENING_OUT
-            ).stream().max(Comparator.comparing(InOut::getPunchTypeTime));
+            ).stream().max(Comparator.comparing(InOut::getPunchTypeTime)); */
+
+            List<InOut> punches = inOutRepository.findByEmployeeIdAndPunchTime(employeeArchive.getSltId(), processDate);
+
+            Optional<InOut> earliestPunchIn = punches.stream()
+                .filter(inOut -> inOut.getInOutValue() == 1)
+                .min(Comparator.comparing(InOut::getPunchTypeTime));
+
+            Optional<InOut> latestPunchOut = punches.stream()
+                .filter(inOut -> inOut.getInOutValue() == 0)
+                .max(Comparator.comparing(InOut::getPunchTypeTime));   
 
             InOut inOut = earliestPunchIn.orElse(null);
-            InOut inOutLatest = latestPunchIn.orElse(null);
+            InOut inOutLatest = latestPunchOut.orElse(null);
 
             if (inOut == null) {
                 if(inOutLatest != null)

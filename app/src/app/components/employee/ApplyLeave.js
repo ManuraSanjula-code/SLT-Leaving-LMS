@@ -75,9 +75,32 @@ const ApplyLeave = () => {
   useEffect(() => {
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
+
       dispatch(setUserId(storedUserId));
       dispatch(fetchLeaveBalances(storedUserId));
+
+      const urlParams = new URLSearchParams(window.location.search);
+
+      const fromDate = urlParams.get('fromDate');
+      const toDate = urlParams.get('toDate');
+      const happenDate = urlParams.get('happenDate');
+      const componentBehavior = urlParams.get('componentBehavior');
+
+      if (fromDate) {
+        dispatch(updateFormField({ name: 'fromDate', value: fromDate }));
+      }
+      if (toDate) {
+        dispatch(updateFormField({ name: 'toDate', value: toDate }));
+      }
+      if (happenDate) {
+        dispatch(updateFormField({ name: 'happenDate', value: happenDate }));
+      }
+      if (componentBehavior) {
+        dispatch(setComponentBehavior(componentBehavior));
+      }
+
     } else {
+
       dispatch({
         type: 'leaveApplication/setNotification',
         payload: {
@@ -86,6 +109,7 @@ const ApplyLeave = () => {
           severity: 'error'
         }
       });
+
     }
   }, [dispatch]);
 

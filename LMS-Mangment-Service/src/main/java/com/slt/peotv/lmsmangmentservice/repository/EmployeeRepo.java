@@ -12,4 +12,5 @@ public interface EmployeeRepo extends CrudRepository<EmployeeEntity, Long> {
     Optional<EmployeeEntity> findBySltId(String sltId);
     Optional<EmployeeEntity> findByEmployeeId(String employeeId);
     Optional<EmployeeEntity> findByEmail(String email);
+    boolean existsByEmployeeId(String employeeId);
 }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     Container,
     Typography,
@@ -29,28 +30,37 @@ import {
     Refresh
 } from '@mui/icons-material';
 
-const formatDate = (date) => {
-    const d = new Date(date);
-    let month = '' + (d.getMonth() + 1);
-    let day = '' + d.getDate();
-    const year = d.getFullYear();
-
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-
-    return [year, month, day].join('-');
-};
+import {
+    fetchAttendanceData,
+    setDateInput,
+    setPage,
+    setRowsPerPage,
+    setEmployeeFilter,
+    setStatusFilter,
+    applyFilters,
+    resetFilters,
+} from '../../../../../lib/redux/redux-roster/attendanceSlice';
 
 const AttendanceComponent = () => {
-    const [dateInput, setDateInput] = useState(formatDate(new Date()));
-    const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [employeeFilter, setEmployeeFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [attendanceData, setAttendanceData] = useState(null);
-    const [filteredData, setFilteredData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const dispatch = useDispatch();
+    
+    const { 
+        attendanceData, 
+        loading, 
+        error, 
+        dateInput, 
+        page, 
+        rowsPerPage, 
+        employeeFilter, 
+        statusFilter, 
+        filteredData 
+    } = useSelector(state => state.attendanceRoster);
+
+    const paginatedData = filteredData.slice(
+        (page - 1) * rowsPerPage,
+        page * rowsPerPage
+    );
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
     useEffect(() => {
         document.body.style.backgroundColor = '#ffffff';
@@ -58,81 +68,36 @@ const AttendanceComponent = () => {
         document.body.style.color = '#000000';
     }, []);
 
-    const fetchAttendanceData = async (dateString) => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const response = await fetch(`http://192.168.3.20:8080/api/attendance/${dateString}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            setAttendanceData(data);
-            setFilteredData(data.content);
-        } catch (err) {
-            setError(err.message);
-            console.error("Error fetching attendance data:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const applyFilters = useCallback(() => {
-        if (!attendanceData) return;
-
-        let result = [...attendanceData.content];
-
-        if (employeeFilter) {
-            result = result.filter(record =>
-                record.employeeId.toLowerCase().includes(employeeFilter.toLowerCase())
-            );
-        }
-
-        if (statusFilter !== 'all') {
-            result = result.filter(record => {
-                if (statusFilter === 'present') return record.attendanceType === 'FULL_DAY';
-                if (statusFilter === 'absent') return record.attendanceType === 'ABSENT';
-                if (statusFilter === 'halfday') return record.attendanceType === 'HALF_DAY';
-                if (statusFilter === 'leave') return record.leaveStatus;
-                return true;
-            });
-        }
-
-        setFilteredData(result);
-        setPage(1);
-    }, [attendanceData, employeeFilter, statusFilter]);
-
-    const resetFilters = () => {
-        setEmployeeFilter('');
-        setStatusFilter('all');
-        if (attendanceData) {
-            setFilteredData(attendanceData.content);
-        }
-        setPage(1);
-    };
+    useEffect(() => {
+        dispatch(fetchAttendanceData(dateInput));
+    }, [dispatch, dateInput]);
 
     useEffect(() => {
-        fetchAttendanceData(dateInput);
-    }, [dateInput]);
-
-    useEffect(() => {
-        applyFilters();
-    }, [applyFilters]);
+        dispatch(applyFilters());
+    }, [dispatch, employeeFilter, statusFilter, attendanceData]);
 
     const handleDateChange = (e) => {
-        setDateInput(e.target.value);
+        dispatch(setDateInput(e.target.value));
     };
 
     const handlePageChange = (event, newPage) => {
-        setPage(newPage);
+        dispatch(setPage(newPage));
     };
 
     const handleRowsPerPageChange = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(1);
+        dispatch(setRowsPerPage(parseInt(event.target.value, 10)));
+    };
+
+    const handleEmployeeFilterChange = (e) => {
+        dispatch(setEmployeeFilter(e.target.value));
+    };
+
+    const handleStatusFilterChange = (e) => {
+        dispatch(setStatusFilter(e.target.value));
+    };
+
+    const handleResetFilters = () => {
+        dispatch(resetFilters());
     };
 
     const formatDisplayDate = (dateString) => {
@@ -169,11 +134,6 @@ const AttendanceComponent = () => {
             word.charAt(0) + word.slice(1).toLowerCase()
         ).join(' ');
     };
-
-    const paginatedData = filteredData.slice(
-        (page - 1) * rowsPerPage,
-        page * rowsPerPage
-    );
 
     return (
         <div style={{
@@ -229,7 +189,6 @@ const AttendanceComponent = () => {
                     />
                 </Box>
 
-                {/* Filter Section */}
                 <Paper sx={{
                     p: 2,
                     mb: 3,
@@ -253,7 +212,7 @@ const AttendanceComponent = () => {
                                 fullWidth
                                 label="Search Employee ID"
                                 value={employeeFilter}
-                                onChange={(e) => setEmployeeFilter(e.target.value)}
+                                onChange={handleEmployeeFilterChange}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -274,7 +233,7 @@ const AttendanceComponent = () => {
                                 <Select
                                     value={statusFilter}
                                     label="Status"
-                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    onChange={handleStatusFilterChange}
                                     sx={{
                                         backgroundColor: '#ffffff !important'
                                     }}
@@ -291,7 +250,7 @@ const AttendanceComponent = () => {
                             <Button
                                 variant="outlined"
                                 startIcon={<Refresh />}
-                                onClick={resetFilters}
+                                onClick={handleResetFilters}
                                 fullWidth
                                 sx={{ height: '56px' }}
                             >
@@ -438,7 +397,7 @@ const AttendanceComponent = () => {
                                 </Select>
                             </FormControl>
                             <Pagination
-                                count={Math.ceil(filteredData.length / rowsPerPage)}
+                                count={totalPages}
                                 page={page}
                                 onChange={handlePageChange}
                                 color="primary"

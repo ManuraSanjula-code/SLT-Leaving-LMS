@@ -37,12 +37,14 @@ import {
     Card,
     CardContent,
     Avatar,
+    Snackbar,
 } from "@mui/material";
 import {
     Delete as DeleteIcon,
     Edit as EditIcon,
     Save as SaveIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    Error as ErrorIcon,
 } from "@mui/icons-material";
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -66,10 +68,6 @@ const MOVEMENT_TYPES = {
     OFFICE_TO_HOME: 'Office to Home',
     HOME_TO_OFFICE: 'Home to Office',
     REMOTE_WORK: 'Remote Work',
-    SITE_VISIT: 'Site Visit',
-    TRAINING: 'Training',
-    MEETING: 'Meeting',
-    OTHER: 'Other'
 };
 
 const REQUEST_STATUSES = {
@@ -125,11 +123,13 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
         requestStatus: "DRAFT",
         attSync: 0,
         attendance: "",
+        error: null
     });
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deleteMovementId, setDeleteMovementId] = useState(null);
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [viewMovementData, setViewMovementData] = useState(null);
+    const [showErrorSnackbar, setShowErrorSnackbar] = useState(false);
 
     useEffect(() => {
         const currentUserId = userId || sessionStorage.getItem('userId');
@@ -256,7 +256,11 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
                 setDeleteDialogOpen(false);
                 setDeleteMovementId(null);
             } catch (err) {
-                console.error("Error deleting movement request:", err);
+                setEditValues(prev => ({
+                    ...prev,
+                    error: err.message || 'Failed to delete movement request'
+                }));
+                setShowErrorSnackbar(true);
             }
         }
     };
@@ -401,7 +405,12 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
             }
         } catch (err) {
             console.error("Error updating movement request:", err);
-            alert(`Update failed: ${err.message || err}`);
+            setEditValues(prev => ({
+                ...prev,
+                error: err.message || err || 'Failed to update movement request'
+            }));
+            setShowErrorSnackbar(true);
+
         }
     };
 
@@ -465,6 +474,14 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
         return timeString;
     };
 
+    const handleCloseErrorSnackbar = () => {
+        setShowErrorSnackbar(false);
+        setEditValues(prev => ({
+            ...prev,
+            error: null
+        }));
+    };
+
     const movementTypes = [...new Set(movementRequests.map(req => req.type).filter(Boolean))];
     const statuses = [...new Set(movementRequests.map(req => req.status).filter(Boolean))];
 
@@ -481,7 +498,36 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
                         Error: {error}
                     </Alert>
                 )}
-
+                {editValues.error && (
+                    <>
+                        <Alert
+                            severity="error"
+                            sx={{ mb: 2 }}
+                            icon={<ErrorIcon />}
+                            onClose={handleCloseErrorSnackbar}
+                        >
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                Error:
+                            </Typography>
+                            {editValues.error}
+                        </Alert>
+                        <Snackbar
+                            open={showErrorSnackbar}
+                            autoHideDuration={6000}
+                            onClose={handleCloseErrorSnackbar}
+                            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                        >
+                            <Alert
+                                onClose={handleCloseErrorSnackbar}
+                                severity="error"
+                                sx={{ width: '100%' }}
+                                icon={<ErrorIcon />}
+                            >
+                                {editValues.error}
+                            </Alert>
+                        </Snackbar>
+                    </>
+                )}
                 {loading ? (
                     <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                         <CircularProgress />

@@ -33,126 +33,15 @@ export const fetchUnauthorizedLeaves = createAsyncThunk(
                 throw new Error('Failed to fetch data');
             }
 
-            return await response.json();
-        } catch (err) {
-            return rejectWithValue(err.message);
-        }
-    }
-);
-
-export const resolveUnauthorizedLeave = createAsyncThunk(
-    'unauthorized-leaves/resolve',
-    async (id, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to resolve leave');
-            }
-
             const data = await response.json();
-            return { id, resolveType: data?.resolveType || 'VIA_MOVEMENT' };
-        } catch (err) {
-            return rejectWithValue(err.message);
-        }
-    }
-);
-
-export const approveUnauthorizedLeave = createAsyncThunk(
-    'unauthorized-leaves/approve',
-    async (id, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
+            if (data.content && Array.isArray(data.content)) {
+                data.content.sort((a, b) => {
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    return dateB - dateA;
+                });
             }
-            const response = await fetch(`http://192.168.3.20:8080/lms/approve-unauthorized/${id}/${empId}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to approve leave');
-            }
-
-            return id;
-        } catch (err) {
-            return rejectWithValue(err.message);
-        }
-    }
-);
-
-export const bulkResolveUnauthorizedLeaves = createAsyncThunk(
-    'unauthorized-leaves/bulkResolve',
-    async (ids, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const promises = ids.map(id =>
-                fetch(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-            );
-
-            const responses = await Promise.all(promises);
-            const resolvedItems = await Promise.all(
-                responses.map(async (response, index) => {
-                    const data = await response.json();
-                    return {
-                        id: ids[index],
-                        resolveType: data?.resolveType || 'VIA_MOVEMENT'
-                    };
-                })
-            );
-
-            return resolvedItems;
-        } catch (err) {
-            return rejectWithValue("Failed to resolve selected leaves. Please try again.");
-        }
-    }
-);
-
-export const deleteMultipleUnauthorizedLeaves = createAsyncThunk(
-    'unauthorized-leaves/deleteMultiple',
-    async (ids, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/un-authorized/delete-multiple/${empId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ids }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete selected leaves');
-            }
-
-            return ids;
+            return data;
         } catch (err) {
             return rejectWithValue(err.message);
         }
@@ -191,41 +80,6 @@ const unauthorizedLeavesSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-            .addCase(resolveUnauthorizedLeave.fulfilled, (state, action) => {
-                const { id, resolveType } = action.payload;
-                state.leaves.content = state.leaves.content.map(leave =>
-                    leave.id === id ? { ...leave, resolve: resolveType, isResolved: true } : leave
-                );
-            })
-            .addCase(resolveUnauthorizedLeave.rejected, (state, action) => {
-                state.error = action.payload;
-            })
-            .addCase(approveUnauthorizedLeave.fulfilled, (state, action) => {
-                const approvedId = action.payload;
-                state.leaves.content = state.leaves.content.filter(leave => leave.id !== approvedId);
-                state.leaves.totalElements -= 1;
-            })
-            .addCase(approveUnauthorizedLeave.rejected, (state, action) => {
-                state.error = action.payload;
-            })
-            .addCase(bulkResolveUnauthorizedLeaves.fulfilled, (state, action) => {
-                const resolvedItems = action.payload;
-                state.leaves.content = state.leaves.content.map(leave => {
-                    const resolvedItem = resolvedItems.find(item => item.id === leave.id);
-                    return resolvedItem ? { ...leave, resolve: resolvedItem.resolveType, isResolved: true } : leave;
-                });
-            })
-            .addCase(bulkResolveUnauthorizedLeaves.rejected, (state, action) => {
-                state.error = action.payload;
-            })
-            .addCase(deleteMultipleUnauthorizedLeaves.fulfilled, (state, action) => {
-                const deletedIds = action.payload;
-                state.leaves.content = state.leaves.content.filter(leave => !deletedIds.includes(leave.id));
-                state.leaves.totalElements -= deletedIds.length;
-            })
-            .addCase(deleteMultipleUnauthorizedLeaves.rejected, (state, action) => {
-                state.error = action.payload;
-            });
     }
 });
 

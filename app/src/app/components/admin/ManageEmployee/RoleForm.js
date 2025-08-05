@@ -69,7 +69,7 @@ const RoleForm = ({ onSubmit }) => {
         if (saveError) {
             setErrorOpen(true);
         }
-    }, [saveSuccess, saveError, dispatch, currentPage, pageSize, handleCloseDialog]);
+    }, [saveSuccess, saveError, dispatch, currentPage, pageSize]);
 
     const handlePageChange = (event, newPage) => {
         dispatch(fetchManagementData({
@@ -224,7 +224,7 @@ const RoleForm = ({ onSubmit }) => {
         dispatch(saveRole({
             roleData,
             isUpdate: !!currentRole,
-            roleId: currentRole?.id
+            roleId: currentRole?.publicId
         }));
     }, [
         formData,

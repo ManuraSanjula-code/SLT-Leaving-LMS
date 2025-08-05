@@ -34,57 +34,33 @@ export const fetchUnsuccessfulLeaves = createAsyncThunk(
                 },
                 withCredentials: true
             });
-            return response.data;
+            
+            const data = response.data;
+            
+            if (data.content && Array.isArray(data.content)) {
+                data.content.sort((a, b) => {
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    return dateB - dateA;
+                });
+            }
+            
+            return data;
         } catch (err) {
             return rejectWithValue(err.response?.data?.message || "Failed to load data");
         }
     }
 );
 
-export const resolveLeave = createAsyncThunk(
-    'unsuccessfulLeaves/resolve',
-    async (id, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const response = await axios.post(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
-                withCredentials: true
-            });
-            return { id, resolveType: response.data?.resolveType || 'VIA_MOVEMENT' };
-        } catch (err) {
-            return rejectWithValue(err.response?.data?.message || "Failed to resolve leave");
-        }
-    }
-);
 
-export const bulkResolveLeaves = createAsyncThunk(
-    'unsuccessfulLeaves/bulkResolve',
-    async (ids, { rejectWithValue }) => {
-        try {
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const promises = ids.map(id =>
-                axios.post(`http://192.168.3.20:8080/lms/resolve-unauthorized/${id}/${empId}`, {}, {
-                    withCredentials: true
-                })
-            );
 
-            const responses = await Promise.all(promises);
-            const resolvedItems = ids.map((id, index) => ({
-                id,
-                resolveType: responses[index].data?.resolveType || 'VIA_MOVEMENT'
-            }));
-
-            return resolvedItems;
-        } catch (err) {
-            return rejectWithValue(err.response?.data?.message || "Failed to resolve selected leaves");
-        }
-    }
-);
+const sortLeavesByDate = (leaves) => {
+    return leaves.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA;
+    });
+};
 
 const unsuccessfulLeavesSlice = createSlice({
     name: 'unsuccessfulLeaves',
@@ -110,28 +86,12 @@ const unsuccessfulLeavesSlice = createSlice({
             .addCase(fetchUnsuccessfulLeaves.fulfilled, (state, action) => {
                 state.loading = false;
                 state.leaves = action.payload;
+                if (state.leaves.content && Array.isArray(state.leaves.content)) {
+                    state.leaves.content = sortLeavesByDate([...state.leaves.content]);
+                }
             })
             .addCase(fetchUnsuccessfulLeaves.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload;
-            })
-            .addCase(resolveLeave.fulfilled, (state, action) => {
-                const { id, resolveType } = action.payload;
-                state.leaves.content = state.leaves.content.map(leave =>
-                    leave.id === id ? { ...leave, resolve: resolveType, isResolved: true } : leave
-                );
-            })
-            .addCase(resolveLeave.rejected, (state, action) => {
-                state.error = action.payload;
-            })
-            .addCase(bulkResolveLeaves.fulfilled, (state, action) => {
-                const resolvedItems = action.payload;
-                state.leaves.content = state.leaves.content.map(leave => {
-                    const resolvedItem = resolvedItems.find(item => item.id === leave.id);
-                    return resolvedItem ? { ...leave, resolve: resolvedItem.resolveType, isResolved: true } : leave;
-                });
-            })
-            .addCase(bulkResolveLeaves.rejected, (state, action) => {
                 state.error = action.payload;
             });
     }

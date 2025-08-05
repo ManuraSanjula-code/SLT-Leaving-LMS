@@ -38,7 +38,14 @@ export const fetchAttendanceData = createAsyncThunk(
             }
 
             const data = await response.json();
-            return data;
+            
+            const sortedData = data.sort((a, b) => {
+                const dateA = new Date(a.punchTime);
+                const dateB = new Date(b.punchTime);
+                return dateB - dateA;
+            });
+            
+            return sortedData;
         } catch (error) {
             return rejectWithValue(`Failed to fetch attendance data: ${error.message}`);
         }
@@ -134,7 +141,7 @@ export const attendanceHelpers = {
         const [outHours, outMinutes] = punchOutTime.split(':').map(Number);
 
         let durationMinutes = (outHours * 60 + outMinutes) - (inHours * 60 + inMinutes);
-        if (durationMinutes < 0) durationMinutes += 24 * 60; // Handle overnight shifts
+        if (durationMinutes < 0) durationMinutes += 24 * 60;
 
         const hours = Math.floor(durationMinutes / 60);
         const minutes = durationMinutes % 60;
@@ -146,7 +153,6 @@ export const attendanceHelpers = {
         const processedData = {};
 
         attendanceData.forEach(record => {
-            // Use the new 'date' field from the API response
             const dateString = attendanceHelpers.formatISODate(record.date);
             if (!dateString) return;
 
@@ -170,20 +176,19 @@ export const attendanceHelpers = {
         const pairs = [];
         let currentPair = {};
 
-        // Sort records by punch time
         const sortedRecords = [...dateRecords].sort((a, b) => {
-            const timeA = a.pucnhTime || '';
-            const timeB = b.pucnhTime || '';
+            const timeA = a.punchTypeTime || '';
+            const timeB = b.punchTypeTime || '';
             return timeA.localeCompare(timeB);
         });
 
         sortedRecords.forEach(record => {
-            if (record.inOut === 1) { // Punch in
+            if (record.inOutValue === 1) { // Punch in
                 if (Object.keys(currentPair).length > 0 && !currentPair.out) {
                     pairs.push({...currentPair, out: null});
                 }
                 currentPair = {in: record, out: null};
-            } else if (record.inOut === 0) { // Punch out
+            } else if (record.inOutValue === 0) { // Punch out
                 if (Object.keys(currentPair).length > 0 && currentPair.in && !currentPair.out) {
                     currentPair.out = record;
                     pairs.push({...currentPair});
@@ -213,8 +218,8 @@ export const attendanceHelpers = {
 
             pairs.forEach(pair => {
                 if (pair.in && pair.out) {
-                    const inTime = pair.in.pucnhTime;
-                    const outTime = pair.out.pucnhTime;
+                    const inTime = pair.in.punchTypeTime;
+                    const outTime = pair.out.punchTypeTime;
 
                     if (inTime && outTime) {
                         dayHasValidPair = true;

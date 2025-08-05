@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     Table,
     TableBody,
@@ -19,57 +20,40 @@ import {
     Grid
 } from '@mui/material';
 
+import {
+    fetchRosterData,
+    setSelectedYear,
+    setSelectedMonth,
+} from '../../../../../lib/redux/redux-roster/shiftRosterSlice'
+
 const ShiftRosterTable = () => {
-    const [rosterData, setRosterData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
+    const dispatch = useDispatch();
 
-    const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    const fetchRosterData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch(`http://192.168.3.20:8080/api/roster/shift-roster/${selectedYear}/${selectedMonth}`);
-
-            if (!response.ok) {
-                if (response.status == 404) {
-                    setRosterData(null)
-                    return;
-                }
-            }
-
-            const data = await response.json();
-
-            if (!data || Object.keys(data).length === 0) {
-                throw new Error('No data found for the selected month and year');
-            }
-
-            if (!data.dutyTurn || !data.dates) {
-                throw new Error('Invalid data structure received from server');
-            }
-
-            setRosterData(data);
-        } catch (err) {
-            setError(err.message);
-            setRosterData(null);
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedYear, selectedMonth]);
+    const {
+        rosterData,
+        loading,
+        error,
+        selectedYear,
+        selectedMonth,
+        months,
+        shifts,
+        teamColors
+    } = useSelector(state => state.shiftRoster);
 
     useEffect(() => {
-        fetchRosterData();
-    }, [fetchRosterData]);
+        dispatch(fetchRosterData({ year: selectedYear, month: selectedMonth }));
+    }, [dispatch, selectedYear, selectedMonth]);
+
+    const handleYearChange = (e) => {
+        dispatch(setSelectedYear(parseInt(e.target.value)));
+    };
+
+    const handleMonthChange = (e) => {
+        dispatch(setSelectedMonth(e.target.value));
+    };
 
     const handleFetchData = () => {
-        fetchRosterData();
+        dispatch(fetchRosterData({ year: selectedYear, month: selectedMonth }));
     };
 
     const getTeamForDateAndShift = (date, shift) => {
@@ -99,24 +83,13 @@ const ShiftRosterTable = () => {
     };
 
     const getTeamColor = (team) => {
-        const colors = {
-            'T 1': '#e3f2fd',
-            'T 1 ROT': '#bbdefb',
-            'T 2': '#e8f5e8',
-            'T 2 ROT': '#c8e6c8',
-            'T 3': '#fff3e0',
-            'T 3 ROT': '#ffcc02',
-            'Na': '#f5f5f5'
-        };
-        return colors[team] || '#ffffff';
+        return teamColors[team] || '#ffffff';
     };
 
     const renderTableContent = () => {
         if (!rosterData || !rosterData.dates) {
             return null;
         }
-
-        const shifts = ['00:00 - 08:00', '08:00 - 16:00', '16:00 - 24:00'];
 
         return (
             <TableContainer component={Paper} elevation={3}>
@@ -253,7 +226,7 @@ const ShiftRosterTable = () => {
                                 type="number"
                                 label="Year"
                                 value={selectedYear}
-                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                                onChange={handleYearChange}
                                 InputProps={{
                                     inputProps: {
                                         min: 2020,
@@ -270,7 +243,7 @@ const ShiftRosterTable = () => {
                                 select
                                 label="Month"
                                 value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                onChange={handleMonthChange}
                                 SelectProps={{
                                     native: true,
                                 }}
@@ -353,14 +326,13 @@ const ShiftRosterTable = () => {
                         }}
                     >
                         <Typography variant="h6">No Data</Typography>
-                        <Typography variant="body2">
-                            Please select a month and year, then click &quot;Load Roster&quot; to fetch the shift schedule.
+                        <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 2 }}>
+                            {'📅 Data automatically loads when you change month or year'}
                         </Typography>
                     </Alert>
                 </Box>
             )}
 
-            {/* Legend */}
             {rosterData && (
                 <Card sx={{ mt: 3 }}>
                     <CardContent>

@@ -8,7 +8,10 @@ import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
 import com.slt.peotv.userservice.lms.shared.model.request.UserReq;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -29,7 +32,6 @@ public class UserReqDeserializer extends StdDeserializer<UserReq> {
         JsonNode node = p.getCodec().readTree(p);
         UserReq userReq = new UserReq();
 
-        // Parse basic fields
         if (node.has("userId")) userReq.setUserId(node.get("userId").asText());
         if (node.has("firstName")) userReq.setFirstName(node.get("firstName").asText());
         if (node.has("lastName")) userReq.setLastName(node.get("lastName").asText());
@@ -44,7 +46,6 @@ public class UserReqDeserializer extends StdDeserializer<UserReq> {
         if (node.has("active")) userReq.setActive(node.get("active").asInt());
         if (node.has("roaster")) userReq.setRoaster(node.get("roaster").asBoolean());
 
-        // Parse lists
         if (node.has("roles")) {
             userReq.setRoles(parseStringList(node.get("roles")));
         }
@@ -61,7 +62,18 @@ public class UserReqDeserializer extends StdDeserializer<UserReq> {
             userReq.setDeleteAddresses(parseStringList(node.get("deleteAddresses")));
         }
 
-        // Parse addresses
+        if (node.has("joiningDate") && !node.get("joiningDate").isNull()) {
+            String dateStr = node.get("joiningDate").asText();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Date joiningDate = null;
+            try {
+                joiningDate = sdf.parse(dateStr);
+            } catch (ParseException e) {
+
+            }
+            userReq.setJoiningDate(joiningDate);
+        }
+
         if (node.has("addresses")) {
             List<AddressDTO> addresses = new ArrayList<>();
             for (JsonNode addrNode : node.get("addresses")) {
@@ -77,7 +89,6 @@ public class UserReqDeserializer extends StdDeserializer<UserReq> {
             userReq.setAddresses(addresses);
         }
 
-        // Parse additional field
         if (node.has("additional")) {
             JsonNode additionalNode = node.get("additional");
             UserReq.Additional additional = new UserReq.Additional();

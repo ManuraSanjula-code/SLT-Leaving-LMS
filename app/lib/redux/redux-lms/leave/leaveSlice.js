@@ -1,4 +1,19 @@
-import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+
+const calculateDayDifference = (startDate, endDate) => {
+    if (!startDate || !endDate) return 0;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    return diffDays;
+};
 
 const initialState = {
     data: [],
@@ -24,9 +39,7 @@ export const fetchLeaveData = createAsyncThunk(
     async ({isAdmin, userId, userAdmin, page, size}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
+            if (!empId) return rejectWithValue('Employee ID not found');
             const url = `http://192.168.3.20:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
             const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch');
@@ -51,19 +64,11 @@ export const fetchLeaveBalances = createAsyncThunk(
     async (userId, {rejectWithValue}) => {
         try {
             const loggedInUserId = sessionStorage.getItem('userId');
-            if (!loggedInUserId) {
-                return rejectWithValue('User ID not found in session storage');
-            }
-
+            if (!loggedInUserId) return rejectWithValue('User ID not found');
             const url = `http://192.168.3.20:8080/lms/leave-balance/${userId}/${loggedInUserId}`;
-            const response = await fetch(url, {
-                credentials: 'include'
-            });
-
+            const response = await fetch(url, {credentials: 'include'});
             if (!response.ok) throw new Error('Failed to fetch balances');
-
             const data = await response.json();
-
             return data.leaveDetails || [];
         } catch (err) {
             return rejectWithValue(err.message);
@@ -76,22 +81,18 @@ export const fetchInOutData = createAsyncThunk(
     async ({ userId, happenDate }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
+            if (!empId) return rejectWithValue('Employee ID not found');
             const dateObj = new Date(happenDate);
             dateObj.setDate(dateObj.getDate() + 1);
             const adjustedDate = dateObj.toISOString().split('T')[0];
-
-            const response = await fetch(`http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
-                credentials: 'include'
-            });
-
+            const response = await fetch(
+                `http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`,
+                {credentials: 'include'}
+            );
             if (!response.ok) {
                 const errorText = await response.json();
-                throw new Error(`ERROR : ${errorText.message}`);
+                throw new Error(`ERROR: ${errorText.message}`);
             }
-
             return await response.json();
         } catch (err) {
             return rejectWithValue(err.message);
@@ -104,13 +105,11 @@ export const deleteLeaveRequest = createAsyncThunk(
     async (publicId, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            const response = await fetch(`http://192.168.3.20:8080/lms/leave/${publicId}/${empId}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
+            if (!empId) return rejectWithValue('Employee ID not found');
+            const response = await fetch(
+                `http://192.168.3.20:8080/lms/leave/${publicId}/${empId}`,
+                {method: 'DELETE', credentials: 'include'}
+            );
             if (!response.ok) throw new Error('Delete failed');
             return publicId;
         } catch (err) {
@@ -124,9 +123,7 @@ export const updateLeaveRequest = createAsyncThunk(
     async ({updatePayload, userAdmin, isAdmin}, {rejectWithValue}) => {
         try {
             const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
+            if (!empId) return rejectWithValue('Employee ID not found');
 
             const cleanPayload = {
                 fromDate: updatePayload.fromDate,
@@ -154,23 +151,19 @@ export const updateLeaveRequest = createAsyncThunk(
                 `http://192.168.3.20:8080/lms/management/leave/${updatePayload.publicId}/${empId}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
                     body: JSON.stringify(cleanPayload)
                 }
             );
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+                const errorText = await response.json();
+                throw new Error(`${response.status} Message: ${errorText.error || errorText.message}`);
             }
 
-            // Return the original payload for state update
             return updatePayload;
         } catch (err) {
-            console.error('Update request failed:', err);
             return rejectWithValue(err.message);
         }
     }
@@ -179,7 +172,16 @@ export const updateLeaveRequest = createAsyncThunk(
 const leaveSlice = createSlice({
     name: 'leaveNo',
     initialState,
-    reducers: {},
+    reducers: {
+        calculateLeaveDays: (state, action) => {
+            const { startDate, endDate, componentBehavior } = action.payload;
+            if (startDate && endDate) {
+                const diffDays = calculateDayDifference(startDate, endDate);
+                return componentBehavior === 'HALF_DAY' ? 0.5 : diffDays;
+            }
+            return 0;
+        }
+    },
     extraReducers: (builder) => {
         builder
             .addCase(fetchLeaveData.pending, (state) => {
@@ -228,14 +230,9 @@ const leaveSlice = createSlice({
             })
             .addCase(updateLeaveRequest.fulfilled, (state, action) => {
                 state.loading = false;
-                // Update the specific request in the state
-                const updatedRequest = action.payload;
-                const index = state.data.findIndex(leave => leave.publicId === updatedRequest.publicId);
+                const index = state.data.findIndex(leave => leave.publicId === action.payload.publicId);
                 if (index !== -1) {
-                    state.data[index] = {
-                        ...state.data[index],
-                        ...updatedRequest
-                    };
+                    state.data[index] = {...state.data[index], ...action.payload};
                 }
             })
             .addCase(updateLeaveRequest.rejected, (state, action) => {
@@ -261,10 +258,8 @@ const transformLeaveItem = (item) => ({
     fromDate: item.fromDate || "",
     toDate: item.toDate || "",
     submitDate: item.submitDate || "",
-
     componentBehavior: item.componentBehavior,
     requestStatus: item.requestStatus,
-
     late: item.componentBehavior === 'LATE',
     absent: item.componentBehavior === 'ABSENT',
     fullDay: item.componentBehavior === 'FULL_DAY',
@@ -273,13 +268,11 @@ const transformLeaveItem = (item) => ({
     unauthorized: item.componentBehavior === 'UNAUTHORIZED',
     unSuccessful: item.componentBehavior === 'UNSUCCESSFUL',
     lateCover: item.componentBehavior === 'LATE_COVER',
-
     pending: item.requestStatus === 'PENDING_APPROVAL' || item.requestStatus === 'SUBMITTED',
     accepted: item.requestStatus === 'APPROVED',
     reject: item.requestStatus === 'REJECTED',
     canceled: item.requestStatus === 'CANCELLED',
     expired: item.requestStatus === 'EXPIRED',
-
     manualRequest: Boolean(item.isManualRequest),
     numOfDays: item.numOfDays || 0,
     actualDays: item.actualDays || 0,
@@ -287,7 +280,6 @@ const transformLeaveItem = (item) => ({
     editedByDTOs: item.editedByDTOs || [],
     notUsed: Boolean(item.notUsed),
     isEdited: Boolean(item.isEdited),
-
     originalItem: {
         ...item,
         componentBehavior: item.componentBehavior,
@@ -299,46 +291,30 @@ const transformLeaveItem = (item) => ({
 
 const getLeaveType = (item) => {
     switch (item.componentBehavior) {
-        case 'FULL_DAY':
-            return "Full Day Leave";
-        case 'HALF_DAY':
-            return "Half Day Leave";
-        case 'ABSENT':
-            return "Absence";
-        case 'LATE':
-            return "Late Arrival";
-        case 'LATE_COVER':
-            return "Late Cover";
-        case 'SHORT_LEAVE':
-            return "Short Leave";
-        case 'UNSUCCESSFUL':
-            return "Unsuccessful";
-        case 'UNAUTHORIZED':
-            return "Unauthorized";
-        default:
-            return item.leaveType?.name || "Regular Leave";
+        case 'FULL_DAY': return "Full Day Leave";
+        case 'HALF_DAY': return "Half Day Leave";
+        case 'ABSENT': return "Absence";
+        case 'LATE': return "Late Arrival";
+        case 'LATE_COVER': return "Late Cover";
+        case 'SHORT_LEAVE': return "Short Leave";
+        case 'UNSUCCESSFUL': return "Unsuccessful";
+        case 'UNAUTHORIZED': return "Unauthorized";
+        default: return item.leaveType?.name || "Regular Leave";
     }
 };
 
 const getLeaveStatus = (item) => {
     switch (item.requestStatus) {
-        case 'DRAFT':
-            return "Draft";
-        case 'SUBMITTED':
-            return "Submitted";
-        case 'PENDING_APPROVAL':
-            return "Pending";
-        case 'APPROVED':
-            return "Approved";
-        case 'REJECTED':
-            return "Rejected";
-        case 'CANCELLED':
-            return "Canceled";
-        case 'EXPIRED':
-            return "Expired";
-        default:
-            return "Unknown";
+        case 'DRAFT': return "Draft";
+        case 'SUBMITTED': return "Submitted";
+        case 'PENDING_APPROVAL': return "Pending";
+        case 'APPROVED': return "Approved";
+        case 'REJECTED': return "Rejected";
+        case 'CANCELLED': return "Canceled";
+        case 'EXPIRED': return "Expired";
+        default: return "Unknown";
     }
 };
 
+export const { calculateLeaveDays } = leaveSlice.actions;
 export default leaveSlice.reducer;

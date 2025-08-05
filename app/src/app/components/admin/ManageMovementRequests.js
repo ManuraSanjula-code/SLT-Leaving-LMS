@@ -73,10 +73,6 @@ const ManageMovementRequests = () => {
         request.rejected;
   };
 
-  const hasNonSelectableRequests = movementRequests.some(request =>
-      request && request.publicId && isNonSelectable(request)
-  );
-
   const selectableRequests = movementRequests.filter(request =>
       request && request.publicId && !isNonSelectable(request)
   );
@@ -98,19 +94,42 @@ const ManageMovementRequests = () => {
   };
 
   const handleSelect = (id) => {
-    const request = movementRequests.find(req => req.publicId === id);
-    if (request && isNonSelectable(request)) return;
-
     dispatch(selectMovementRequest(id));
   };
 
+  // Modified handleSelectAll to only select selectable requests
   const handleSelectAll = () => {
-    dispatch(selectAllMovementRequests());
+    const selectableIds = selectableRequests.map(req => req.publicId);
+    const allSelectableSelected = selectableIds.every(id => selected.includes(id));
+
+    if (allSelectableSelected) {
+      // If all selectable items are selected, deselect only the selectable ones
+      selectableIds.forEach(id => {
+        if (selected.includes(id)) {
+          dispatch(selectMovementRequest(id));
+        }
+      });
+    } else {
+      // Select all selectable items that aren't already selected
+      selectableIds.forEach(id => {
+        if (!selected.includes(id)) {
+          dispatch(selectMovementRequest(id));
+        }
+      });
+    }
   };
 
   const handleBulkApprove = () => {
+    // Filter out any non-selectable items from selected array
+    const validSelectedIds = selected.filter(id => {
+      const request = movementRequests.find(req => req.publicId === id);
+      return request && !isNonSelectable(request);
+    });
+
+    if (validSelectedIds.length === 0) return;
+
     dispatch(processBulkMovementRequests({
-      movementIds: selected,
+      movementIds: validSelectedIds,
       approved: true
     })).then(() => {
       dispatch(fetchMovementRequests({
@@ -121,8 +140,16 @@ const ManageMovementRequests = () => {
   };
 
   const handleBulkReject = () => {
+    // Filter out any non-selectable items from selected array
+    const validSelectedIds = selected.filter(id => {
+      const request = movementRequests.find(req => req.publicId === id);
+      return request && !isNonSelectable(request);
+    });
+
+    if (validSelectedIds.length === 0) return;
+
     dispatch(processBulkMovementRequests({
-      movementIds: selected,
+      movementIds: validSelectedIds,
       approved: false
     })).then(() => {
       dispatch(fetchMovementRequests({
@@ -261,6 +288,15 @@ const ManageMovementRequests = () => {
     }
   };
 
+  // Calculate counts for display
+  const selectedSelectableCount = selected.filter(id => {
+    const request = movementRequests.find(req => req.publicId === id);
+    return request && !isNonSelectable(request);
+  }).length;
+
+  const allSelectableSelected = selectableRequests.length > 0 &&
+      selectableRequests.every(req => selected.includes(req.publicId));
+
   return (
       <Container maxWidth="lg">
         <CssBaseline />
@@ -281,37 +317,19 @@ const ManageMovementRequests = () => {
                   variant="contained"
                   color="primary"
                   onClick={handleBulkApprove}
-                  disabled={
-                      selected.length === 0 ||
-                      loading ||
-                      hasNonSelectableRequests ||
-                      selected.some(id => {
-                        const request = movementRequests.find(req => req.publicId === id);
-                        return request && isNonSelectable(request);
-                      })
-                  }
+                  disabled={selectedSelectableCount === 0 || loading}
                   sx={{ mr: 1 }}
               >
-                Approve Selected ({selected.length})
-                {hasNonSelectableRequests && " - Some items cannot be processed"}
+                Approve Selected ({selectedSelectableCount})
               </Button>
               <Button
                   variant="contained"
                   color="secondary"
                   onClick={handleBulkReject}
-                  disabled={
-                      selected.length === 0 ||
-                      loading ||
-                      hasNonSelectableRequests ||
-                      selected.some(id => {
-                        const request = movementRequests.find(req => req.publicId === id);
-                        return request && isNonSelectable(request);
-                      })
-                  }
+                  disabled={selectedSelectableCount === 0 || loading}
                   sx={{ mr: 1 }}
               >
-                Reject Selected ({selected.length})
-                {hasNonSelectableRequests && " - Some items cannot be processed"}
+                Reject Selected ({selectedSelectableCount})
               </Button>
             </Box>
             <FormControl sx={{ minWidth: 120 }}>
@@ -337,23 +355,23 @@ const ManageMovementRequests = () => {
               </Box>
           ) : (
               <>
-                {/* Table */}
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead sx={{ bgcolor: "primary.light" }}>
                       <TableRow>
                         <TableCell padding="checkbox">
-                          <Checkbox
-                              indeterminate={
-                                  selected.length > 0 && selected.length < selectableRequests.length
-                              }
-                              checked={
-                                  selected.length === selectableRequests.length &&
-                                  selectableRequests.length > 0
-                              }
-                              onChange={handleSelectAll}
-                              disabled={hasNonSelectableRequests}
-                          />
+                          <Tooltip title={selectableRequests.length === 0 ? "No selectable items" : "Select all selectable items"}>
+                            <span>
+                              <Checkbox
+                                  indeterminate={
+                                      selected.length > 0 && !allSelectableSelected
+                                  }
+                                  checked={allSelectableSelected}
+                                  onChange={handleSelectAll}
+                                  disabled={selectableRequests.length === 0}
+                              />
+                            </span>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>Employee ID</TableCell>
                         <TableCell>Request Date</TableCell>
@@ -379,17 +397,10 @@ const ManageMovementRequests = () => {
                             return (
                                 <TableRow key={request.publicId}>
                                   <TableCell padding="checkbox">
-                                    <Tooltip
-                                        title={isRequestNonSelectable ? "This movement request cannot be selected" : ""}
-                                    >
-                              <span>
-                                <Checkbox
-                                    checked={selected.includes(request.publicId)}
-                                    onChange={() => handleSelect(request.publicId)}
-                                    disabled={isRequestNonSelectable}
-                                />
-                              </span>
-                                    </Tooltip>
+                                    <Checkbox
+                                        checked={selected.includes(request.publicId)}
+                                        onChange={() => handleSelect(request.publicId)}
+                                        disabled={isRequestNonSelectable}                                    />
                                   </TableCell>
                                   <TableCell>
                                     {request.employeeId}

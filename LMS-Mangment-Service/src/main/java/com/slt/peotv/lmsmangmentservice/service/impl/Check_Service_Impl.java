@@ -28,6 +28,7 @@ import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.HolidayChecker;
 import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
+import feign.FeignException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -55,6 +56,9 @@ import java.util.*;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class Check_Service_Impl implements Check_Service {
@@ -99,6 +103,8 @@ public class Check_Service_Impl implements Check_Service {
     private HolidayRepository holidayRepo;
 
     private static final int MAX_RETRY_ATTEMPTS = 3;
+    private final Object adminFetchLockForM = new Object();
+    private final Object adminFetchLockForL = new Object();
 
     public static Map<String, UserRest> createUserMap(List<UserRest> users) {
         if (users == null) {
@@ -366,6 +372,30 @@ public class Check_Service_Impl implements Check_Service {
         return records.stream().map(lMSUtils::inOutDTO).toList();
     }
 
+    public List<UserRest> fetchAdminsWithResilience(String userId, String token) {
+        try {
+            return userClient.getEmployeeAdmins(userId, token);
+        }
+        catch (FeignException.ServiceUnavailable ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "User service temporarily down"
+            );
+        }
+        catch (CallNotPermittedException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "User service overloaded (circuit breaker open)"
+            );
+        }
+        catch (FeignException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to fetch admins: " + ex.getMessage()
+            );
+        }
+    }
+
     @Override
     public void requestMovement(MovementReq req, HttpServletRequest request, Authentication authentication) {
         try {
@@ -383,15 +413,15 @@ public class Check_Service_Impl implements Check_Service {
             if (reqDate.isPresent())
                 throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
-            /*if (!req.validateMovementReq()) {
-                return;
-            }*/
 
             String token = "Bearer " + extractJwtTokenFromCookie(request);
             if (token == null || token.trim().isEmpty())
                 throw new NoSuchElementException("AUTH TOKEN NOT FOUND");
 
-            final List<UserRest> admins = userClient.getEmployeeAdmins(req.getUserId(), token);
+            final List<UserRest> admins;
+            synchronized (adminFetchLockForM) {
+                admins = fetchAdminsWithResilience(req.getUserId(), token);
+            }
             if (admins == null || admins.isEmpty())
                 throw new NoSuchElementException("No ADMINS FOUND ");
 
@@ -522,6 +552,17 @@ public class Check_Service_Impl implements Check_Service {
         e.printStackTrace();
     }
 
+    private void validateLowerPriorityApprovals(List<ComponetAdminsEntity> admins, ComponetAdminsEntity currentAdmin) {
+        int currentAdminIndex = admins.indexOf(currentAdmin);
+        for (int i = 0; i < currentAdminIndex; i++) {
+            ComponetAdminsEntity admin = admins.get(i);
+            if (admin.getApprovedDate() == null || !Boolean.TRUE.equals(admin.getIsAccepted())) {
+                logger.warn("Lower priority admin {} has not approved", admin.getEmployee().getEmployeeId());
+                throw new IllegalArgumentException("Lower priority admins have not approved");
+            }
+        }
+    }
+
     public void approvedMove(MovementsEntity movement, String userId) {
 
         if (movement.getRequestStatus().equals(RequestStatus.REJECTED) || movement.getRequestStatus().equals(RequestStatus.APPROVED) || movement.getRequestStatus().equals(RequestStatus.CANCELLED))
@@ -559,6 +600,7 @@ public class Check_Service_Impl implements Check_Service {
 
 
         if (currentAdmin == null) throw new NoSuchElementException("ADMIN NOT FOUND");
+        validateLowerPriorityApprovals(admins, currentAdmin);
         if (currentAdmin.getIsAccepted()) throw new IllegalArgumentException("ALREADY ACCEPTED");
 
         int currentAdminIndex = admins.indexOf(currentAdmin);
@@ -598,14 +640,22 @@ public class Check_Service_Impl implements Check_Service {
 
             switch (movement.getMovementType()) {
                 case HOME_TO_OFFICE:
-                    attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                    if (movement.getInTime() != null) {
+                        attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                    }
                     break;
                 case OFFICE_TO_HOME:
-                    attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                    if (movement.getOutTime() != null) {
+                        attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                    }
                     break;
                 default:
-                    attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
-                    attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                    if (movement.getInTime() != null) {
+                        attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                    }
+                    if (movement.getOutTime() != null) {
+                        attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                    }
             }
 
 
@@ -658,7 +708,7 @@ public class Check_Service_Impl implements Check_Service {
 
 
         if (currentAdmin == null) throw new NoSuchElementException("ADMIN NOT FOUND");
-
+        validateLowerPriorityApprovals(admins, currentAdmin);
         if (currentAdmin.getIsAccepted()) throw new IllegalArgumentException("ALREADY ACCEPTED");
 
         int currentAdminIndex = admins.indexOf(currentAdmin);
@@ -872,15 +922,18 @@ public class Check_Service_Impl implements Check_Service {
         }
 
         LocalDateTime yesterdayBefore830 = LocalDate.now().minusDays(1).atTime(8, 30);
+        
+        LocalTime eveStart = LocalTime.of(17, 0);
+        LocalTime eveStart_ = LocalTime.of(17, 30);
+
+        LocalTime eveEnd = LocalTime.of(23, 59);
+
         Time sqlTime830 = Time.valueOf(yesterdayBefore830.toLocalTime());
 
-        LocalTime eveStart = LocalTime.of(17, 0);
-        LocalTime eveEnd = LocalTime.of(23, 59);
         Time timeEveStart = Time.valueOf(eveStart);
-        Time timeEveEnd = Time.valueOf(eveEnd);
-
-        LocalTime eveStart_ = LocalTime.of(17, 30);
         Time timeEveStart_ = Time.valueOf(eveStart_);
+
+        Time timeEveEnd = Time.valueOf(eveEnd);
 
 
         Date yesterdayDate = helper.getYesterdayDate();
@@ -894,8 +947,11 @@ public class Check_Service_Impl implements Check_Service {
 
         List<InOutEntity> employeesLeftAfter5 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
                 timeEveStart, timeEveEnd);
-        List<InOutEntity> employeesLeftAfter5_ = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
+        List<InOutEntity> employeesLeftAfter530 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
                 timeEveStart_, timeEveEnd);
+
+        List<InOutEntity> employeesLeftAfter50_30 = inOutRepo.findByDateAndPunchTypeTimeBetween(yesterdayDate,
+                timeEveStart, Time.valueOf(LocalTime.of(17, 29)));
 
 
         /// ************************************************************************************************
@@ -908,8 +964,10 @@ public class Check_Service_Impl implements Check_Service {
         Map<String, InOutEntity> earliestEveningPunchByEmployee = findEarliestEveningPunchByEmployee(
                 employeesLeftAfter5); /// PUNCH BETWEEN 5.00pm - 23.59pm
         Map<String, InOutEntity> earliestEveningPunchByEmployee_ = findEarliestEveningPunchByEmployee(
-                employeesLeftAfter5_); /// PUNCH BETWEEN 5.30pm - 23.59pm
+                employeesLeftAfter530); /// PUNCH BETWEEN 5.30pm - 23.59pm
 
+        Map<String, InOutEntity> earliestEveningPunchByEmployee_5_30 = findEarliestEveningPunchByEmployee(
+                employeesLeftAfter50_30); /// PUNCH BETWEEN 5.00pm - 5.30pm
 
         /// =====================================================================================
         /// =====================================================================================
@@ -924,7 +982,7 @@ public class Check_Service_Impl implements Check_Service {
             employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
                 InOutEntity morningPunch = entry.getValue()[0];
                 InOutEntity eveningPunch = entry.getValue()[1];
-                reportAttendance(morningPunch, eveningPunch, true, false, false, false, false, false, false, false,
+                reportAttendance(morningPunch, eveningPunch, false, true, false, false, false, false, false, false, false,
                         false, true, false, false, yesterdayDate);
             });
         }
@@ -934,6 +992,27 @@ public class Check_Service_Impl implements Check_Service {
         /// ==============================================================================================
         /// ==============================================================================================
         /// ==============================================================================================
+
+        /// Late Arrive 8.30 (AFTER) Am but do the did not late cover
+
+        Map<String, InOutEntity[]> employeesWithBothPunchesLateNot = findEmployeesWithBothPunches(
+                earliestMorningPunchByEmployee_, earliestEveningPunchByEmployee_5_30);
+
+        for (Map.Entry<String, InOutEntity[]> entry : employeesWithBothPunchesLateNot.entrySet()) {
+            String employeeId = entry.getKey();
+            employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
+                InOutEntity morningPunch = entry.getValue()[0];
+                InOutEntity eveningPunch = entry.getValue()[1];
+                boolean punchTimeAfter1730 = !eveningPunch.isPunchTimeAfter1730();
+                reportAttendance(morningPunch, eveningPunch, true, false, false, true, true, punchTimeAfter1730, false, false, false,
+                        false, true, false, false, yesterdayDate);
+
+            });
+        }
+
+        /// =====================================================================================
+        /// =====================================================================================
+        /// =====================================================================================
 
         /// Late Arrive 8.30 Am (AFTER) but do the late cover
 
@@ -948,19 +1027,14 @@ public class Check_Service_Impl implements Check_Service {
 
             employeeRepo.findBySltId(employeeId).ifPresent(employee -> {
 
-                reportAttendance(morningPunch, eveningPunch, true, false, false, true, true, false, false, false, false,
+                reportAttendance(morningPunch, eveningPunch, false,true, false, false, true, true, false, false, false, false,
                         true, false, false, yesterdayDate);
             });
 
         }
 
-        /// =====================================================================================
-        /// =====================================================================================
-        /// =====================================================================================
 
-        /// Late Arrive 8.30 (AFTER) Am but do the did not late cover
-
-        Map<String, InOutEntity> onlyMorningPunchesLate90 = findEmployeesWithOnlyOnePunches(earliestMorningPunchByEmployee_,
+        /*Map<String, InOutEntity> onlyMorningPunchesLate90 = findEmployeesWithOnlyOnePunches(earliestMorningPunchByEmployee_,
                 earliestEveningPunchByEmployee_);
 
         for (Map.Entry<String, InOutEntity> entry : onlyMorningPunchesLate90.entrySet()) {
@@ -973,7 +1047,7 @@ public class Check_Service_Impl implements Check_Service {
                         false, false, yesterdayDate);
             });
 
-        }
+        }*/
 
         /// ***************************************************************************************************************
 
@@ -1137,13 +1211,13 @@ public class Check_Service_Impl implements Check_Service {
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(inout.getPunchTime()));
 
         if (unSuccessful)
-            helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance);
+            helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
     }
 
     @Override
-    public void reportAttendance(InOutEntity moa, InOutEntity eve, Boolean fullday, Boolean unAuthorized,
+    public void reportAttendance(InOutEntity moa, InOutEntity eve, Boolean swap, Boolean fullday, Boolean unAuthorized,
                                  Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave,
                                  Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent, Date date) {
 
@@ -1221,7 +1295,7 @@ public class Check_Service_Impl implements Check_Service {
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(moa.getPunchTime()));
 
         if (unSuccessful)
-            helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance);
+            helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
     }
 
     @Override
@@ -1282,7 +1356,7 @@ public class Check_Service_Impl implements Check_Service {
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.getYesterdayDate());
 
         if (unSuccessful)
-            helper.handleLateAndUnsuccessful(employeeID, savedAttendance);
+            helper.handleLateAndUnsuccessful(employeeID, savedAttendance, swap);
     }
 
     public void handleLeave(List<LeaveEntity> leave) {
@@ -1344,7 +1418,7 @@ public class Check_Service_Impl implements Check_Service {
 
         try {
             LocalTime punchTime = inout.getPunchTypeTime().toLocalTime();
-            LocalTime eightThirtyAM = LocalTime.of(8, 30); 
+            LocalTime eightThirtyAM = LocalTime.of(8, 30);
             LocalTime nineAM = LocalTime.of(9, 0);
             LocalTime twelvePM = LocalTime.of(12, 0);
             LocalTime thirteenPM = LocalTime.of(13, 0);
@@ -1503,7 +1577,13 @@ public class Check_Service_Impl implements Check_Service {
 
         EmployeeEntity employee = helper.getEmployeeById(userId);
 
-        if (leaveRepo.findByEmployeeAndFromDate(employee, helper.removeTimeFromDate(new Date())).isPresent()) {
+        /* if (leaveRepo.findByEmployeeAndFromDate(employee, helper.removeTimeFromDate(new Date())).isPresent()) {
+            throw new IllegalArgumentException((ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage()));
+        } */
+
+        List<LeaveEntity> leave_ = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, req.getFromDate(), req.getToDate());
+
+        if (!leave_.isEmpty()){
             throw new IllegalArgumentException((ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage()));
         }
 
@@ -1561,8 +1641,8 @@ public class Check_Service_Impl implements Check_Service {
             if (token == null || token.isEmpty()) throw new IllegalArgumentException("AUTH TOKEN NOT FOUND");
 
             final List<UserRest> admins;
-            synchronized (this) {
-                admins = userClient.getEmployeeAdmins(req.getUserId(), token);
+            synchronized (adminFetchLockForL) {
+                admins = fetchAdminsWithResilience(req.getUserId(), token);
             }
             if (admins.isEmpty() || admins == null)
                 throw new NoSuchElementException("NO ADMINS FOUND");
@@ -1809,8 +1889,8 @@ public class Check_Service_Impl implements Check_Service {
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
                 LocalTime.parse(accessLog.getLogTime().trim(), timeFormatter);
             } catch (DateTimeParseException e) {
-                logger.warn("Invalid time format: '{}' (length: {})", 
-                    accessLog.getLogTime(), accessLog.getLogTime().length());
+                logger.warn("Invalid time format: '{}' (length: {})",
+                        accessLog.getLogTime(), accessLog.getLogTime().length());
                 return false;
             }
         }

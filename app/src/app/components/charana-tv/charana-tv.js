@@ -1,56 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchRosterData, setSelectedWeekStart, clearError } from '../../../../lib/redux/redux-roster/charanaTvSlice';
 
 const CharanaTVRosterTable = () => {
-    const [rosterData, setRosterData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
-        const today = new Date();
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - today.getDay() + 1);
-        return monday.toISOString().split('T')[0];
-    });
-
-    const fetchRosterData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch(`http://192.168.3.20:8080/api/duty-roster/charana-tv/week/${selectedWeekStart}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            if (response.status === 204 || response.headers.get('Content-Length') === '0') {
-                setRosterData(null);
-                return []
-            }
-            const data = await response.json();
-
-            if (!data || Object.keys(data).length === 0) {
-                throw new Error('No data found for the selected week');
-            }
-
-            if (!data.dailyDuties || !Array.isArray(data.dailyDuties)) {
-                throw new Error('Invalid data structure received from server');
-            }
-
-            setRosterData(data);
-        } catch (err) {
-            setError(err.message);
-            setRosterData(null);
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedWeekStart]);
+    const dispatch = useDispatch();
+    const { rosterData, loading, error, selectedWeekStart } = useSelector((state) => state.charanaTvRoster);
 
     useEffect(() => {
-        fetchRosterData();
-    }, [fetchRosterData, selectedWeekStart]);
+        dispatch(fetchRosterData(selectedWeekStart));
+    }, [dispatch, selectedWeekStart]);
 
-    const handleFetchData = () => {
-        fetchRosterData();
+    const handleWeekStartChange = (e) => {
+        dispatch(setSelectedWeekStart(e.target.value));
+    };
+
+    const handleRefreshData = () => {
+        dispatch(fetchRosterData(selectedWeekStart));
     };
 
     const formatDate = (dateString) => {
@@ -63,7 +28,7 @@ const CharanaTVRosterTable = () => {
     };
 
     const formatTime = (timeString) => {
-        return timeString.substring(0, 5); // Remove seconds
+        return timeString.substring(0, 5);
     };
 
     const getShiftTypeColor = (shiftType) => {
@@ -130,8 +95,7 @@ const CharanaTVRosterTable = () => {
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: 'bold',
-            disabled: loading
+            fontWeight: 'bold'
         },
         buttonDisabled: {
             backgroundColor: '#ccc',
@@ -162,11 +126,6 @@ const CharanaTVRosterTable = () => {
             padding: '12px',
             textAlign: 'center',
             border: '1px solid #ddd'
-        },
-        tableRow: {
-            '&:nth-child(even)': {
-                backgroundColor: '#f9f9f9'
-            }
         },
         chip: {
             padding: '4px 8px',
@@ -241,122 +200,122 @@ const CharanaTVRosterTable = () => {
             <div style={styles.tableContainer}>
                 <table style={styles.table}>
                     <thead style={styles.tableHeader}>
-                    <tr>
-                        <th style={styles.tableHeaderCell}>Day &amp; Date</th>
-                        <th style={styles.tableHeaderCell}>Shift Time</th>
-                        <th style={styles.tableHeaderCell}>Shift Type</th>
-                        <th style={styles.tableHeaderCell}>Primary Employee</th>
-                        <th style={styles.tableHeaderCell}>Secondary Employee</th>
-                        <th style={styles.tableHeaderCell}>All Assigned Employees</th>
-                    </tr>
+                        <tr>
+                            <th style={styles.tableHeaderCell}>Day & Date</th>
+                            <th style={styles.tableHeaderCell}>Shift Time</th>
+                            <th style={styles.tableHeaderCell}>Shift Type</th>
+                            <th style={styles.tableHeaderCell}>Primary Employee</th>
+                            <th style={styles.tableHeaderCell}>Secondary Employee</th>
+                            <th style={styles.tableHeaderCell}>All Assigned Employees</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {rosterData.dailyDuties.map((day, dayIndex) => {
-                        const dayRowSpan = day.timeSlots.length;
+                        {rosterData.dailyDuties.map((day, dayIndex) => {
+                            const dayRowSpan = day.timeSlots.length;
 
-                        return day.timeSlots.map((timeSlot, slotIndex) => (
-                            <tr
-                                key={`${day.date}-${slotIndex}`}
-                                style={{
-                                    backgroundColor: slotIndex % 2 === 0 ? '#f9f9f9' : 'white',
-                                    ...getShiftTypeColor(timeSlot.shiftType) && {
-                                        backgroundColor: getShiftTypeColor(timeSlot.shiftType)
-                                    }
-                                }}
-                            >
-                                {slotIndex === 0 && (
-                                    <td
-                                        rowSpan={dayRowSpan}
-                                        style={{...styles.tableCell, ...styles.dayCell}}
-                                    >
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                                                {day.dayOfWeek}
+                            return day.timeSlots.map((timeSlot, slotIndex) => (
+                                <tr
+                                    key={`${day.date}-${slotIndex}`}
+                                    style={{
+                                        backgroundColor: slotIndex % 2 === 0 ? '#f9f9f9' : 'white',
+                                        ...getShiftTypeColor(timeSlot.shiftType) && {
+                                            backgroundColor: getShiftTypeColor(timeSlot.shiftType)
+                                        }
+                                    }}
+                                >
+                                    {slotIndex === 0 && (
+                                        <td
+                                            rowSpan={dayRowSpan}
+                                            style={{ ...styles.tableCell, ...styles.dayCell }}
+                                        >
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                                                    {day.dayOfWeek}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                                    {formatDate(day.date)}
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#666' }}>
-                                                {formatDate(day.date)}
-                                            </div>
+                                        </td>
+                                    )}
+
+                                    <td style={styles.tableCell}>
+                                        <div style={{ fontWeight: 'bold' }}>
+                                            {formatTime(timeSlot.startTime)} - {formatTime(timeSlot.endTime)}
                                         </div>
                                     </td>
-                                )}
 
-                                <td style={styles.tableCell}>
-                                    <div style={{ fontWeight: 'bold' }}>
-                                        {formatTime(timeSlot.startTime)} - {formatTime(timeSlot.endTime)}
-                                    </div>
-                                </td>
+                                    <td style={styles.tableCell}>
+                                        <span
+                                            style={{
+                                                ...styles.chip,
+                                                backgroundColor: getShiftTypeChipColor(timeSlot.shiftType),
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {timeSlot.shiftType}
+                                        </span>
+                                    </td>
 
-                                <td style={styles.tableCell}>
-                                    <span
-                                        style={{
-                                            ...styles.chip,
-                                            backgroundColor: getShiftTypeChipColor(timeSlot.shiftType),
-                                            color: 'white'
-                                        }}
-                                    >
-                                        {timeSlot.shiftType}
-                                    </span>
-                                </td>
+                                    <td style={styles.tableCell}>
+                                        <span
+                                            style={{
+                                                ...styles.chip,
+                                                backgroundColor: timeSlot.primaryEmployee ? '#4caf50' : '#ccc',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {timeSlot.primaryEmployee || 'Not Assigned'}
+                                        </span>
+                                    </td>
 
-                                <td style={styles.tableCell}>
-                                    <span
-                                        style={{
-                                            ...styles.chip,
-                                            backgroundColor: timeSlot.primaryEmployee ? '#4caf50' : '#ccc',
-                                            color: 'white'
-                                        }}
-                                    >
-                                        {timeSlot.primaryEmployee || 'Not Assigned'}
-                                    </span>
-                                </td>
+                                    <td style={styles.tableCell}>
+                                        <span
+                                            style={{
+                                                ...styles.chip,
+                                                backgroundColor: timeSlot.secondaryEmployee ? '#2196f3' : '#ccc',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {timeSlot.secondaryEmployee || 'Not Assigned'}
+                                        </span>
+                                    </td>
 
-                                <td style={styles.tableCell}>
-                                    <span
-                                        style={{
-                                            ...styles.chip,
-                                            backgroundColor: timeSlot.secondaryEmployee ? '#2196f3' : '#ccc',
-                                            color: 'white'
-                                        }}
-                                    >
-                                        {timeSlot.secondaryEmployee || 'Not Assigned'}
-                                    </span>
-                                </td>
-
-                                <td style={styles.tableCell}>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
-                                        {timeSlot.assignedEmployees && timeSlot.assignedEmployees.length > 0 ? (
-                                            timeSlot.assignedEmployees.map((employee, empIndex) => (
+                                    <td style={styles.tableCell}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
+                                            {timeSlot.assignedEmployees && timeSlot.assignedEmployees.length > 0 ? (
+                                                timeSlot.assignedEmployees.map((employee, empIndex) => (
+                                                    <span
+                                                        key={empIndex}
+                                                        style={{
+                                                            ...styles.chip,
+                                                            backgroundColor: '#ff9800',
+                                                            color: 'white',
+                                                            fontSize: '11px',
+                                                            maxWidth: '120px',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis'
+                                                        }}
+                                                    >
+                                                        {employee}
+                                                    </span>
+                                                ))
+                                            ) : (
                                                 <span
-                                                    key={empIndex}
                                                     style={{
                                                         ...styles.chip,
-                                                        backgroundColor: '#ff9800',
-                                                        color: 'white',
-                                                        fontSize: '11px',
-                                                        maxWidth: '120px',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis'
+                                                        backgroundColor: '#ccc',
+                                                        color: 'white'
                                                     }}
                                                 >
-                                                    {employee}
+                                                    No Assignments
                                                 </span>
-                                            ))
-                                        ) : (
-                                            <span
-                                                style={{
-                                                    ...styles.chip,
-                                                    backgroundColor: '#ccc',
-                                                    color: 'white'
-                                                }}
-                                            >
-                                                No Assignments
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ));
-                    })}
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ));
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -372,12 +331,12 @@ const CharanaTVRosterTable = () => {
                     <input
                         type="date"
                         value={selectedWeekStart}
-                        onChange={(e) => setSelectedWeekStart(e.target.value)}
+                        onChange={handleWeekStartChange}
                         style={styles.input}
                         title="Week Starting Date (Monday)"
                     />
                     <button
-                        onClick={handleFetchData}
+                        onClick={handleRefreshData}
                         disabled={loading}
                         style={{
                             ...styles.button,
@@ -433,13 +392,12 @@ const CharanaTVRosterTable = () => {
             {!loading && !error && !rosterData && (
                 <div style={styles.info}>
                     <h3>No Data</h3>
-                    <p>
-                        Please select a week starting date (Monday), then click &quot;Refresh Data&quot; to fetch the weekly roster.
+                    <p style={{ textAlign: 'center', color: '#666', fontSize: '14px', marginBottom: '16px' }}>
+                        {'📅 Data automatically loads when you change the week starting date'}
                     </p>
                 </div>
             )}
 
-            {/* Summary Stats */}
             {rosterData && (
                 <div style={styles.card}>
                     <h3 style={{ marginBottom: '16px' }}>Weekly Summary</h3>
@@ -451,13 +409,13 @@ const CharanaTVRosterTable = () => {
                             <div style={{ fontSize: '14px', color: '#666' }}>Days Scheduled</div>
                         </div>
                         <div style={styles.summaryBox}>
-                            <div style={{...styles.summaryNumber, color: '#4caf50'}}>
+                            <div style={{ ...styles.summaryNumber, color: '#4caf50' }}>
                                 {rosterData.dailyDuties.reduce((total, day) => total + day.timeSlots.length, 0)}
                             </div>
                             <div style={{ fontSize: '14px', color: '#666' }}>Total Shifts</div>
                         </div>
                         <div style={styles.summaryBox}>
-                            <div style={{...styles.summaryNumber, color: '#ff9800'}}>
+                            <div style={{ ...styles.summaryNumber, color: '#ff9800' }}>
                                 {rosterData.dailyDuties.reduce((total, day) =>
                                     total + day.timeSlots.filter(slot => slot.shiftType === 'MORNING').length, 0
                                 )}
@@ -465,7 +423,7 @@ const CharanaTVRosterTable = () => {
                             <div style={{ fontSize: '14px', color: '#666' }}>Morning Shifts</div>
                         </div>
                         <div style={styles.summaryBox}>
-                            <div style={{...styles.summaryNumber, color: '#f44336'}}>
+                            <div style={{ ...styles.summaryNumber, color: '#f44336' }}>
                                 {rosterData.dailyDuties.reduce((total, day) =>
                                     total + day.timeSlots.filter(slot => slot.shiftType === 'EVENING').length, 0
                                 )}

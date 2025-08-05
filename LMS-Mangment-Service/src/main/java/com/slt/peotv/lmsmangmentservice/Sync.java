@@ -34,21 +34,8 @@ public class Sync {
 
     @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
-        /*LocalDate currentDate = LocalDate.now();
-
-        if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            System.out.println("Today (" + currentDate + ") is Sunday! 🌞");
-        } else {
-            check_Service.getAllTheInOutRecordsFromSLT();
-            accessLogService.main();
-            check_Service.main();
-        }*/
-        /* check_Service.getAllTheInOutRecordsFromSLT();
-        accessLogService.main(); */
         check_Service.main();
     }
-
-
 
     @Scheduled(cron = "0 0 6 1 * ?")
     public void makeAsInActive() {

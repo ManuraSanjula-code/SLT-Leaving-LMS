@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
@@ -33,8 +34,13 @@ public class CommandLine implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(CommandLine.class);
     private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 5000; // 5 seconds
     private static final int BATCH_SIZE = 100;
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    
+    private volatile boolean initializationComplete = false;
+    private volatile boolean initializationInProgress = false;
+    private LocalDateTime lastRetryTime;
 
     @Autowired private AccessLogService accessLogService;
     @Autowired private Check_Service checkService;
@@ -52,27 +58,54 @@ public class CommandLine implements CommandLineRunner {
             logger.info("Employee data initialization completed successfully.");
         } catch (Exception e) {
             logger.error("Critical error during initialization: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to initialize employee data", e);
         }
     }
 
-    private void initializeEmployeeData() {
-        if (employeeRepo.count() > 0) {
-            logger.info("Employees already exist in database. Skipping initialization.");
+    @Scheduled(fixedDelay = 3600000)
+    public void periodicRetry() {
+        if (!initializationComplete && !initializationInProgress) {
+            if (lastRetryTime == null || 
+                LocalDateTime.now().isAfter(lastRetryTime.plusSeconds(RETRY_DELAY_MS / 1000))) {
+                logger.info("Attempting periodic retry of employee data initialization...");
+                initializeEmployeeData();
+            }
+        }
+    }
+
+    private synchronized void initializeEmployeeData() {
+        if (initializationComplete || initializationInProgress) {
             return;
         }
+        
+        initializationInProgress = true;
+        lastRetryTime = LocalDateTime.now();
+        
+        try {
+            if (employeeRepo.count() > 0) {
+                logger.info("Employees already exist in database. Skipping initialization.");
+                initializationComplete = true;
+                return;
+            }
 
-        logger.info("Fetching employees from external service...");
-        String token = generateAndEncryptToken();
-        if (token == null) return;
+            logger.info("Fetching employees from external service...");
+            String token = generateAndEncryptToken();
+            if (token == null) {
+                return;
+            }
 
-        List<UserRest> externalEmployees = fetchEmployeesWithRetry(token);
-        if (externalEmployees == null || externalEmployees.isEmpty()) {
-            logger.warn("No employees received from external service.");
-            return;
+            List<UserRest> externalEmployees = fetchEmployeesWithRetry(token);
+            if (externalEmployees == null || externalEmployees.isEmpty()) {
+                logger.warn("No employees received from external service.");
+                return;
+            }
+
+            processEmployeesInBatches(externalEmployees);
+            initializationComplete = true;
+        } catch (Exception e) {
+            logger.error("Error during employee data initialization (will retry later): {}", e.getMessage());
+        } finally {
+            initializationInProgress = false;
         }
-
-        processEmployeesInBatches(externalEmployees);
     }
 
     private String generateAndEncryptToken() {
@@ -85,17 +118,30 @@ public class CommandLine implements CommandLineRunner {
         }
     }
 
-    @Retryable(maxAttempts = MAX_RETRIES, backoff = @Backoff(delay = 1000))
+    @Retryable(maxAttempts = MAX_RETRIES, 
+               backoff = @Backoff(delay = 1000, multiplier = 2),
+               recover = "recoverFromFeignFailure")
     private List<UserRest> fetchEmployeesWithRetry(String token) {
         try {
             return userClient.getAllEmployee(token);
         } catch (FeignException e) {
             logger.error("Failed to fetch employees (Status: {}): {}", e.status(), e.getMessage());
             throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error fetching employees: {}", e.getMessage());
+            throw e;
         }
     }
 
+    @SuppressWarnings("unused")
+    private List<UserRest> recoverFromFeignFailure(String token, Exception e) {
+        logger.warn("All retry attempts failed for fetching employees. Will try again later.");
+        return null;
+    }
+
     private void processEmployeesInBatches(List<UserRest> employees) {
+        if (employees == null) return;
+        
         AtomicInteger successCount = new AtomicInteger();
         AtomicInteger errorCount = new AtomicInteger();
 
@@ -108,7 +154,7 @@ public class CommandLine implements CommandLineRunner {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-     void processBatch(List<UserRest> batch, AtomicInteger successCount, AtomicInteger errorCount) {
+    void processBatch(List<UserRest> batch, AtomicInteger successCount, AtomicInteger errorCount) {
         batch.forEach(employee -> {
             try {
                 processSingleEmployee(employee);

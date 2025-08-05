@@ -25,10 +25,17 @@ import leaveReducer from './redux-lms/leave/admin/leaveSlice';
 import attendanceReducer from './redux-lms/in-outs/attendanceSlice';
 import leaveApplicationReducer from './redux-lms/leave/apply/leaveSlice';
 import leaveReducerNo from './redux-lms/leave/leaveSlice';
-import rosterReducer from './redux-roster/rosterSlice';
+import absentEmployeesReducer from './redux-lms/absent/absentEmployeesSlice';
+
+import otherReducer from './redux-lms/other/otherSlice'; 
+import holidaySlice from './redux-lms/other/holidaySlice'; 
+
 import attendanceRosterReducer from './redux-roster/attendanceSlice';
+import shiftAttendanceRosterReducer from './redux-roster/shiftRosterSlice';
 import rosterManagementReducer from './redux-roster/rosterManagementSlice';
-import absentEmployeesReducer from './redux-lms/absent/absentEmployeesSlice'
+import rosterReducer from './redux-roster/rosterSlice';
+import charanaRoster from './redux-roster/charanaTvSlice';
+
 
 import { authMiddleware, apiErrorMiddleware } from "./middleware/middleware";
 import { encryptionMiddleware } from './middleware/encryptionMiddleware';
@@ -125,7 +132,6 @@ function calculateIntegrity(state) {
     return CryptoJS.SHA256(JSON.stringify(stateForHash)).toString();
 }
 
-// Integrity check transform
 const integrityTransform = createTransform(
     (inboundState, key) => {
         if (!inboundState || key !== 'auth') return inboundState;
@@ -172,7 +178,11 @@ const rootReducer = combineReducers({
     movementNo: movementReducerNo,
     roster: rosterReducer,
     rosterManagement: rosterManagementReducer,
-    attendanceRoster: attendanceRosterReducer
+    attendanceRoster: attendanceRosterReducer,
+    shiftRoster: shiftAttendanceRosterReducer,
+    other: otherReducer,
+    holidays: holidaySlice,
+    charanaTvRoster: charanaRoster
 });
 
 const securityMiddleware = store => next => action => {
@@ -181,7 +191,6 @@ const securityMiddleware = store => next => action => {
 
         if (authState._expires && Date.now() > authState._expires) {
             console.warn('Stored authentication expired');
-            // Override payload with null to trigger initial state
             action.payload = null;
         }
     }
@@ -231,12 +240,32 @@ export const store = configureStore({
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {
-                ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-                ignoredPaths: ['auth.userDetails.addresses'],
+                ignoredActions: [
+                    FLUSH, 
+                    REHYDRATE, 
+                    PAUSE, 
+                    PERSIST, 
+                    PURGE, 
+                    REGISTER,
+                    'other/setFile',
+                    'other/uploadRoster/pending',
+                    'other/uploadRosterShift/pending',
+                    'other/uploadDutyRoster/pending',
+                    'other/downloadAttendance/fulfilled',
+                    'other/downloadAttendanceByDate/fulfilled',
+                    'other/downloadAttendanceByMonth/fulfilled'
+                ],
+                ignoredPaths: [
+                    'auth.userDetails.addresses',
+                    'other.files'
+                ],
             },
             immutableCheck: {
                 warnAfter: 300,
-                ignoredPaths: ['auth.userDetails.someSpecialField']
+                ignoredPaths: [
+                    /*'auth.userDetails.someSpecialField',*/                    
+                    'other.files'
+                ]
             },
         }).concat(
             authMiddleware,
@@ -259,7 +288,7 @@ export const secureLogout = () => {
 export const handleStateMigration = () => {
     if (typeof window !== 'undefined') {
         const oldVersion = localStorage.getItem('redux-version');
-        const currentVersion = '1.0.3'; // Should match key version in persistConfig
+        const currentVersion = '1.0.3';
 
         if (oldVersion && oldVersion !== currentVersion) {
             console.log('Redux state version changed, migrating...');
@@ -277,7 +306,6 @@ if (typeof window !== 'undefined') {
 export const isPersistenceEnabled = () =>
     typeof window !== 'undefined' &&
     persistConfig.whitelist.length > 0;
-
 
 if (typeof window !== 'undefined') {
     window.__REDUX_DEVTOOLS_EXTENSION__ = () => function(createStore) {

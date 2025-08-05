@@ -22,7 +22,6 @@ export const fetchAbsentEmployees = createAsyncThunk(
                 ? `http://192.168.3.20:8080/lms/absent/all/${empId}`
                 : `http://192.168.3.20:8080/lms/absent/${empId}/${empId}`
 
-            // Add query parameters
             const urlParams = new URLSearchParams({
                 page: page.toString(),
                 size: size.toString(),
@@ -60,7 +59,14 @@ export const fetchAbsentEmployees = createAsyncThunk(
             }
 
             const data = await response.json();
-            const transformedEmployees = data.content.map((item) => ({
+            
+            const sortedContent = [...data.content].sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                return dateB - dateA; 
+            });
+
+            const transformedEmployees = sortedContent.map((item) => ({
                 id: item.id,
                 publicId: item.publicId,
                 employeeId: item.employeeId,

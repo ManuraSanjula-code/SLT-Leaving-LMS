@@ -15,32 +15,7 @@ public class LMSUser implements Serializable {
     private Date join_date;
     private String publicId;
     private Boolean roaster;
-
     private String gender;
-
-    public String getGender() {
-        return gender;
-    }
-
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
-
-    public Boolean getRoaster() {
-        return roaster;
-    }
-
-    public void setRoaster(Boolean roaster) {
-        this.roaster = roaster;
-    }
-
-    public String getPublicId() {
-        return publicId;
-    }
-
-    public void setPublicId(String publicId) {
-        this.publicId = publicId;
-    }
 
     public String getEmployeeId() {
         return employeeId;
@@ -90,16 +65,43 @@ public class LMSUser implements Serializable {
         this.join_date = join_date;
     }
 
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public Boolean getRoaster() {
+        return roaster;
+    }
+
+    public void setRoaster(Boolean roaster) {
+        this.roaster = roaster;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         LMSUser lmsUser = (LMSUser) o;
-        return Objects.equals(employeeId, lmsUser.employeeId) && Objects.equals(sltId, lmsUser.sltId) && Objects.equals(firstName, lmsUser.firstName) && Objects.equals(lastName, lmsUser.lastName) && Objects.equals(email, lmsUser.email) && Objects.equals(join_date, lmsUser.join_date) && Objects.equals(publicId, lmsUser.publicId);
+        return Objects.equals(employeeId, lmsUser.employeeId) && 
+               Objects.equals(sltId, lmsUser.sltId) && 
+               Objects.equals(email, lmsUser.email);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(employeeId, sltId, firstName, lastName, email, join_date, publicId);
+        return Objects.hash(employeeId, sltId, email);
     }
 
     @Override
@@ -110,8 +112,6 @@ public class LMSUser implements Serializable {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
-                ", join_date=" + join_date +
-                ", publicId='" + publicId + '\'' +
                 '}';
     }
 }

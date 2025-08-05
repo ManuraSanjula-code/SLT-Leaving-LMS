@@ -384,7 +384,11 @@ public class LMS_Service_impl implements LMS_Service {
         NoPayEntity noPayEntity = noPayRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         NoPayReasonEntity noPayReasonEntitiesByNoPay = noPayReasonRepo.findNoPayReasonEntitiesByNoPay(noPayEntity)
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
-
+        AttendanceEntity attendance = noPayEntity.getAttendance();
+        if(attendance != null) {
+            attendance.setPayStatus(null);
+            attendanceRepo.save(attendance);
+        }
         noPayReasonRepo.delete(noPayReasonEntitiesByNoPay);
         noPayRepo.delete(noPayEntity);
     }
@@ -633,7 +637,7 @@ public class LMS_Service_impl implements LMS_Service {
                         req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
             }
         }
-        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity);
+        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, false);
         return lmsUtils.toAttendanceDTO(saved);
     }
 
@@ -643,18 +647,29 @@ public class LMS_Service_impl implements LMS_Service {
         if (opt.isPresent()) {
             AttendanceEntity attendanceEntity = opt.get();
 
+            PayStatus originalPayStatus = attendanceEntity.getPayStatus();
+            Boolean originalIsUnSuccessful = attendanceEntity.getIsUnSuccessful();
+
             lmsUtils.updateAttendanceEntityFromReq(attendanceEntity, req);
 
             AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
             EmployeeEntity employee = saved.getEmployee();
+
             if (saved.getPayStatus() != null) {
-                if (!attendanceEntity.getPayStatus().equals(PayStatus.NO_PAY) && saved.getPayStatus().equals(PayStatus.NO_PAY)) {
-                    check_Service.saveNoPayEntity(employee, attendanceEntity, check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
-                            req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
+                if ((originalPayStatus == null || !originalPayStatus.equals(PayStatus.NO_PAY))
+                        && saved.getPayStatus().equals(PayStatus.NO_PAY)) {
+
+                    check_Service.saveNoPayEntity(employee, saved,
+                            check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(),
+                                    req.getIsUnAuthorized(), req.getIsLate(), req.getLateCover(), req.getIsAbsent()),
+                            saved.getArrivalDate() == null ? saved.getDate() : req.getArrivalDate());
                 }
             }
-            if (!attendanceEntity.getIsUnSuccessful() && saved.getIsUnSuccessful())
-                helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity);
+
+            if (!originalIsUnSuccessful && saved.getIsUnSuccessful()) {
+                helper.handleLateAndUnsuccessful(employee.getEmployeeId(), saved, false);
+            }
+
             return lmsUtils.toAttendanceDTO(saved);
         } else {
             return null;

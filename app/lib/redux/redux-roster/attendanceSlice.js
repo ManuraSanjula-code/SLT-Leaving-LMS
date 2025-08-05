@@ -1,144 +1,140 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
 
-const formatDateForApi = (date) => {
-    const d = date instanceof Date ? date : new Date(date);
-    if (isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const formatDate = (date) => {
+  const d = new Date(date);
+  let month = '' + (d.getMonth() + 1);
+  let day = '' + d.getDate();
+  const year = d.getFullYear();
+
+  if (month.length < 2) month = '0' + month;
+  if (day.length < 2) day = '0' + day;
+
+  return [year, month, day].join('-');
 };
 
 export const fetchAttendanceData = createAsyncThunk(
-    'attendance/fetchAttendanceData',
-    async (date, { rejectWithValue }) => {
-        try {
-            const formattedDate = formatDateForApi(date);
-            if (!formattedDate) return rejectWithValue('Invalid date');
-
-            const response = await axios.get(`http://192.168.3.20:8080/api/attendance/2025-05-06`);
-
-            const responseData = response.data || {};
-            let attendanceRecords = [];
-
-            if (Array.isArray(responseData)) {
-                attendanceRecords = responseData;
-            } else if (responseData.content && Array.isArray(responseData.content)) {
-                attendanceRecords = responseData.content;
-            } else if (responseData) {
-                attendanceRecords = [responseData];
-            }
-
-            return attendanceRecords;
-        } catch (error) {
-            console.error('Error fetching attendance data:', error);
-            return rejectWithValue(error.response?.data?.message || 'Failed to load attendance data');
-        }
+  'attendance/fetchAttendanceData',
+  async (dateString, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`http://192.168.3.20:8080/api/attendance/${dateString}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message);
     }
+  }
 );
 
 const initialState = {
-    attendanceData: [],
-    filteredData: [],
-    loading: false,
-    error: null,
-    selectedDate: new Date().toISOString(),
-    searchTerm: '',
-    filterStatus: 'all',
-    page: 0,
-    rowsPerPage: 5
+  attendanceData: null,
+  filteredData: [],
+  
+  loading: false,
+  error: null,
+  
+  dateInput: formatDate(new Date()),
+  page: 1,
+  rowsPerPage: 10,
+  employeeFilter: '',
+  statusFilter: 'all',
 };
 
 const attendanceSlice = createSlice({
-    name: 'attendance',
-    initialState,
-    reducers: {
-        setSelectedDate: {
-            reducer: (state, action) => {
-                state.selectedDate = action.payload;
-            },
-            prepare: (date) => {
-                const isoDate = date instanceof Date ? date.toISOString() : date;
-                return { payload: isoDate };
-            }
-        },
-        setSearchTerm: (state, action) => {
-            state.searchTerm = action.payload || '';
-            state.page = 0;
-        },
-        setFilterStatus: (state, action) => {
-            state.filterStatus = action.payload || 'all';
-            state.page = 0;
-        },
-        setPage: (state, action) => {
-            state.page = Math.max(0, action.payload || 0);
-        },
-        setRowsPerPage: (state, action) => {
-            state.rowsPerPage = Math.max(1, action.payload || 5);
-            state.page = 0;
-        },
-        applyFilters: (state) => {
-            const { attendanceData = [], searchTerm = '', filterStatus = 'all' } = state;
-
-            state.filteredData = attendanceData.filter(item => {
-                if (!item) return false;
-
-                const matchesSearch =
-                    String(item.employeeID || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    String(item.shiftTime || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    String(item.shiftCode || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-                let matchesStatus = true;
-                if (filterStatus !== 'all') {
-                    if (filterStatus === 'absent') matchesStatus = item.isAbsent === true;
-                    else if (filterStatus === 'late') matchesStatus = item.isLate === true;
-                    else if (filterStatus === 'leave') {
-                        matchesStatus = item.isFullLeave === true || item.isHalfDay === true || item.isShortLeave === true;
-                    }
-                }
-
-                return matchesSearch && matchesStatus;
-            });
-        }
+  name: 'attendance',
+  initialState,
+  reducers: {
+    setDateInput: (state, action) => {
+      state.dateInput = action.payload;
     },
-    extraReducers: (builder) => {
-        builder
-            .addCase(fetchAttendanceData.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(fetchAttendanceData.fulfilled, (state, action) => {
-                state.loading = false;
-                state.attendanceData = Array.isArray(action.payload) ? action.payload : [];
-                state.filteredData = Array.isArray(action.payload) ? action.payload : [];
-                state.page = 0;
-            })
-            .addCase(fetchAttendanceData.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload || 'Failed to load data';
-                state.attendanceData = [];
-                state.filteredData = [];
-            });
-    }
+    setPage: (state, action) => {
+      state.page = action.payload;
+    },
+    setRowsPerPage: (state, action) => {
+      state.rowsPerPage = action.payload;
+      state.page = 1; 
+    },
+    
+    setEmployeeFilter: (state, action) => {
+      state.employeeFilter = action.payload;
+      state.page = 1;
+    },
+    setStatusFilter: (state, action) => {
+      state.statusFilter = action.payload;
+      state.page = 1; 
+    },
+    
+    applyFilters: (state) => {
+      if (!state.attendanceData) return;
+
+      let result = [...state.attendanceData.content];
+
+      if (state.employeeFilter) {
+        result = result.filter(record =>
+          record.employeeId.toLowerCase().includes(state.employeeFilter.toLowerCase())
+        );
+      }
+
+      if (state.statusFilter !== 'all') {
+        result = result.filter(record => {
+          if (state.statusFilter === 'present') return record.attendanceType === 'FULL_DAY';
+          if (state.statusFilter === 'absent') return record.attendanceType === 'ABSENT';
+          if (state.statusFilter === 'halfday') return record.attendanceType === 'HALF_DAY';
+          if (state.statusFilter === 'leave') return record.leaveStatus;
+          return true;
+        });
+      }
+
+      state.filteredData = result;
+    },
+    
+    resetFilters: (state) => {
+      state.employeeFilter = '';
+      state.statusFilter = 'all';
+      state.page = 1;
+      if (state.attendanceData) {
+        state.filteredData = state.attendanceData.content;
+      }
+    },
+    
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAttendanceData.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAttendanceData.fulfilled, (state, action) => {
+        state.loading = false;
+        state.attendanceData = action.payload;
+        state.filteredData = action.payload.content;
+        state.error = null;
+      })
+      .addCase(fetchAttendanceData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.attendanceData = null;
+        state.filteredData = [];
+      });
+  },
 });
 
 export const {
-    setSelectedDate,
-    setSearchTerm,
-    setFilterStatus,
-    setPage,
-    setRowsPerPage,
-    applyFilters
+  setDateInput,
+  setPage,
+  setRowsPerPage,
+  setEmployeeFilter,
+  setStatusFilter,
+  applyFilters,
+  resetFilters,
+  clearError,
 } = attendanceSlice.actions;
-
-export const selectAttendanceState = (state) => ({
-    ...initialState,
-    ...(state.attendance || {})
-});
-
-export const selectPaginatedData = (state) => {
-    const { filteredData = [], page = 0, rowsPerPage = 5 } = selectAttendanceState(state);
-    const start = page * rowsPerPage;
-    const end = start + rowsPerPage;
-    return filteredData.slice(start, end);
-};
 
 export default attendanceSlice.reducer;

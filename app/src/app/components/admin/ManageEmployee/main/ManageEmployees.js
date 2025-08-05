@@ -127,7 +127,7 @@ const ManageEmployees = React.memo(() => {
         setCurrentEmployee(null);
         setInitialFormData(null);
     }, []);
-    
+
     useEffect(() => {
         if (saveSuccess || deleteSuccess) {
             setSuccessOpen(true);
@@ -165,7 +165,11 @@ const ManageEmployees = React.memo(() => {
                 employee.profiles?.some((profile) => profile.name?.toLowerCase().includes(searchQuery.toLowerCase()));
 
             return matchesRole && matchesSection && matchesProfile && matchesSearch;
-        });
+        }).sort((a, b) => {
+            const dateA = a.join_date || 0;
+            const dateB = b.join_date || 0;
+            return dateB - dateA; 
+        });;
     }, [paginatedUsers, selectedRoles, selectedSections, selectedProfiles, searchQuery]);
 
     const debouncedSearch = useMemo(

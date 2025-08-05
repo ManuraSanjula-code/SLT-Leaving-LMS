@@ -326,7 +326,7 @@ const employeeActivitiesSlice = createSlice({
             })
             .addCase(fetchEmployeeActivities.fulfilled, (state, action) => {
                 state.loading = false;
-                state.activities = action.payload;
+                state.activities = action.payload.sort((a, b) => new Date(b.date) - new Date(a.date));
             })
             .addCase(fetchEmployeeActivities.rejected, (state, action) => {
                 state.loading = false;

@@ -113,7 +113,7 @@ export const selectFilteredActivities = (state) => {
 
     const searchTermLower = searchTerm.toLowerCase();
 
-    return records.filter((activity) => {
+    let filteredRecords = records.filter((activity) => {
         if (searchTerm) {
             const idToSearch = (activity.userId || activity.employeeId || '').toLowerCase();
             if (!idToSearch.includes(searchTermLower)) {
@@ -172,6 +172,12 @@ export const selectFilteredActivities = (state) => {
         }
 
         return true;
+    });
+
+    return filteredRecords.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA; 
     });
 };
 

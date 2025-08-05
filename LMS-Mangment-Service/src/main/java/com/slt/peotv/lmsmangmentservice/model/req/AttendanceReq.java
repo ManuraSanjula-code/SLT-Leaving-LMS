@@ -6,6 +6,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
 import lombok.Data;
+import lombok.ToString;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -14,6 +15,7 @@ import java.util.Date;
 import java.util.Objects;
 
 @Data
+@ToString
 public class AttendanceReq {
 
     private String publicId;
@@ -24,10 +26,16 @@ public class AttendanceReq {
     private String employeeID;
 
     @NotNull(message = "Date is required")
+    @JsonProperty("date")
     private Date date;
 
+    @JsonProperty("arrivalDate")
     private Date arrivalDate;
+
+    @JsonProperty("arrivalTime")
     private Time arrivalTime;
+
+    @JsonProperty("leftTime")
     private Time leftTime;
 
     @NotBlank(message = "Terminal ID is required")
@@ -37,26 +45,58 @@ public class AttendanceReq {
     @NotNull(message = "Attendance type is required")
     private AttendanceType attendanceType;
 
+    @JsonProperty("leaveStatus")
     private LeaveStatus leaveStatus;
+
+    @JsonProperty("payStatus")
     private PayStatus payStatus;
+
+    @JsonProperty("resolve")
     private ResolveType resolve;
 
+    @JsonProperty("isLate")
     private Boolean isLate = false;
+
+    @JsonProperty("isLateCovered")
     private Boolean isLateCovered = false;
+
+    @JsonProperty("isUnauthorized")
     private Boolean isUnauthorized = false;
+
+    @JsonProperty("isUnSuccessful")
     private Boolean isUnSuccessful = false;
+
+    @JsonProperty("isHoliday")
     private Boolean isHoliday = false;
+
+    @JsonProperty("isResolved")
     private Boolean isResolved = false;
+
+    @JsonProperty("hasIssues")
     private Boolean hasIssues = false;
+
+    @JsonProperty("isManual")
     private Boolean isManual = false;
 
+    @JsonProperty("issueDescription")
     private String issueDescription;
+
+    @JsonProperty("dueDateForUA")
     private Date dueDateForUA;
+
+    @JsonProperty("etlRunTime")
     private Date etlRunTime;
+
     private Date createdDate;
     private Date updatedDate;
+
+    @JsonProperty("isActive")
     private Boolean isActive = true;
+
+    @JsonProperty("viaMovement")
     private Boolean viaMovement = false;
+
+    @JsonProperty("viaLeave")
     private Boolean viaLeave = false;
 
     public boolean validateAttendanceReq() {

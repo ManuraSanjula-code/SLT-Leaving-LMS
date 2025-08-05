@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Container,
   CssBaseline,
@@ -31,20 +30,25 @@ import {
   Chip,
   CircularProgress
 } from "@mui/material";
+import {format} from 'date-fns';
 import { Check as CheckIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { useSelector, useDispatch } from "react-redux";
 import {
   fetchUnauthorizedLeaves,
-  resolveUnauthorizedLeave,
-  approveUnauthorizedLeave,
-  bulkResolveUnauthorizedLeaves,
-  deleteMultipleUnauthorizedLeaves,
   setPage,
   setPageSize,
   clearError
 } from "../../../../lib/redux/redux-lms/unauthorized-leaves/unauthorizedLeavesSlice";
 
+const MovementType = {
+  FULLDAY: 'FULLDAY',
+  OFFICE_TO_HOME: 'OFFICE_TO_HOME',
+  HOME_TO_OFFICE: 'HOME_TO_OFFICE',
+  REMOTEWORK: 'REMOTEWORK'
+};
+
 const UnauthorizedLeaves = ({ isAdmin = false }) => {
+  const router = useRouter();
   const dispatch = useDispatch();
   const {
     leaves,
@@ -91,12 +95,59 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
     dispatch(setPageSize(parseInt(event.target.value)));
   };
 
-  const handleResolveLeave = (id) => {
-    dispatch(resolveUnauthorizedLeave(id));
-  };
+  const handleResolveLeave = (leave) => {
+    let movementType = MovementType.FULLDAY;
+    
+    if (!leave.arrivalTime && leave.leftTime) {
+      movementType = MovementType.HOME_TO_OFFICE;
+    } else if (leave.arrivalTime && !leave.leftTime) {
+      movementType = MovementType.OFFICE_TO_HOME;
+    }
+    const queryParams = new URLSearchParams({
+      employeeId: leave.employeeId || '',
+      movementType: movementType,
+      happenDate: leave.date ? leave.date.split('T')[0] : leave.arrivalDate ? leave.arrivalDate.split('T')[0] : '',      logTime: leave.arrivalTime || leave.leftTime || '',
+      inTime: leave.arrivalTime || '',
+      outTime: leave.leftTime || '',
+      comment: leave.issueDescription || '',
+      logTime: leave.date ? format(new Date(leave.date), 'yyyy-MM-dd\'T\'HH:mm') : ''
+    });
 
-  const handleApproveLeave = (id) => {
-    dispatch(approveUnauthorizedLeave(id));
+    if (leave.terminalId) {
+      const currentComment = leave.issueDescription || '';
+      queryParams.set('comment', `${currentComment}\nTerminal ID: ${leave.terminalId}`);
+    }
+
+    const issueContext = [];
+    if (leave.isLate) {
+      issueContext.push('Late arrival');
+      queryParams.set('isLate', 'true');
+    }
+    if (leave.isUnauthorized) {
+      issueContext.push('Unauthorized absence');
+      queryParams.set('isUnauthorized', 'true');
+    }
+    if (leave.hasIssues) {
+      issueContext.push('Swipe issues');
+      queryParams.set('hasIssues', 'true');
+    }
+
+    if (issueContext.length > 0) {
+      const currentComment = queryParams.get('comment') || '';
+      queryParams.set('comment', `${currentComment}\nIssue: ${issueContext.join(', ')}`);
+    }
+
+    if (leave.publicId) {
+      queryParams.set('publicId', leave.publicId);
+    }
+    if (leave.userId) {
+      queryParams.set('userId', leave.userId);
+    }
+    if (leave.id) {
+      queryParams.set('leaveId', leave.id.toString());
+    }
+
+    router.push(`/request-movement?${queryParams.toString()}`);
   };
 
   const handleViewDetails = (leave) => {
@@ -210,16 +261,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
     } else {
       setSelected(filteredLeaves.map((leave) => leave.id));
     }
-  };
-
-  const handleDeleteAllSelected = () => {
-    dispatch(deleteMultipleUnauthorizedLeaves(selected));
-    setSelected([]);
-  };
-
-  const handleBulkResolve = () => {
-    dispatch(bulkResolveUnauthorizedLeaves(selected));
-    setSelected([]);
   };
 
   const handlePageChange = (event, value) => {
@@ -361,30 +402,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                   InputLabelProps={{ shrink: true }}
               />
             </Box>
-
-            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-              {!isAdmin && selected.length > 0 && (
-                  <>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleBulkResolve}
-                        disabled={selected.length === 0}
-                    >
-                      Resolve Selected ({selected.length})
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleDeleteAllSelected}
-                        disabled={selected.length === 0}
-                    >
-                      Delete Selected
-                    </Button>
-                  </>
-              )}
-            </Box>
-
             {loading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                   <CircularProgress />
@@ -395,18 +412,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                     <Table>
                       <TableHead>
                         <TableRow>
-                          {!isAdmin && (
-                              <TableCell padding="checkbox">
-                                <Checkbox
-                                    indeterminate={
-                                        selected.length > 0 && selected.length < filteredLeaves.length
-                                    }
-                                    checked={selected.length === filteredLeaves.length && filteredLeaves.length > 0}
-                                    onChange={handleSelectAll}
-                                />
-                              </TableCell>
-                          )}
-                          <TableCell>Public ID</TableCell>
                           <TableCell>Employee ID</TableCell>
                           <TableCell>User ID</TableCell>
                           <TableCell>Date</TableCell>
@@ -428,16 +433,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                         ) : (
                             filteredLeaves.map((leave) => (
                                 <TableRow key={leave.id}>
-                                  {!isAdmin && (
-                                      <TableCell padding="checkbox">
-                                        <Checkbox
-                                            checked={selected.includes(leave.id)}
-                                            onChange={() => handleSelect(leave.id)}
-                                            disabled={leave.resolve !== null}
-                                        />
-                                      </TableCell>
-                                  )}
-                                  <TableCell>{leave.publicId}</TableCell>
                                   <TableCell>{leave.employeeId}</TableCell>
                                   <TableCell>{leave.userId}</TableCell>
                                   <TableCell>{formatDate(leave.date)}</TableCell>
@@ -456,22 +451,12 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
                                     {leave.issueDescription || 'N/A'}
                                   </TableCell>
                                   <TableCell>
-                                    {!isAdmin && leave.resolve === null && (
-                                        <IconButton
-                                            onClick={() => handleApproveLeave(leave.id)}
-                                            color="success"
-                                            size="small"
-                                            title="Approve"
-                                        >
-                                          <CheckIcon />
-                                        </IconButton>
-                                    )}
                                     {leave.resolve === null && !isAdmin && (
                                         <Button
                                             variant="contained"
                                             color="primary"
                                             size="small"
-                                            onClick={() => handleResolveLeave(leave.id)}
+                                            onClick={() => handleResolveLeave(leave)}
                                             sx={{ mx: 1 }}
                                         >
                                           Resolve
@@ -577,7 +562,7 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
             {!isAdmin && selectedLeave && selectedLeave.resolve === null && (
                 <Button
                     onClick={() => {
-                      handleResolveLeave(selectedLeave.id);
+                      handleResolveLeave(selectedLeave);
                       handleCloseDetails();
                     }}
                     color="primary"

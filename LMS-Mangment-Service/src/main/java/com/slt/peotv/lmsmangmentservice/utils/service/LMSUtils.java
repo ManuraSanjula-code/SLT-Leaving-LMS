@@ -394,15 +394,16 @@ public class LMSUtils {
         if (req.getIssueDescription() != null) entity.setIssueDescription(req.getIssueDescription());
         if (req.getDueDateForUA() != null) entity.setDueDateForUA(req.getDueDateForUA());
 
-        if (req.getIsFullDay() != null || req.getIsHalfDay() != null || req.getIsAbsent() != null) {
-            if (Boolean.TRUE.equals(req.getIsFullDay())) {
-                entity.setAttendanceType(AttendanceType.FULL_DAY);
-            } else if (Boolean.TRUE.equals(req.getIsHalfDay())) {
-                entity.setAttendanceType(AttendanceType.HALF_DAY);
-            } else if (Boolean.TRUE.equals(req.getIsAbsent())) {
-                entity.setAttendanceType(AttendanceType.ABSENT);
-            }
+        if (Boolean.TRUE.equals(req.getIsFullDay())) {
+            entity.setAttendanceType(AttendanceType.FULL_DAY);
+        } else if (Boolean.TRUE.equals(req.getIsHalfDay())) {
+            entity.setAttendanceType(AttendanceType.HALF_DAY);
+        } else if (Boolean.TRUE.equals(req.getIsAbsent())) {
+            entity.setAttendanceType(AttendanceType.ABSENT);
         }
+        
+        if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
+        else entity.setLeaveStatus(null);
 
         if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
         if(req.getPayStatus() != null) entity.setPayStatus(req.getPayStatus());
@@ -415,13 +416,15 @@ public class LMSUtils {
         } else if (req.getViaLeave() != null && Boolean.TRUE.equals(req.getViaLeave())) {
             entity.setResolve(ResolveType.VIA_LEAVE);
         }
-
-        if (req.getIsLate() != null) entity.setIsLate(req.getIsLate());
-        if (req.getLateCover() != null) entity.setIsLateCovered(req.getLateCover());
-        if (req.getIsUnAuthorized() != null) entity.setIsUnauthorized(req.getIsUnAuthorized());
-        if (req.getIsUnSuccessful() != null) entity.setIsUnSuccessful(req.getIsUnSuccessful());
-        if (req.getIssues() != null) entity.setHasIssues(req.getIssues());
-        if (req.getActive() != null) entity.setIsActive(req.getActive());
+        entity.setIsLate(req.getIsLate());
+        entity.setIsLateCovered(req.getLateCover());
+        entity.setIsUnauthorized(req.getIsUnAuthorized());
+        entity.setIsUnSuccessful(req.getIsUnSuccessful());
+        entity.setHasIssues(req.getIssues());
+        entity.setIsActive(req.getActive());
+        entity.setIsHoliday(req.getIsHoliday());
+        entity.setIsResolved(req.getIsResolved());
+        entity.setIsManual(req.getIsManual());
 
         entity.setUpdatedDate(new Date());
     }

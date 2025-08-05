@@ -1312,12 +1312,12 @@ public class UserServiceImpl implements UserService {
         Page<RoleEntity> rolesPage = roleRepository.findRolesByPriorityBetween(min, max, pageable);
 
         List<UserEntity> users = rolesPage.getContent().stream()
+                .filter(role -> !(role.getPriority() >= 30 && role.getPriority() <= 49))
                 .map(RoleEntity::getUsers)
                 .flatMap(Collection::stream)
                 .distinct()
                 .collect(Collectors.toList());
 
-        // Create a new Page with the combined users
         return new PageImpl<>(users, pageable, rolesPage.getTotalElements());
     }
 

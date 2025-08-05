@@ -70,7 +70,7 @@ public class DutyRosterService {
             }
 
             DutyRoster roster = new DutyRoster(weekStartingDate, rosterName, dailyDuties, true);
-            deactivateAllOtherRosters();
+            /*deactivateAllOtherRosters();*/
             return saveRoster(roster);
         }
     }

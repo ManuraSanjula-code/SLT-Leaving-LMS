@@ -1,12 +1,17 @@
 package com.slt.peotv.lmsmangmentservice.model.req;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class HolidayReq {
     private LocalDate holidayDate;
     private String description;
+
+    @JsonProperty("isRecurring")
     private boolean isRecurring = false;
+    
     private LocalDateTime createdAt;
 
     public LocalDate getHolidayDate() {

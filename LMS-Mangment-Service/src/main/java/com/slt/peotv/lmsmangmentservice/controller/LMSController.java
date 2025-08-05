@@ -90,43 +90,49 @@ public class LMSController {
     }
 
     @PostMapping("/bulk/approved/movement/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkApprovedM(@RequestBody BulkApprovedReq req, @PathVariable(required = false) String empId) {
         threadSafeBulkApprovalService.allApproved(req, empId, true);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/bulk/approved/leave/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkApprovedL(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
         threadSafeBulkApprovalService.allApproved(req, empId, false);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/bulk/reject/movement/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkRejectM(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
         checkService.allReject(req, true);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/bulk/reject/leave/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkRejectL(@RequestBody BulkApprovedReq req, @PathVariable String empId) {
         checkService.allReject(req, false);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/movement/reject/{movementId}/{userId}/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkRejectM(@PathVariable String movementId,@PathVariable String userId, @PathVariable String empId) {
         checkService.reject(movementId,userId, true);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/leave/reject/{leaveId}/{userId}/{empId}")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public ResponseEntity<Void> bulkRejectL(@PathVariable String leaveId,@PathVariable String userId, @PathVariable String empId) {
         checkService.reject(leaveId,userId, false);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/employee/{id}/excel/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 49)")
     public ResponseEntity<byte[]> downloadEmployeeExcelReport(@PathVariable String id, @PathVariable String empId) {
         try {
             byte[] excelFile = exelUtils.generateEmployeeExcelReport(id);
@@ -141,7 +147,7 @@ public class LMSController {
     }
 
     @GetMapping("/employee/{id}/excel/date/{actual_date}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 49)")
     public ResponseEntity<byte[]> downloadEmployeeExcelReportByDate(@PathVariable String id, @PathVariable String actual_date, @PathVariable String empId) {
         try {
             byte[] excelFile = exelUtils.generateEmployeeExcelReportByDate(id, createDateFromString(actual_date));
@@ -156,7 +162,7 @@ public class LMSController {
     }
 
     @GetMapping("/employee/{id}/excel/month/{year}/{month}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 49)")
     public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonthYear(
             @PathVariable String id, 
             @PathVariable int year, 
@@ -183,7 +189,7 @@ public class LMSController {
 
 
     @GetMapping("/employee/{id}/excel/monthly/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 99)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 49)")
     public ResponseEntity<byte[]> downloadEmployeeExcelReportByMonthYearQuery(
             @PathVariable String id, 
             @RequestParam int year, 
@@ -240,17 +246,11 @@ public class LMSController {
     }
 
     @GetMapping("/access-log/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public List<AccessLogRest> getAllAccessLogsToday(@RequestParam String date, @PathVariable String empId) {
         return checkService.getAllAccessLogsToday(date);
     }
 
-    @GetMapping("/access-log")
-    public List<AccessLogRest> getAllAccessLogsToday(@RequestParam String date) {
-        return checkService.getAllAccessLogsToday(date);
-    }
-
-    /// ----------------- ADMIN-----------------------------
     @PostMapping("/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public AttendanceDTO createAttendance(@RequestBody AttendanceReq req, @PathVariable String empId) {
@@ -260,7 +260,6 @@ public class LMSController {
     @PutMapping("/attendance/{publicId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public AttendanceDTO updateAttendance(@PathVariable String publicId, @RequestBody AttendanceReq req, @PathVariable String empId) {
-        System.out.println(publicId);
         return lmsService.updateAttendance(req, publicId);
     }
 
@@ -276,20 +275,25 @@ public class LMSController {
         lmsService.deleteAttendanceV1(publicId);
     }
 
-    /// ----------------- ADMIN-----------------------------
-
     @GetMapping("/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public Page<AttendanceDTO> getAllAttendance(@RequestParam(defaultValue = "0") int page,
                                                 @RequestParam(defaultValue = "10") int size, @PathVariable String empId) {
         return lmsService.getAllAttendance(page, size);
     }
 
     @GetMapping("/un-successful/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public Page<AttendanceDTO> getAllAttendanceThatUn(@RequestParam(defaultValue = "0") int page,
                                                       @RequestParam(defaultValue = "10") int size, @PathVariable String empId) {
         return lmsService.getAllAttendanceThatUn(page, size);
+    }
+
+    @GetMapping("/un-authorized/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
+    public Page<AttendanceDTO> getAllAttendanceThatUnA(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
+                                                       @RequestParam(defaultValue = "10") int size) {
+        return lmsService.getAllAttendanceThatUnA(page, size);
     }
 
     @GetMapping("/un-successful/{userid}/{empId}")
@@ -297,13 +301,6 @@ public class LMSController {
     public Page<AttendanceDTO> getAttendanceThatUnByUserId(@PathVariable String userid, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                                            @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllAttendanceThatUnByUserId(userid, page, size);
-    }
-
-    @GetMapping("/un-authorized/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
-    public Page<AttendanceDTO> getAllAttendanceThatUnA(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
-                                                       @RequestParam(defaultValue = "10") int size) {
-        return lmsService.getAllAttendanceThatUnA(page, size);
     }
 
     @GetMapping("/un-authorized/{userid}/{empId}")
@@ -329,8 +326,6 @@ public class LMSController {
         return lmsService.getAllLeaveByUserByUserId(userId, page, size);
     }
 
-    /// ----------------- ADMIN-----------------------------
-
     @GetMapping("/leave/admin/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<LeaveDTO> getAllLeaveByUserByUserIdAdmin(@PathVariable String userId,
@@ -339,10 +334,9 @@ public class LMSController {
                                                          @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Boolean isAdmin) {
         return lmsService.getAllLeaveByUserByUserIdAdmin(userId, page, size);
     }
-    /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/leave/all/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<LeaveDTO> getAllLeave(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllLeaves(page, size);
@@ -360,14 +354,12 @@ public class LMSController {
         return lmsService.getAllLeaveDetails(userId);
     }
 
-    /// ----------------- ADMIN-----------------------------
 
     @PostMapping("/leave/process/{leaveId}/{userId}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(50, 99)")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public void procesLeave(@PathVariable String leaveId, @PathVariable String userId, @PathVariable String empId) {
         checkService.processLeave(leaveId, userId);
     }
-    /// ----------------- ADMIN-----------------------------
 
     @DeleteMapping("/movement/{movementId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
@@ -375,14 +367,12 @@ public class LMSController {
         lmsService.deleteMovements(movementId);
     }
 
-    /// ----------------- ADMIN-----------------------------
 
     @PostMapping("/movement/process/{movementId}/{userId}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(50, 99)")
+    @PreAuthorize("@prioritySecurity.isAdminOrManagementOnly()")
     public void processMovement(@PathVariable String movementId, @PathVariable String userId, @PathVariable String empId) {
         checkService.processMovement(movementId, userId);
     }
-    /// ----------------- ADMIN-----------------------------
 
 
     @GetMapping("/movement/{userId}/{empId}")
@@ -392,7 +382,6 @@ public class LMSController {
         return lmsService.getAllMovementByUser(userId, page, size);
     }
 
-    /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/movement/admin/{userId}/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
@@ -400,16 +389,16 @@ public class LMSController {
                                                    @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllMovementByAdmin(userId, page, size);
     }
-    /// ----------------- ADMIN-----------------------------
 
     @GetMapping("/movement/all/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<MovementDTO> getAllMovement(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllMovements(page, size);
     }
 
     @DeleteMapping("/no-pay/{nopayid}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
     public void deleteNoPay(@PathVariable String nopayid, @PathVariable String empId) {
         lmsService.deleteNoPay(nopayid);
     }
@@ -422,7 +411,7 @@ public class LMSController {
     }
 
     @GetMapping("/no-pay/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 99)")
     public Page<NopayDTO> getAllNoPays(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                        @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllNoPays(page, size);
@@ -438,7 +427,7 @@ public class LMSController {
 
 
     @GetMapping("/in-out/{userId}/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 199)") /// --- stop
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(10, 199)")
     public Page<InOutDTO> getAllInOutByUserId(@PathVariable String userId, @PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
         return checkService.getAllInOut(userId, page, size);
@@ -480,28 +469,32 @@ public class LMSController {
     }
 
     @GetMapping("/absent/all/{empId}")
-    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 199)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public Page<AttendanceDTO> getAllAbsentee(@PathVariable String empId, @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         return lmsService.getAllAbsent(page, size);
     }
 
     @PostMapping("/holiday/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public void saveHoliday(@RequestBody HolidayReq req, @PathVariable String empId) {
         holidayService.saveHoliday(req);
     }
 
     @PutMapping("/holiday/{id}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public void updateHoliday(@RequestBody HolidayReq req, @PathVariable Long id ,@PathVariable String empId) {
         holidayService.updateHoliday(id,req);
     }
 
     @DeleteMapping("/holiday/{id}/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public void deleteHoliday(@PathVariable Long id, @PathVariable String empId) {
         holidayService.deleteHoliday(id);
     }
 
     @GetMapping("/holiday/{empId}")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public List<HolidayDTO> getAllHolidays(@RequestParam int year, @PathVariable String empId) {
         return holidayService.getHolidays(year);
     }

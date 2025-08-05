@@ -9,16 +9,23 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.slt.peotv.lmsmangmentservice.feign_client.UserClient;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -27,56 +34,101 @@ public class TokenConverter {
     private final JwtConfiguration jwtConfiguration;
     private final UserClient userClient;
 
+    private final Object tokenDecryptionLock = new Object();
+    private final Object tokenValidationLock = new Object();
+
+    private final ConcurrentHashMap<String, UserRest> tokenCache = new ConcurrentHashMap<>();
+
+
     public String decryptToken(String encryptedToken) throws ParseException, JOSEException {
-        JWEObject jweObject = JWEObject.parse(encryptedToken);
-        DirectDecrypter directDecrypter = new DirectDecrypter(jwtConfiguration.getPrivateKey().getBytes());
-        jweObject.decrypt(directDecrypter);
-        return jweObject.getPayload().toSignedJWT().serialize();
+        synchronized (tokenDecryptionLock) {
+            JWEObject jweObject = JWEObject.parse(encryptedToken);
+            DirectDecrypter directDecrypter = new DirectDecrypter(
+                    jwtConfiguration.getPrivateKey().getBytes()
+            );
+            jweObject.decrypt(directDecrypter);
+            return jweObject.getPayload().toSignedJWT().serialize();
+        }
     }
 
-    public UserRest validateTokenSignature(String signedToken, HttpServletRequest request, String originalAuthHeader) throws ParseException, JOSEException {
-        SignedJWT signedJWT = SignedJWT.parse(signedToken);
+    public UserRest validateTokenSignature(String signedToken, HttpServletRequest request,
+                                           String originalAuthHeader) throws ParseException, JOSEException {
 
+        UserRest cachedUser = tokenCache.get(signedToken);
+        if (cachedUser != null) {
+            return cachedUser;
+        }
+
+        SignedJWT signedJWT = SignedJWT.parse(signedToken);
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
-        String subject = claimsSet.getSubject();
-        List<String> roles = claimsSet.getStringListClaim("authorities"); // Custom claim
-        List<GrantedAuthority> authorities = new ArrayList<>();
-
-        String issuer = claimsSet.getIssuer();
-        Date expiration = claimsSet.getExpirationTime();
-
-        Date todayDate = new Date();
-        if (expiration.before(todayDate)) {
+        if (isTokenExpired(claimsSet) || !isSignatureValid(signedJWT)) {
             return null;
         }
 
-        RSAKey publicKey = RSAKey.parse(signedJWT.getHeader().getJWK().toJSONObject());
-        if (!signedJWT.verify(new RSASSAVerifier(publicKey))) {
+        UserRest user = fetchUserWithResilience(
+                claimsSet.getSubject(),
+                originalAuthHeader,
+                request
+        );
+
+        if (user == null || !user.getUserId().equals(extractUserId(request))) {
             return null;
         }
 
-        // Use the original authorization header or token - NOT the decrypted one
-        UserRest user = userClient.getEmployeeById(subject, originalAuthHeader);
+        assignAuthorities(user, claimsSet.getStringListClaim("authorities"));
+
+        tokenCache.put(signedToken, user);
+        return user;
+    }
+
+    private UserRest fetchUserWithResilience(String userId, String token,
+                                             HttpServletRequest request) {
+        synchronized (tokenValidationLock) {
+            try {
+                return fetchUserWithRetry(userId, token);
+            } catch (Exception e) {
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "User service unavailable"
+                );
+            }
+        }
+    }
+
+    @Retry(name = "userServiceRetry", fallbackMethod = "fetchUserFallback")
+    private UserRest fetchUserWithRetry(String userId, String token) {
+        return userClient.getEmployeeById(userId, token);
+    }
+
+    private UserRest fetchUserFallback(String userId, String token, Exception e) {
+        throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "User service unavailable"
+        );
+    }
+
+    private boolean isTokenExpired(JWTClaimsSet claimsSet) {
+        return claimsSet.getExpirationTime().before(new Date());
+    }
+
+    private boolean isSignatureValid(SignedJWT signedJWT) throws JOSEException, ParseException {
+        return signedJWT.verify(new RSASSAVerifier(
+                RSAKey.parse(signedJWT.getHeader().getJWK().toJSONObject())
+        ));
+    }
+
+    private String extractUserId(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
-        String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
+        return requestURI.substring(requestURI.lastIndexOf("/") + 1);
+    }
 
-        if (user == null) {
-            return null;
-        }
-
-        if(!user.getUserId().equals(id)){
-            return null;
-        }
-
-        // Add the authorities from the token
+    private void assignAuthorities(UserRest user, List<String> roles) {
         if (roles != null) {
-            roles.forEach(auth -> {
-                authorities.add(new SimpleGrantedAuthority(auth));
-            });
+            List<GrantedAuthority> authorities = roles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
             user.setAuthorities(authorities);
         }
-
-        return user;
     }
 }
