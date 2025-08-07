@@ -1330,7 +1330,7 @@ public class Check_Service_Impl implements Check_Service {
     }
 
     @Override
-    public void reportAttendance(InOutEntity moa, InOutEntity eve,Date date){
+    public void reportAttendance(InOutEntity moa, InOutEntity eve, Date date){
         if (moa.getEmployeeId() == null || eve.getEmployeeId() == null) {
             logger.warn("One or both InOut entities have null employee ID. Cannot proceed with attendance reporting.");
             return;
@@ -1381,10 +1381,13 @@ public class Check_Service_Impl implements Check_Service {
         try {
 
             LocalTime punchTime = moa.getPunchTypeTime().toLocalTime();
+            LocalTime punchTime_ = eve.getPunchTypeTime().toLocalTime();
+
             LocalTime eightThirtyAM = LocalTime.of(8, 30);
             LocalTime tenAM = LocalTime.of(10, 0);
             LocalTime twelvePM = LocalTime.of(12, 0);
             LocalTime thirteenPM = LocalTime.of(13, 0);
+            LocalTime fivePM = LocalTime.of(17, 0);
 
             if (punchTime.isAfter(thirteenPM)) {
                 attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
@@ -1408,7 +1411,7 @@ public class Check_Service_Impl implements Check_Service {
                 attendance.setIsLate(true);
             }
 
-            if (punchTime.isBefore(eightThirtyAM)) {
+            if (punchTime.isBefore(eightThirtyAM) && punchTime.isAfter(fivePM)) {
                 attendance.setAttendanceType(AttendanceType.FULL_DAY);
                 attendance.setDueDateForUA(null);
                 attendance.setHasIssues(false);
