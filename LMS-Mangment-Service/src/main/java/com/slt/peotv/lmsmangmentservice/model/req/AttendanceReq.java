@@ -99,124 +99,11 @@ public class AttendanceReq {
     @JsonProperty("viaLeave")
     private Boolean viaLeave = false;
 
-    public boolean validateAttendanceReq() {
-        if (Objects.isNull(this.employeeID) || this.employeeID.trim().isEmpty()) {
-            return false;
-        }
+    @JsonProperty("arrivalTimeRaw")
+    private String arrivalTimeRaw;
 
-        if (Objects.isNull(this.date)) {
-            return false;
-        }
-
-        if (Objects.isNull(this.terminalID) || this.terminalID.trim().isEmpty()) {
-            return false;
-        }
-
-        if (Objects.isNull(this.attendanceType)) {
-            return false;
-        }
-
-        if (!validateDateLogic()) {
-            return false;
-        }
-
-        if (!validateTimeLogic()) {
-            return false;
-        }
-
-        if (!validateAttendanceTypeConsistency()) {
-            return false;
-        }
-
-        if (!validateStatusConsistency()) {
-            return false;
-        }
-
-        return true;
-    }
-
-
-    private boolean validateDateLogic() {
-        Date today = new Date();
-        if (this.date != null && this.date.after(today)) {
-            return false;
-        }
-
-        if (this.arrivalDate != null && this.date != null) {
-            long diffInDays = Math.abs(this.arrivalDate.getTime() - this.date.getTime()) / (24 * 60 * 60 * 1000);
-            return diffInDays <= 1;
-        }
-
-        return true;
-    }
-
-    private boolean validateTimeLogic() {
-        // If both arrival and left times are provided, left time should be after arrival time
-        if (this.arrivalTime != null && this.leftTime != null) {
-            return this.leftTime.after(this.arrivalTime);
-        }
-
-        if (this.attendanceType == AttendanceType.FULL_DAY) {
-            return this.arrivalTime != null && this.leftTime != null;
-        }
-
-        if (this.attendanceType == AttendanceType.HALF_DAY) {
-            return this.arrivalTime != null;
-        }
-
-        return true;
-    }
-
-
-    private boolean validateAttendanceTypeConsistency() {
-        if (this.attendanceType == null) {
-            return false;
-        }
-
-        switch (this.attendanceType) {
-            case ABSENT:
-                return this.arrivalTime == null && this.leftTime == null;
-
-            case FULL_DAY:
-                return true;
-
-            case HALF_DAY:
-                return this.arrivalTime != null;
-
-            default:
-                return true;
-        }
-    }
-
-
-    private boolean validateStatusConsistency() {
-        if (Boolean.TRUE.equals(this.hasIssues)) {
-            return this.issueDescription != null && !this.issueDescription.trim().isEmpty();
-        }
-
-        if (Boolean.TRUE.equals(this.isUnauthorized)) {
-            return this.dueDateForUA != null;
-        }
-
-        if (Boolean.TRUE.equals(this.isResolved)) {
-            return this.resolve != null;
-        }
-
-        if (this.payStatus == PayStatus.NO_PAY) {
-            return this.attendanceType == AttendanceType.ABSENT ||
-                    Boolean.TRUE.equals(this.isUnauthorized);
-        }
-
-        return true;
-    }
-
-
-    public boolean hasRequiredFields() {
-        return Objects.nonNull(this.employeeID) && !this.employeeID.trim().isEmpty() &&
-                Objects.nonNull(this.date) &&
-                Objects.nonNull(this.terminalID) && !this.terminalID.trim().isEmpty() &&
-                Objects.nonNull(this.attendanceType);
-    }
+    @JsonProperty("leftTimeRaw")
+    private String leftTimeRaw;
 
     public boolean isFullDayAttendance() {
         return this.attendanceType == AttendanceType.FULL_DAY;
@@ -265,7 +152,6 @@ public class AttendanceReq {
     }
 
     public boolean validateBusinessRules() {
-        // Working hours should be reasonable (not more than 24 hours)
         double workingHours = getWorkingHours();
         if (workingHours > 24) {
             return false;

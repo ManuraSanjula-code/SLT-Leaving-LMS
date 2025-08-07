@@ -44,6 +44,9 @@ public class AttendanceDTO {
 
     private RosterType rosterType;
 
+    private String arrivalTimeRaw;
+    private String leftTimeRaw;
+
     public AttendanceDTO() {}
 
     public AttendanceDTO(Long id, String publicId, String employeeId, Date date) {
@@ -51,6 +54,22 @@ public class AttendanceDTO {
         this.publicId = publicId;
         this.employeeId = employeeId;
         this.date = date;
+    }
+
+    public String getArrivalTimeRaw() {
+        return arrivalTimeRaw;
+    }
+
+    public void setArrivalTimeRaw(String arrivalTimeRaw) {
+        this.arrivalTimeRaw = arrivalTimeRaw;
+    }
+
+    public String getLeftTimeRaw() {
+        return leftTimeRaw;
+    }
+
+    public void setLeftTimeRaw(String leftTimeRaw) {
+        this.leftTimeRaw = leftTimeRaw;
     }
 
     public String getUserId() {
@@ -416,6 +435,8 @@ public class AttendanceDTO {
                 ", viaMovement=" + viaMovement +
                 ", viaLeave=" + viaLeave +
                 ", rosterType=" + rosterType +
+                ", arrivalTimeRaw='" + arrivalTimeRaw + '\'' +
+                ", leftTimeRaw='" + leftTimeRaw + '\'' +
                 '}';
     }
 }

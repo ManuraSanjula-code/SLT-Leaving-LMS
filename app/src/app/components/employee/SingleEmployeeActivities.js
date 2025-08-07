@@ -1,8 +1,8 @@
 "use client";
 
-import {format} from 'date-fns';
-import React, {useEffect} from "react";
-import {useDispatch, useSelector} from "react-redux";
+import { format } from 'date-fns';
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
     Typography,
     Box,
@@ -61,8 +61,8 @@ import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import {TrashIcon, X} from "lucide-react";
-import {Edit as EditIcon} from "@mui/icons-material";
+import { TrashIcon, X } from "lucide-react";
+import { Edit as EditIcon } from "@mui/icons-material";
 import {
     fetchEmployeeActivities,
     createEmployeeActivity,
@@ -88,8 +88,8 @@ import {
     clearError,
     handleFormChange
 } from "../../../../lib/redux/redux-lms/employee-activities/employeeActivitiesSlice";
-import {useRouter} from 'next/navigation';
-import {MovementType} from "../../../../lib/redux/redux-lms/movement/req/movementRequestSlice";
+import { useRouter } from 'next/navigation';
+import { MovementType } from "../../../../lib/redux/redux-lms/movement/req/movementRequestSlice";
 
 const theme = createTheme({
     palette: {
@@ -143,12 +143,17 @@ const formatDate = (dateString) => {
 const formatTimeForInput = (timeString) => {
     if (!timeString) return "";
 
-    if (typeof timeString === 'string') {
+    if (typeof timeString === 'string' && timeString.match(/^\d{1,2}:\d{2}$/)) {
+        return timeString;
+    }
+
+    if (typeof timeString === 'string' && timeString.includes(':')) {
         const parts = timeString.split(':');
         if (parts.length >= 2) {
             return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
         }
     }
+
     return "";
 };
 
@@ -168,7 +173,7 @@ const formatDateForInput = (dateString) => {
 };
 
 function TablePaginationActions(props) {
-    const {count, page, rowsPerPage, onPageChange} = props;
+    const { count, page, rowsPerPage, onPageChange } = props;
 
     const handleFirstPageButtonClick = (event) => {
         onPageChange(event, 0);
@@ -187,73 +192,73 @@ function TablePaginationActions(props) {
     };
 
     return (
-        <Box sx={{flexShrink: 0, ml: 2.5}}>
+        <Box sx={{ flexShrink: 0, ml: 2.5 }}>
             <IconButton
                 onClick={handleFirstPageButtonClick}
                 disabled={page === 0}
                 aria-label="first page"
             >
-                <FirstPageIcon/>
+                <FirstPageIcon />
             </IconButton>
             <IconButton
                 onClick={handleBackButtonClick}
                 disabled={page === 0}
                 aria-label="previous page"
             >
-                <KeyboardArrowLeftIcon/>
+                <KeyboardArrowLeftIcon />
             </IconButton>
             <IconButton
                 onClick={handleNextButtonClick}
                 disabled={page >= Math.ceil(count / rowsPerPage) - 1}
                 aria-label="next page"
             >
-                <KeyboardArrowRightIcon/>
+                <KeyboardArrowRightIcon />
             </IconButton>
             <IconButton
                 onClick={handleLastPageButtonClick}
                 disabled={page >= Math.ceil(count / rowsPerPage) - 1}
                 aria-label="last page"
             >
-                <LastPageIcon/>
+                <LastPageIcon />
             </IconButton>
         </Box>
     );
 }
 
-const StatusChip = ({activity}) => {
+const StatusChip = ({ activity }) => {
     const getChipProps = () => {
         if (activity.isUnauthorized) {
             return {
                 color: 'error',
-                icon: <BlockIcon fontSize="small"/>,
+                icon: <BlockIcon fontSize="small" />,
                 label: 'Unauthorized'
             };
         }
         if (activity.isUnSuccessful) {
             return {
                 color: 'warning',
-                icon: <ErrorIcon fontSize="small"/>,
+                icon: <ErrorIcon fontSize="small" />,
                 label: 'Unsuccessful'
             };
         }
         if (activity.hasIssues) {
             return {
                 color: 'warning',
-                icon: <ErrorIcon fontSize="small"/>,
+                icon: <ErrorIcon fontSize="small" />,
                 label: 'Has Issues'
             };
         }
         if (activity.leaveStatus === 'LEAVE_APPROVED') {
             return {
                 color: 'success',
-                icon: <CheckCircleIcon fontSize="small"/>,
+                icon: <CheckCircleIcon fontSize="small" />,
                 label: 'Leave Approved'
             };
         }
         if (activity.leaveStatus === 'LEAVE_REQUESTED') {
             return {
                 color: 'info',
-                icon: <HourglassEmptyIcon fontSize="small"/>,
+                icon: <HourglassEmptyIcon fontSize="small" />,
                 label: 'Leave Requested'
             };
         }
@@ -267,26 +272,26 @@ const StatusChip = ({activity}) => {
         if (activity.isLate && !activity.isLateCovered) {
             return {
                 color: 'warning',
-                icon: <AccessTimeIcon fontSize="small"/>,
+                icon: <AccessTimeIcon fontSize="small" />,
                 label: 'Late'
             };
         }
         if (activity.isLate && activity.isLateCovered) {
             return {
                 color: 'info',
-                icon: <CheckCircleIcon fontSize="small"/>,
+                icon: <CheckCircleIcon fontSize="small" />,
                 label: 'Late Covered'
             };
         }
 
         return {
             color: 'success',
-            icon: <CheckCircleIcon fontSize="small"/>,
+            icon: <CheckCircleIcon fontSize="small" />,
             label: 'Normal'
         };
     };
 
-    const {color, icon, label} = getChipProps();
+    const { color, icon, label } = getChipProps();
 
     return (
         <Chip
@@ -294,12 +299,12 @@ const StatusChip = ({activity}) => {
             color={color}
             size="small"
             icon={icon}
-            sx={{fontWeight: 500}}
+            sx={{ fontWeight: 500 }}
         />
     );
 };
 
-const TypeBadge = ({activity}) => {
+const TypeBadge = ({ activity }) => {
     const getTypeProps = () => {
         if (activity.isUnauthorized) {
             return {
@@ -396,7 +401,7 @@ const TypeBadge = ({activity}) => {
         };
     };
 
-    const {bgcolor, color, label} = getTypeProps();
+    const { bgcolor, color, label } = getTypeProps();
 
     return (
         <Chip
@@ -413,8 +418,8 @@ const TypeBadge = ({activity}) => {
     );
 };
 
-const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
-    const {userDetails} = useSelector((state) => state.auth);
+const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
+    const { userDetails } = useSelector((state) => state.auth);
 
     if (userId == null) userId = sessionStorage.getItem('userId');
     const router = useRouter();
@@ -439,7 +444,8 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
         showModal,
         showFilters,
         openDeleteDialog,
-        idToDelete
+        idToDelete,
+        totalElements
     } = useSelector(state => state.employeeActivities);
 
     const [anchorEl, setAnchorEl] = React.useState(false);
@@ -454,10 +460,9 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
     }, [dispatch, userId, isAdmin, page, rowsPerPage]);
 
 
-    // Handle form input changes
     const handleChange = (e) => {
-        const {name, value, type, checked} = e.target;
-        dispatch(handleFormChange({name, value, type, checked}));
+        const { name, value, type, checked } = e.target;
+        dispatch(handleFormChange({ name, value, type, checked }));
     };
 
     const handleEditClick = (activity) => {
@@ -465,8 +470,8 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
             date: formatDateForInput(activity.date),
             employeeId: activity.employeeId || '',
             arrivalDate: formatDateForInput(activity.arrivalDate),
-            arrivalTime: formatTimeForInput(activity.arrivalTime),
-            leftTime: formatTimeForInput(activity.leftTime),
+            arrivalTime: formatTimeForInput(activity.arrivalTime || activity.arrivalTimeRaw),
+            leftTime: formatTimeForInput(activity.leftTime || activity.leftTimeRaw),
             attendanceType: activity.attendanceType || 'FULL_DAY',
             leaveStatus: activity.leaveStatus || null,
             payStatus: activity.payStatus || null,
@@ -482,7 +487,9 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
             isActive: activity.isActive !== false,
             issueDescription: activity.issueDescription || '',
             dueDateForUA: formatDateForInput(activity.dueDateForUA),
-            terminalId: activity.terminalId || ''
+            terminalId: activity.terminalId || '',
+            arrivalTimeRaw: activity.arrivalTimeRaw,
+            leftTimeRaw: activity.leftTimeRaw
         };
 
         dispatch(setFormData(preparedData));
@@ -524,7 +531,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
 
     const handleSubmit = () => {
         if (isEditMode && editId) {
-            dispatch(updateEmployeeActivity({id: editId, formData}));
+            dispatch(updateEmployeeActivity({ id: editId, formData }));
         } else {
             dispatch(createEmployeeActivity(formData));
         }
@@ -607,14 +614,16 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
         return matchesSearch && matchesType && matchesStatus && matchesActive && matchesStartDate && matchesEndDate;
     });
 
-    const paginatedActivities = filteredActivities.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-    );
+    const paginatedActivities = filteredActivities.length > 0
+        ? filteredActivities.slice(
+            page * rowsPerPage,
+            page * rowsPerPage + rowsPerPage
+        )
+        : [];
 
     const handleResolveViaMovement = (activity) => {
-        const happenDate = activity.date ? format(new Date(activity.date), 'yyyy-MM-dd') : '';
-        const logTime = activity.date ? format(new Date(activity.date), 'yyyy-MM-dd\'T\'HH:mm') : '';
+        const happenDate = activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd') : activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd') : '';
+        const logTime = activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : '';
 
         const params = new URLSearchParams();
         params.set('employeeId', activity.employeeId || '');
@@ -630,9 +639,9 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
         params.set('hasIssues', activity.hasIssues ? 'true' : 'false');
 
         let movementType = MovementType.FULLDAY;
-        if (activity.isUnauthorized && activity.arrivalTime == null) {
+        if (activity.isUnauthorized && (activity.arrivalTime == null || activity.arrivalTime === '00:00')) {
             movementType = MovementType.HOME_TO_OFFICE;
-        } else if (activity.isUnauthorized && activity.leftTime == null) {
+        } else if (activity.isUnauthorized && (activity.leftTime == null || activity.leftTime === '00:00')) {
             movementType = MovementType.OFFICE_TO_HOME;
         }
 
@@ -684,7 +693,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                     }
                 }}
             >
-                <Box sx={{position: 'relative'}}>
+                <Box sx={{ position: 'relative' }}>
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -693,15 +702,15 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                         borderBottom: '1px solid #e0e0e0',
                         bgcolor: '#f5f5f5'
                     }}>
-                        <Typography variant="h6" sx={{fontWeight: 500}}>
+                        <Typography variant="h6" sx={{ fontWeight: 500 }}>
                             {isEditMode ? 'Edit Attendance Record' : 'Add Attendance Record'}
                         </Typography>
                         <IconButton onClick={handleCloseModal} size="small">
-                            <X size={20}/>
+                            <X size={20} />
                         </IconButton>
                     </Box>
 
-                    <Box sx={{p: 3}}>
+                    <Box sx={{ p: 3 }}>
                         <Grid container spacing={2}>
                             {/* Date */}
                             <Grid item xs={12} md={6}>
@@ -712,11 +721,11 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     name="date"
                                     value={formData.date}
                                     onChange={handleChange}
-                                    InputLabelProps={{shrink: true}}
+                                    InputLabelProps={{ shrink: true }}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <EventIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <EventIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
@@ -732,8 +741,8 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     onChange={handleChange}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <PersonIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <PersonIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
@@ -749,8 +758,8 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     onChange={handleChange}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <PersonIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <PersonIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
@@ -765,11 +774,11 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     name="arrivalDate"
                                     value={formData.arrivalDate}
                                     onChange={handleChange}
-                                    InputLabelProps={{shrink: true}}
+                                    InputLabelProps={{ shrink: true }}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <EventIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <EventIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
@@ -782,16 +791,17 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     label="Arrival Time"
                                     type="time"
                                     name="arrivalTime"
-                                    value={formData.arrivalTime}
+                                    value={formData.arrivalTime || formData.arrivalTimeRaw}
                                     onChange={handleChange}
-                                    InputLabelProps={{shrink: true}}
+                                    InputLabelProps={{ shrink: true }}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <AccessTimeIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <AccessTimeIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
+                                    inputProps={{ step: 1 }}
                                 />
                             </Grid>
 
@@ -801,16 +811,17 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     label="Left Time"
                                     type="time"
                                     name="leftTime"
-                                    value={formData.leftTime}
+                                    value={formData.leftTime || formData.leftTimeRaw}
                                     onChange={handleChange}
-                                    InputLabelProps={{shrink: true}}
+                                    InputLabelProps={{ shrink: true }}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <AccessTimeIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <AccessTimeIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
+                                    inputProps={{ step: 1 }}
                                 />
                             </Grid>
 
@@ -889,11 +900,11 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                     name="dueDateForUA"
                                     value={formData.dueDateForUA}
                                     onChange={handleChange}
-                                    InputLabelProps={{shrink: true}}
+                                    InputLabelProps={{ shrink: true }}
                                     InputProps={{
                                         startAdornment: (
-                                            <Box sx={{mr: 1, color: 'text.secondary'}}>
-                                                <EventIcon fontSize="small"/>
+                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                                                <EventIcon fontSize="small" />
                                             </Box>
                                         ),
                                     }}
@@ -913,21 +924,21 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                             </Grid>
 
                             <Grid item xs={12}>
-                                <Typography variant="subtitle1" sx={{fontWeight: 500, mb: 1.5}}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1.5 }}>
                                     Additional Options
                                 </Typography>
 
                                 <Grid container spacing={1}>
                                     {[
-                                        {name: 'isLate', label: 'Late'},
-                                        {name: 'isLateCovered', label: 'Late Covered'},
-                                        {name: 'isUnauthorized', label: 'Unauthorized'},
-                                        {name: 'isUnSuccessful', label: 'Unsuccessful'},
-                                        {name: 'isHoliday', label: 'Holiday'},
-                                        {name: 'isResolved', label: 'Resolved'},
-                                        {name: 'hasIssues', label: 'Has Issues'},
-                                        {name: 'isManual', label: 'Manual Entry'},
-                                        {name: 'isActive', label: 'Active'}
+                                        { name: 'isLate', label: 'Late' },
+                                        { name: 'isLateCovered', label: 'Late Covered' },
+                                        { name: 'isUnauthorized', label: 'Unauthorized' },
+                                        { name: 'isUnSuccessful', label: 'Unsuccessful' },
+                                        { name: 'isHoliday', label: 'Holiday' },
+                                        { name: 'isResolved', label: 'Resolved' },
+                                        { name: 'hasIssues', label: 'Has Issues' },
+                                        { name: 'isManual', label: 'Manual Entry' },
+                                        { name: 'isActive', label: 'Active' }
                                     ].map((field) => (
                                         <Grid item xs={6} sm={4} md={3} key={field.name}>
                                             <FormControlLabel
@@ -975,9 +986,9 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
             </Dialog>
 
             <ThemeProvider theme={theme}>
-                <CssBaseline/>
-                <Box sx={{p: {xs: 2, md: 4}, backgroundColor: "#f5f7fa", minHeight: "100vh"}}>
-                    <Card variant="outlined" sx={{mb: 4, borderRadius: 2, overflow: 'hidden'}}>
+                <CssBaseline />
+                <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: "#f5f7fa", minHeight: "100vh" }}>
+                    <Card variant="outlined" sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
                         <Box
                             sx={{
                                 p: 3,
@@ -986,10 +997,10 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 alignItems: 'center'
                             }}
                         >
-                            <Avatar sx={{bgcolor: '#fff', color: '#3f51b5', mr: 2}}>
-                                <EventNoteIcon/>
+                            <Avatar sx={{ bgcolor: '#fff', color: '#3f51b5', mr: 2 }}>
+                                <EventNoteIcon />
                             </Avatar>
-                            <Typography variant="h4" gutterBottom sx={{color: 'white', fontWeight: 'bold', mb: 0}}>
+                            <Typography variant="h4" gutterBottom sx={{ color: 'white', fontWeight: 'bold', mb: 0 }}>
                                 {isAdmin ? 'Employee Activities' : 'Your Activities'}
                             </Typography>
                         </Box>
@@ -1008,7 +1019,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                             <Button
                                 size="small"
                                 color="inherit"
-                                sx={{ml: 2}}
+                                sx={{ ml: 2 }}
                                 onClick={() => dispatch(clearError())}
                             >
                                 Dismiss
@@ -1025,13 +1036,13 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                             flexDirection="column"
                             gap={2}
                         >
-                            <CircularProgress size={60}/>
+                            <CircularProgress size={60} />
                             <Typography variant="h6" color="textSecondary">Loading activities...</Typography>
                         </Box>
                     ) : (
                         <>
-                            <Card sx={{mb: 4, borderRadius: 2}}>
-                                <CardContent sx={{pb: 2}}>
+                            <Card sx={{ mb: 4, borderRadius: 2 }}>
+                                <CardContent sx={{ pb: 2 }}>
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -1040,26 +1051,26 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                             mb: 2
                                         }}
                                     >
-                                        <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                            <SearchIcon sx={{color: 'action.active', mr: 1}}/>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <SearchIcon sx={{ color: 'action.active', mr: 1 }} />
                                             <TextField
                                                 label="Search by Employee ID"
                                                 variant="outlined"
                                                 size="small"
                                                 value={searchTerm}
                                                 onChange={handleSearchChange}
-                                                sx={{minWidth: 200}}
+                                                sx={{ minWidth: 200 }}
                                             />
                                         </Box>
 
-                                        <Box sx={{display: 'flex', alignItems: 'center'}}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             {isAdmin && (
                                                 <Button
                                                     variant="contained"
                                                     color="primary"
-                                                    startIcon={<PersonIcon/>}
+                                                    startIcon={<PersonIcon />}
                                                     onClick={handleAddNew}
-                                                    sx={{mr: 1}}
+                                                    sx={{ mr: 1 }}
                                                 >
                                                     Add Record
                                                 </Button>
@@ -1070,14 +1081,14 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                     onClick={() => dispatch(setShowFilters(!showFilters))}
                                                     color="primary"
                                                 >
-                                                    {showFilters ? <ExpandLessIcon/> : <ExpandMoreIcon/>}
+                                                    {showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                                 </IconButton>
                                             </Tooltip>
                                         </Box>
                                     </Box>
 
                                     <Collapse in={showFilters}>
-                                        <Divider sx={{my: 2}}/>
+                                        <Divider sx={{ my: 2 }} />
 
                                         <Box
                                             sx={{
@@ -1086,13 +1097,13 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                 mb: 1
                                             }}
                                         >
-                                            <FilterListIcon sx={{mr: 1, color: 'action.active'}}/>
+                                            <FilterListIcon sx={{ mr: 1, color: 'action.active' }} />
                                             <Typography variant="subtitle1" fontWeight="medium">
                                                 Filters
                                             </Typography>
                                         </Box>
 
-                                        <Grid container spacing={2} sx={{mt: 1}}>
+                                        <Grid container spacing={2} sx={{ mt: 1 }}>
                                             <Grid item xs={12} md={2.4}>
                                                 <FormControl variant="outlined" size="small" fullWidth>
                                                     <InputLabel>Type</InputLabel>
@@ -1157,7 +1168,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                     fullWidth
                                                     value={startDateFilter}
                                                     onChange={(e) => dispatch(setStartDateFilter(e.target.value))}
-                                                    InputLabelProps={{shrink: true}}
+                                                    InputLabelProps={{ shrink: true }}
                                                 />
                                             </Grid>
 
@@ -1170,7 +1181,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                     fullWidth
                                                     value={endDateFilter}
                                                     onChange={(e) => dispatch(setEndDateFilter(e.target.value))}
-                                                    InputLabelProps={{shrink: true}}
+                                                    InputLabelProps={{ shrink: true }}
                                                 />
                                             </Grid>
                                         </Grid>
@@ -1191,32 +1202,32 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                 </Typography>
                             </Box>
 
-                            <Card sx={{borderRadius: 2}}>
+                            <Card sx={{ borderRadius: 2 }}>
                                 <TableContainer>
                                     <Table>
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>
-                                                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                                        <PersonIcon fontSize="small" sx={{mr: 1, opacity: 0.7}}/>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <PersonIcon fontSize="small" sx={{ mr: 1, opacity: 0.7 }} />
                                                         Employee ID
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                                        <EventIcon fontSize="small" sx={{mr: 1, opacity: 0.7}}/>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <EventIcon fontSize="small" sx={{ mr: 1, opacity: 0.7 }} />
                                                         Date
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                                        <AccessTimeIcon fontSize="small" sx={{mr: 1, opacity: 0.7}}/>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <AccessTimeIcon fontSize="small" sx={{ mr: 1, opacity: 0.7 }} />
                                                         Arrival Time
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                                        <AccessTimeIcon fontSize="small" sx={{mr: 1, opacity: 0.7}}/>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <AccessTimeIcon fontSize="small" sx={{ mr: 1, opacity: 0.7 }} />
                                                         Left Time
                                                     </Box>
                                                 </TableCell>
@@ -1242,25 +1253,25 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                     backgroundColor: activity.isActive === false ? '#ffebee' : 'inherit'
                                                                 }}
                                                             >
-                                                                <TableCell sx={{fontWeight: 500}}>
+                                                                <TableCell sx={{ fontWeight: 500 }}>
                                                                     {activity.userId}
                                                                     {activity.isActive === false && (
                                                                         <Chip
                                                                             label="Inactive"
                                                                             size="small"
                                                                             color="error"
-                                                                            sx={{ml: 1, fontSize: '0.7rem'}}
+                                                                            sx={{ ml: 1, fontSize: '0.7rem' }}
                                                                         />
                                                                     )}
                                                                 </TableCell>
                                                                 <TableCell>{formatDate(activity.arrivalDate)}</TableCell>
-                                                                <TableCell>{activity.arrivalTime || "-"}</TableCell>
-                                                                <TableCell>{activity.leftTime || "-"}</TableCell>
+                                                                <TableCell>{activity.arrivalTime || activity.arrivalTimeRaw || "-"}</TableCell>
+                                                                <TableCell>{activity.leftTime || activity.leftTimeRaw || "-"}</TableCell>
                                                                 <TableCell>
-                                                                    <TypeBadge activity={activity}/>
+                                                                    <TypeBadge activity={activity} />
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <StatusChip activity={activity}/>
+                                                                    <StatusChip activity={activity} />
                                                                 </TableCell>
                                                                 <TableCell>{activity.terminalId || "-"}</TableCell>
                                                                 <TableCell>{activity.rosterType || "NONE"}</TableCell>
@@ -1271,7 +1282,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                 }}>
                                                                     {activity.hasIssues && activity.issueDescription ? (
                                                                         <Tooltip title={activity.issueDescription}
-                                                                                 arrow>
+                                                                            arrow>
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{
@@ -1291,44 +1302,40 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                                     )}
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    {(isAdmin && activity.isManual) ||
-                                                                        (isAdmin && userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50) && (
-                                                                            <Box sx={{display: 'flex', gap: 1}}>
-                                                                                <IconButton
-                                                                                    color="primary"
-                                                                                    onClick={() => handleEditClick(activity)}
-                                                                                    size="small"
-                                                                                >
-                                                                                    <EditIcon fontSize="small"/>
-                                                                                </IconButton>
-                                                                                <IconButton
-                                                                                    color="error"
-                                                                                    onClick={() => handleDeleteClick(activity.publicId)}
-                                                                                    size="small"
-                                                                                >
-                                                                                    <TrashIcon size={18}/>
-                                                                                </IconButton>
-                                                                            </Box>
-                                                                        )}
-                                                                    {isAdmin && !activity.isManual && activity.isActive && (
-                                                                        <Box sx={{display: 'flex', gap: 1}}>
+                                                                    {(isAdmin && userDetails.highestRolePriority > 0 && userDetails.highestRolePriority < 50) && (
+                                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                                            <IconButton
+                                                                                color="primary"
+                                                                                onClick={() => handleEditClick(activity)}
+                                                                                size="small"
+                                                                            >
+                                                                                <EditIcon fontSize="small" />
+                                                                            </IconButton>
+                                                                            <IconButton
+                                                                                color="error"
+                                                                                onClick={() => handleDeleteClick(activity.publicId)}
+                                                                                size="small"
+                                                                            >
+                                                                                <TrashIcon size={18} />
+                                                                            </IconButton>
                                                                             <IconButton
                                                                                 color="error"
                                                                                 onClick={() => handleDeleteDeClick(activity.publicId)}
                                                                                 size="small"
                                                                             >
-                                                                                <X size={18}/>
+                                                                                <X size={18} />
                                                                             </IconButton>
                                                                         </Box>
                                                                     )}
+
                                                                     {!isAdmin && activity.isActive && activity.isUnauthorized && (
-                                                                        <Box sx={{display: 'flex', gap: 1}}>
+                                                                        <Box sx={{ display: 'flex', gap: 1 }}>
                                                                             <Button
                                                                                 variant="contained"
                                                                                 color="primary"
                                                                                 size="small"
                                                                                 onClick={() => handleResolveViaMovement(activity)}
-                                                                                sx={{textTransform: 'none'}}
+                                                                                sx={{ textTransform: 'none' }}
                                                                             >
                                                                                 Resolve via Movement
                                                                             </Button>
@@ -1341,7 +1348,7 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={9} align="center" sx={{py: 4}}>
+                                                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                                         <Box sx={{
                                                             display: 'flex',
                                                             flexDirection: 'column',
@@ -1349,12 +1356,12 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                                             py: 2
                                                         }}>
                                                             <FilterListIcon
-                                                                sx={{fontSize: 40, color: 'text.secondary', mb: 1}}/>
+                                                                sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
                                                             <Typography variant="h6" color="textSecondary">
                                                                 No activities found matching the current filters
                                                             </Typography>
                                                             <Typography variant="body2" color="textSecondary"
-                                                                        sx={{mt: 1}}>
+                                                                sx={{ mt: 1 }}>
                                                                 Try adjusting your search or filter criteria
                                                             </Typography>
                                                         </Box>
@@ -1366,19 +1373,18 @@ const SingleEmployeeActivities = ({isAdmin = false, userId = null}) => {
                                             <TableFooter>
                                                 <TableRow>
                                                     <TablePagination
-                                                        rowsPerPageOptions={[5, 10, 25, {label: 'All', value: -1}]}
-                                                        colSpan={9}
-                                                        count={filteredActivities.length}
+                                                        rowsPerPageOptions={[5, 10, 25]}
+                                                        count={totalElements}
                                                         rowsPerPage={rowsPerPage}
                                                         page={page}
-                                                        SelectProps={{
-                                                            inputProps: {
-                                                                'aria-label': 'rows per page',
-                                                            },
-                                                            native: true,
+                                                        onPageChange={(event, newPage) => {
+                                                            dispatch(setPage(newPage));
                                                         }}
-                                                        onPageChange={handleChangePage}
-                                                        onRowsPerPageChange={handleChangeRowsPerPage}
+                                                        onRowsPerPageChange={(event) => {
+                                                            const newSize = parseInt(event.target.value, 10);
+                                                            dispatch(setRowsPerPage(newSize));
+                                                            dispatch(setPage(0));
+                                                        }}
                                                         ActionsComponent={TablePaginationActions}
                                                     />
                                                 </TableRow>

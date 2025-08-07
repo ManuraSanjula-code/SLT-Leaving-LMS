@@ -67,7 +67,7 @@ import {
 const MOVEMENT_TYPES = {
     OFFICE_TO_HOME: 'Office to Home',
     HOME_TO_OFFICE: 'Home to Office',
-    REMOTE_WORK: 'Remote Work',
+    REMOTEWORK: 'Remote Work',
 };
 
 const REQUEST_STATUSES = {

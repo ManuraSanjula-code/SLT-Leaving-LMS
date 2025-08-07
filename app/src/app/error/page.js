@@ -4,7 +4,6 @@ import { Container, Typography, Button, Box } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import { useRouter } from "next/navigation";
 import NavBar from "../components/navbar/NavBar";
-import Image from "next/image";
 
 export default function ErrorPage() {
     const router = useRouter();
@@ -25,26 +24,23 @@ export default function ErrorPage() {
                     textAlign: 'center',
                     backgroundColor: 'white'
                 }}>
-                    {/* Centered Image Container */}
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
                         mb: 4,
                         width: '100%',
-                        position: 'relative',
-                        height: '300px' // Set a fixed height for the image container
+                        height: '300px'
                     }}>
-                        <Image
+                        <img
                             src="https://media.giphy.com/media/3o7TKsrf0g3VCDnkZq/giphy.gif"
                             alt="Error animation"
-                            fill
                             style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
                                 objectFit: 'contain',
                                 borderRadius: '16px'
                             }}
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 500px"
-                            priority
                         />
                     </Box>
 

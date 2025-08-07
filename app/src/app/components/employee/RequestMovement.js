@@ -54,6 +54,20 @@ const RequestMovement = () => {
   const showError = Boolean(error);
   const showSuccess = Boolean(successMessage);
 
+  const normalizeTime = (time) => {
+    if (!time) return null;
+
+    if (/^\d{1,2}:\d{2}$/.test(time)) {
+      return `${time}:00`;
+    }
+    if (/^\d{1,2}:\d{2}:\d{2}$/.test(time)) {
+      return time;
+    }
+
+    return null;
+  };
+
+
   useEffect(() => {
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -220,6 +234,10 @@ const RequestMovement = () => {
 
     const submissionData = {
       ...formData,
+      inTime: normalizeTime(formData.inTime),
+      outTime: normalizeTime(formData.outTime),
+      inTimeRaw: formData.inTime,
+      outTimeRaw: formData.outTime,
       employeeId: formData.employeeId?.trim(),
       comment: formData.comment?.trim(),
       destination: formData.destination?.trim(),
@@ -376,6 +394,7 @@ const RequestMovement = () => {
                     error={shouldShowError('inTime')}
                     helperText={shouldShowError('inTime') ? errors.inTime : ''}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 1 }}
                 />
               </Grid>
 
@@ -393,6 +412,7 @@ const RequestMovement = () => {
                     error={shouldShowError('outTime')}
                     helperText={shouldShowError('outTime') ? errors.outTime : ''}
                     InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 1 }}
                 />
               </Grid>
             </Grid>

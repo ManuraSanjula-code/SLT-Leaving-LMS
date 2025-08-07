@@ -12,6 +12,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -35,10 +36,14 @@ public class MovementsEntity {
     private String publicId;
 
     @Column(name = "In_Time", length = 45)
-    private String inTime;
+    private Time inTime;
 
     @Column(name = "Out_Time", length = 45)
-    private String outTime;
+    private Time outTime;
+
+    private String inTimeRaw;
+    private String outTimeRaw;
+    private String happenDateRaw;
 
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;

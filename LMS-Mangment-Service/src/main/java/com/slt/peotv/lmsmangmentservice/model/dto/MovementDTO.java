@@ -34,12 +34,21 @@ public class MovementDTO {
     private Boolean isEdited = false;
 
     private String attendance;
+    private String happenDateRaw;
 
     @JsonIgnore
     private List<MovementAdminsDTO> movementAdmins = new ArrayList<>();
 
     @Transient
     private List<MovementTra> adminsTra;
+
+    public String getHappenDateRaw() {
+        return happenDateRaw;
+    }
+
+    public void setHappenDateRaw(String happenDateRaw) {
+        this.happenDateRaw = happenDateRaw;
+    }
 
     public Long getId() {
         return id;

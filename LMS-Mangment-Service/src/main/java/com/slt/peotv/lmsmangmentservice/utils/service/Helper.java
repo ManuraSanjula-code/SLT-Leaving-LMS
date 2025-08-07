@@ -98,7 +98,7 @@ public class Helper {
         }
     }
 
-    public Time parseToSqlTime(String timeStr) {
+    /* public Time parseToSqlTime(String timeStr) {
         try {
             if (timeStr == null || timeStr.isEmpty()) {
                 return null;
@@ -107,6 +107,47 @@ public class Helper {
             return Time.valueOf(localTime);
         } catch (Exception e) {
             System.err.println("Error parsing time string '" + timeStr + "': " + e.getMessage());
+            return null;
+        }
+    } */
+
+    public Time parseToSqlTime(String timeStr) {
+        try {
+            System.out.println("DEBUG parseToSqlTime: Input = '" + timeStr + "'");
+
+            if (timeStr == null) {
+                return null;
+            }
+
+            // Clean the string more aggressively
+            timeStr = timeStr.trim().replaceAll("\\s+", "")  // Remove all whitespace
+                    .replaceAll("[^\\d:]", ""); // Remove non-digit/non-colon chars
+
+            System.out.println("DEBUG parseToSqlTime: After cleaning = '" + timeStr + "'");
+
+            // Check if string is empty after cleaning
+            if (timeStr.isEmpty()) {
+                return null;
+            }
+
+            // Try multiple time formats
+            DateTimeFormatter[] formatters = {DateTimeFormatter.ofPattern("HH:mm"), DateTimeFormatter.ofPattern("H:mm"), DateTimeFormatter.ofPattern("HH:mm:ss"), DateTimeFormatter.ofPattern("H:mm:ss"), DateTimeFormatter.ISO_LOCAL_TIME};
+
+            for (DateTimeFormatter formatter : formatters) {
+                try {
+                    LocalTime localTime = LocalTime.parse(timeStr, formatter);
+                    System.out.println("DEBUG parseToSqlTime: Success with pattern: " + formatter);
+                    return Time.valueOf(localTime);
+                } catch (Exception e) {
+                    System.out.println("DEBUG parseToSqlTime: Failed with pattern " + formatter + ": " + e.getMessage());
+                }
+            }
+
+            System.out.println("DEBUG parseToSqlTime: All parsing attempts failed for: '" + timeStr + "'");
+            return null;
+
+        } catch (Exception e) {
+            System.err.println("DEBUG parseToSqlTime: Unexpected error: " + e.getMessage());
             return null;
         }
     }
@@ -124,14 +165,11 @@ public class Helper {
                 return;
             }
 
-            if(attendanceEntity.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE) || attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT) ||
-                    attendanceEntity.getAttendanceType().equals(AttendanceType.HALF_DAY) || attendanceEntity.getAttendanceType().equals(AttendanceType.FULL_DAY) ||
-                    attendanceEntity.getIsUnauthorized()) return;
+            if (((attendanceEntity.getLeaveStatus() != null) && attendanceEntity.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) || ((attendanceEntity.getAttendanceType() != null) && (attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT) || attendanceEntity.getAttendanceType().equals(AttendanceType.FULL_DAY)))) {
+                return;
+            }
 
-            attendanceEntity.setIsUnSuccessful(true);
-
-            UserLeaveTypeRemainingEntity remainingShortLeaves =
-                    serviceEvent.getUserLeaveTypeRemaining("Short Leave", employee.getEmployeeId());
+            UserLeaveTypeRemainingEntity remainingShortLeaves = serviceEvent.getUserLeaveTypeRemaining("Short Leave", employee.getEmployeeId());
 
             if (remainingShortLeaves == null || remainingShortLeaves.getRemainingLeaves() < 1) {
                 handleNoShortLeaveAvailable(attendanceEntity);
@@ -139,8 +177,7 @@ public class Helper {
                 handleShortLeaveAvailable(attendanceEntity, remainingShortLeaves);
             }
 
-            if(!swap)
-                updateAttendanceWithLeaveTime(employee, attendanceEntity);
+            if (!swap) updateAttendanceWithLeaveTime(employee, attendanceEntity);
 
         } catch (Exception e) {
             System.err.println("Error in handleLateAndUnsuccessful: " + e.getMessage());
@@ -149,13 +186,14 @@ public class Helper {
 
     private void handleNoShortLeaveAvailable(AttendanceEntity attendanceEntity) {
         attendanceEntity.setAttendanceType(AttendanceType.HALF_DAY);
+        attendanceEntity.setLeaveStatus(null);
+        attendanceEntity.setIsUnauthorized(true);
         attendanceEntity.setIssueDescription("GOING HALF DAY BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
         attendanceEntity.setDueDateForUA(getDueDate());
         attendanceRepo.save(attendanceEntity);
     }
 
-    private void handleShortLeaveAvailable(AttendanceEntity attendanceEntity,
-                                           UserLeaveTypeRemainingEntity remainingShortLeaves) {
+    private void handleShortLeaveAvailable(AttendanceEntity attendanceEntity, UserLeaveTypeRemainingEntity remainingShortLeaves) {
         attendanceEntity.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
         remainingShortLeaves.setRemainingLeaves(remainingShortLeaves.getRemainingLeaves() - 1);
         userLeaveTypeRemainingRepo.save(remainingShortLeaves);
@@ -164,8 +202,7 @@ public class Helper {
 
     private void updateAttendanceWithLeaveTime(EmployeeEntity employee, AttendanceEntity attendanceEntity) {
         try {
-            Optional<InOutEntity> latest = inOutRepo.findLatestByEmployeeIdAndDate(
-                    employee.getSltId(), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : attendanceEntity.getArrivalDate());
+            Optional<InOutEntity> latest = inOutRepo.findLatestByEmployeeIdAndDate(employee.getSltId(), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : attendanceEntity.getArrivalDate());
 
             if (latest.isPresent()) {
                 InOutEntity inOutEntity = latest.get();
@@ -185,28 +222,13 @@ public class Helper {
 
     private void checkNoPayCondition(EmployeeEntity employee, AttendanceEntity attendanceEntity) {
         try {
-            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining =
-                    serviceEvent.getUserLeaveTypeRemaining(employee.getEmployeeId());
+            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(employee.getEmployeeId());
 
             if (userLeaveCategoryRemaining != null) {
-                boolean noPay = userLeaveCategoryRemaining.stream()
-                        .filter(Objects::nonNull)
-                        .allMatch(remaining -> remaining.getRemainingLeaves() < 1);
+                boolean noPay = userLeaveCategoryRemaining.stream().filter(Objects::nonNull).allMatch(remaining -> remaining.getRemainingLeaves() < 1);
 
                 if (noPay) {
-                    checkService.saveNoPayEntity(
-                            employee,
-                            attendanceEntity,
-                            checkService.createNoPayRequest(
-                                    attendanceEntity.getAttendanceType().equals(AttendanceType.HALF_DAY),
-                                    attendanceEntity.getIsUnSuccessful(),
-                                    attendanceEntity.getIsUnauthorized(),
-                                    attendanceEntity.getIsLate(),
-                                    attendanceEntity.getIsLateCovered(),
-                                    attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT)
-                            ),
-                            attendanceEntity.getDate()
-                    );
+                    checkService.saveNoPayEntity(employee, attendanceEntity, checkService.createNoPayRequest(attendanceEntity.getAttendanceType().equals(AttendanceType.HALF_DAY), attendanceEntity.getIsUnSuccessful(), attendanceEntity.getIsUnauthorized(), attendanceEntity.getIsLate(), attendanceEntity.getIsLateCovered(), attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT)), attendanceEntity.getDate());
                 }
             }
         } catch (Exception e) {
@@ -220,10 +242,7 @@ public class Helper {
                 return null;
             }
 
-            return employeeRepo.findByPublicId(employeeId)
-                    .or(() -> employeeRepo.findByEmployeeId(employeeId))
-                    .or(() -> employeeRepo.findBySltId(employeeId))
-                    .orElse(null);
+            return employeeRepo.findByPublicId(employeeId).or(() -> employeeRepo.findByEmployeeId(employeeId)).or(() -> employeeRepo.findBySltId(employeeId)).orElse(null);
         } catch (Exception e) {
             System.err.println("Error getting employee by ID: " + e.getMessage());
             return null;
@@ -236,9 +255,7 @@ public class Helper {
                 return Optional.empty();
             }
 
-            return employeeRepo.findByPublicId(id)
-                    .or(() -> employeeRepo.findBySltId(id))
-                    .or(() -> employeeRepo.findByEmployeeId(id));
+            return employeeRepo.findByPublicId(id).or(() -> employeeRepo.findBySltId(id)).or(() -> employeeRepo.findByEmployeeId(id));
         } catch (Exception e) {
             System.err.println("Error in getEmployeeByIdV2: " + e.getMessage());
             return Optional.empty();

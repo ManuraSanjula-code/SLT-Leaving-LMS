@@ -90,6 +90,9 @@ export const updateMovementRequest = createAsyncThunk(
                 }
             });
 
+            cleanPayload.inTimeRaw = updatePayload.inTime
+            cleanPayload.outTimeRaw = updatePayload.outTime
+            cleanPayload.happenDateRaw = updatePayload.happenDate
 
             const response = await fetch(`http://192.168.3.20:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
                 method: 'PUT',
@@ -120,11 +123,7 @@ export const fetchInOutData = createAsyncThunk(
             if (!empId) {
                 return rejectWithValue('Employee ID not found in session storage');
             }
-            const dateObj = new Date(happenDate);
-            dateObj.setDate(dateObj.getDate() + 1);
-            const adjustedDate = dateObj.toISOString().split('T')[0];
-
-            const response = await fetch(`http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`, {
+            const response = await fetch(`http://192.168.3.20:8080/lms/in-out/${happenDate}/earliest/${userId}/${empId}`, {
                 credentials: 'include'
             });
 
@@ -226,11 +225,11 @@ const movementSlice = createSlice({
                         employeeId: item.employeeId || "",
                         userId: item.userId || "",
                         type: item.movementType || "Unknown",
-                        startDate: item.happenDate ? new Date(item.happenDate).toISOString().split('T')[0] : "",
+                        startDate: item.happenDateRaw ? new Date(item.happenDateRaw).toISOString().split('T')[0] : "",
                         endDate: item.reqDate ? new Date(item.reqDate).toISOString().split('T')[0] : "",
                         status: getStatus(item),
-                        inTime: item.inTime || "00:00",
-                        outTime: item.outTime || "00:00",
+                        inTime: item.inTime || item.inTimeRaw ||"00:00",
+                        outTime: item.outTime || item.leftTimeRaw || "00:00",
                         logTime: item.logTime ? new Date(item.logTime).toISOString() : "",
                         comment: item.comment || "",
                         destination: item.destination || "",
@@ -251,7 +250,7 @@ const movementSlice = createSlice({
                         pending: item.requestStatus === 'PENDING_APPROVAL' || item.requestStatus === 'SUBMITTED',
                         reject: item.requestStatus === 'REJECTED',
 
-                        happenDate: item.happenDate || "",
+                        happenDate: item.happenDateRaw || "",
                         reqDate: item.reqDate || "",
                         adminsTra: item.adminsTra || [],
                         editedByDTOs: item.editedByDTOs || [],

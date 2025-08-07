@@ -314,6 +314,23 @@ public class LMS_Service_impl implements LMS_Service {
         if (movementsEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || movementsEntity.getRequestStatus().equals(RequestStatus.REJECTED)
                 || movementsEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
 
+        EmployeeEntity employee = movementsEntity.getEmployee();
+
+        if(req.getHappenDate() != null && employee != null){
+            req.setHappenDate(helper.removeTimeFromDate(req.getHappenDate()));
+            Optional<AttendanceEntity> attendanceEntity = attendanceRepo.findByEmployeeAndArrivalDateAndIsActiveTrue(
+                    employee, req.getHappenDate());
+            if(attendanceEntity.isPresent()){
+                AttendanceEntity attendanceEntity_ = attendanceEntity.get();
+                if(attendanceEntity_.getIsUnauthorized() && !attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()){
+                    movementsEntity.setAttendance(attendanceEntity_);
+                    movementsEntity.setHappenDate(req.getHappenDate());
+                    if(req.getHappenDateRaw() != null)
+                        movementsEntity.setHappenDateRaw(req.getHappenDateRaw());
+                }
+            }
+        }
+
         if (req.getMovementType() != null)
             movementsEntity.setMovementType(req.getMovementType());
         if (req.getComment() != null)
@@ -335,6 +352,11 @@ public class LMS_Service_impl implements LMS_Service {
         }
         if (req.getRequestStatus() != null)
             movementsEntity.setRequestStatus(req.getRequestStatus());
+
+        if(req.getInTimeRaw() != null)
+            movementsEntity.setInTimeRaw(req.getInTimeRaw());
+        if(req.getOutTimeRaw() != null)
+            movementsEntity.setOutTimeRaw(req.getOutTimeRaw());    
 
         movementsEntity.setUpdateDate(new Date());
         movementsRepo.save(movementsEntity);
@@ -597,10 +619,6 @@ public class LMS_Service_impl implements LMS_Service {
         if (req.getNotUsed() != null) {
             leaveEntity.setNotUsed(req.getNotUsed());
         }
-        /*if (req.getAdminComment() != null && !req.getAdminComment().trim().isEmpty()) {
-            lmsMapper.addAdminCommentToEntity(leaveEntity, req.getAdminComment(), req.getAdminId());
-        }*/
-
         if (req.getComponentBehavior() != null)
             leaveEntity.setComponentBehavior(req.getComponentBehavior());
 
@@ -629,6 +647,21 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public AttendanceDTO createAttendance(AttendanceReq req) {
         AttendanceEntity attendanceEntity = lmsUtils.toAttendanceEntity(req);
+        if(attendanceEntity == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+
+        EmployeeEntity employee_ = attendanceEntity.getEmployee();
+        if(employee_ == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+
+        if (attendanceRepo.existsByEmployeeAndDate(employee_, helper.removeTimeFromDate(req.getDate()))) {
+            return null;
+        }
+
+        if (attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(employee_, helper.removeTimeFromDate(req.getArrivalDate()), req.getArrivalTime())) {
+            return null;
+        } 
+        if(!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend()) return null;
+       
+        
         AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
         EmployeeEntity employee = saved.getEmployee();
         if (saved.getPayStatus() != null) {
@@ -637,7 +670,7 @@ public class LMS_Service_impl implements LMS_Service {
                         req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
             }
         }
-        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, false);
+        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, true);
         return lmsUtils.toAttendanceDTO(saved);
     }
 
@@ -666,8 +699,8 @@ public class LMS_Service_impl implements LMS_Service {
                 }
             }
 
-            if (!originalIsUnSuccessful && saved.getIsUnSuccessful()) {
-                helper.handleLateAndUnsuccessful(employee.getEmployeeId(), saved, false);
+            if ((originalIsUnSuccessful == null || !originalIsUnSuccessful) && saved.getIsUnSuccessful()) {
+                helper.handleLateAndUnsuccessful(employee.getEmployeeId(), saved, true);
             }
 
             return lmsUtils.toAttendanceDTO(saved);

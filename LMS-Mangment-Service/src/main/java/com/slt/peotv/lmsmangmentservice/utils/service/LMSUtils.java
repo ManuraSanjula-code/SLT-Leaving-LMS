@@ -118,8 +118,13 @@ public class LMSUtils {
         dto.setUserId(entity.getEmployee() != null ? entity.getEmployee().getSltId() : null);
         dto.setDate(entity.getDate());
         dto.setArrivalDate(entity.getArrivalDate());
+
         dto.setArrivalTime(entity.getArrivalTime());
         dto.setLeftTime(entity.getLeftTime());
+
+        dto.setArrivalTimeRaw(entity.getArrivalTimeRaw());
+        dto.setLeftTimeRaw(entity.getLeftTimeRaw());
+
         dto.setTerminalId(entity.getTerminalId());
 
         dto.setAttendanceType(entity.getAttendanceType());
@@ -197,8 +202,9 @@ public class LMSUtils {
         dto.setId(entity.getId());
         dto.setPublicId(entity.getPublicId());
         dto.setUserId(entity.getEmployee() != null ? entity.getEmployee().getPublicId() : null);
-        dto.setInTime(entity.getInTime());
-        dto.setOutTime(entity.getOutTime());
+        dto.setInTime(entity.getInTimeRaw());
+        dto.setOutTime(entity.getOutTimeRaw());
+        dto.setHappenDateRaw(entity.getHappenDateRaw());
         dto.setComment(entity.getComment());
         dto.setLogTime(entity.getLogTime());
         dto.setCategory(entity.getCategory());
@@ -316,10 +322,10 @@ public class LMSUtils {
         return dto;
     }
     public AttendanceEntity toAttendanceEntity(AttendanceReq req) {
-        if (req == null) return null;
+        if (req == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
         Optional<EmployeeEntity> employee = helper.getEmployeeByIdV2(req.getEmployeeID());
-        if (employee.isEmpty()) return null;
+        if (employee.isEmpty()) throw new IllegalArgumentException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         EmployeeEntity employeeEntity = employee.get();
 
@@ -333,19 +339,19 @@ public class LMSUtils {
         entity.setPublicId(utils.generateId(10));
         entity.setEtlRunTime(new Date());
         entity.setDate(helper.removeTimeFromDate(req.getDate()));
-        
-        entity.setArrivalDate(req.getArrivalDate() != null ? 
-            helper.removeTimeFromDate(req.getArrivalDate()) : null);
-        
+
+        entity.setArrivalDate(req.getArrivalDate() != null ?
+                helper.removeTimeFromDate(req.getArrivalDate()) : null);
+
         entity.setArrivalTime(req.getArrivalTime());
         entity.setLeftTime(req.getLeftTime());
         entity.setIssueDescription(req.getIssueDescription());
         entity.setDueDateForUA(req.getDueDateForUA());
-        
+
         if (req.getTerminalID() != null) {
             entity.setTerminalId(req.getTerminalID());
         }
-        
+
         entity.setUpdatedDate(new Date());
 
         if (Boolean.TRUE.equals(req.getIsFullDay())) {
@@ -388,9 +394,13 @@ public class LMSUtils {
 
         entity.setEmployee(employee);
 
-        if (req.getArrivalDate() != null) entity.setArrivalDate(req.getArrivalDate());
+        /* if (req.getArrivalDate() != null) entity.setArrivalDate(req.getArrivalDate()); */
         if (req.getArrivalTime() != null) entity.setArrivalTime(req.getArrivalTime());
         if (req.getLeftTime() != null) entity.setLeftTime(req.getLeftTime());
+
+        if (req.getArrivalTimeRaw() != null) entity.setArrivalTimeRaw(req.getArrivalTimeRaw());
+        if (req.getLeftTimeRaw() != null) entity.setLeftTimeRaw(req.getLeftTimeRaw());
+
         if (req.getIssueDescription() != null) entity.setIssueDescription(req.getIssueDescription());
         if (req.getDueDateForUA() != null) entity.setDueDateForUA(req.getDueDateForUA());
 
@@ -401,13 +411,14 @@ public class LMSUtils {
         } else if (Boolean.TRUE.equals(req.getIsAbsent())) {
             entity.setAttendanceType(AttendanceType.ABSENT);
         }
-        
+
         if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
         else entity.setLeaveStatus(null);
 
         if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
         if(req.getPayStatus() != null) entity.setPayStatus(req.getPayStatus());
         if(req.getResolve() != null) entity.setResolve(req.getResolve());
+        else entity.setResolve(null);
         if(req.getAttendanceType() != null) entity.setAttendanceType(req.getAttendanceType());
 
 

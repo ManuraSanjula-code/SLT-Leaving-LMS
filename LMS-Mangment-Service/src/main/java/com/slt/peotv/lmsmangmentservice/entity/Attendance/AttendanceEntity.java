@@ -40,6 +40,9 @@ public class AttendanceEntity {
 
     private Time leftTime;
 
+    private String arrivalTimeRaw;
+    private String leftTimeRaw;
+
     @Column(name = "terminal_id", nullable = false)
     @Builder.Default
     private String terminalId = "NONE";

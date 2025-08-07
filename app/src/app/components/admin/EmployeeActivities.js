@@ -224,13 +224,13 @@ const ActivityDetailsDialog = React.memo(({
                                     <ListItem>
                                         <ListItemText
                                             primary="Arrival Time"
-                                            secondary={formatTime(activity.arrivalTime)}
+                                            secondary={formatTime(activity.arrivalTime || activity.inTimeRaw)}
                                         />
                                     </ListItem>
                                     <ListItem>
                                         <ListItemText
                                             primary="Left Time"
-                                            secondary={formatTime(activity.leftTime)}
+                                            secondary={formatTime(activity.leftTime || activity.leftTimeRaw)}
                                         />
                                     </ListItem>
                                     <ListItem>
@@ -602,7 +602,7 @@ const EmployeeActivities = () => {
                     In-Outs
                 </MenuItem>
                 <MenuItem onClick={() => handleMenuItemClick('/no-pay-leaves')}>
-                   No-Pay
+                    No-Pay
                 </MenuItem>
             </Menu>
 
@@ -681,6 +681,7 @@ const EmployeeActivities = () => {
                             <TableCell><strong>Attendance</strong></TableCell>
                             <TableCell><strong>Status</strong></TableCell>
                             <TableCell><strong>Roster Type</strong></TableCell>
+                            <TableCell><strong>Resolve Type</strong></TableCell>
                             <TableCell align="center"><strong>Actions</strong></TableCell>
                         </TableRow>
                     </TableHead>
@@ -706,7 +707,7 @@ const EmployeeActivities = () => {
                                         fontFamily: 'monospace',
                                         color: activity.arrivalTime ? 'text.primary' : 'text.secondary'
                                     }}>
-                                        {activity.arrivalTime || 'Not Recorded'}
+                                        {activity.arrivalTime || activity.inTimeRaw ||'Not Recorded'}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>
@@ -714,7 +715,7 @@ const EmployeeActivities = () => {
                                         fontFamily: 'monospace',
                                         color: activity.leftTime ? 'text.primary' : 'text.secondary'
                                     }}>
-                                        {activity.leftTime || 'Not Recorded'}
+                                        {activity.leftTime || activity.leftTimeRaw ||'Not Recorded'}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>
@@ -750,6 +751,13 @@ const EmployeeActivities = () => {
                                         fontFamily: 'monospace',
                                     }}>
                                         {activity.rosterType || 'Not Recorded'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" sx={{
+                                        fontFamily: 'monospace',
+                                    }}>
+                                        {activity.resolve || 'Not Recorded'}
                                     </Typography>
                                 </TableCell>
                                 <TableCell align="center">

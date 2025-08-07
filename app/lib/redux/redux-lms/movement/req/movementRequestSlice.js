@@ -54,7 +54,7 @@ export const submitMovementRequest = createAsyncThunk(
         if (submissionData.inTime >= submissionData.outTime) {
             return rejectWithValue('Out time must be after in time');
         }
-
+        const date = new Date(submissionData.happenDate).toISOString()
         const requestData = {
             employeeId: submissionData.employeeId?.trim(),
             userId: userId,
@@ -66,7 +66,10 @@ export const submitMovementRequest = createAsyncThunk(
             logTime: new Date(submissionData.logTime).toISOString(),
             inTime: submissionData.inTime,
             outTime: submissionData.outTime,
-            requestStatus: 'DRAFT'
+            requestStatus: 'DRAFT',
+            inTimeRaw: submissionData.inTimeRaw,
+            outTimeRaw: submissionData.outTimeRaw,
+            happenDateRaw: date
         };
 
         try {

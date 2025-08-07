@@ -108,8 +108,8 @@ public class BulkApprovalProcessor {
             LeaveEntity leave = leaveRepo.findByPublicId(leaveId)
                     .orElseThrow(() -> new BulkApprovalException("Leave not found: " + leaveId));
 
-                /*validateEmployeeMatch(leave.getEmployee().getEmployeeId(), employeeId, "Leave", leaveId);*/            
-                approvedLeaveInternal(leave, approverId);
+            /*validateEmployeeMatch(leave.getEmployee().getEmployeeId(), employeeId, "Leave", leaveId);*/
+            approvedLeaveInternal(leave, approverId);
 
             logger.debug("Processed leave approval for ID: {}, Employee: {}", leaveId, employeeId);
         } catch (Exception e) {
@@ -456,22 +456,55 @@ public class BulkApprovalProcessor {
         attendance.setIsResolved(true);
         attendance.setDueDateForUA(null);
         attendance.setHasIssues(false);
+        attendance.setIsUnauthorized(false);
         attendance.setResolve(ResolveType.VIA_MOVEMENT);
         attendance.setAttendanceType(AttendanceType.FULL_DAY);
 
         switch (movement.getMovementType()) {
             case HOME_TO_OFFICE:
-                attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
+                if (movement.getInTime() != null) {
+                    attendance.setArrivalTime(movement.getInTime());
+                }
+                if(attendance.getArrivalTime().equals(attendance.getLeftTime())){
+                    attendance.setArrivalTime(null);
+                    logger.warn("Two time are equal Arrival time: {} Movement In time {}", attendance.getArrivalTime(), movement.getInTime());
+
+                }
                 break;
             case OFFICE_TO_HOME:
-                attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                if (movement.getOutTime() != null) {
+                    attendance.setLeftTime((movement.getOutTime()));
+                }
+                if(attendance.getLeftTime().equals(attendance.getArrivalTime())){
+                    attendance.setLeftTime(null);
+                    logger.warn("Two time are equal Left time: {} Movement Out time {}", attendance.getLeftTime(), movement.getOutTime());
+                }
+                break;
+            case FULLDAY, REMOTEWORK:
+                if (movement.getInTime() != null) {
+                    attendance.setArrivalTime(movement.getInTime());
+                }
+                if (movement.getOutTime() != null) {
+                    attendance.setLeftTime(movement.getOutTime());
+                }
+                if (Objects.equals(attendance.getArrivalTime(), attendance.getLeftTime())) {
+                    logger.warn("Both times are equal - Arrival time and Left time: {} : {}",
+                            attendance.getArrivalTime(), attendance.getLeftTime());
+                    attendance.setArrivalTime(null);
+                    attendance.setLeftTime(null);
+                }
                 break;
             default:
-                attendance.setArrivalTime(helper.parseToSqlTime(movement.getInTime()));
-                attendance.setLeftTime(helper.parseToSqlTime(movement.getOutTime()));
+                logger.warn("Unknown movement type: {}", movement.getMovementType());
         }
 
-        attendance.setIsUnauthorized(false);
+        if(attendance.getLeaveStatus() != null && attendance.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) {
+            attendance.setLeaveStatus(null);
+        }
+
+        attendance.setArrivalTimeRaw(movement.getInTimeRaw());
+        attendance.setLeftTimeRaw(movement.getOutTimeRaw());
+
         attendanceRepo.save(attendance);
         movementsRepo.save(movement);
         logger.info("Movement {} fully approved", movement.getPublicId());

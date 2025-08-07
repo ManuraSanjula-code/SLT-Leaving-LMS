@@ -6,6 +6,7 @@ const initialState = {
     error: null,
     page: 0,
     rowsPerPage: 5,
+    totalElements: 0,
     formData: {
         date: new Date().toISOString().split('T')[0],
         employeeId: '',
@@ -28,6 +29,8 @@ const initialState = {
         issueDescription: '',
         dueDateForUA: '',
         terminalId: '',
+        arrivalTimeRaw: '',
+        leftTimeRaw: '',
     },
     isEditMode: false,
     editId: null,
@@ -45,28 +48,30 @@ const initialState = {
 
 export const fetchEmployeeActivities = createAsyncThunk(
     'employeeActivities/fetch',
-    async ({userId, isAdmin, page, rowsPerPage}, { rejectWithValue }) => {
+    async ({ userId, isAdmin, page, rowsPerPage }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
-
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-
-            const response = await fetch(`http://192.168.3.20:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`, {
-                credentials: 'include',
-            });
-
+            if (!empId) throw new Error('Employee ID not found');
+            
+            const response = await fetch(
+                `http://192.168.3.20:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`,
+                { credentials: 'include' }
+            );
+            
             if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error("User not found. Please check your credentials.");
-                }
-                throw new Error(`Error fetching data: ${response.statusText}`);
+                const error = await response.text();
+                throw new Error(error || 'Failed to fetch');
             }
-
+            
             const data = await response.json();
-            return data.content || [];
+            return {
+                content: data.content || [],
+                totalElements: data.totalElements || 0,
+                number: data.number || page,
+                size: data.size || rowsPerPage
+            };
         } catch (err) {
+            console.error('Fetch error:', err);
             return rejectWithValue(err.message);
         }
     }
@@ -189,8 +194,6 @@ export const deleteEmployeeDeActivity = createAsyncThunk(
 
 const prepareFormData = (formData) => {
     const submissionData = { ...formData };
-
-    // Handle time formatting
     if (submissionData.arrivalTime) {
         if (!submissionData.arrivalTime.includes(':')) {
             submissionData.arrivalTime = submissionData.arrivalTime + ":00:00";
@@ -211,7 +214,9 @@ const prepareFormData = (formData) => {
         submissionData.leftTime = "00:00:00";
     }
 
-    // Handle date formatting
+    submissionData.arrivalTimeRaw = submissionData.arrivalTime
+    submissionData.leftTimeRaw = submissionData.leftTime
+
     if (submissionData.date) {
         submissionData.date = new Date(submissionData.date).toISOString();
     } else {
@@ -234,7 +239,6 @@ const prepareFormData = (formData) => {
         submissionData.dueDateForUA = null;
     }
 
-    // Convert null values to proper enum values or null
     if (!submissionData.leaveStatus || submissionData.leaveStatus === '') {
         submissionData.leaveStatus = null;
     }
@@ -326,7 +330,10 @@ const employeeActivitiesSlice = createSlice({
             })
             .addCase(fetchEmployeeActivities.fulfilled, (state, action) => {
                 state.loading = false;
-                state.activities = action.payload.sort((a, b) => new Date(b.date) - new Date(a.date));
+                state.activities = action.payload.content;
+                state.totalElements = action.payload.totalElements;
+                state.page = action.payload.number;
+                state.rowsPerPage = action.payload.size;
             })
             .addCase(fetchEmployeeActivities.rejected, (state, action) => {
                 state.loading = false;

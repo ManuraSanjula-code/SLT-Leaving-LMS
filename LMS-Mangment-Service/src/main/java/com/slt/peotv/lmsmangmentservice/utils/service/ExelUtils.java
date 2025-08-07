@@ -396,8 +396,8 @@ public class ExelUtils {
 
                 createCell(row, colNum++, movement.getId() != null ? movement.getId().toString() : "");
                 createCell(row, colNum++, movement.getPublicId() != null ? movement.getPublicId() : "");
-                createCell(row, colNum++, movement.getInTime() != null ? movement.getInTime() : "");
-                createCell(row, colNum++, movement.getOutTime() != null ? movement.getOutTime() : "");
+                createCell(row, colNum++, movement.getInTimeRaw() != null ? movement.getInTimeRaw() : "");
+                createCell(row, colNum++, movement.getOutTimeRaw() != null ? movement.getOutTimeRaw() : "");
                 createCell(row, colNum++, movement.getComment() != null ? movement.getComment() : "");
                 createCell(row, colNum++, movement.getLogTime() != null ? dateTimeFormat.format(movement.getLogTime()) : "");
                 createCell(row, colNum++, movement.getCategory() != null ? movement.getCategory() : "");

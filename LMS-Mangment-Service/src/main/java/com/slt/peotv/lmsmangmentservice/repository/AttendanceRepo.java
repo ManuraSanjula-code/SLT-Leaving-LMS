@@ -34,6 +34,8 @@ public interface AttendanceRepo extends CrudRepository<AttendanceEntity, Long> {
 
     @Query("SELECT a FROM AttendanceEntity a WHERE a.employee = :employee AND a.date = :date AND a.isActive = true")
     Optional<AttendanceEntity> findByEmployeeAndDateAndIsActiveTrue(EmployeeEntity employee, Date date);
+    Optional<AttendanceEntity> findByEmployeeAndArrivalDateAndIsActiveTrue(EmployeeEntity employee, Date arrivalDate);
+
     Optional<AttendanceEntity> findByEmployeeAndArrivalDate(EmployeeEntity employee, Date arrivalDate);
     Page<AttendanceEntity> findByIsUnSuccessfulTrue(Pageable pageable);
     Page<AttendanceEntity> findByIsUnauthorizedTrue(Pageable pageable);
