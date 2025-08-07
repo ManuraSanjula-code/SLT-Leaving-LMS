@@ -188,7 +188,7 @@ public class Helper {
         attendanceEntity.setAttendanceType(AttendanceType.HALF_DAY);
         attendanceEntity.setLeaveStatus(null);
         attendanceEntity.setIsUnauthorized(true);
-        attendanceEntity.setIssueDescription("GOING HALF DAY BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
+        attendanceEntity.setIssueDescription("GOING HALF DAY AND SET AS UNAUTHORIZED BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
         attendanceEntity.setDueDateForUA(getDueDate());
         attendanceRepo.save(attendanceEntity);
     }

@@ -1117,7 +1117,7 @@ public class Check_Service_Impl implements Check_Service {
                 int morningGapMinutes = calculateMorningGapMinutes(morningPunch);
                 boolean isGapCovered = doesEveningPunchCoverGap(eveningPunch, morningGapMinutes);
 
-                reportAttendance(morningPunch, eveningPunch, false, false, false, isGapCovered, true, isGapCovered, false, false, false,
+                reportAttendance(morningPunch, eveningPunch, true, false, false, isGapCovered, true, isGapCovered, false, false, false,
                         false, true, false, false, yesterdayDate);
 
             });
