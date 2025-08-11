@@ -21,7 +21,7 @@ public class ProfilesEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
 
-    @Column(name = "Name", length = 45, nullable = false)
+    @Column(name = "Name", length = 45, nullable = false, unique = true)
     private String name;
 
     @Column(nullable = false)

@@ -125,7 +125,7 @@ public class AttendanceService {
         Date processDate = helper.getYesterdayDate();
         List<Attendance> attendancesToSave = new CopyOnWriteArrayList<>();
 
-        duty.getDailyDuties().forEach(dailyDuty -> {
+        mainDuty.getDailyDuties().forEach(dailyDuty -> {
     
             if (!dailyDuty.getDayOfWeek().equals(today.getDayOfWeek())) {
                 return;

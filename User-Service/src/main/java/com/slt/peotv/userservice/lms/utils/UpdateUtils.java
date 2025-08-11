@@ -24,10 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 @Service
@@ -137,10 +134,9 @@ public class UpdateUtils {
 
     @Transactional
     public synchronized void handleAdminUpdates(UserEntity currentUser, UserReq userReq) throws UserServiceException {
-        // Check if both lists are null/empty
         if ((userReq.getAddedAdmins() == null || userReq.getAddedAdmins().isEmpty()) &&
                 (userReq.getDeletedAdmins() == null || userReq.getDeletedAdmins().isEmpty())) {
-            return;
+            currentUser.setMyAdmins(Collections.emptyList());
         }
 
         currentUser = userRepository.findByUserId(currentUser.getUserId());
@@ -149,7 +145,7 @@ public class UpdateUtils {
             for (String adminUserId : userReq.getAddedAdmins()) {
                 UserEntity adminUser = userRepository.findByUserId(adminUserId);
                 if (adminUser == null) {
-                    throw new UserServiceException("Admin user with ID " + adminUserId + " not found");
+                    return;
                 }
 
                 boolean adminAlreadyAssigned = false;

@@ -451,13 +451,26 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
     const [anchorEl, setAnchorEl] = React.useState(false);
 
     useEffect(() => {
+        const filters = {
+            searchTerm,
+            filterType,
+            filterStatus,
+            filterActive,
+            startDateFilter,
+            endDateFilter
+        };
+
         dispatch(fetchEmployeeActivities({
             userId,
             isAdmin,
             page,
             rowsPerPage,
+            filters
         }));
-    }, [dispatch, userId, isAdmin, page, rowsPerPage]);
+    }, [
+        dispatch, userId, isAdmin, page, rowsPerPage,
+        searchTerm, filterType, filterStatus, filterActive, startDateFilter, endDateFilter
+    ]);
 
 
     const handleChange = (e) => {
@@ -614,37 +627,52 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
         return matchesSearch && matchesType && matchesStatus && matchesActive && matchesStartDate && matchesEndDate;
     });
 
-    const paginatedActivities = filteredActivities.length > 0
-        ? filteredActivities.slice(
-            page * rowsPerPage,
-            page * rowsPerPage + rowsPerPage
-        )
-        : [];
+    /*   const paginatedActivities = filteredActivities.length > 0
+          ? filteredActivities.slice(
+              page * rowsPerPage,
+              page * rowsPerPage + rowsPerPage
+          )
+          : [];
+   */
+
+    const paginatedActivities = activities;
 
     const handleResolveViaMovement = (activity) => {
-        const happenDate = activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd') : activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd') : '';
-        const logTime = activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : activity.date ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : '';
+        const happenDate = activity.arrivalDate
+            ? format(new Date(activity.arrivalDate), 'yyyy-MM-dd')
+            : '';
+        const logTime = activity.arrivalDate
+            ? format(new Date(activity.arrivalDate), "yyyy-MM-dd'T'HH:mm")
+            : '';
+
+        const inTime = activity.arrivalTime || activity.arrivalTimeRaw || '';
+        const outTime = activity.leftTime || activity.leftTimeRaw || '';
+
+        const isTimeEmpty = (time) => !time || time === '00:00' || time === '00:00:00';
+
+        let movementType = MovementType.FULLDAY;
+
+        const inTimeEmpty = isTimeEmpty(inTime);
+        const outTimeEmpty = isTimeEmpty(outTime);
+
+        if (inTimeEmpty && !outTimeEmpty) {
+            movementType = MovementType.HOME_TO_OFFICE;
+        } else if (!inTimeEmpty && outTimeEmpty) {
+            movementType = MovementType.OFFICE_TO_HOME;
+        }
 
         const params = new URLSearchParams();
         params.set('employeeId', activity.employeeId || '');
         params.set('userId', activity.userId || '');
         params.set('happenDate', happenDate);
         params.set('logTime', logTime);
-        params.set('inTime', activity.arrivalTime || '');
-        params.set('outTime', activity.leftTime || '');
+        params.set('inTime', inTime);
+        params.set('outTime', outTime);
         params.set('terminalId', activity.terminalId || '');
         params.set('comment', activity.issueDescription || '');
         params.set('isLate', activity.isLate ? 'true' : 'false');
         params.set('isUnauthorized', activity.isUnauthorized ? 'true' : 'false');
         params.set('hasIssues', activity.hasIssues ? 'true' : 'false');
-
-        let movementType = MovementType.FULLDAY;
-        if (activity.isUnauthorized && (activity.arrivalTime == null || activity.arrivalTime === '00:00')) {
-            movementType = MovementType.HOME_TO_OFFICE;
-        } else if (activity.isUnauthorized && (activity.leftTime == null || activity.leftTime === '00:00')) {
-            movementType = MovementType.OFFICE_TO_HOME;
-        }
-
         params.set('movementType', movementType);
 
         router.push(`/request-movement?${params.toString()}`);
@@ -1373,7 +1401,7 @@ const SingleEmployeeActivities = ({ isAdmin = false, userId = null }) => {
                                             <TableFooter>
                                                 <TableRow>
                                                     <TablePagination
-                                                        rowsPerPageOptions={[5, 10, 25]}
+                                                        rowsPerPageOptions={[5, 10, 25, 50]}
                                                         count={totalElements}
                                                         rowsPerPage={rowsPerPage}
                                                         page={page}

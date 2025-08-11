@@ -33,7 +33,6 @@ public class ImplUtils {
         if (roleEntity.getPublicId() == null) {
             roleEntity.setPublicId(idUtils.generateId(10));
         }
-        // Remove deleted authorities
         if (!req.getDeletedAuthorities().isEmpty()) {
             req.getDeletedAuthorities().forEach(authority -> {
                 Optional<AuthorityEntity> auth = authorityRepo.findById(Long.parseLong(authority));
@@ -46,7 +45,6 @@ public class ImplUtils {
             });
         }
 
-        // Remove deleted users
         if (!req.getDeletedUsers().isEmpty()) {
             req.getDeletedUsers().forEach(userId -> {
                 boolean removed = roleEntity.getUsers().removeIf(user -> user.getUserId().equals(userId));
@@ -54,26 +52,24 @@ public class ImplUtils {
                     UserEntity userEntity = userRepository.findByUserId(userId);
                     if (userEntity != null) {
                         userEntity.getRoles().removeIf(role -> role.equals(roleEntity));
-                        userRepository.save(userEntity); // Update the user entity
+                        userRepository.save(userEntity);
                         roleRepository.save(roleEntity);
                     }
                 }
             });
         }
 
-        // Add new users
         if (!req.getAddedUsers().isEmpty()) {
             req.getAddedUsers().forEach(userId -> {
                 UserEntity userEntity = userRepository.findByUserId(userId);
                 if (userEntity != null && !roleEntity.getUsers().contains(userEntity)) {
                     roleEntity.getUsers().add(userEntity);
                     userEntity.getRoles().add(roleEntity);
-                    userRepository.save(userEntity); // Update the user entity
+                    userRepository.save(userEntity);
                 }
             });
         }
 
-        // Add new authorities
         if (!roleEntity.getAuthorities().isEmpty()) {
             req.getAddedAuthorities().forEach(authority -> {
                 Optional<AuthorityEntity> authorityEntity = authorityRepo.findById(Long.parseLong(authority));
@@ -88,43 +84,40 @@ public class ImplUtils {
             });
         }
 
-        // Update role name if provided
         if (req.getName() != null && !req.getName().isEmpty()) {
             roleEntity.setName(req.getName());
         }
         if (req.getPriority() != null) {
             roleEntity.setPriority(req.getPriority());
         }
-        return roleRepository.save(roleEntity); // Save the updated role entity
+        return roleRepository.save(roleEntity);
     }
 
     public RoleEntity saveRole_(RoleReq req) {
-        // Create a new RoleEntity (local variable, no shared state)
         RoleEntity roleEntity = new RoleEntity();
         roleEntity.setPublicId(idUtils.generateId(10));
         roleEntity.setOt(req.getOt());
-        // Use thread-safe collections for users and authorities
+
         List<UserEntity> userEntities = Collections.synchronizedList(new ArrayList<>());
         List<AuthorityEntity> authorityEntities = Collections.synchronizedList(new ArrayList<>());
 
-        // Safely process added users
         if (req.getAddedUsers() != null && !req.getAddedUsers().isEmpty()) {
             req.getAddedUsers().forEach(userId -> {
-                // Synchronize access to userRepository if it's not thread-safe
                 synchronized (userRepository) {
                     UserEntity user = userRepository.findByUserId(userId);
                     if (user != null) {
                         userEntities.add(user);
+                        if (user.getRoles() == null) {
+                            user.setRoles(new ArrayList<>());
+                        }
+                        user.getRoles().add(roleEntity);
                     }
                 }
             });
         }
 
-        // Safely process added authorities
         if (req.getAddedAuthorities() != null && !req.getAddedAuthorities().isEmpty()) {
             req.getAddedAuthorities().forEach(authority -> {
-
-                // Synchronize access to authorityRepo if it's not thread-safe
                 synchronized (authorityRepo) {
                     Optional<AuthorityEntity> authorityEntity = authorityRepo.findById(Long.parseLong(authority));
                     authorityEntity.ifPresent(authorityEntities::add);
@@ -132,14 +125,12 @@ public class ImplUtils {
             });
         }
 
-        // Set the role name (ensure null safety)
         if (req.getName() != null && !req.getName().isEmpty()) {
             roleEntity.setName(req.getName());
         }
         if (req.getPriority() != null) {
             roleEntity.setPriority(req.getPriority());
         }
-        // Set users and authorities (use immutable collections to prevent further modifications)
         roleEntity.setUsers(Collections.unmodifiableList(userEntities));
         roleEntity.setAuthorities(Collections.unmodifiableList(authorityEntities));
 

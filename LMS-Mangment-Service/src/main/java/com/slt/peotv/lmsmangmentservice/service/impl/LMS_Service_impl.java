@@ -659,8 +659,8 @@ public class LMS_Service_impl implements LMS_Service {
         if (attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(employee_, helper.removeTimeFromDate(req.getArrivalDate()), req.getArrivalTime())) {
             return null;
         } 
-        if(!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend()) return null;
-       
+        if(!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend())
+            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());       
         
         AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
         EmployeeEntity employee = saved.getEmployee();

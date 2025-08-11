@@ -251,6 +251,11 @@ public class LMSController {
         return checkService.getAllAccessLogsToday(date);
     }
 
+    @GetMapping("/access-log")
+    public List<AccessLogRest> getAllAccessLogsToday(@RequestParam String date) {
+        return checkService.getAllAccessLogsToday(date);
+    }
+
     @PostMapping("/{empId}")
     @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public AttendanceDTO createAttendance(@RequestBody AttendanceReq req, @PathVariable String empId) {

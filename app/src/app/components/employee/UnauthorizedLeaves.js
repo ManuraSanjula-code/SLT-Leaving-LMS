@@ -96,31 +96,43 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
   };
 
   const handleResolveLeave = (leave) => {
-    const happenDate = leave.date ? format(new Date(leave.arrivalDate), 'yyyy-MM-dd') : leave.date ? format(new Date(leave.arrivalDate), 'yyyy-MM-dd') : '';
-    const logTime = leave.date ? format(new Date(leave.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : leave.date ? format(new Date(leave.arrivalDate), 'yyyy-MM-dd\'T\'HH:mm') : '';
+    const happenDate = leave.arrivalDate
+      ? format(new Date(leave.arrivalDate), 'yyyy-MM-dd')
+      : '';
+    const logTime = leave.arrivalDate
+      ? format(new Date(leave.arrivalDate), "yyyy-MM-dd'T'HH:mm")
+      : '';
+
+    const isTimeEmpty = (time) => !time || time === '00:00' || time === '00:00:00';
+
+    const inTimeEmpty = isTimeEmpty(leave.arrivalTime);
+    const outTimeEmpty = isTimeEmpty(leave.leftTime);
 
     let movementType = MovementType.FULLDAY;
-    if ((!leave.arrivalTime && leave.leftTime )|| (leave.arrivalTime === '00:00')) {
+
+    if (inTimeEmpty && !outTimeEmpty) {
       movementType = MovementType.HOME_TO_OFFICE;
-    } else if ((leave.arrivalTime && !leave.leftTime) || (leave.leftTime === '00:00')) {
+    } else if (!inTimeEmpty && outTimeEmpty) {
       movementType = MovementType.OFFICE_TO_HOME;
     }
 
-    const queryParams = new URLSearchParams({
-      employeeId: leave.employeeId || '',
-      movementType: movementType,
-      happenDate: happenDate,
-      inTime: leave.arrivalTime || '',
-      outTime: leave.leftTime || '',
-      comment: leave.issueDescription || '',
-      logTime: leave.date ? format(new Date(leave.date), 'yyyy-MM-dd\'T\'HH:mm') : ''
-    });
+    const queryParams = new URLSearchParams();
+
+    queryParams.set('employeeId', leave.employeeId || '');
+    queryParams.set('userId', leave.userId || '');
+    queryParams.set('happenDate', happenDate);
+    queryParams.set('logTime', logTime);
+    queryParams.set('inTime', leave.arrivalTime || '');
+    queryParams.set('outTime', leave.leftTime || '');
+    queryParams.set('movementType', movementType);
+    queryParams.set('comment', leave.issueDescription || '');
 
     if (leave.terminalId) {
-      const currentComment = leave.issueDescription || '';
+      const currentComment = queryParams.get('comment');
       queryParams.set('comment', `${currentComment}\nTerminal ID: ${leave.terminalId}`);
     }
 
+    // Add issue context
     const issueContext = [];
     if (leave.isLate) {
       issueContext.push('Late arrival');
@@ -142,9 +154,6 @@ const UnauthorizedLeaves = ({ isAdmin = false }) => {
 
     if (leave.publicId) {
       queryParams.set('publicId', leave.publicId);
-    }
-    if (leave.userId) {
-      queryParams.set('userId', leave.userId);
     }
     if (leave.id) {
       queryParams.set('leaveId', leave.id.toString());

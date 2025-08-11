@@ -48,21 +48,42 @@ const initialState = {
 
 export const fetchEmployeeActivities = createAsyncThunk(
     'employeeActivities/fetch',
-    async ({ userId, isAdmin, page, rowsPerPage }, { rejectWithValue }) => {
+    async ({ userId, isAdmin, page, rowsPerPage, filters }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) throw new Error('Employee ID not found');
-            
+
+            const {
+                searchTerm,
+                filterType,
+                filterStatus,
+                filterActive,
+                startDateFilter,
+                endDateFilter
+            } = filters;
+
+            const params = new URLSearchParams();
+            params.set('page', page);
+            params.set('size', rowsPerPage);
+
+            if (searchTerm) params.set('search', searchTerm);
+            if (filterType && filterType !== 'all') params.set('type', filterType);
+            if (filterStatus && filterStatus !== 'all') params.set('status', filterStatus);
+            if (filterActive === 'active') params.set('active', 'true');
+            if (filterActive === 'inactive') params.set('active', 'false');
+            if (startDateFilter) params.set('startDate', startDateFilter);
+            if (endDateFilter) params.set('endDate', endDateFilter);
+
             const response = await fetch(
-                `http://192.168.3.20:8080/lms/${userId}/${empId}?page=${page}&size=${rowsPerPage}`,
+                `http://192.168.3.20:8080/lms/${userId}/${empId}?${params.toString()}`,
                 { credentials: 'include' }
             );
-            
+
             if (!response.ok) {
                 const error = await response.text();
                 throw new Error(error || 'Failed to fetch');
             }
-            
+
             const data = await response.json();
             return {
                 content: data.content || [],

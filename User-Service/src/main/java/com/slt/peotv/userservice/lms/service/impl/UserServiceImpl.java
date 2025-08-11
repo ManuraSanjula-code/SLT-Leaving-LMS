@@ -616,7 +616,6 @@ public class UserServiceImpl implements UserService {
     public boolean verifyEmailToken(String token) {
         boolean returnValue = false;
 
-        // Find user by token
         UserEntity userEntity = userRepository.findUserByEmailVerificationToken(token);
 
         if (userEntity != null) {
@@ -667,20 +666,16 @@ public class UserServiceImpl implements UserService {
             return returnValue;
         }
 
-        // Prepare new password
         String encodedPassword = bCryptPasswordEncoder.encode(password);
 
-        // Update User password in database
         UserEntity userEntity = passwordResetTokenEntity.getUserDetails();
         userEntity.setEncryptedPassword(encodedPassword);
         UserEntity savedUserEntity = userRepository.save(userEntity);
 
-        // Verify if password was saved successfully
         if (savedUserEntity != null && savedUserEntity.getEncryptedPassword().equalsIgnoreCase(encodedPassword)) {
             returnValue = true;
         }
 
-        // Remove Password Reset token from database
         passwordResetTokenRepository.delete(passwordResetTokenEntity);
 
         return returnValue;
@@ -904,142 +899,70 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public SectionDTO saveSection(SectionReq req) {
         if (req == null) {
             throw new IllegalArgumentException("Section request cannot be null");
         }
-        if(req.getSection() == null || req.getSection().trim().isEmpty()) {
+        if (req.getSection() == null || req.getSection().trim().isEmpty()) {
             throw new IllegalArgumentException("Section cannot be null or empty");
         }
-        // Use section name as synchronization key
-        final String lockKey = StringUtils.hasText(req.getPublicId())
-                ? req.getPublicId()
-                : req.getSection();
 
-        synchronized (lockKey.intern()) { // String.intern() for global lock
-            Optional<SectionEntity> sectionEntity = findExistingSection(req);
+        SectionEntity sectionEntity = findOrCreateSection(req);
 
-            SectionEntity entityToSave = sectionEntity
-                    .map(existingEntity -> updateExistingSection(req, existingEntity))
-                    .orElseGet(() -> createNewSectionEntity(req));
-
-            return UserMapper.mapToSectionDTO(sectionRepo.save(entityToSave));
+        if (req.getDeletedUsers() != null) {
+            removeUsersFromSection(req.getDeletedUsers(), sectionEntity);
         }
-    }
-
-    private Optional<SectionEntity> findExistingSection(SectionReq req) {
-        if (StringUtils.hasText(req.getPublicId())) {
-            return sectionRepo.findByPublicId(req.getPublicId());
-        }
-        if (StringUtils.hasText(req.getSection())) {
-            return Optional.ofNullable(sectionRepo.findBySection(req.getSection()));
-        }
-        return Optional.empty();
-    }
-
-    private SectionEntity updateExistingSection(SectionReq req, SectionEntity existingEntity) {
-        // Process in atomic operation
-        synchronized (existingEntity) {
-            if (req.getDeletedUsers() != null) {
-                removeDeletedUsers(req, existingEntity);
-            }
-            if (req.getAddedUsers() != null) {
-                addNewUsers(req, existingEntity);
-            }
-            if (StringUtils.hasText(req.getSection())) {
-                existingEntity.setSection(req.getSection());
-            }
-            return existingEntity;
-        }
-    }
-
-    private void removeDeletedUsers(SectionReq req, SectionEntity sectionEntity) {
-        req.getDeletedUsers().forEach(userId -> {
-            UserEntity user = null;
-            synchronized (userRepository) {
-                user = userRepository.findByUserId(userId);
-            }
-
-            if (user != null) {
-                synchronized (user) {
-                    // Remove from section
-                    boolean removed = sectionEntity.getUsers().removeIf(u -> u.getUserId().equals(userId));
-
-                    // Remove from user
-                    if (removed) {
-                        user.getSections().removeIf(s -> s.getPublicId().equals(sectionEntity.getPublicId()));
-                        synchronized (userRepository) {
-                            userRepository.save(user);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private void addNewUsers(SectionReq req, SectionEntity sectionEntity) {
-        Set<String> existingUserIds = sectionEntity.getUsers().stream()
-                .map(UserEntity::getUserId)
-                .collect(Collectors.toSet());
-
-        req.getAddedUsers().forEach(userId -> {
-            if (!existingUserIds.contains(userId)) {
-                UserEntity user = null;
-                synchronized (userRepository) {
-                    user = userRepository.findByUserId(userId);
-                }
-
-                if (user != null) {
-                    synchronized (user) {
-                        // Add to section
-                        sectionEntity.getUsers().add(user);
-
-                        // Add to user
-                        user.getSections().add(sectionEntity);
-                        synchronized (userRepository) {
-                            userRepository.save(user);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private SectionEntity createNewSectionEntity(SectionReq req) {
-        SectionEntity sectionEntity = new SectionEntity();
-        sectionEntity.setPublicId(idUtils.generateId(10));
-        sectionEntity.setSection(req.getSection());
 
         if (req.getAddedUsers() != null) {
-            List<UserEntity> users = new CopyOnWriteArrayList<>();
-            req.getAddedUsers().forEach(userId -> {
-                UserEntity user = null;
-                synchronized (userRepository) {
-                    user = userRepository.findByUserId(userId);
-                }
-
-                if (user != null) {
-                    synchronized (user) {
-                        users.add(user);
-                        user.getSections().add(sectionEntity);
-                        synchronized (userRepository) {
-                            userRepository.save(user);
-                        }
-                    }
-                }
-            });
-            sectionEntity.setUsers(users);
-        } else {
-            sectionEntity.setUsers(Collections.emptyList());
+            addUsersToSection(req.getAddedUsers(), sectionEntity);
         }
 
-        return sectionEntity;
+        SectionEntity savedEntity = sectionRepo.save(sectionEntity);
+        return UserMapper.mapToSectionDTO(savedEntity);
     }
+
+    private SectionEntity findOrCreateSection(SectionReq req) {
+        if (StringUtils.hasText(req.getPublicId())) {
+            return sectionRepo.findByPublicId(req.getPublicId())
+                    .orElseGet(() -> createNewSection(req));
+        } else {
+            return Optional.ofNullable(sectionRepo.findBySection(req.getSection()))
+                    .orElseGet(() -> createNewSection(req));
+        }
+    }
+
+    private SectionEntity createNewSection(SectionReq req) {
+        SectionEntity section = new SectionEntity();
+        section.setPublicId(idUtils.generateId(10));
+        section.setSection(req.getSection());
+        section.setUsers(new ArrayList<>());
+        return section;
+    }
+
+    private void addUsersToSection(List<String> userIds, SectionEntity section) {
+        userIds.forEach(userId -> {
+            UserEntity user = userRepository.findByUserId(userId);
+            if (user != null) {
+                section.addUser(user);
+            }
+        });
+    }
+
+    private void removeUsersFromSection(List<String> userIds, SectionEntity section) {
+        userIds.forEach(userId -> {
+            UserEntity user = userRepository.findByUserId(userId);
+            if (user != null) {
+                section.removeUser(user);
+            }
+        });
+    }
+
+
 
     public ProfilesEntity mapProfileReqToProfilesEntity(ProfileReq profileReq) {
         ProfilesEntity profilesEntity = new ProfilesEntity();
 
-        // Map fields from ProfileReq to ProfilesEntity (excluding addedUsers and deletedUsers)
         profilesEntity.setName(profileReq.getName());
         profilesEntity.setWorkStart(profileReq.getWorkStart());
         profilesEntity.setWorkEnds(profileReq.getWorkEnds());
@@ -1057,7 +980,6 @@ public class UserServiceImpl implements UserService {
         profilesEntity.setFlexiDays(profileReq.getFlexiDays());
         profilesEntity.setFlexiHrsStart(profileReq.getFlexiHrsStart());
 
-        // publicId and users are not mapped here
         return profilesEntity;
     }
 
@@ -1068,7 +990,6 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Profile request cannot be null");
         }
 
-        // Use profile publicId or name as synchronization key
         final String lockKey = StringUtils.hasText(req.getPublicId())
                 ? req.getPublicId()
                 : "NEW_PROFILE_" + System.currentTimeMillis();
@@ -1076,7 +997,6 @@ public class UserServiceImpl implements UserService {
         synchronized (lockKey.intern()) {
             ProfilesEntity profilesEntity = findOrCreateProfileEntity(req);
 
-            // Handle user modifications
             if (req.getDeletedUsers() != null) {
                 removeUsersFromProfile(req.getDeletedUsers(), profilesEntity);
             }
@@ -1085,8 +1005,8 @@ public class UserServiceImpl implements UserService {
                 addUsersToProfile(req.getAddedUsers(), profilesEntity);
             }
 
-            // Save and return
-            return UserMapper.mapToProfilesDTO(profilesRepo.save(profilesEntity));
+            ProfilesEntity savedEntity = profilesRepo.save(profilesEntity);
+            return UserMapper.mapToProfilesDTO(savedEntity);
         }
     }
 
@@ -1097,11 +1017,9 @@ public class UserServiceImpl implements UserService {
                 throw new NoSuchElementException("Profile not found with publicId: " + req.getPublicId());
             }
 
-            // Update profile fields
             if (StringUtils.hasText(req.getName())) {
                 entity.setName(req.getName());
             }
-            // Add other field updates here...
             updateProfileFields(entity, req);
 
             return entity;
@@ -1113,64 +1031,44 @@ public class UserServiceImpl implements UserService {
     }
 
     private void updateProfileFields(ProfilesEntity entity, ProfileReq req) {
-        // Update all profile fields in one place
         if (req.getWorkStart() != null) entity.setWorkStart(req.getWorkStart());
         if (req.getWorkEnds() != null) entity.setWorkEnds(req.getWorkEnds());
-        // Add all other field updates...
     }
 
-    private void addUsersToProfile(List<String> addedUsers, ProfilesEntity profileEntity) {
-        // Get existing user IDs for quick lookup
-        Set<String> existingUserIds = profileEntity.getUsers().stream()
-                .map(UserEntity::getUserId)
-                .collect(Collectors.toSet());
+    private void addUsersToProfile(List<String> userIds, ProfilesEntity profile) {
+        if (userIds == null || profile == null) return;
 
-        addedUsers.forEach(userId -> {
-            if (!existingUserIds.contains(userId)) {
-                UserEntity user = null;
-                synchronized (userRepository) {
-                    user = userRepository.findByUserId(userId);
-                }
-
-                if (user != null) {
-                    synchronized (user) {
-                        // Add to profile
-                        profileEntity.getUsers().add(user);
-
-                        // Add to user's profiles
-                        user.getProfiles().add(profileEntity);
-                        synchronized (userRepository) {
-                            userRepository.save(user);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private void removeUsersFromProfile(List<String> deletedUsers, ProfilesEntity profileEntity) {
-        deletedUsers.forEach(userId -> {
-            UserEntity user = null;
-            synchronized (userRepository) {
-                user = userRepository.findByUserId(userId);
-            }
-
+        userIds.forEach(userId -> {
+            UserEntity user = userRepository.findByUserId(userId);
             if (user != null) {
-                synchronized (user) {
-                    // Remove from profile
-                    boolean removed = profileEntity.getUsers().removeIf(u -> u.getUserId().equals(userId));
+                if (profile.getUsers() == null) {
+                    profile.setUsers(new ArrayList<>());
+                }
+                profile.getUsers().add(user);
 
-                    // Remove from user's profiles
-                    if (removed) {
-                        user.getProfiles().removeIf(p -> p.getPublicId().equals(profileEntity.getPublicId()));
-                        synchronized (userRepository) {
-                            userRepository.save(user);
-                        }
-                    }
+                if (user.getProfiles() == null) {
+                    user.setProfiles(new ArrayList<>());
+                }
+                user.getProfiles().add(profile);
+            }
+        });
+    }
+
+    private void removeUsersFromProfile(List<String> userIds, ProfilesEntity profile) {
+        if (userIds == null || profile == null || profile.getUsers() == null) return;
+
+        userIds.forEach(userId -> {
+            UserEntity user = userRepository.findByUserId(userId);
+            if (user != null) {
+                profile.getUsers().remove(user);
+
+                if (user.getProfiles() != null) {
+                    user.getProfiles().remove(profile);
                 }
             }
         });
     }
+
     @Override
     @Transactional
     public void deleteRole(Long roleId) {
@@ -1212,30 +1110,25 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetails getUserDetailsByUserId(String userId) {
-        // Validate input
         if (userId == null || userId.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
 
-        // Parse userId and loginType
         String[] parts = userId.split(" ");
-        String user_id = parts[0].trim();  // Added trim() to remove any whitespace
+        String user_id = parts[0].trim();
         String loginType = parts.length > 1 ? parts[1].trim() : "DEFAULT";
 
 
         try {
             if ("TEMP".equalsIgnoreCase(loginType)) {
-                // Handle temporary user case
                 TempUser tempUser = tempUserRepo.findTempUserByUserId(user_id);
 
                 if (tempUser == null) {
                     System.out.println("No temporary user found with ID: " + user_id);
                     return null;
-                    /*throw new UsernameNotFoundException("Temporary user not found with ID: " + user_id);*/
                 }
 
 
-                // Create UserEntity from TempUser
                 UserEntity userEntity = new UserEntity();
                 userEntity.setUserId(tempUser.getUserId() + " " + "TEMP");
                 userEntity.setFirstName(tempUser.getFirstName());
@@ -1244,7 +1137,6 @@ public class UserServiceImpl implements UserService {
                 userEntity.setEncryptedPassword(tempUser.getPassword());
                 userEntity.setEmailVerificationStatus(false);
 
-                // Set roles
                 RoleEntity role = UserMapper.mapRoleToRoleEntity(userEntity);
                 userEntity.setRoles(List.of(role));
 
@@ -1266,13 +1158,11 @@ public class UserServiceImpl implements UserService {
                 
             }
             else {
-                // Handle regular user case
                 UserEntity userEntity = userRepository.findByUserId(user_id);
 
                 if (userEntity == null) {
                     System.out.println("No user found with ID: " + user_id);
                     return null;
-                    /*throw new UsernameNotFoundException("User not found with ID: " + user_id);*/
                 }
 
                 return new UserPrincipal(userEntity);
@@ -1280,7 +1170,6 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             System.err.println("Error fetching user details for ID: " + user_id);
             e.printStackTrace();
-            /*throw e;  // Re-throw the exception after logging*/
             return null;
         }
     }
@@ -1289,14 +1178,13 @@ public class UserServiceImpl implements UserService {
     public void rebalancePriorities() {
         List<RoleEntity> roles = roleRepository.findAllByOrderByPriorityAsc();
 
-        int newPriority = 10; // Start from first available in admin band
+        int newPriority = 10;
         for (RoleEntity role : roles) {
-            // Skip system roles (1-9)
             if (role.getPriority() <= 9) continue;
 
             role.setPriority(newPriority);
             roleRepository.save(role);
-            newPriority += 10; // Leave 9 gaps between roles
+            newPriority += 10;
         }
     }
 
@@ -1324,21 +1212,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<String> getAllRoleNames() {
         return StreamSupport.stream(roleRepository.findAll().spliterator(), false)
-                .map(RoleEntity::getName) // Use roleEntity.getName() directly
+                .map(RoleEntity::getName)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<String> getAllSectionNames() {
         return StreamSupport.stream(sectionRepo.findAll().spliterator(), false)
-                .map(SectionEntity::getSection) // Use roleEntity.getName() directly
+                .map(SectionEntity::getSection)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<String> getAllProfileNames() {
         return StreamSupport.stream(profilesRepo.findAll().spliterator(), false)
-                .map(ProfilesEntity::getName) // Use roleEntity.getName() directly
+                .map(ProfilesEntity::getName)
                 .collect(Collectors.toList());
     }
 
@@ -1389,42 +1277,37 @@ public class UserServiceImpl implements UserService {
             userDto.setRoaster(user.getRoaster());
             userDto.setJoin_date(user.getJoin_date());
 
-            // Convert collections
             if (user.getRoles() != null) {
                 List<String> roleNames = user.getRoles().stream()
-                        .map(role -> role.getName())  // Assuming RoleEntity has a getName() method
+                        .map(role -> role.getName())
                         .collect(Collectors.toList());
                 userDto.setRoles(roleNames);
             }
 
             if (user.getSections() != null) {
                 List<String> sectionNames = user.getSections().stream()
-                        .map(section -> section.getSection())  // Assuming SectionEntity has a getName() method
+                        .map(section -> section.getSection())
                         .collect(Collectors.toList());
                 userDto.setSections(sectionNames);
             }
 
             if (user.getProfiles() != null) {
                 List<String> profileNames = user.getProfiles().stream()
-                        .map(profile -> profile.getName())  // Assuming ProfilesEntity has a getName() method
+                        .map(profile -> profile.getName())
                         .collect(Collectors.toList());
                 userDto.setProfiles(profileNames);
             }
 
-            // Convert addresses if they exist
             if (user.getAddresses() != null) {
                 List<AddressDTO> addressDTOs = user.getAddresses().stream()
                         .map(address -> {
                             AddressDTO addressDTO = new AddressDTO();
-                            // Set address properties based on your AddressEntity and AddressDTO structure
-                            // Example: addressDTO.setStreet(address.getStreet());
                             return addressDTO;
                         })
                         .collect(Collectors.toList());
                 userDto.setAddresses(addressDTOs);
             }
 
-            // Convert administrative users if they exist
             if (user.getMyAdmins() != null) {
                 List<UserAdminDto> adminDtos = user.getMyAdmins().stream()
                         .map(adminUser -> {
@@ -1490,7 +1373,7 @@ public class UserServiceImpl implements UserService {
         lmsUser.setLastName(userEntity.getLastName());
         lmsUser.setEmail(userEntity.getEmail());
         lmsUser.setJoin_date(userEntity.getJoin_date());
-        lmsUser.setPublicId(userEntity.getUserId()); // Assuming userId is the publicId
+        lmsUser.setPublicId(userEntity.getUserId());
         return lmsUser;
     }
 }

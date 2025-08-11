@@ -138,5 +138,20 @@ public class UserEntity implements Serializable {
             subordinate.getMyAdmins().remove(this);
         }
     }
+    public void addSection(SectionEntity section) {
+        if (section != null) {
+            if (this.sections == null) {
+                this.sections = new ArrayList<>();
+            }
+            if (!this.sections.contains(section)) {
+                this.sections.add(section);
+            }
+        }
+    }
 
+    public void removeSection(SectionEntity section) {
+        if (section != null && this.sections != null) {
+            this.sections.remove(section);
+        }
+    }
 }

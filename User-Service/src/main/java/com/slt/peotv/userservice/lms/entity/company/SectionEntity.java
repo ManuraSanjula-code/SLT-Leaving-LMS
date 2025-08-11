@@ -22,7 +22,7 @@ public class SectionEntity implements Serializable {
     @GeneratedValue(strategy= GenerationType.AUTO)
     private long id;
 
-    @Column(nullable=false, length=20)
+    @Column(nullable=false, length=20, unique=true)
     private String section;
 
     @Column(nullable = false)
@@ -30,5 +30,24 @@ public class SectionEntity implements Serializable {
 
     @ManyToMany(mappedBy="sections")
 	@JsonIgnore
-    private Collection<UserEntity> users =  new ArrayList<>();;
+    private Collection<UserEntity> users =  new ArrayList<>();
+
+    public void addUser(UserEntity user) {
+        if (user != null) {
+            if (this.users == null) {
+                this.users = new ArrayList<>();
+            }
+            if (!this.users.contains(user)) {
+                this.users.add(user);
+                user.addSection(this);
+            }
+        }
+    }
+
+    public void removeUser(UserEntity user) {
+        if (user != null && this.users != null) {
+            this.users.remove(user);
+            user.removeSection(this);
+        }
+    }
 }
