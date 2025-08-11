@@ -49,12 +49,16 @@ public class AttendanceService {
 
     private static final LocalTime NOON = LocalTime.NOON;
 
-    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT_ =
             ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
+
+    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("dd/MM/yyyy"));
+
     private static final ThreadLocal<SimpleDateFormat> ALT_DATE_FORMAT =
             ThreadLocal.withInitial(() -> new SimpleDateFormat("dd/MM/yyyy"));
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     private static final Logger logger = LoggerFactory.getLogger(AttendanceService.class);
     private final ReentrantLock processLock = new ReentrantLock();

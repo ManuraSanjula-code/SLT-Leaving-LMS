@@ -40,8 +40,9 @@ public class AccessLogSyncService {
     @Autowired
     private LMSClient lmsClient;
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final String LMS_SERVICE_USER = "lms@slt.com";
+    private static final DateTimeFormatter DATE_FORMATTER_ = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");   
+     private static final String LMS_SERVICE_USER = "lms@slt.com";
 
     @Scheduled(cron = "00 00 03  * * ?")
     public void getLogs() {

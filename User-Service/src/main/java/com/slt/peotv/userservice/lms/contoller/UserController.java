@@ -35,7 +35,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
+import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
+import com.slt.peotv.userservice.lms.entity.RoleEntity;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
@@ -188,7 +191,14 @@ public class UserController {
             UserRest userRest = userService.getUserByUserId_(userid);
             userRest.setHighestRolePriority(highestRolePriority);
             return userRest;
-        } else {
+        }
+        else if("LMS".equals(loginType)){
+            UserEntity userEntity = u.getUserEntity();
+            UserRest userRest = UserMapper.mapToUserRest(userEntity);
+            userRest.setUserId("LMS");
+            return userRest;
+        }
+        else {
             UserDto userDto = userService.getUserByUserId(userid);
             UserRest userRest = UserMapper.mapToUserRest(userDto);
             userRest.setRoaster(userDto.getRoaster());
@@ -423,6 +433,64 @@ public class UserController {
     }
 
     public class UserMapper {
+        
+        public static UserRest mapToUserRest(UserEntity userEntity) {
+            if (userEntity == null) {
+                return null;
+            }
+
+            UserRest userRest = new UserRest();
+            userRest.setUserId(userEntity.getUserId());
+            userRest.setEmployeeId(userEntity.getEmployeeId());
+            userRest.setSltId(userEntity.getSltId());
+            userRest.setFirstName(userEntity.getFirstName());
+            userRest.setLastName(userEntity.getLastName());
+            userRest.setEmail(userEntity.getEmail());
+            userRest.setProfilePic(userEntity.getProfilePic());
+            userRest.setGender(userEntity.getGender());
+            userRest.setPhone(userEntity.getPhone());
+            userRest.setIsSltEmp(userEntity.getIsSltEmp());
+            userRest.setIsSltIntern(userEntity.getIsSltIntern());
+            userRest.setActive(userEntity.getActive());
+            userRest.setJoiningDate(userEntity.getJoin_date());
+            userRest.setRoaster(userEntity.getRoaster());
+
+            if (userEntity.getAddresses() != null) {
+                userRest.setAddresses(userEntity.getAddresses().stream()
+                        .map(address -> {
+                            AddressesRest addressRest = new AddressesRest();
+                            addressRest.setAddressId(address.getAddressId());
+                            addressRest.setCity(address.getCity());
+                            addressRest.setCountry(address.getCountry());
+                            addressRest.setStreetName(address.getStreetName());
+                            addressRest.setPostalCode(address.getPostalCode());
+                            addressRest.setIsDefault(address.getIsDefault());
+                            return addressRest;
+                        })
+                        .collect(Collectors.toList()));
+            }
+
+            if (userEntity.getRoles() != null) {
+                userRest.setRoles(userEntity.getRoles().stream()
+                        .map(RoleEntity::getName)
+                        .collect(Collectors.toList()));
+            }
+
+            if (userEntity.getSections() != null) {
+                userRest.setSections(userEntity.getSections().stream()
+                        .map(SectionEntity::getSection)
+                        .collect(Collectors.toList()));
+            }
+
+            if (userEntity.getProfiles() != null) {
+                userRest.setProfiles(userEntity.getProfiles().stream()
+                        .map(ProfilesEntity::getName)
+                        .collect(Collectors.toList()));
+            }
+
+            return userRest;
+        }
+
         public static UserDto mapToUserDto(UserDetailsRequestModel requestModel) {
             UserDto userDto = new UserDto();
 
