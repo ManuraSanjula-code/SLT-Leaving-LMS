@@ -495,7 +495,7 @@ public class AttendanceService {
             }
 
             ShiftRoster shiftRoster = shiftRosterOpt.get();
-            String dayPart = dateStr.split("-")[2];
+            String dayPart = dateStr.split("/")[0];
             dayPart = dayPart.replaceFirst("^0+(?!$)", "");
 
             if (!shiftRoster.getDates().contains(dayPart)) {
@@ -540,7 +540,7 @@ public class AttendanceService {
 
         shifts.forEach((shiftTime, assignments) -> {
             assignments.forEach(assignment -> {
-                String dayPart = dateStr.split("-")[2];
+                String dayPart = dateStr.split("/")[0];
                 dayPart = dayPart.replaceFirst("^0+(?!$)", "");
 
                 if (!dayPart.equals(assignment.getDate())) return;
