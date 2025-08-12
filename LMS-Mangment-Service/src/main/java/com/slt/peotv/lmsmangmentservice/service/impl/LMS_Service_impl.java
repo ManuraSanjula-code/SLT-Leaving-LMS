@@ -653,11 +653,11 @@ public class LMS_Service_impl implements LMS_Service {
         if(employee_ == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
         if (attendanceRepo.existsByEmployeeAndDate(employee_, helper.removeTimeFromDate(req.getDate()))) {
-            return null;
+            throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
         }
 
         if (attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(employee_, helper.removeTimeFromDate(req.getArrivalDate()), req.getArrivalTime())) {
-            return null;
+            throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
         } 
         if(!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend())
             throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());       

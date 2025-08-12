@@ -97,61 +97,7 @@ public class Helper {
             return null;
         }
     }
-
-    /* public Time parseToSqlTime(String timeStr) {
-        try {
-            if (timeStr == null || timeStr.isEmpty()) {
-                return null;
-            }
-            LocalTime localTime = LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
-            return Time.valueOf(localTime);
-        } catch (Exception e) {
-            System.err.println("Error parsing time string '" + timeStr + "': " + e.getMessage());
-            return null;
-        }
-    } */
-
-    public Time parseToSqlTime(String timeStr) {
-        try {
-            System.out.println("DEBUG parseToSqlTime: Input = '" + timeStr + "'");
-
-            if (timeStr == null) {
-                return null;
-            }
-
-            // Clean the string more aggressively
-            timeStr = timeStr.trim().replaceAll("\\s+", "")  // Remove all whitespace
-                    .replaceAll("[^\\d:]", ""); // Remove non-digit/non-colon chars
-
-            System.out.println("DEBUG parseToSqlTime: After cleaning = '" + timeStr + "'");
-
-            // Check if string is empty after cleaning
-            if (timeStr.isEmpty()) {
-                return null;
-            }
-
-            // Try multiple time formats
-            DateTimeFormatter[] formatters = {DateTimeFormatter.ofPattern("HH:mm"), DateTimeFormatter.ofPattern("H:mm"), DateTimeFormatter.ofPattern("HH:mm:ss"), DateTimeFormatter.ofPattern("H:mm:ss"), DateTimeFormatter.ISO_LOCAL_TIME};
-
-            for (DateTimeFormatter formatter : formatters) {
-                try {
-                    LocalTime localTime = LocalTime.parse(timeStr, formatter);
-                    System.out.println("DEBUG parseToSqlTime: Success with pattern: " + formatter);
-                    return Time.valueOf(localTime);
-                } catch (Exception e) {
-                    System.out.println("DEBUG parseToSqlTime: Failed with pattern " + formatter + ": " + e.getMessage());
-                }
-            }
-
-            System.out.println("DEBUG parseToSqlTime: All parsing attempts failed for: '" + timeStr + "'");
-            return null;
-
-        } catch (Exception e) {
-            System.err.println("DEBUG parseToSqlTime: Unexpected error: " + e.getMessage());
-            return null;
-        }
-    }
-
+    
     public void handleLateAndUnsuccessful(String user, AttendanceEntity attendanceEntity, boolean swap) {
         try {
             if (user == null || attendanceEntity == null) {
