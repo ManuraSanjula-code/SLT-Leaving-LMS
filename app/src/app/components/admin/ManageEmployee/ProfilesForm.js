@@ -299,7 +299,7 @@ const ProfileForm = ({ onSubmit }) => {
 
   return (
       <>
-        <SuccessDialog
+        {/* <SuccessDialog
             open={successOpen}
             onClose={() => setSuccessOpen(false)}
             title="Success!"
@@ -311,7 +311,7 @@ const ProfileForm = ({ onSubmit }) => {
             onClose={() => setErrorOpen(false)}
             title="Error"
             message={saveError || "Failed to save profile"}
-        />
+        /> */}
 
         <div>
           <Button variant="contained" onClick={() => handleOpenDialog()}>

@@ -56,8 +56,8 @@ public interface UserService extends UserDetailsService{
 	RoleDTOArchive saveRoleV2(RoleReq req);
 
 	AuthorityDTO saveAuthority(AuthReq authority);
-	SectionDTO saveSection(SectionReq req);
-	ProfilesDTO saveProfile(ProfileReq req);
+	SectionDTO saveSection(SectionReq req, boolean swap);
+	ProfilesDTO saveProfile(ProfileReq req, boolean swap);
 
 	List<String> getAllRoleNames();
 	List<String> getAllSectionNames();
@@ -68,8 +68,11 @@ public interface UserService extends UserDetailsService{
 	boolean checkAuth(String name);
 	void deleteAuth(Long authId);
 	void deleteSection(Long sectionId);
-	void deleteRole(Long roleId);
+	void deleteRoleV2(Long roleId);
 	void deleteProfile(Long roleId);
+
+	void deleteRole(Long roleId);
+
 	UserDetails getUserDetailsByUserId(String userId);
 	public void rebalancePriorities();
 

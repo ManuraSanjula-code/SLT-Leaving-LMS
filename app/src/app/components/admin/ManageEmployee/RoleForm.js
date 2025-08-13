@@ -269,7 +269,7 @@ const RoleForm = ({ onSubmit }) => {
 
     return (
         <>
-            <SuccessDialog
+           {/* <SuccessDialog
                 open={successOpen}
                 onClose={() => setSuccessOpen(false)}
                 title="Success!"
@@ -281,7 +281,7 @@ const RoleForm = ({ onSubmit }) => {
                 onClose={() => setErrorOpen(false)}
                 title="Error"
                 message={saveError || "Failed to save role"}
-            />
+            />*/}
 
             <div>
                 <Button variant="contained" onClick={() => handleOpenDialog()}>

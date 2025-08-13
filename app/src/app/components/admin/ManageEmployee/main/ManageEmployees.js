@@ -2,537 +2,587 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    CssBaseline,
-    Dialog,
-    FormControl,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TextField,
-    Typography,
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Container,
+  CssBaseline,
+  Dialog,
+  FormControl,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Tabs,
+  Tab,
+  Menu,
+  TablePagination
 } from "@mui/material";
-import { Delete as DeleteIcon, Edit as EditIcon, MoreHoriz as MoreHorizIcon } from '@mui/icons-material';
+import { 
+  PersonAdd as PersonAddIcon,
+  GroupAdd as GroupAddIcon,
+  Category as CategoryIcon,
+  Workspaces as WorkspacesIcon,
+  Security as SecurityIcon,
+  VerifiedUser as VerifiedUserIcon,
+  Refresh as RefreshIcon,
+  Edit as EditIcon,
+  MoreHoriz as MoreHorizIcon,
+} from '@mui/icons-material';
 import dynamic from 'next/dynamic';
 import { debounce, isEqual } from 'lodash';
-import DynamicDialog from '../DynamicDialog';
-import EntityDialog from '../EntityDialog';
-import SectionForm from '../SectionForm';
-import ProfilesForm from '../ProfilesForm';
-import AuthorityForm from '../AuthorityForm';
-import RoleForm from '../RoleForm';
 import { useDispatch, useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
 import {
     fetchManagementData,
     fetchPaginatedUsers,
-    fetchPaginatedAdmins,
     setCurrentPage,
+    setPageSize,
     saveEmployee,
     resetSaveStatus,
     deleteEmployee
 } from '../../../../../../lib/redux/redux-lms/user/managementSlice';
-import Menu from '@mui/material/Menu';
-import { useRouter } from 'next/navigation';
 
 const EmployeeDialog = dynamic(() => import('../EmployeeDialog'), {
-    ssr: false,
-    loading: () => <CircularProgress size={24} />
+  ssr: false,
+  loading: () => <CircularProgress size={24} />
 });
 
 const ConfirmationDialog = dynamic(() => import('../../../ConfirmationDialog'), {
-    ssr: false
+  ssr: false
 });
 
-const ManageEmployees = React.memo(() => {
-    const dispatch = useDispatch();
-    const {
-        data: managementData,
-        paginatedUsers,
-        paginatedAdmins,
-        loading: isLoading,
-        error,
-        currentPage,
-        pageSize,
-        currentAdminPage,
-        adminPageSize,
-        saveLoading,
-        saveError,
-        saveSuccess,
-        deleteLoading,
-        deleteError,
-        deleteSuccess
-    } = useSelector(state => state.management);
+const SectionForm = dynamic(() => import('../SectionForm'));
+const ProfilesForm = dynamic(() => import('../ProfilesForm'));
+const AuthorityForm = dynamic(() => import('../AuthorityForm'));
+const RoleForm = dynamic(() => import('../RoleForm'));
 
-    const [openDialog, setOpenDialog] = useState(false);
-    const [currentEmployee, setCurrentEmployee] = useState(null);
-    const [selectedRoles, setSelectedRoles] = useState([]);
-    const [selectedSections, setSelectedSections] = useState([]);
-    const [selectedProfiles, setSelectedProfiles] = useState([]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [successOpen, setSuccessOpen] = useState(false);
-    const [errorOpen, setErrorOpen] = useState(false);
-    const [openDialog_, setOpenDialog_] = useState(false);
-    const [dialogType, setDialogType] = useState('');
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const [employeeToDelete, setEmployeeToDelete] = useState(null);
-    const [initialFormData, setInitialFormData] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const router = useRouter();
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const open = Boolean(anchorEl);
+const ManageEmployees = () => {
+  const dispatch = useDispatch();
+  const {
+    data: managementData,
+    paginatedUsers,
+    loading: isLoading,
+    error,
+    currentPage,
+    pageSize,
+    saveLoading,
+    saveError,
+    saveSuccess,
+    deleteLoading,
+    deleteError,
+    deleteSuccess
+  } = useSelector(state => state.management);
 
-    const handleMenuItemClick = (path) => {
-        handleClose();
-        router.push(path);
-    };
+  // State management
+  const [openDialog, setOpenDialog] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState(null);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedSections, setSelectedSections] = useState([]);
+  const [selectedProfiles, setSelectedProfiles] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [initialFormData, setInitialFormData] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [activeTab, setActiveTab] = useState(0);
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    type: ''
+  });
 
-    const handleClose = useCallback(() => {
-        setAnchorEl(null);
-    }, []);
+  const open = Boolean(anchorEl);
+  const router = useRouter();
 
-    useEffect(() => {
-        dispatch(fetchManagementData({ page: 0, limit: 0 }));
-    }, [dispatch]);
+  // Handlers
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
-    useEffect(() => {
-        dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
-    }, [currentPage, pageSize, dispatch]);
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
-    useEffect(() => {
-        dispatch(fetchPaginatedAdmins({ minPriority: 10, maxPriority: 99, page: currentAdminPage, limit: adminPageSize }));
-    }, [currentAdminPage, adminPageSize, dispatch]);
+  const showMessage = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
-    const handleOpenDialog = useCallback((employee = null) => {
-        setCurrentEmployee(employee);
-        setInitialFormData(employee ? { ...employee } : null);
-        setOpenDialog(true);
-    }, []);
+  const handleOpenMenu = (event, id) => {
+    setAnchorEl(event.currentTarget);
+    setUserId(id);
+  };
 
-    const handleCloseDialog = useCallback(() => {
-        setOpenDialog(false);
-        setCurrentEmployee(null);
-        setInitialFormData(null);
-    }, []);
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
 
-    useEffect(() => {
-        if (saveSuccess || deleteSuccess) {
-            setSuccessOpen(true);
-            dispatch(resetSaveStatus());
-            dispatch(fetchManagementData({ page: 0, limit: 0 }));
-            dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
-            handleCloseDialog();
-        }
+  const handleMenuItemClick = (path) => {
+    handleCloseMenu();
+    router.push(path);
+  };
 
-        if (saveError || deleteError) {
-            setErrorOpen(true);
-        }
-    }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch, currentPage, pageSize, handleCloseDialog]);
+  const handleOpenDialog = (employee = null) => {
+    setCurrentEmployee(employee);
+    setInitialFormData(employee ? { ...employee } : null);
+    setOpenDialog(true);
+  };
 
-    const filteredEmployees = useMemo(() => {
-        if (!paginatedUsers?.content) return [];
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setCurrentEmployee(null);
+    setInitialFormData(null);
+  };
 
-        return paginatedUsers.content.filter((employee) => {
-            const matchesRole = selectedRoles.length === 0 ||
-                selectedRoles.some((role) => employee.roles?.some((r) => r.name === role));
-            const matchesSection = selectedSections.length === 0 ||
-                selectedSections.some((section) => employee.sections?.some((s) => s.section === section));
-            const matchesProfile = selectedProfiles.length === 0 ||
-                selectedProfiles.some((profile) => employee.profiles?.includes(profile));
+  const handleOpenFormDialog = (type) => {
+    setDialogState({ open: true, type });
+  };
 
-            const matchesSearch =
-                searchQuery.trim() === "" ||
-                employee.sltId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                employee.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                employee.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                employee.roles?.some((role) => role.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                employee.sections?.some((section) => section.section?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                employee.profiles?.some((profile) => profile.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleCloseFormDialog = () => {
+    setDialogState({ open: false, type: '' });
+  };
 
-            return matchesRole && matchesSection && matchesProfile && matchesSearch;
-        }).sort((a, b) => {
-            const dateA = a.join_date || 0;
-            const dateB = b.join_date || 0;
-            return dateB - dateA; 
-        });;
-    }, [paginatedUsers, selectedRoles, selectedSections, selectedProfiles, searchQuery]);
+  const handleFormSubmit = () => {
+    handleCloseFormDialog();
+    dispatch(fetchManagementData({ page: 0, limit: 0 }));
+  };
 
-    const debouncedSearch = useMemo(
-        () => debounce((query) => {
-            setSearchQuery(query);
-            dispatch(setCurrentPage(0));
-        }, 300),
-        [dispatch]
-    );
+  const handleSaveEmployee = (employee) => {
+    if (initialFormData && isEqual(initialFormData, employee)) {
+      handleCloseDialog();
+      return;
+    }
+    dispatch(saveEmployee({
+      employee,
+      isUpdate: !!employee.userId
+    }));
+  };
 
-    const handleSearchChange = (e) => {
-        debouncedSearch(e.target.value);
-    };
+  const handleDeleteClick = (employeeId) => {
+    setEmployeeToDelete(employeeId);
+    setDeleteConfirmOpen(true);
+  };
 
-    useEffect(() => {
-        return () => {
-            debouncedSearch.cancel();
-        };
-    }, [debouncedSearch]);
+  const handleConfirmDelete = () => {
+    if (employeeToDelete) {
+      dispatch(deleteEmployee(employeeToDelete));
+    }
+    setDeleteConfirmOpen(false);
+  };
 
-    const handleOpenDialog_ = useCallback((type) => {
-        setDialogType(type);
-        setOpenDialog_(true);
-    }, []);
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setEmployeeToDelete(null);
+  };
 
-    const handleCloseDialog_ = useCallback(() => {
-        setOpenDialog_(false);
-    }, []);
+  const handleRefresh = () => {
+    dispatch(fetchManagementData({ page: 0, limit: 0 }));
+    dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
+  };
 
-    const handleSubmit = useCallback((data) => {
-        handleCloseDialog_();
-    }, [handleCloseDialog_]);
+  const handleChangePage = (event, newPage) => {
+    dispatch(setCurrentPage(newPage));
+  };
 
-    const handleSuccessOpen = useCallback(() => setSuccessOpen(true), []);
-    const handleSuccessClose = useCallback(() => setSuccessOpen(false), []);
-    const handleErrorOpen = useCallback(() => setErrorOpen(true), []);
-    const handleErrorClose = useCallback(() => {
-        setErrorOpen(false);
-        dispatch(resetSaveStatus());
-    }, [dispatch]);
+  const handleChangeRowsPerPage = (event) => {
+    const newSize = parseInt(event.target.value, 10);
+    dispatch(setPageSize(newSize));
+    dispatch(setCurrentPage(0));
+  };
 
-    const renderForm = useCallback(() => {
-        switch (dialogType) {
-            case 'section': return <SectionForm onSubmit={handleSubmit} />;
-            case 'profile': return <ProfilesForm onSubmit={handleSubmit} />;
-            case 'authority': return <AuthorityForm onSubmit={handleSubmit} />;
-            case 'role': return <RoleForm onSubmit={handleSubmit} />;
-            default: return null;
-        }
-    }, [dialogType, handleSubmit]);
+  useEffect(() => {
+    dispatch(fetchManagementData({ page: 0, limit: 0 }));
+  }, [dispatch]);
 
+  useEffect(() => {
+    dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
+  }, [currentPage, pageSize, dispatch]);
 
+  useEffect(() => {
+    if (saveSuccess) {
+      showMessage('Operation completed successfully!');
+      dispatch(resetSaveStatus());
+      handleCloseDialog();
+    }
 
-    const handleSaveEmployee = useCallback((employee) => {
-        if (initialFormData && isEqual(initialFormData, employee)) {
-            handleCloseDialog();
-            return;
-        }
+    if (deleteSuccess) {
+      showMessage('Record deleted successfully!');
+      dispatch(resetSaveStatus());
+    }
 
-        dispatch(saveEmployee({
-            employee,
-            isUpdate: !!employee.userId
-        }));
-    }, [dispatch, initialFormData, handleCloseDialog]);
+    if (saveError) {
+      showMessage(saveError || 'Operation failed', 'error');
+      dispatch(resetSaveStatus());
+    }
 
-    const handleClick = useCallback((event, id) => {
-        setAnchorEl(event.currentTarget);
-        setUserId(id)
-    }, []);
+    if (deleteError) {
+      showMessage(deleteError || 'Deletion failed', 'error');
+      dispatch(resetSaveStatus());
+    }
+  }, [saveSuccess, saveError, deleteSuccess, deleteError, dispatch]);
 
-    const handleConfirmDelete = useCallback(() => {
-        if (employeeToDelete) {
-            dispatch(deleteEmployee(employeeToDelete));
-        }
-        setDeleteConfirmOpen(false);
-    }, [dispatch, employeeToDelete]);
+  // Search debouncing
+  const debouncedSearch = useMemo(
+    () => debounce((query) => {
+      setSearchQuery(query);
+      dispatch(setCurrentPage(0));
+    }, 300),
+    [dispatch]
+  );
 
-    const handleCancelDelete = useCallback(() => {
-        setDeleteConfirmOpen(false);
-        setEmployeeToDelete(null);
-    }, []);
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
 
-    const handleRefresh = useCallback(() => {
-        dispatch(fetchManagementData({ page: 0, limit: 0 }));
-        dispatch(fetchPaginatedUsers({ page: currentPage, limit: pageSize }));
-    }, [dispatch, currentPage, pageSize]);
+  useEffect(() => {
+    return () => debouncedSearch.cancel();
+  }, [debouncedSearch]);
 
-    const handleDialogOpen = useCallback(() => setDialogOpen(true), []);
-    const handleDialogClose = useCallback(() => setDialogOpen(false), []);
+  // Filter employees
+  const filteredEmployees = useMemo(() => {
+    if (!paginatedUsers?.content) return [];
 
-    const items = useMemo(() => [
-        { label: 'Add Employee', onClick: () => handleOpenDialog() },
-        { label: 'Authority Section', onClick: () => handleOpenDialog_('authority') },
-        { label: 'Section', onClick: () => handleOpenDialog_('section') },
-        { label: 'Profiles Section', onClick: () => handleOpenDialog_('profile') },
-        { label: 'Roles Section', onClick: () => handleOpenDialog_('role') },
-    ], [handleOpenDialog, handleOpenDialog_]);
+    return paginatedUsers.content.filter((employee) => {
+      const matchesRole = selectedRoles.length === 0 ||
+        selectedRoles.some((role) => employee.roles?.some((r) => r.name === role));
+      const matchesSection = selectedSections.length === 0 ||
+        selectedSections.some((section) => employee.sections?.some((s) => s.section === section));
+      const matchesProfile = selectedProfiles.length === 0 ||
+        selectedProfiles.some((profile) => employee.profiles?.includes(profile));
 
-    return (
-        <>
-            {/*<SuccessDialog*/}
-            {/*    open={successOpen}*/}
-            {/*    onClose={handleSuccessClose}*/}
-            {/*    title="Success!"*/}
-            {/*    message="Your action was completed successfully."*/}
-            {/*/>*/}
+      const matchesSearch =
+        searchQuery.trim() === "" ||
+        employee.sltId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.roles?.some((role) => role.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        employee.sections?.some((section) => section.section?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        employee.profiles?.some((profile) => profile.name?.toLowerCase().includes(searchQuery.toLowerCase()));
 
-            {/*<ErrorDialog*/}
-            {/*    open={errorOpen}*/}
-            {/*    onClose={handleErrorClose}*/}
-            {/*    title="Oops! Something Went Wrong"*/}
-            {/*    message={saveError || deleteError || "There was an error processing your request. Please try again."}*/}
-            {/*/>*/}
+      return matchesRole && matchesSection && matchesProfile && matchesSearch;
+    }).sort((a, b) => {
+      const dateA = a.join_date || 0;
+      const dateB = b.join_date || 0;
+      return dateB - dateA;
+    });
+  }, [paginatedUsers, selectedRoles, selectedSections, selectedProfiles, searchQuery]);
 
-            <Menu
-                id="demo-positioned-menu"
-                aria-labelledby="demo-positioned-button"
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleClose}
-                anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                }}
-            >
-                <MenuItem onClick={() => handleMenuItemClick(`/all-movements/${userId}`)}>Movements</MenuItem>
-                <MenuItem onClick={() => handleMenuItemClick(`/all-leaves/${userId}`)}>Leave</MenuItem>
-                <MenuItem onClick={() => handleMenuItemClick(`/single-employee-activities/${userId}`)}>Attendance</MenuItem>
-                <MenuItem onClick={() => handleMenuItemClick(`/in-outs/${userId}`)}>In-Outs</MenuItem>
-            </Menu>
+  return (
+    <>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
-            <ConfirmationDialog
-                open={deleteConfirmOpen}
-                onClose={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-                title="Confirm Deletion"
-                message="Are you sure you want to delete this employee? This action cannot be undone."
-            />
+      <Container maxWidth="xl">
+        <CssBaseline />
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Employee Management System
+          </Typography>
 
-            <DynamicDialog
-                open={dialogOpen}
-                onClose={handleDialogClose}
-                title="Choose your option"
-                items={items}
-            />
+          <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+            <Tab label="Employees" icon={<PersonAddIcon />} />
+            <Tab label="System Configuration" icon={<WorkspacesIcon />} />
+          </Tabs>
 
-            <EntityDialog
-                open={openDialog_}
-                onClose={handleCloseDialog_}
-                title={`Add ${dialogType}`}
-                onSubmit={handleSubmit}
-            >
-                {renderForm()}
-            </EntityDialog>
+          {activeTab === 0 && (
+            <>
+              <Grid container spacing={2} justifyContent="space-between" sx={{ mb: 2 }}>
+                <Grid item>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleOpenDialog()}
+                    startIcon={<PersonAddIcon />}
+                  >
+                    Add Employee
+                  </Button>
+                </Grid>
+                <Grid item>
+                  <Button
+                    variant="outlined"
+                    onClick={handleRefresh}
+                    startIcon={<RefreshIcon />}
+                  >
+                    Refresh
+                  </Button>
+                </Grid>
+              </Grid>
 
-            <Container>
-                <CssBaseline />
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h4" gutterBottom>
-                        Manage Employees
-                    </Typography>
+              <TextField
+                label="Search Employees"
+                variant="outlined"
+                fullWidth
+                value={searchQuery}
+                onChange={handleSearchChange}
+                sx={{ mb: 2 }}
+              />
 
-                    {isLoading && (
-                        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-                            <CircularProgress />
-                            <Typography variant="body1" sx={{ ml: 2 }}>
-                                Loading employees...
-                            </Typography>
-                        </Box>
+              <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Filter by Role</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedRoles}
+                    onChange={(e) => setSelectedRoles(e.target.value)}
+                    renderValue={(selected) => selected.join(", ")}
+                  >
+                    {managementData?.roleNames?.map((role) => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Filter by Section</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedSections}
+                    onChange={(e) => setSelectedSections(e.target.value)}
+                    renderValue={(selected) => selected.join(", ")}
+                  >
+                    {managementData?.sectionNames?.map((section) => (
+                      <MenuItem key={section} value={section}>{section}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Filter by Profile</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedProfiles}
+                    onChange={(e) => setSelectedProfiles(e.target.value)}
+                    renderValue={(selected) => selected.join(", ")}
+                  >
+                    {managementData?.profileNames?.map((profile) => (
+                      <MenuItem key={profile} value={profile}>{profile}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>SLT ID</TableCell>
+                      <TableCell>Employee ID</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Roles</TableCell>
+                      <TableCell>Sections</TableCell>
+                      <TableCell>Profiles</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredEmployees.length > 0 ? (
+                      filteredEmployees.map((employee) => (
+                        <TableRow key={employee.userId}>
+                          <TableCell>{employee.sltId}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{`${employee.firstName} ${employee.lastName}`}</TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>
+                            {employee.roles?.map(r => r.name).join(', ')}
+                          </TableCell>
+                          <TableCell>
+                            {employee.sections?.map(s => s.section).join(', ')}
+                          </TableCell>
+                          <TableCell>
+                            {employee.profiles?.map(p => p.name).join(', ')}
+                          </TableCell>
+                          <TableCell>
+                            <IconButton onClick={() => handleOpenDialog(employee)}>
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton onClick={(e) => handleOpenMenu(e, employee.userId)}>
+                              <MoreHorizIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center">
+                          {isLoading ? 'Loading...' : 'No employees found'}
+                        </TableCell>
+                      </TableRow>
                     )}
+                  </TableBody>
+                </Table>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
+                  count={paginatedUsers?.totalElements || 0}
+                  rowsPerPage={pageSize}
+                  page={currentPage}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+              </TableContainer>
+            </>
+          )}
 
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            {error}
-                        </Alert>
-                    )}
+          {activeTab === 1 && (
+            <>
+              <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+                System Configuration
+              </Typography>
 
-                    <Grid container spacing={2} justifyContent="flex-end" sx={{ mb: 2 }}>
-                        <Grid item>
-                            <Button
-                                variant="contained"
-                                onClick={handleRefresh}
-                                sx={{ mr: 2 }}
-                                disabled={isLoading}
-                            >
-                                <Typography component="span" sx={{ fontSize: "30px", lineHeight: 1 }}>
-                                    ⟲
-                                </Typography>
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button
-                                variant="contained"
-                                onClick={handleDialogOpen}
-                                sx={{ mr: 2 }}
-                                disabled={isLoading}
-                            >
-                                <Typography component="span" sx={{ fontSize: "30px", lineHeight: 1 }}>
-                                    +
-                                </Typography>
-                            </Button>
-                        </Grid>
-                    </Grid>
-
-                    <TextField
-                        label="Search"
-                        variant="outlined"
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <SecurityIcon color="primary" sx={{ fontSize: 40 }} />
+                      <Typography variant="h6" sx={{ mt: 1 }}>Roles</Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleOpenFormDialog('role')}
+                        sx={{ mt: 2 }}
                         fullWidth
-                        defaultValue={searchQuery}
-                        onChange={handleSearchChange}
-                        sx={{ mb: 2 }}
-                        disabled={isLoading}
-                    />
+                      >
+                        Manage Roles
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
 
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, gap: 2 }}>
-                        <FormControl fullWidth disabled={isLoading}>
-                            <InputLabel>Roles</InputLabel>
-                            <Select
-                                multiple
-                                value={selectedRoles}
-                                onChange={(e) => setSelectedRoles(e.target.value)}
-                                renderValue={(selected) => selected.join(", ")}
-                            >
-                                {managementData?.roleNames?.map((role) => (
-                                    <MenuItem key={role} value={role}>
-                                        {role}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth disabled={isLoading}>
-                            <InputLabel>Sections</InputLabel>
-                            <Select
-                                multiple
-                                value={selectedSections}
-                                onChange={(e) => setSelectedSections(e.target.value)}
-                                renderValue={(selected) => selected.join(", ")}
-                            >
-                                {managementData?.sectionNames?.map((section) => (
-                                    <MenuItem key={section} value={section}>
-                                        {section}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth disabled={isLoading}>
-                            <InputLabel>Profiles</InputLabel>
-                            <Select
-                                multiple
-                                value={selectedProfiles}
-                                onChange={(e) => setSelectedProfiles(e.target.value)}
-                                renderValue={(selected) => selected.join(", ")}
-                            >
-                                {managementData?.profileNames?.map((profile) => (
-                                    <MenuItem key={profile} value={profile}>
-                                        {profile}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <VerifiedUserIcon color="primary" sx={{ fontSize: 40 }} />
+                      <Typography variant="h6" sx={{ mt: 1 }}>Authorities</Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleOpenFormDialog('authority')}
+                        sx={{ mt: 2 }}
+                        fullWidth
+                      >
+                        Manage Authorities
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
 
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>SLT ID</TableCell>
-                                    <TableCell>PEOID</TableCell>
-                                    <TableCell>First Name</TableCell>
-                                    <TableCell>Last Name</TableCell>
-                                    <TableCell>Email</TableCell>
-                                    <TableCell>Role</TableCell>
-                                    <TableCell>Section</TableCell>
-                                    <TableCell>Profile</TableCell>
-                                    <TableCell>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredEmployees.length > 0 ? (
-                                    filteredEmployees.map((employee) => (
-                                        <TableRow key={employee.userId}>
-                                            <TableCell>{employee.sltId}</TableCell>
-                                            <TableCell>{employee.employeeId}</TableCell>
-                                            <TableCell>{employee.firstName}</TableCell>
-                                            <TableCell>{employee.lastName}</TableCell>
-                                            <TableCell>{employee.email}</TableCell>
-                                            <TableCell>{employee.roles?.map((role) => role.name).join(", ")}</TableCell>
-                                            <TableCell>{employee.sections?.map((section) => section.section).join(", ")}</TableCell>
-                                            <TableCell>{employee.profiles?.map((profile) => profile.name).join(", ")}</TableCell>
-                                            <TableCell>
-                                                <IconButton
-                                                    onClick={() => handleOpenDialog(employee)}
-                                                    disabled={isLoading || deleteLoading}
-                                                >
-                                                    <EditIcon />
-                                                </IconButton>
-                                                <IconButton
-                                                    onClick={(event) => handleClick(event, employee.userId)}
-                                                >
-                                                    <MoreHorizIcon />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={7} align="center">
-                                            {isLoading ? 'Loading...' : 'No employees found'}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <CategoryIcon color="primary" sx={{ fontSize: 40 }} />
+                      <Typography variant="h6" sx={{ mt: 1 }}>Sections</Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleOpenFormDialog('section')}
+                        sx={{ mt: 2 }}
+                        fullWidth
+                      >
+                        Manage Sections
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
 
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
-                        <Button
-                            variant="contained"
-                            onClick={() => dispatch(setCurrentPage(Math.max(currentPage - 1, 0)))}
-                            disabled={currentPage === 0 || isLoading}
-                        >
-                            Previous Page
-                        </Button>
-                        <Typography variant="body1">
-                            Page {currentPage + 1} / {paginatedUsers?.totalPages || 1}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            onClick={() => dispatch(setCurrentPage(currentPage + 1))}
-                            disabled={currentPage >= (paginatedUsers?.totalPages || 1) - 1 || isLoading}
-                        >
-                            Next Page
-                        </Button>
-                    </Box>
-                    <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-                        <EmployeeDialog
-                            open={openDialog}
-                            onClose={handleCloseDialog}
-                            onSave={handleSaveEmployee}
-                            employee={currentEmployee}
-                            roles={managementData?.roleNames || []}
-                            sections={managementData?.sectionNames || []}
-                            profiles={managementData?.profileNames || []}
-                            saveLoading={saveLoading}
-                            initialData={initialFormData}
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <GroupAddIcon color="primary" sx={{ fontSize: 40 }} />
+                      <Typography variant="h6" sx={{ mt: 1 }}>Profiles</Typography>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleOpenFormDialog('profile')}
+                        sx={{ mt: 2 }}
+                        fullWidth
+                      >
+                        Manage Profiles
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </>
+          )}
+        </Box>
+      </Container>
 
-                            paginatedAdmins={paginatedAdmins}
-                            currentAdminPage={currentAdminPage}
-                            adminPageSize={adminPageSize}
-                            isLoading={isLoading}
+      <EmployeeDialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        onSave={handleSaveEmployee}
+        employee={currentEmployee}
+        roles={managementData?.roleNames || []}
+        sections={managementData?.sectionNames || []}
+        profiles={managementData?.profileNames || []}
+        saveLoading={saveLoading}
+        initialData={initialFormData}
+      />
 
-                        />
-                    </Dialog>
-                </Box>
-            </Container>
-        </>
-    );
-});
+      <Dialog
+        open={dialogState.open}
+        onClose={handleCloseFormDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            {`${dialogState.type.charAt(0).toUpperCase() + dialogState.type.slice(1)} Management`}
+          </Typography>
+          {dialogState.type === 'role' && <RoleForm onSubmit={handleFormSubmit} />}
+          {dialogState.type === 'authority' && <AuthorityForm onSubmit={handleFormSubmit} />}
+          {dialogState.type === 'section' && <SectionForm onSubmit={handleFormSubmit} />}
+          {dialogState.type === 'profile' && <ProfilesForm onSubmit={handleFormSubmit} />}
+        </Box>
+      </Dialog>
 
-ManageEmployees.displayName = 'ManageEmployees';
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this record?"
+      />
+
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleCloseMenu}
+      >
+        <MenuItem onClick={() => handleMenuItemClick(`/all-movements/${userId}`)}>Movements</MenuItem>
+        <MenuItem onClick={() => handleMenuItemClick(`/all-leaves/${userId}`)}>Leave</MenuItem>
+        <MenuItem onClick={() => handleMenuItemClick(`/single-employee-activities/${userId}`)}>Attendance</MenuItem>
+        <MenuItem onClick={() => handleMenuItemClick(`/in-outs/${userId}`)}>In-Outs</MenuItem>
+        <MenuItem onClick={() => handleMenuItemClick(`/employee-edit/${userId}`)}>
+          Edit Profile
+        </MenuItem>
+      </Menu>
+    </>
+  );
+};
 
 export default ManageEmployees;

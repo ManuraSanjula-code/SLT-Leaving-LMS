@@ -755,7 +755,6 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
                     </DialogActions>
                 </Dialog>
 
-                {/* View Leave Details Dialog */}
                 <Dialog
                     open={viewDialogOpen}
                     onClose={() => setViewDialogOpen(false)}
@@ -819,6 +818,42 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
                                     </Table>
                                 </TableContainer>
 
+                                {viewLeaveData.adminsTra && viewLeaveData.adminsTra.length > 0 && (
+                                    <>
+                                        <Typography variant="h6" gutterBottom>
+                                            Approvers
+                                        </Typography>
+                                        <TableContainer component={Paper} sx={{ mb: 3 }}>
+                                            <Table>
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>Approver</TableCell>
+                                                        <TableCell>Employee ID</TableCell>
+                                                        <TableCell>Status</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {viewLeaveData.adminsTra.map((admin, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>
+                                                                {admin.firstName} {admin.lastName}
+                                                            </TableCell>
+                                                            <TableCell>{admin.employeeId}</TableCell>
+                                                            <TableCell>
+                                                                {admin.accepted ? (
+                                                                    <Chip label="Approved" color="success" size="small" />
+                                                                ) : (
+                                                                    <Chip label="Pending" color="warning" size="small" />
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    </>
+                                )}
+
                                 <Typography variant="h6" gutterBottom>
                                     Attendance Records
                                 </Typography>
@@ -836,39 +871,39 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
                                                     <TableCell>Status</TableCell>
                                                 </TableRow>
                                             </TableHead>
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell>Check In</TableCell>
+                                                    <TableCell>
+                                                        {inOutData.morning?.timeMoa || "Not recorded"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {inOutData.morning?.inOut === 1 ? (
+                                                            <Chip label="Present" color="success" size="small" />
+                                                        ) : (
+                                                            <Chip label="Absent" color="error" size="small" />
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                    <TableCell>Check Out</TableCell>
+                                                    <TableCell>
+                                                        {inOutData.evening?.timeEve || "Not recorded"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {inOutData.evening?.inOut === 0 ? (
+                                                            <Chip label="Present" color="success" size="small" />
+                                                        ) : (
+                                                            <Chip label="Absent" color="error" size="small" />
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
                                         </Table>
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell>Check In</TableCell>
-                                                <TableCell>
-                                                    {inOutData.morning?.timeMoa || "Not recorded"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {inOutData.morning?.inOut === 1 ? (
-                                                        <Chip label="Present" color="success" size="small" />
-                                                    ) : (
-                                                        <Chip label="Absent" color="error" size="small" />
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell>Check Out</TableCell>
-                                                <TableCell>
-                                                    {inOutData.evening?.timeEve || "Not recorded"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {inOutData.evening?.inOut === 0 ? (
-                                                        <Chip label="Present" color="success" size="small" />
-                                                    ) : (
-                                                        <Chip label="Absent" color="error" size="small" />
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
                                     </TableContainer>
-                                    ) : (
+                                ) : (
                                     <Alert severity="info">No attendance records found for this date</Alert>
-                                    )}
+                                )}
                             </Box>
                         )}
                     </DialogContent>

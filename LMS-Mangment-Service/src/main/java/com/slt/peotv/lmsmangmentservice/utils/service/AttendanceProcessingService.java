@@ -63,6 +63,9 @@ public class AttendanceProcessingService {
                 System.err.println("Error: No leave type for leave ID " + leave.getId());
                 return;
             }
+            
+            if(leaveType.getName().equals("Special Leave") || leaveType.getName().equals("Duty Leave"))
+                return;
 
             String user = leave.getEmployee() != null ? leave.getEmployee().getEmployeeId() : null;
             if (user == null) {

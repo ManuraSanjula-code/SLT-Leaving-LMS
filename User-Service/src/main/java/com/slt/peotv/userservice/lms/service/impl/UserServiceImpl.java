@@ -84,117 +84,128 @@ public class UserServiceImpl implements UserService {
         }
     }
     @Override
-    public UserDto createUser(UserReq user) throws Exception {
-        if (userRepository.findByEmail(user.getEmail()) != null) {
-            throw new UserServiceException("Record already exists");
+    public UserDto createUser(UserReq user) throws UserServiceException {
+        try {
+            validateEmailUniqueness(user.getEmail());
+
+            UserEntity userEntity = createAndValidateUserEntity(user);
+
+            enrichUserEntity(user, userEntity);
+
+            setUserRelationships(user, userEntity);
+
+            UserEntity storedUser = saveAndProcessUser(userEntity, user);
+
+            notifySystemsAndCacheCredentials(storedUser, user.getPassword());
+
+            return UserMapper.mapToUserDto(storedUser);
+
+        } catch (DataIntegrityViolationException e) {
+            throw new UserServiceException("The provided data conflicts with existing records");
+        } catch (IllegalArgumentException e) {
+            throw new UserServiceException(e.getMessage());
+        } catch (Exception e) {
+            throw new UserServiceException("Failed to create user due to an unexpected error");
         }
+    }
 
-        UserEntity userEntity = UserMapper.mapToUserEntity(user, roleRepository, profilesRepo, sectionRepo, userRepository);
-        if (userEntity == null) {
-            throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+    private void validateEmailUniqueness(String email) throws UserServiceException {
+        if (userRepository.findByEmail(email) != null) {
+            throw new UserServiceException("This email address is already registered");
         }
-        String publicUserId = idUtils.generateId(30);
-        userEntity.setUserId(publicUserId);
-        userEntity.setJoin_date(new Date());
-        userEntity.setRoaster(user.getRoaster());
+    }
 
-       
-        updateFieldIfNotNull(user.getJoiningDate(), userEntity::setJoin_date);
+    private UserEntity createAndValidateUserEntity(UserReq user) throws UserServiceException {
+        UserEntity entity = UserMapper.mapToUserEntity(user, roleRepository, profilesRepo, sectionRepo, userRepository);
+        if (entity == null) {
+            throw new UserServiceException("Required user information is missing");
+        }
+        return entity;
+    }
 
-      
+    private void enrichUserEntity(UserReq user, UserEntity entity) {
+        entity.setUserId(idUtils.generateId(30));
+        entity.setJoin_date(user.getJoiningDate() != null ? user.getJoiningDate() : new Date());
+        entity.setRoaster(user.getRoaster());
+        entity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+
         if (!user.getAddresses().isEmpty()) {
-            List<AddressEntity> addressEntities = new ArrayList<>();
-            for (AddressDTO addressDto : user.getAddresses()) {
-                AddressEntity addressEntity = UserMapper.mapToAddressEntity_(addressDto);
-                addressEntity.setUserDetails(userEntity);
-                String publicAddressId = idUtils.generateId(30);
-                addressEntity.setAddressId(publicAddressId);
-                addressEntity.setIsDefault(addressDto.getIsDefault());
-                addressEntities.add(addressEntity);
-            }
-            userEntity.setAddresses(addressEntities); // Set the addresses list
+            entity.setAddresses(createAddressEntities(user.getAddresses(), entity));
+        }
+    }
+
+    private List<AddressEntity> createAddressEntities(List<AddressDTO> addresses, UserEntity userEntity) {
+        return addresses.stream()
+                .map(addressDto -> {
+                    AddressEntity entity = UserMapper.mapToAddressEntity_(addressDto);
+                    entity.setUserDetails(userEntity);
+                    entity.setAddressId(idUtils.generateId(30));
+                    entity.setIsDefault(addressDto.getIsDefault());
+                    return entity;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private void setUserRelationships(UserReq user, UserEntity entity) {
+        entity.setRoles(getValidRoles(user.getRoles()));
+        entity.setSections(getValidSections(user.getSections()));
+        entity.setProfiles(getValidProfiles(user.getProfiles()));
+    }
+
+    private Collection<RoleEntity> getValidRoles(Collection<String> roleNames) {
+        return roleNames.stream()
+                .map(roleRepository::findByName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private Collection<SectionEntity> getValidSections(Collection<String> sectionNames) {
+        return sectionNames.stream()
+                .map(sectionRepo::findBySection)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private Collection<ProfilesEntity> getValidProfiles(Collection<String> profileNames) {
+        return profileNames.stream()
+                .map(profilesRepo::findByName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private UserEntity saveAndProcessUser(UserEntity entity, UserReq user) throws UserServiceException {
+        UserEntity storedUser = userRepository.save(entity);
+        if (storedUser == null) {
+            throw new UserServiceException("Failed to save user data");
         }
 
+        updateUtils.handleAdminUpdates(storedUser, user);
+        updateRelationshipEntities(storedUser);
+        return storedUser;
+    }
 
-        userEntity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+    private void updateRelationshipEntities(UserEntity user) {
+        user.getSections().forEach(sec -> {
+            sec.getUsers().add(user);
+            sectionRepo.save(sec);
+        });
 
-        // Handle roles, sections, and profiles
-        Collection<SectionEntity> sectionEntities = new HashSet<>();
-        Collection<ProfilesEntity> profilesEntities = new HashSet<>();
-        Collection<RoleEntity> roleEntities = new HashSet<>();
+        user.getProfiles().forEach(pro -> {
+            pro.getUsers().add(user);
+            profilesRepo.save(pro);
+        });
 
-        if (!user.getRoles().isEmpty()) {
-            for (String role : user.getRoles()) {
-                RoleEntity roleEntity = roleRepository.findByName(role);
-                if (roleEntity != null) {
-                    roleEntities.add(roleEntity);
-                }
-            }
-        }
+        user.getRoles().forEach(role -> {
+            role.getUsers().add(user);
+            roleRepository.save(role);
+        });
+    }
 
-        if (!user.getSections().isEmpty()) {
-            user.getSections().forEach(sect -> {
-                SectionEntity sec = sectionRepo.findBySection(sect);
-                if (sec != null) {
-                    sectionEntities.add(sec);
-                }
-            });
-        }
-
-        if (!user.getProfiles().isEmpty()) {
-            user.getProfiles().forEach(profile -> {
-                ProfilesEntity pr = profilesRepo.findByName(profile);
-                if (pr != null) {
-                    profilesEntities.add(pr);
-                }
-            });
-        }
-        userEntity.setRoles(roleEntities);
-        userEntity.setSections(sectionEntities);
-        userEntity.setProfiles(profilesEntities);
-        // Save the user entity first
-        UserEntity storedUserDetails = userRepository.save(userEntity);
-        if (storedUserDetails == null) {
-            throw new Exception(ErrorMessages.INTERNAL_SERVER_ERROR.getErrorMessage());
-        }
-        updateUtils.handleAdminUpdates(storedUserDetails, user);
-
-        if (!storedUserDetails.getSections().isEmpty()) {
-            storedUserDetails.getSections().forEach(sec -> {
-                sec.getUsers().add(storedUserDetails);
-                sectionRepo.save(sec);
-            });
-        }
-
-        if (!storedUserDetails.getProfiles().isEmpty()) {
-            storedUserDetails.getProfiles().forEach(pro -> {
-                pro.getUsers().add(storedUserDetails);
-                profilesRepo.save(pro);
-            });
-        }
-
-        if (!storedUserDetails.getRoles().isEmpty()) {
-            storedUserDetails.getRoles().forEach(role -> {
-                role.getUsers().add(storedUserDetails);
-                roleRepository.save(role);
-            });
-        }
-
-        LMSUser lmsUser = new LMSUser();
-        lmsUser.setEmail(storedUserDetails.getEmail());
-        lmsUser.setFirstName(storedUserDetails.getFirstName());
-        lmsUser.setLastName(storedUserDetails.getLastName());
-        lmsUser.setEmployeeId(storedUserDetails.getEmployeeId());
-        lmsUser.setSltId(storedUserDetails.getSltId());
-        lmsUser.setJoin_date(storedUserDetails.getJoin_date());
-        lmsUser.setPublicId(storedUserDetails.getUserId());
-        lmsUser.setRoaster(storedUserDetails.getRoaster());
-        lmsUser.setGender(storedUserDetails.getGender());
-
+    private void notifySystemsAndCacheCredentials(UserEntity user, String plainPassword) {
+        LMSUser lmsUser = convertToLMSUser(user);
         messageProducerService.sendMessage("user.queue", lmsUser);
         messageProducerService.sendMessage("user.queue.roster", lmsUser);
-        redisService.setValue(storedUserDetails.getEmployeeId(), user.getPassword());
-        return UserMapper.mapToUserDto(storedUserDetails);
+        redisService.setValue(user.getEmployeeId(), plainPassword);
     }
 
     @Override
@@ -316,14 +327,12 @@ public class UserServiceImpl implements UserService {
         if (userDto == null) {
             throw new UserServiceException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
         }
-        // Find the user entity by userId
         UserEntity userEntity = userRepository.findByUserId(userId);
 
         if (userEntity == null) {
             throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         }
 
-        // Update basic user details
         if (userDto.getFirstName() != null && !userDto.getFirstName().trim().isEmpty()) {
             userEntity.setFirstName(userDto.getFirstName());
         }
@@ -416,7 +425,6 @@ public class UserServiceImpl implements UserService {
         userEntity.setSections(section_user);
         userEntity.setProfiles(profile_user);
 
-        // Save the updated user entity
         UserEntity updatedUserEntity = userRepository.save(userEntity);
         if (updatedUserEntity == null) {
             throw new Exception(ErrorMessages.INTERNAL_SERVER_ERROR.getErrorMessage());
@@ -500,8 +508,8 @@ public class UserServiceImpl implements UserService {
         if (userEntity == null) {
             throw new UserServiceException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
         }
-
-        userRepository.delete(userEntity);
+        userEntity.setActive(0);
+        userRepository.save(userEntity);
 
     }
 
@@ -900,13 +908,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public SectionDTO saveSection(SectionReq req) {
+    public SectionDTO saveSection(SectionReq req, boolean swap) {
         if (req == null) {
             throw new IllegalArgumentException("Section request cannot be null");
         }
         if (req.getSection() == null || req.getSection().trim().isEmpty()) {
             throw new IllegalArgumentException("Section cannot be null or empty");
         }
+
+        if((sectionRepo.findBySection(req.getSection()) != null) && !swap)
+            throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
         SectionEntity sectionEntity = findOrCreateSection(req);
 
@@ -985,10 +996,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ProfilesDTO saveProfile(ProfileReq req) {
+    public ProfilesDTO saveProfile(ProfileReq req, boolean swap) {
         if (req == null) {
             throw new IllegalArgumentException("Profile request cannot be null");
         }
+        if((profilesRepo.findByName(req.getName()) != null) && !swap)
+            throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
         final String lockKey = StringUtils.hasText(req.getPublicId())
                 ? req.getPublicId()
@@ -1086,7 +1099,6 @@ public class UserServiceImpl implements UserService {
                 authorityRepo.save(authority);
             }
 
-            // Finally, delete the role
             roleRepository.delete(role);
         } else {
             throw new RuntimeException("Role not found with id: " + roleId);
@@ -1094,18 +1106,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void deleteRoleV2(Long roleId) {
+        roleRepository.findById(roleId).ifPresent(role -> roleRepository.delete(role));
+    }
+
+    @Override
     public void deleteProfile(Long profileId) {
-        Optional<ProfilesEntity> roleOpt = profilesRepo.findById(profileId);
-        if (roleOpt.isPresent()) {
-            ProfilesEntity profile = roleOpt.get();
-            for (UserEntity user : profile.getUsers()) {
-                user.getRoles().remove(profile);
-                userRepository.save(user);
-            }
-            profilesRepo.delete(profile);
-        } else {
-            throw new RuntimeException("Role not found with id: " + profileId);
-        }
+        profilesRepo.findById(profileId).ifPresent(profile -> profilesRepo.delete(profile));
     }
 
     @Override
@@ -1338,23 +1346,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteAuth(Long authId) {
-        authorityRepo.deleteById(authId);
+        authorityRepo.findById(authId).ifPresent(authority -> authorityRepo.delete(authority));
     }
 
     @Override
     public void deleteSection(Long sectionId) {
-        sectionRepo.deleteById(sectionId);
-        /*Optional<SectionEntity> sectionOpt = sectionRepo.findById(sectionId);
-        if (sectionOpt.isPresent()) {
-            SectionEntity profile = sectionOpt.get();
-            for (UserEntity user : profile.getUsers()) {
-                user.getRoles().remove(profile);
-                userRepository.save(user);
-            }
-            sectionRepo.delete(profile);
-        } else {
-            throw new RuntimeException("Role not found with id: " + sectionId);
-        }*/
+        sectionRepo.findById(sectionId).ifPresent(section -> sectionRepo.delete(section));
     }
    
     @Override

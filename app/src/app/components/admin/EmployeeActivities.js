@@ -22,7 +22,7 @@ import {
     Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import {
-    fetchActivityRecords,
+    fetchActivityRecordsV2,
     setSearchTerm,
     setFilterType,
     setFilterStatus,
@@ -450,7 +450,7 @@ const EmployeeActivities = () => {
 
     useEffect(() => {
         if (!isFiltering) {
-            dispatch(fetchActivityRecords({ page, rowsPerPage }));
+            dispatch(fetchActivityRecordsV2({ page, rowsPerPage }));
         }
     }, [dispatch, page, rowsPerPage, isFiltering]);
 

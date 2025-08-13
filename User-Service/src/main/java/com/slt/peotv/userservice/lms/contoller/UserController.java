@@ -94,14 +94,14 @@ public class UserController {
     @RequestMapping(value = "/section/{userid}", method = {RequestMethod.POST})
     @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public SectionDTO saveSection(@RequestBody SectionReq req, @PathVariable("userid") String userid) {
-        return userService.saveSection(req);
+        return userService.saveSection(req, false);
     }
 
     @RequestMapping(value = "/section/{sectionId}/{userid}", method = {RequestMethod.PUT})
     @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public SectionDTO updateSection(@RequestBody SectionReq req,@PathVariable("sectionId") String sectionId, @PathVariable("userid") String userid) {
         req.setPublicId(sectionId);
-        return userService.saveSection(req);
+        return userService.saveSection(req, true);
     }
     /// -------------------------------- SECTION ------------------------------------ END *********
 
@@ -111,7 +111,7 @@ public class UserController {
     @RequestMapping(value = "/profile/{userid}", method = {RequestMethod.POST})
     @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public ProfilesDTO saveAProfile(@RequestBody ProfileReq req, @PathVariable("userid") String userid) {
-        return userService.saveProfile(req);
+        return userService.saveProfile(req, false);
     }
 
     @RequestMapping(value = "/profile/{profileID}/{userid}", method = {RequestMethod.PUT})
@@ -119,7 +119,7 @@ public class UserController {
     public ProfilesDTO updateProfile(@RequestBody ProfileReq req, @PathVariable("profileID") String profileID, @PathVariable("userid") String userid) {
         if(req.getPublicId() == null)
             req.setPublicId(profileID);
-        return userService.saveProfile(req);
+        return userService.saveProfile(req, true);
     }
 
     @DeleteMapping("/profile/{id}/{userid}")
@@ -149,7 +149,7 @@ public class UserController {
     @DeleteMapping("/delete/role/{id}/{userid}")
     @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
     public void deleteRole(@PathVariable Long id, @PathVariable String userid) {
-        userService.deleteRole(id);
+        userService.deleteRoleV2(id);
 
     }
 
@@ -637,7 +637,7 @@ public class UserController {
             userRest.setSltId(userDto.getSltId());
             userRest.setJoiningDate(userDto.getJoin_date());
             userRest.setRoaster(userDto.getRoaster());
-            // Map AddressDTO to AddressesRest
+
             if (userDto.getAddresses() != null) {
                 List<AddressesRest> addressesRest = userDto.getAddresses().stream()
                         .map(UserMapper::mapToAddressRest)

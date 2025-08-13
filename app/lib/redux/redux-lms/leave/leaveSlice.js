@@ -36,12 +36,12 @@ const initialState = {
 
 export const fetchLeaveData = createAsyncThunk(
     'leave/fetchData',
-    async ({isAdmin, userId, userAdmin, page, size}, {rejectWithValue}) => {
+    async ({ isAdmin, userId, userAdmin, page, size }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) return rejectWithValue('Employee ID not found');
             const url = `http://192.168.3.20:8080/lms/${isAdmin ? 'leave/all' : `leave/${userId}`}/${empId}?page=${page}&size=${size}`;
-            const response = await fetch(url, {credentials: 'include'});
+            const response = await fetch(url, { credentials: 'include' });
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
             return {
@@ -61,12 +61,12 @@ export const fetchLeaveData = createAsyncThunk(
 
 export const fetchLeaveBalances = createAsyncThunk(
     'leave/fetchBalances',
-    async (userId, {rejectWithValue}) => {
+    async (userId, { rejectWithValue }) => {
         try {
             const loggedInUserId = sessionStorage.getItem('userId');
             if (!loggedInUserId) return rejectWithValue('User ID not found');
             const url = `http://192.168.3.20:8080/lms/leave-balance/${userId}/${loggedInUserId}`;
-            const response = await fetch(url, {credentials: 'include'});
+            const response = await fetch(url, { credentials: 'include' });
             if (!response.ok) throw new Error('Failed to fetch balances');
             const data = await response.json();
             return data.leaveDetails || [];
@@ -87,7 +87,7 @@ export const fetchInOutData = createAsyncThunk(
             const adjustedDate = dateObj.toISOString().split('T')[0];
             const response = await fetch(
                 `http://192.168.3.20:8080/lms/in-out/${adjustedDate}/earliest/${userId}/${empId}`,
-                {credentials: 'include'}
+                { credentials: 'include' }
             );
             if (!response.ok) {
                 const errorText = await response.json();
@@ -102,13 +102,13 @@ export const fetchInOutData = createAsyncThunk(
 
 export const deleteLeaveRequest = createAsyncThunk(
     'leave/delete',
-    async (publicId, {rejectWithValue}) => {
+    async (publicId, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) return rejectWithValue('Employee ID not found');
             const response = await fetch(
                 `http://192.168.3.20:8080/lms/leave/${publicId}/${empId}`,
-                {method: 'DELETE', credentials: 'include'}
+                { method: 'DELETE', credentials: 'include' }
             );
             if (!response.ok) throw new Error('Delete failed');
             return publicId;
@@ -120,7 +120,7 @@ export const deleteLeaveRequest = createAsyncThunk(
 
 export const updateLeaveRequest = createAsyncThunk(
     'leave/updateLeaveRequest',
-    async ({updatePayload, userAdmin, isAdmin}, {rejectWithValue}) => {
+    async ({ updatePayload, userAdmin, isAdmin }, { rejectWithValue }) => {
         try {
             const empId = sessionStorage.getItem('userId');
             if (!empId) return rejectWithValue('Employee ID not found');
@@ -151,7 +151,7 @@ export const updateLeaveRequest = createAsyncThunk(
                 `http://192.168.3.20:8080/lms/management/leave/${updatePayload.publicId}/${empId}`,
                 {
                     method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(cleanPayload)
                 }
@@ -232,7 +232,7 @@ const leaveSlice = createSlice({
                 state.loading = false;
                 const index = state.data.findIndex(leave => leave.publicId === action.payload.publicId);
                 if (index !== -1) {
-                    state.data[index] = {...state.data[index], ...action.payload};
+                    state.data[index] = { ...state.data[index], ...action.payload };
                 }
             })
             .addCase(updateLeaveRequest.rejected, (state, action) => {
@@ -248,8 +248,8 @@ const transformLeaveItem = (item) => ({
     employeeId: item.employeeID,
     employeeName: `Employee ${item.employeeID?.substring(0, 5) || 'Unknown'}`,
     type: getLeaveType(item),
-    startDate: item.fromDate ? new Date(item.fromDate).toISOString().split('T')[0] : "",
-    endDate: item.toDate ? new Date(item.toDate).toISOString().split('T')[0] : "",
+    startDate: item.fromDate ? addOneDay(new Date(item.fromDate)).toISOString().split('T')[0] : "",
+    endDate: item.toDate ? addOneDay(new Date(item.toDate)).toISOString().split('T')[0] : "", 
     status: getLeaveStatus(item),
     comment: item.description || "",
     description: item.description || "",
@@ -288,6 +288,12 @@ const transformLeaveItem = (item) => ({
         leaveStatusString: item.leaveStatusString
     }
 });
+
+const addOneDay = (date) => {
+    const newDate = new Date(date);
+    newDate.setDate(newDate.getDate() + 1);
+    return newDate;
+};
 
 const getLeaveType = (item) => {
     switch (item.componentBehavior) {

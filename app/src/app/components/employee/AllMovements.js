@@ -940,6 +940,8 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
                                     fullWidth
                                     margin="normal"
                                     InputLabelProps={{ shrink: true }}
+                                    inputProps={{ step: 1 }}
+
                                 />
                             </Grid>
 
@@ -953,6 +955,8 @@ const ManageMovementRequests = ({ isAdmin = false, useAdmin = false, userId = nu
                                     fullWidth
                                     margin="normal"
                                     InputLabelProps={{ shrink: true }}
+                                    inputProps={{ step: 1 }}
+
                                 />
                             </Grid>
 

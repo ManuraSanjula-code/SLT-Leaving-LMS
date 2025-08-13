@@ -29,6 +29,7 @@ public class DutyRosterService {
             throw new IllegalStateException("Roster exists for week starting " + roster.getWeekStartingDate());
         }
         roster.setUpdatedDate(LocalDate.now());
+        roster.setActive(true);
         return dutyRosterRepository.save(roster);
     }
 
@@ -70,7 +71,12 @@ public class DutyRosterService {
             }
 
             DutyRoster roster = new DutyRoster(weekStartingDate, rosterName, dailyDuties, true);
-            /*deactivateAllOtherRosters();*/
+            Optional<DutyRoster> latestActiveRoster = dutyRosterRepository.findLatestActiveRoster();
+            if (latestActiveRoster.isPresent()) {
+                DutyRoster roster_ = latestActiveRoster.get();
+                roster_.setActive(false);
+                dutyRosterRepository.save(roster_);
+            }
             return saveRoster(roster);
         }
     }

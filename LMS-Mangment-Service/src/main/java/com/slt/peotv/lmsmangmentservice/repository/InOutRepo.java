@@ -8,6 +8,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
+
+import java.util.Comparator;
 import java.util.Optional;
 import java.sql.Time;
 import java.util.Date;
@@ -22,6 +24,8 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
 
     List<InOutEntity> findByDateAndPunchTypeTimeBefore(Date date, Time punchTypeTimeBefore);
     List<InOutEntity> findByDateAndPunchTypeTimeBetween(Date date, Time punchTypeTimeAfter, Time punchTypeTimeBefore);
+    List<InOutEntity> findByEmployeeIdAndDateAndPunchTypeTime(String employeeId, Date date, Time punchTypeTime);
+    List<InOutEntity> findByEmployeeIdAndPunchTimeAndPunchTypeTime(String employeeId, Date punchTime, Time punchTypeTime);
 
     List<InOutEntity> findByPunchTime(Date punchTime);;
     List<InOutEntity> findByDateAndPunchTypeTimeAfter(Date date, Time punchTypeTimeAfter);
@@ -59,6 +63,20 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
     Optional<InOutEntity> findLatestByEmployeeIdAndDate(
             @Param("employeeId") String employeeId,
             @Param("date") Date date);
+
+    default Optional<InOutEntity> findMorningInPunch(String employeeId, Date date) {
+        return findByEmployeeIdAndPunchTime(employeeId, date).stream()
+                .filter(i -> i.getInOutValue() != null && i.getInOutValue() == 1)
+                .filter(dto -> dto.getPunchTypeTime() != null) // IN
+                .min(Comparator.comparing(InOutEntity::getPunchTime));
+    }
+
+    default Optional<InOutEntity> findEveningOutPunch(String employeeId, Date date) {
+        return findByEmployeeIdAndPunchTime(employeeId, date).stream()
+                .filter(i -> i.getInOutValue() != null && i.getInOutValue() == 0) // OUT
+                .filter(dto -> dto.getPunchTypeTime() != null)
+                .max(Comparator.comparing(InOutEntity::getPunchTime));
+    }
 
 }
 

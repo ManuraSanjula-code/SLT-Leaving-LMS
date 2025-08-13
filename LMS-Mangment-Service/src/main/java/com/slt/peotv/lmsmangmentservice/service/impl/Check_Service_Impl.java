@@ -331,7 +331,7 @@ public class Check_Service_Impl implements Check_Service {
 
         List<InOutDTO> allInOut = Collections.emptyList();
         try {
-            allInOut = inOutRepo.findByEmployeeIdAndDate(employeeEntity.getSltId(), date)
+            allInOut = inOutRepo.findByEmployeeIdAndPunchTime(employeeEntity.getSltId(), date)
                     .stream()
                     .filter(Objects::nonNull)
                     .map(lMSUtils::inOutDTO)
@@ -345,14 +345,14 @@ public class Check_Service_Impl implements Check_Service {
 
         allInOut.stream()
                 .filter(Objects::nonNull)
-                .filter(InOutDTO::isMorning)
+                .filter(dto -> dto.getInOutValue() != null && dto.getInOutValue() == 1)
                 .filter(dto -> dto.getPunchTypeTime() != null)
                 .min(Comparator.comparing(InOutDTO::getPunchTypeTime))
                 .ifPresent(dto -> result.put("morning", dto));
 
         allInOut.stream()
                 .filter(Objects::nonNull)
-                .filter(InOutDTO::isEvening)
+                .filter(dto -> dto.getInOutValue() != null && dto.getInOutValue() == 0)
                 .filter(dto -> dto.getPunchTypeTime() != null)
                 .max(Comparator.comparing(InOutDTO::getPunchTypeTime))
                 .ifPresent(dto -> result.put("evening", dto));
@@ -412,7 +412,10 @@ public class Check_Service_Impl implements Check_Service {
 
             Optional<MovementsEntity> reqDate = movementsRepo.findAllByEmployeeAndHappenDate(employee, helper.removeTimeFromDate(req.getHappenDate()));
 
-            if (reqDate.isPresent())
+            if (reqDate.isPresent() && reqDate.get().getRequestStatus() != null &&
+                    reqDate.get().getRequestStatus() != RequestStatus.CANCELLED &&
+                    reqDate.get().getRequestStatus() != RequestStatus.EXPIRED &&
+                    reqDate.get().getRequestStatus() != RequestStatus.REJECTED)
                 throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
 
@@ -445,6 +448,11 @@ public class Check_Service_Impl implements Check_Service {
 
             if (!attendance.getIsUnauthorized() || attendance.getIsUnSuccessful())
                 throw new IllegalArgumentException(" This Attendance not unauthorized");
+
+            if (attendance.getAttendanceType() != null &&
+                    (attendance.getAttendanceType() == AttendanceType.FULL_DAY || attendance.getAttendanceType() == AttendanceType.HALF_DAY))
+                throw new IllegalArgumentException(" This Attendance not unauthorized");
+
 
             if (!Boolean.TRUE.equals(attendance.getHasIssues()) || Boolean.TRUE.equals(attendance.getIsResolved())) {
                 throw new IllegalArgumentException("Attendance has no issues OR Attendance is Resolved ");
@@ -573,7 +581,9 @@ public class Check_Service_Impl implements Check_Service {
 
     public void approvedMove(MovementsEntity movement, String userId) {
 
-        if (movement.getRequestStatus().equals(RequestStatus.REJECTED) || movement.getRequestStatus().equals(RequestStatus.APPROVED) || movement.getRequestStatus().equals(RequestStatus.CANCELLED))
+        if (movement.getRequestStatus().equals(RequestStatus.REJECTED) ||
+                movement.getRequestStatus().equals(RequestStatus.APPROVED) ||
+                movement.getRequestStatus().equals(RequestStatus.CANCELLED))
             return;
 
         AttendanceEntity attendance = movement.getAttendance();
@@ -605,7 +615,6 @@ public class Check_Service_Impl implements Check_Service {
                                 userId.equals(admin.getEmployee().getSltId()))
                 .findFirst()
                 .orElse(null);
-
 
         if (currentAdmin == null) throw new NoSuchElementException("ADMIN NOT FOUND");
         validateLowerPriorityApprovals(admins, currentAdmin);
@@ -655,7 +664,6 @@ public class Check_Service_Impl implements Check_Service {
                     if(attendance.getArrivalTime().equals(attendance.getLeftTime())){
                         attendance.setArrivalTime(null);
                         logger.warn("Two time are equal Arrival time: {} Movement In time {}", attendance.getArrivalTime(), movement.getInTime());
-
                     }
                     break;
                 case OFFICE_TO_HOME:
@@ -692,8 +700,118 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setArrivalTimeRaw(movement.getInTimeRaw());
             attendance.setLeftTimeRaw(movement.getOutTimeRaw());
 
-            attendanceRepo.save(attendance);
+            AttendanceEntity savedAttendance = attendanceRepo.save(attendance);
             movementsRepo.save(movement);
+
+            // Link InOut records with the attendance
+            updateAttendanceWithInOutRecords(movement, savedAttendance);
+        }
+    }
+
+    
+    private void updateAttendanceWithInOutRecords(MovementsEntity movement, AttendanceEntity attendance) {
+        try {
+            String employeeId = movement.getEmployee().getSltId();
+            Date happenDate = movement.getHappenDate();
+
+            if (employeeId == null || happenDate == null) {
+                logger.warn("Missing employeeId or happenDate for movement: {}", movement.getId());
+                return;
+            }
+
+            List<InOutEntity> inOutRecords = inOutRepo.findByEmployeeIdAndPunchTime(employeeId, happenDate);
+
+            if (inOutRecords.isEmpty()) {
+                logger.info("No InOut records found for employee {} on date {}", employeeId, happenDate);
+                return;
+            }
+
+            switch (movement.getMovementType()) {
+                case HOME_TO_OFFICE:
+                    linkInRecordsOnly(inOutRecords, attendance, movement);
+                    break;
+                case OFFICE_TO_HOME:
+                    linkOutRecordsOnly(inOutRecords, attendance, movement);
+                    break;
+                case FULLDAY:
+                case REMOTEWORK:
+                    linkAllInOutRecords(inOutRecords, attendance, movement);
+                    break;
+                default:
+                    logger.warn("Unknown movement type: {}", movement.getMovementType());
+            }
+
+            logger.info("Successfully linked InOut records with attendance for movement: {}", movement.getId());
+
+        } catch (Exception e) {
+            logger.error("Error linking InOut records with attendance for movement: {}", movement.getId(), e);
+        }
+    }
+
+    
+    private void linkInRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 1)
+                .min(Comparator.comparing(InOutEntity::getPunchTime));
+
+        if (earliestInRecord.isPresent()) {
+            InOutEntity inRecord = earliestInRecord.get();
+            inRecord.setAttendance(attendance);
+            inOutRepo.save(inRecord);
+            logger.info("Linked IN record {} with attendance {}", inRecord.getId(), attendance.getId());
+        } else {
+            logger.warn("No IN records found for HOME_TO_OFFICE movement: {}", movement.getId());
+        }
+    }
+
+    
+    private void linkOutRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        Optional<InOutEntity> latestOutRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 0)
+                .max(Comparator.comparing(InOutEntity::getPunchTime));
+
+        if (latestOutRecord.isPresent()) {
+            InOutEntity outRecord = latestOutRecord.get();
+            outRecord.setAttendance(attendance);
+            inOutRepo.save(outRecord);
+            logger.info("Linked OUT record {} with attendance {}", outRecord.getId(), attendance.getId());
+        } else {
+            logger.warn("No OUT records found for OFFICE_TO_HOME movement: {}", movement.getId());
+        }
+    }
+
+    
+    private void linkAllInOutRecords(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 1)
+                .min(Comparator.comparing(InOutEntity::getPunchTime));
+
+        Optional<InOutEntity> latestOutRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 0)
+                .max(Comparator.comparing(InOutEntity::getPunchTime));
+
+        int linkedCount = 0;
+
+        if (earliestInRecord.isPresent()) {
+            InOutEntity inRecord = earliestInRecord.get();
+            inRecord.setAttendance(attendance);
+            inOutRepo.save(inRecord);
+            linkedCount++;
+            logger.info("Linked IN record {} with attendance {}", inRecord.getId(), attendance.getId());
+        }
+
+        if (latestOutRecord.isPresent()) {
+            InOutEntity outRecord = latestOutRecord.get();
+            if (earliestInRecord.isEmpty() || !earliestInRecord.get().getId().equals(outRecord.getId())) {
+                outRecord.setAttendance(attendance);
+                inOutRepo.save(outRecord);
+                linkedCount++;
+                logger.info("Linked OUT record {} with attendance {}", outRecord.getId(), attendance.getId());
+            }
+        }
+
+        if (linkedCount == 0) {
+            logger.warn("No suitable InOut records found for FULLDAY/REMOTEWORK movement: {}", movement.getId());
         }
     }
 
@@ -1268,7 +1386,7 @@ public class Check_Service_Impl implements Check_Service {
         attendance.setIsUnSuccessful(unSuccessful);
         attendance.setIsUnauthorized(unAuthorized);
 
-        handleAttendanceTypeAndIssues(inout,attendance, fullday, half_day, unAuthorized, unSuccessful, absent, employee.getEmployeeId());
+        handleAttendanceTypeAndIssues(inout,attendance,swap, fullday, half_day, unAuthorized, unSuccessful, absent, employee.getEmployeeId());
 
         handleLeaveStatus(attendance, leaveSuccess, leaveReq, isFullLeave);
 
@@ -1456,7 +1574,7 @@ public class Check_Service_Impl implements Check_Service {
         attendance.setIsUnSuccessful(unSuccessful);
         attendance.setIsUnauthorized(unAuthorized);
 
-        handleAttendanceTypeAndIssues(moa, attendance, fullday, half_day, unAuthorized, unSuccessful, absent, employee.getEmployeeId());
+        handleAttendanceTypeAndIssues(moa, attendance, false ,fullday, half_day, unAuthorized, unSuccessful, absent, employee.getEmployeeId());
 
         handleLeaveStatus(attendance, leaveSuccess, leaveReq, isFullLeave);
 
@@ -1468,7 +1586,7 @@ public class Check_Service_Impl implements Check_Service {
         }
 
         AttendanceEntity savedAttendance = null;
-        if( (!attendance.isArrivalOnWeekend()) || (!attendance.getArrivalTime().equals(attendance.getLeftTime())))
+        if( (!attendance.isArrivalOnWeekend()) && (!attendance.getArrivalTime().equals(attendance.getLeftTime())))
             savedAttendance = attendanceRepo.save(attendance);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
@@ -1580,6 +1698,8 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setArrivalDate(date);
             attendance.setEtlRunTime(new Date());
             attendance.setUpdatedDate(new Date());
+            attendance.setCreatedDate(new Date());
+
             return attendance;
         } catch (NullPointerException e) {
             logger.error("Null value encountered while creating base attendance", e);
@@ -1587,7 +1707,7 @@ public class Check_Service_Impl implements Check_Service {
         }
     }
 
-    private void handleAttendanceTypeAndIssues(InOutEntity inout, AttendanceEntity attendance, Boolean fullday, Boolean half_day,
+    private void handleAttendanceTypeAndIssues(InOutEntity inout, AttendanceEntity attendance,Boolean swap, Boolean fullday, Boolean half_day,
                                                Boolean unAuthorized, Boolean unSuccessful, Boolean absent, String employeeId) {
 
         if (attendance == null) {
@@ -1607,36 +1727,38 @@ public class Check_Service_Impl implements Check_Service {
             LocalTime twelvePM = LocalTime.of(12, 0);
             LocalTime thirteenPM = LocalTime.of(13, 0);
 
-            if (punchTime.isAfter(thirteenPM)) {
-                attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
-                attendance.setDueDateForUA(helper.getDueDate());
-                attendance.setIssueDescription("EMPLOYEE CAME AFTER 13:00 PM SO GOING FULL LEAVE");
-                attendance.setHasIssues(true);
-                attendance.setIsLate(true);
-            }
+            if (!Boolean.TRUE.equals(swap)) {
+                if (punchTime.isAfter(thirteenPM)) {
+                    attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
+                    attendance.setDueDateForUA(helper.getDueDate());
+                    attendance.setIssueDescription("EMPLOYEE CAME AFTER 13:00 PM SO GOING FULL LEAVE");
+                    attendance.setHasIssues(true);
+                    attendance.setIsLate(true);
+                }
 
-            if (Boolean.TRUE.equals(half_day) || punchTime.isAfter(twelvePM)) {
-                attendance.setAttendanceType(AttendanceType.HALF_DAY);
-                attendance.setLeaveStatus(null);
-                attendance.setDueDateForUA(helper.getDueDate());
-                attendance.setIssueDescription("EMPLOYEE CAME AFTER 12:00 PM SO GOING HALF DAY");
-                attendance.setHasIssues(true);
-                attendance.setIsLate(true);
-            }
+                if (Boolean.TRUE.equals(half_day) || punchTime.isAfter(twelvePM)) {
+                    attendance.setAttendanceType(AttendanceType.HALF_DAY);
+                    attendance.setLeaveStatus(null);
+                    attendance.setDueDateForUA(helper.getDueDate());
+                    attendance.setIssueDescription("EMPLOYEE CAME AFTER 12:00 PM SO GOING HALF DAY");
+                    attendance.setHasIssues(true);
+                    attendance.setIsLate(true);
+                }
 
-            if((Boolean.TRUE.equals(unSuccessful) && !Boolean.TRUE.equals(unAuthorized)) || punchTime.isAfter(tenAM)){
-                attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
-                attendance.setHasIssues(true);
-                attendance.setIsLate(true);
-            }
+                if((Boolean.TRUE.equals(unSuccessful) && !Boolean.TRUE.equals(unAuthorized)) || punchTime.isAfter(tenAM)){
+                    attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
+                    attendance.setHasIssues(true);
+                    attendance.setIsLate(true);
+                }
 
-            if (Boolean.TRUE.equals(fullday) && punchTime.isBefore(eightThirtyAM)) {
-                attendance.setAttendanceType(AttendanceType.FULL_DAY);
-                attendance.setDueDateForUA(null);
-                attendance.setHasIssues(false);
-                attendance.setIsLate(false);
-                attendance.setIsUnauthorized(false);
-                attendance.setIsUnSuccessful(false);
+                if (Boolean.TRUE.equals(fullday) && punchTime.isBefore(eightThirtyAM)) {
+                    attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                    attendance.setDueDateForUA(null);
+                    attendance.setHasIssues(false);
+                    attendance.setIsLate(false);
+                    attendance.setIsUnauthorized(false);
+                    attendance.setIsUnSuccessful(false);
+                }
             }
 
             if (Boolean.TRUE.equals(unAuthorized)) {
@@ -1801,6 +1923,10 @@ public class Check_Service_Impl implements Check_Service {
             AttendanceEntity attendanceEntity = attendanceEntityOp.get();
             if (attendanceEntity.getIsResolved() || !attendanceEntity.getHasIssues())
                 throw new IllegalArgumentException("To this attendance you can not make leave");
+
+            if (attendanceEntity.getAttendanceType() != null &&
+                    (attendanceEntity.getAttendanceType() == AttendanceType.FULL_DAY || attendanceEntity.getAttendanceType() == AttendanceType.HALF_DAY))
+                throw new IllegalArgumentException(" This Attendance not unauthorized");
 
             if ((req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED) && (!attendanceEntity.getIsUnauthorized())
                     || (req.getComponentBehavior() == ComponentBehavior.ABSENT) && (!attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT))

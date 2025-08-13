@@ -30,4 +30,7 @@ public interface DutyRosterRepository extends MongoRepository<DutyRoster, String
     List<DutyRoster> findCurrentWeekRoster(LocalDate currentDate, LocalDate weekStart);
 
     void deleteDutyRosterByWeekStartingDate(LocalDate weekStartingDate);
+
+    @Query(value = "{ 'isActive' : true }", sort = "{ 'week_starting_date' : -1 }")
+    Optional<DutyRoster> findLatestActiveRoster();
 }

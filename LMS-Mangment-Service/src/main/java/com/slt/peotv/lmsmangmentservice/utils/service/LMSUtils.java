@@ -233,7 +233,7 @@ public class LMSUtils {
 
         dto.setId(entity.getId());
         dto.setPublicId(entity.getPublicId());
-        dto.setEmployeeId(entity.getEmployee() != null ? entity.getEmployee().getId().toString() : null);
+        dto.setEmployeeId(entity.getEmployee() != null ? entity.getEmployee().getSltId() : null);
         dto.setAttendanceId(entity.getAttendance() != null ? entity.getAttendance().getId() : null);
         dto.setSubmissionDate(entity.getSubmissionDate());
         dto.setDate(entity.getDate());

@@ -158,7 +158,7 @@ const formatTimeForInput = (timeString) => {
 };
 
 const formatDateForInput = (dateString) => {
-    if (!dateString) return new Date().toISOString().split('T')[0];
+    if (!dateString) return null;
 
     try {
         const date = new Date(dateString);

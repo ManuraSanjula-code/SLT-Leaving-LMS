@@ -115,9 +115,9 @@ public class AttendanceService {
         if (duty_ != null){
             duty_.setActive(true);
             mainDuty = dutyRosterRepository.save(duty_);
-            dutyRosterRepository.findAll().forEach(dutyRoster -> {
-                dutyRoster.setActive(false);
-                dutyRosterRepository.save(dutyRoster);
+            dutyRosterRepository.findLatestActiveRoster().ifPresent(roster -> {
+                roster.setActive(false);
+                dutyRosterRepository.save(roster);
             });
         }
         else{

@@ -5,6 +5,7 @@ import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.BulkApprovalException;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.repository.*;
@@ -33,6 +34,7 @@ public class BulkApprovalProcessor {
     private final LeaveRepo leaveRepo;
     private final ComponetAdminsRepo componetAdminsRepo;
     private final AttendanceRepo attendanceRepo;
+    private final InOutRepo inOutRepo;
     private final Helper helper;
     private final ExecutorService executorService;
     private final ConcurrentHashMap<String, Long> processingCache;
@@ -44,6 +46,7 @@ public class BulkApprovalProcessor {
             LeaveRepo leaveRepo,
             ComponetAdminsRepo componetAdminsRepo,
             AttendanceRepo attendanceRepo,
+            InOutRepo inOutRepo,
             Helper helper,
             @Value("${bulk.approval.thread.pool.size:5}") int threadPoolSize) {
 
@@ -51,6 +54,7 @@ public class BulkApprovalProcessor {
         this.leaveRepo = leaveRepo;
         this.componetAdminsRepo = componetAdminsRepo;
         this.attendanceRepo = attendanceRepo;
+        this.inOutRepo = inOutRepo;
         this.helper = helper;
 
         int poolSize = threadPoolSize > 0 ? threadPoolSize : DEFAULT_THREAD_POOL_SIZE;
@@ -459,6 +463,7 @@ public class BulkApprovalProcessor {
         attendance.setIsUnauthorized(false);
         attendance.setResolve(ResolveType.VIA_MOVEMENT);
         attendance.setAttendanceType(AttendanceType.FULL_DAY);
+        attendance.setIssueDescription("none :: Movement approved");
 
         switch (movement.getMovementType()) {
             case HOME_TO_OFFICE:
@@ -505,9 +510,13 @@ public class BulkApprovalProcessor {
         attendance.setArrivalTimeRaw(movement.getInTimeRaw());
         attendance.setLeftTimeRaw(movement.getOutTimeRaw());
 
-        attendanceRepo.save(attendance);
+        AttendanceEntity savedAttendance = attendanceRepo.save(attendance);
         movementsRepo.save(movement);
-        logger.info("Movement {} fully approved", movement.getPublicId());
+
+        // Link InOut records with the attendance
+        updateAttendanceWithInOutRecords(movement, savedAttendance);
+
+        logger.info("Movement {} fully approved and linked with InOut records", movement.getPublicId());
     }
 
     private void completeLeaveApproval(LeaveEntity leave) {
@@ -523,5 +532,127 @@ public class BulkApprovalProcessor {
 
         leaveRepo.save(leave);
         logger.info("Leave {} fully approved", leave.getPublicId());
+    }
+
+    /**
+     * Updates attendance by linking it with corresponding InOut records based on movement data
+     */
+    private void updateAttendanceWithInOutRecords(MovementsEntity movement, AttendanceEntity attendance) {
+        try {
+            String employeeId = movement.getEmployee().getSltId();
+            Date happenDate = movement.getHappenDate();
+
+            if (employeeId == null || happenDate == null) {
+                logger.warn("Missing employeeId or happenDate for movement: {}", movement.getId());
+                return;
+            }
+
+            // Get all InOut records for the employee on the movement date
+            List<InOutEntity> inOutRecords = inOutRepo.findByEmployeeIdAndDate(employeeId, happenDate);
+
+            if (inOutRecords.isEmpty()) {
+                logger.info("No InOut records found for employee {} on date {}", employeeId, happenDate);
+                return;
+            }
+
+            // Process records based on movement type
+            switch (movement.getMovementType()) {
+                case HOME_TO_OFFICE:
+                    linkInRecordsOnly(inOutRecords, attendance, movement);
+                    break;
+                case OFFICE_TO_HOME:
+                    linkOutRecordsOnly(inOutRecords, attendance, movement);
+                    break;
+                case FULLDAY:
+                case REMOTEWORK:
+                    linkAllInOutRecords(inOutRecords, attendance, movement);
+                    break;
+                default:
+                    logger.warn("Unknown movement type: {}", movement.getMovementType());
+            }
+
+            logger.info("Successfully linked InOut records with attendance for movement: {}", movement.getId());
+
+        } catch (Exception e) {
+            logger.error("Error linking InOut records with attendance for movement: {}", movement.getId(), e);
+        }
+    }
+
+    /**
+     * Links only IN records (inOutValue = 1) with attendance
+     */
+    private void linkInRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        // Find earliest IN record (inOutValue = 1)
+        Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 1)
+                .min(Comparator.comparing(InOutEntity::getPunchTime));
+
+        if (earliestInRecord.isPresent()) {
+            InOutEntity inRecord = earliestInRecord.get();
+            inRecord.setAttendance(attendance);
+            inOutRepo.save(inRecord);
+            logger.info("Linked IN record {} with attendance {}", inRecord.getId(), attendance.getId());
+        } else {
+            logger.warn("No IN records found for HOME_TO_OFFICE movement: {}", movement.getId());
+        }
+    }
+
+    /**
+     * Links only OUT records (inOutValue = 0) with attendance
+     */
+    private void linkOutRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        // Find latest OUT record (inOutValue = 0)
+        Optional<InOutEntity> latestOutRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 0)
+                .max(Comparator.comparing(InOutEntity::getPunchTime));
+
+        if (latestOutRecord.isPresent()) {
+            InOutEntity outRecord = latestOutRecord.get();
+            outRecord.setAttendance(attendance);
+            inOutRepo.save(outRecord);
+            logger.info("Linked OUT record {} with attendance {}", outRecord.getId(), attendance.getId());
+        } else {
+            logger.warn("No OUT records found for OFFICE_TO_HOME movement: {}", movement.getId());
+        }
+    }
+
+    /**
+     * Links both earliest IN and latest OUT records with attendance
+     */
+    private void linkAllInOutRecords(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
+        // Find earliest IN record (inOutValue = 1)
+        Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 1)
+                .min(Comparator.comparing(InOutEntity::getPunchTime));
+
+        // Find latest OUT record (inOutValue = 0)
+        Optional<InOutEntity> latestOutRecord = inOutRecords.stream()
+                .filter(record -> record.getInOutValue() != null && record.getInOutValue() == 0)
+                .max(Comparator.comparing(InOutEntity::getPunchTime));
+
+        int linkedCount = 0;
+
+        if (earliestInRecord.isPresent()) {
+            InOutEntity inRecord = earliestInRecord.get();
+            inRecord.setAttendance(attendance);
+            inOutRepo.save(inRecord);
+            linkedCount++;
+            logger.info("Linked IN record {} with attendance {}", inRecord.getId(), attendance.getId());
+        }
+
+        if (latestOutRecord.isPresent()) {
+            InOutEntity outRecord = latestOutRecord.get();
+            // Avoid linking the same record twice if IN and OUT are the same
+            if (earliestInRecord.isEmpty() || !earliestInRecord.get().getId().equals(outRecord.getId())) {
+                outRecord.setAttendance(attendance);
+                inOutRepo.save(outRecord);
+                linkedCount++;
+                logger.info("Linked OUT record {} with attendance {}", outRecord.getId(), attendance.getId());
+            }
+        }
+
+        if (linkedCount == 0) {
+            logger.warn("No suitable InOut records found for FULLDAY/REMOTEWORK movement: {}", movement.getId());
+        }
     }
 }

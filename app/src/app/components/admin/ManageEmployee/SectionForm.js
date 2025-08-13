@@ -208,7 +208,7 @@ const SectionForm = ({ onSubmit }) => {
 
   return (
       <>
-        <SuccessDialog
+        {/* <SuccessDialog
             open={successOpen}
             onClose={() => setSuccessOpen(false)}
             title="Success!"
@@ -220,7 +220,7 @@ const SectionForm = ({ onSubmit }) => {
             onClose={() => setErrorOpen(false)}
             title="Error"
             message={saveError || "Failed to save section"}
-        />
+        /> */}
 
         <div>
           <Button variant="contained" onClick={() => handleOpenDialog()}>

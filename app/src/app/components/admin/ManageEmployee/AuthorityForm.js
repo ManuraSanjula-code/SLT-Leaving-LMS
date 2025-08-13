@@ -198,7 +198,7 @@ const AuthorityForm = () => {
 
     return (
         <>
-            <SuccessDialog
+            {/* <SuccessDialog
                 open={successOpen}
                 onClose={handleSuccessClose}
                 title="Success!"
@@ -210,7 +210,7 @@ const AuthorityForm = () => {
                 onClose={handleErrorClose}
                 title="Oops! Something Went Wrong"
                 message="There was an error processing your request. Please try again."
-            />
+            /> */}
 
             <div>
                 <Button variant="contained" onClick={() => handleOpenDialog()}>
