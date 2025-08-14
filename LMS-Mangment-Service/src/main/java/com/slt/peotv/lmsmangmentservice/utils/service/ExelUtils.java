@@ -8,6 +8,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
+import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class ExelUtils {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
     @Autowired
     private EmployeeRepo employeeRepo;
@@ -42,6 +44,8 @@ public class ExelUtils {
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired
     private NoPayRepo noPayRepo;
+    @Autowired
+    private InOutRepo inOutRepo;
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
 
@@ -61,6 +65,7 @@ public class ExelUtils {
 
         Page<NoPayEntity> noPayPage = noPayRepo.findByEmployee(employee, PageRequest.of(0, Integer.MAX_VALUE));
         List<NoPayEntity> noPayList = noPayPage.getContent();
+        List<InOutEntity> inOuts = inOutRepo.findByEmployeeId(employee.getSltId());
 
         try (Workbook workbook = new XSSFWorkbook()) {
             createEmployeeInfoSheet(workbook, employee);
@@ -69,6 +74,7 @@ public class ExelUtils {
             createMovementsSheet(workbook, movements);
             createRemainingLeavesSheet(workbook, remainingLeaves);
             createNoPaySheet(workbook, noPayList);
+            createInOutSheet(workbook, inOuts);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
@@ -98,6 +104,7 @@ public class ExelUtils {
                             dateFormat.format(noPayDate).equals(dateFormat.format(date));
                 })
                 .collect(Collectors.toList());
+        List<InOutEntity> inOuts = inOutRepo.findByEmployeeIdAndDate(employee.getSltId(), date);
 
         try (Workbook workbook = new XSSFWorkbook()) {
             createEmployeeInfoSheet(workbook, employee);
@@ -106,6 +113,7 @@ public class ExelUtils {
             createMovementsSheet(workbook, movements);
             createRemainingLeavesSheet(workbook, remainingLeaves);
             createNoPaySheet(workbook, noPayList);
+            createInOutSheet(workbook, inOuts);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
@@ -136,6 +144,7 @@ public class ExelUtils {
                             !noPayDate.after(endDate);
                 })
                 .collect(Collectors.toList());
+        List<InOutEntity> inOuts = inOutRepo.findByEmployeeIdAndDateBetween(employee.getSltId(), startDate, endDate);
 
         try (Workbook workbook = new XSSFWorkbook()) {
             createEmployeeInfoSheet(workbook, employee);
@@ -144,10 +153,61 @@ public class ExelUtils {
             createMovementsSheet(workbook, movements);
             createRemainingLeavesSheet(workbook, remainingLeaves);
             createNoPaySheet(workbook, noPayList);
-
+            createInOutSheet(workbook, inOuts);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
+        }
+    }
+
+    private void createInOutSheet(Workbook workbook, List<InOutEntity> inOutList) {
+        Sheet sheet = workbook.createSheet("In Out Records");
+        CellStyle headerStyle = createHeaderStyle(workbook);
+
+        Row infoRow = sheet.createRow(0);
+        infoRow.createCell(0).setCellValue("Total In Out Records: " + (inOutList != null ? inOutList.size() : 0));
+
+        Row headerRow = sheet.createRow(1);
+        String[] headers = {
+                "ID", "Employee ID", "Date", "Punch Time", "Punch Type Time",
+                "In Out Type", "Terminal ID", "In Out Value", "Is Manual",
+                "ETL Run Time", "Attendance ID", "Created Date", "Updated Date",
+                "Is Active"
+        };
+
+        for (int i = 0; i < headers.length; i++) {
+            createHeaderCell(headerRow, i, headers[i], headerStyle);
+        }
+
+        if (inOutList == null || inOutList.isEmpty()) {
+            Row row = sheet.createRow(2);
+            row.createCell(0).setCellValue("No in out records found");
+            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, headers.length - 1));
+        } else {
+            int rowNum = 2;
+            for (InOutEntity inOut : inOutList) {
+                Row row = sheet.createRow(rowNum++);
+                int colNum = 0;
+
+                createCell(row, colNum++, inOut.getId() != null ? inOut.getId().toString() : "");
+                createCell(row, colNum++, inOut.getEmployeeId() != null ? inOut.getEmployeeId() : "");
+                createCell(row, colNum++, inOut.getDate() != null ? dateFormat.format(inOut.getDate()) : "");
+                createCell(row, colNum++, inOut.getPunchTime() != null ? dateTimeFormat.format(inOut.getPunchTime()) : "");
+                createCell(row, colNum++, inOut.getPunchTypeTime() != null ? timeFormat.format(inOut.getPunchTypeTime()) : "");
+                createCell(row, colNum++, inOut.getInOutType() != null ? inOut.getInOutType().name() : "");
+                createCell(row, colNum++, inOut.getTerminalId() != null ? inOut.getTerminalId() : "");
+                createCell(row, colNum++, inOut.getInOutValue() != null ? inOut.getInOutValue().toString() : "");
+                createCell(row, colNum++, inOut.getIsManual() != null ? (inOut.getIsManual() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, inOut.getEtlRunTime() != null ? dateTimeFormat.format(inOut.getEtlRunTime()) : "");
+                createCell(row, colNum++, inOut.getAttendance() != null ? inOut.getAttendance().getId().toString() : "");
+                createCell(row, colNum++, inOut.getCreatedDate() != null ? dateTimeFormat.format(inOut.getCreatedDate()) : "");
+                createCell(row, colNum++, inOut.getUpdatedDate() != null ? dateTimeFormat.format(inOut.getUpdatedDate()) : "");
+                createCell(row, colNum++, inOut.getIsActive() != null ? (inOut.getIsActive() ? "Yes" : "No") : "No");
+            }
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
         }
     }
 

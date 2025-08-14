@@ -21,6 +21,7 @@ public interface InOutRepo extends CrudRepository<InOutEntity, Long> {
     List<InOutEntity> findAllByAttendance(AttendanceEntity attendance);
     List<InOutEntity> findByEmployeeIdAndPunchTime(String employeeId, Date punchTime);
     Page<InOutEntity> findByEmployeeId(String employeeId, Pageable pageable);
+    List<InOutEntity> findByEmployeeId(String employeeId);
 
     List<InOutEntity> findByDateAndPunchTypeTimeBefore(Date date, Time punchTypeTimeBefore);
     List<InOutEntity> findByDateAndPunchTypeTimeBetween(Date date, Time punchTypeTimeAfter, Time punchTypeTimeBefore);

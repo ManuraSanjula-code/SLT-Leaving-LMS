@@ -110,7 +110,7 @@ public class Helper {
                 System.err.println("Employee not found for user: " + user);
                 return;
             }
-
+            attendanceEntity.setAttendanceType(null);
             if (((attendanceEntity.getLeaveStatus() != null) && attendanceEntity.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) || ((attendanceEntity.getAttendanceType() != null) && (attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT) || attendanceEntity.getAttendanceType().equals(AttendanceType.FULL_DAY)))) {
                 return;
             }
@@ -165,23 +165,7 @@ public class Helper {
             System.err.println("Error updating attendance with leave time: " + e.getMessage());
         }
     }
-
-    private void checkNoPayCondition(EmployeeEntity employee, AttendanceEntity attendanceEntity) {
-        try {
-            List<UserLeaveTypeRemainingEntity> userLeaveCategoryRemaining = serviceEvent.getUserLeaveTypeRemaining(employee.getEmployeeId());
-
-            if (userLeaveCategoryRemaining != null) {
-                boolean noPay = userLeaveCategoryRemaining.stream().filter(Objects::nonNull).allMatch(remaining -> remaining.getRemainingLeaves() < 1);
-
-                if (noPay) {
-                    checkService.saveNoPayEntity(employee, attendanceEntity, checkService.createNoPayRequest(attendanceEntity.getAttendanceType().equals(AttendanceType.HALF_DAY), attendanceEntity.getIsUnSuccessful(), attendanceEntity.getIsUnauthorized(), attendanceEntity.getIsLate(), attendanceEntity.getIsLateCovered(), attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT)), attendanceEntity.getDate());
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error checking no-pay condition: " + e.getMessage());
-        }
-    }
-
+    
     public EmployeeEntity getEmployeeById(String employeeId) {
         try {
             if (employeeId == null || employeeId.isEmpty()) {
