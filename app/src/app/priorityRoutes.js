@@ -11,6 +11,7 @@ export const priorityRouteAccess = {
     // Priority 10-29 (Administrative Roles)
     10: [
         "/employee-activities",
+        "/view-employees",
         "/absent-employees-admin",
         "/no-pay-leaves-admin",
         "/manage-leave-requests",
@@ -28,6 +29,7 @@ export const priorityRouteAccess = {
 
     // 30-49 (HR Roles)
     30:[
+        "/view-employees",
         "/employee-activities",
         "/absent-employees-admin",
         "/no-pay-leaves-admin",

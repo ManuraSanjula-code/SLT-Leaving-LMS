@@ -47,7 +47,6 @@ public interface Check_Service {
     public void reportAttendance(InOutEntity inOut, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay,Boolean absent, Date date);
 
     public void reportAttendance(InOutEntity moa, InOutEntity eve, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay,Boolean absent, Date date);
-    public void reportAttendance(InOutEntity moa, InOutEntity eve,Date date);
 
     public void reportAttendance(String employeeID, Boolean swap, Boolean fullday, Boolean unAuthorized, Boolean unSuccessful, Boolean late, Boolean late_cover, Boolean half_day, Boolean isFullLeave, Boolean leaveSuccess, Boolean leaveReq, Boolean active, Boolean nopay, Boolean absent,Date date);
 

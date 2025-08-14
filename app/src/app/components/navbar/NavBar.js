@@ -60,6 +60,7 @@ const NavBar = () => {
 
     const admItems = [
       { label: "Manage Employees-Admin", path: "/manage-employees" },
+      { label: "View Employees", path: "/view-employees" },
       { label: "Employee Activities-Admin", path: "/employee-activities" },
       { label: "Manage Leave Requests-Admin", path: "/manage-leave-requests" },
       { label: "Manage Movement Requests-Admin", path: "/manage-movement-requests" },

@@ -415,10 +415,11 @@ public class LMSUtils {
         if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
         else entity.setLeaveStatus(null);
 
-        if(req.getLeaveStatus() != null) entity.setLeaveStatus(req.getLeaveStatus());
         if(req.getPayStatus() != null) entity.setPayStatus(req.getPayStatus());
+        
         if(req.getResolve() != null) entity.setResolve(req.getResolve());
         else entity.setResolve(null);
+
         if(req.getAttendanceType() != null) entity.setAttendanceType(req.getAttendanceType());
 
 

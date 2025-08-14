@@ -334,7 +334,7 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("@prioritySecurity.hasAnyPriority(1, 2, 3, 4, 5, 6, 7,8,9)")
+    @PreAuthorize("@prioritySecurity.hasPriorityInRange(1, 49)")
     public Page<UserEntity> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size, Authentication authentication) {
