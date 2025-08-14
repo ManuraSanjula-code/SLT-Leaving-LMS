@@ -1378,7 +1378,7 @@ public class Check_Service_Impl implements Check_Service {
         if (nopay)
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(inout.getPunchTime()));
 
-        if ((unSuccessful) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
+        if ((unSuccessful || savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
@@ -1480,7 +1480,7 @@ public class Check_Service_Impl implements Check_Service {
         if (nopay)
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(moa.getPunchTime()));
 
-        if ((unSuccessful) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
+        if ((unSuccessful || savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
     }
 
@@ -1797,6 +1797,8 @@ public class Check_Service_Impl implements Check_Service {
                                 attendance.setIssueDescription("LATE ARRIVAL FULLY COMPENSATED WITH OVERTIME");
                                 attendance.setHasIssues(false);
                                 attendance.setDueDateForUA(null);
+                                attendance.setIsLateCovered(true);
+
                             } else {
                                 attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                                 attendance.setIssueDescription("LATE ARRIVAL PARTIALLY COMPENSATED");
