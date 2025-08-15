@@ -896,8 +896,17 @@ public class Check_Service_Impl implements Check_Service {
                 .toList();
 
         overdueEntities_filter.forEach(entity -> {
+            if(entity == null) return;
+
             if (entity.getIsResolved())
                 return;
+
+            EmployeeEntity employee = entity.getEmployee();
+            if(employee == null) return;
+            if (Objects.isNull(employee.getRoaster())) {
+                employee.setRoaster(false);
+            }
+            if(employee.getRoaster()) return;
 
             Optional<MovementsEntity> movement = movementsRepo.findAllByEmployeeAndHappenDate(entity.getEmployee(), entity.getArrivalDate());
             Optional<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDate(entity.getEmployee(), entity.getArrivalDate());
@@ -1339,7 +1348,12 @@ public class Check_Service_Impl implements Check_Service {
 
         AttendanceEntity attendance = createBaseAttendance(employee, date);
         attendance.setTerminalId(inout.getTerminalId());
-        attendance.setArrivalDate(helper.removeTimeFromDate(inout.getPunchTime()));
+
+        Date arrivalDate = (inout.getPunchTime() != null)
+                ? helper.removeTimeFromDate(inout.getPunchTime())
+                : (date != null ? date : helper.getYesterdayDate());
+
+        attendance.setArrivalDate(helper.removeTimeFromDate(arrivalDate));
         if (swap)
             attendance.setLeftTime(inout.getPunchTypeTime());
         else
@@ -1438,7 +1452,11 @@ public class Check_Service_Impl implements Check_Service {
 
         AttendanceEntity attendance = createBaseAttendance(employee, date);
         attendance.setTerminalId(moa.getTerminalId() + " - " + eve.getTerminalId());
-        attendance.setArrivalDate(helper.removeTimeFromDate(moa.getPunchTime()));
+        Date arrivalDate = (moa.getPunchTime() != null)
+                ? helper.removeTimeFromDate(moa.getPunchTime())
+                : (date != null ? date : helper.getYesterdayDate());
+
+        attendance.setArrivalDate(helper.removeTimeFromDate(arrivalDate));
         attendance.setArrivalTime(moa.getPunchTypeTime());
         attendance.setLeftTime(eve.getPunchTypeTime());
         attendance.setIsActive(active);
@@ -1550,46 +1568,46 @@ public class Check_Service_Impl implements Check_Service {
             logger.warn("Null or empty leave list provided to handleLeave");
             return;
         }
-        
+
         for (LeaveEntity leaveEntity : leave) {
             if (leaveEntity == null) {
                 logger.warn("Null leave entity encountered in handleLeave");
                 continue;
             }
-            
+
             try {
                 processLeaveEntity(leaveEntity, attendance);
             } catch (Exception e) {
-                logger.error("Error processing leave entity with ID: {}", 
-                            leaveEntity.getId(), e);
+                logger.error("Error processing leave entity with ID: {}",
+                        leaveEntity.getId(), e);
             }
         }
     }
 
     private void processLeaveEntity(LeaveEntity leaveEntity, AttendanceEntity attendance) {
         boolean isHalfDayLeave = isHalfDayLeave(leaveEntity);
-        
+
         boolean isNonHalfDayAttendance = isNonHalfDayAttendance(attendance);
-        
+
         if (isHalfDayLeave && isNonHalfDayAttendance) {
             markLeaveAsUsed(leaveEntity);
         } else {
             markLeaveAsCancelled(leaveEntity);
         }
-        
+
         leaveRepo.save(leaveEntity);
     }
 
     private boolean isHalfDayLeave(LeaveEntity leaveEntity) {
-        return leaveEntity.getComponentBehavior() != null && 
-            leaveEntity.getComponentBehavior().equals(ComponentBehavior.HALF_DAY);
+        return leaveEntity.getComponentBehavior() != null &&
+                leaveEntity.getComponentBehavior().equals(ComponentBehavior.HALF_DAY);
     }
 
     private boolean isNonHalfDayAttendance(AttendanceEntity attendance) {
         if (attendance == null || attendance.getAttendanceType() == null) {
             return true;
         }
-        
+
         return !attendance.getAttendanceType().equals(AttendanceType.HALF_DAY);
     }
 
@@ -1597,18 +1615,18 @@ public class Check_Service_Impl implements Check_Service {
         leaveEntity.setNotUsed(false);
         leaveEntity.setRequestStatus(RequestStatus.SUBMITTED);
         leaveEntity.setDescription("Half day leave applied - attendance recorded as full day");
-        
-        logger.info("Leave ID {} marked as used - half day leave with non-half-day attendance", 
-                    leaveEntity.getId());
+
+        logger.info("Leave ID {} marked as used - half day leave with non-half-day attendance",
+                leaveEntity.getId());
     }
 
     private void markLeaveAsCancelled(LeaveEntity leaveEntity) {
         leaveEntity.setNotUsed(true);
         leaveEntity.setRequestStatus(RequestStatus.CANCELLED);
         leaveEntity.setDescription("Leave cancelled - employee attendance does not require leave usage");
-        
-        logger.info("Leave ID {} cancelled - attendance matches leave request or employee worked full day", 
-                    leaveEntity.getId());
+
+        logger.info("Leave ID {} cancelled - attendance matches leave request or employee worked full day",
+                leaveEntity.getId());
     }
 
     private AttendanceEntity createBaseAttendance(EmployeeEntity employee, Date date) {

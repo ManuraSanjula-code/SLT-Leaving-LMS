@@ -152,11 +152,16 @@ public class AttendanceService {
                         }
 
                         Optional<EmployeeArchive> employeeOpt = employeeArchiveRepository.findByEmployeeId(cleanEmId);
-                        if (employeeOpt.isEmpty() || !employeeOpt.get().getRoaster()) {
+                        if (employeeOpt.isEmpty()) {
                             return;
                         }
 
                         EmployeeArchive employee = employeeOpt.get();
+                        if (Objects.isNull(employee.getRoaster())) {
+                            employee.setRoaster(false);
+                        }
+
+                        if(!employee.getRoaster()) return;;
 
                         List<InOut> punches = inOutRepository.findByEmployeeIdAndPunchTime(employee.getSltId(), processDate);
 
@@ -186,6 +191,7 @@ public class AttendanceService {
                                 if (fullDayLeaveTime.isAfter(out.getPunchTypeTime())) {
                                     attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
                                 }
+                                attendance.setArrivalDate(out.getPunchTime());
                                 attendance.setIsUnauthorized(true);
                                 attendance.setLeftTime(out.getPunchTypeTime());
                                 attendance.setAttendanceType(AttendanceType.NONE);
@@ -685,6 +691,9 @@ public class AttendanceService {
 
             EmployeeArchive employeeArchive = employeeArchiveRepository.findByEmployeeId(employee.getEmployeeId()).orElse(null);
             if (employeeArchive == null) return null;
+            if (Objects.isNull(employeeArchive.getRoaster())) {
+                employeeArchive.setRoaster(false);
+            }
             if (!employeeArchive.getRoaster()) return null;
 
             /* Optional<InOut> earliestPunchIn = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(employeeArchive.getSltId(), processDate, InOutType.MORNING_IN).

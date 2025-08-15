@@ -115,8 +115,15 @@ public class MessageListener {
                 attendanceEntity.setEmployee(employeeEntity);
 
                 if (attendance.getDate() != null) {
-                    attendanceEntity.setDate(attendance.getDate());
-                    attendanceEntity.setArrivalDate(helper.removeTimeFromDate(attendance.getDate()));
+                    attendanceEntity.setDate(helper.removeTimeFromDate(attendance.getDate()));
+                }else{
+                    attendanceEntity.setDate(helper.removeTimeFromDate(helper.getYesterdayDate()));
+                }
+
+                if(attendance.getArrivalDate() != null){
+                    attendanceEntity.setArrivalDate(helper.removeTimeFromDate(attendance.getArrivalDate()));
+                }else{
+                    attendanceEntity.setArrivalDate(helper.removeTimeFromDate(helper.getYesterdayDate()));
                 }
 
                 if (attendance.getArrivalTime() != null) {
