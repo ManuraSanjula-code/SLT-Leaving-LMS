@@ -20,6 +20,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.InOutDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.model.req.LeaveReq;
 import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
+import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import com.slt.peotv.lmsmangmentservice.service.Check_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
@@ -647,46 +648,10 @@ public class Check_Service_Impl implements Check_Service {
             attendance.setIsUnauthorized(false);
             attendance.setIssueDescription("none :: Movement approved");
 
-            switch (movement.getMovementType()) {
-                case HOME_TO_OFFICE:
-                    if (movement.getInTime() != null) {
-                        attendance.setArrivalTime(movement.getInTime());
-                    }
-                    if (attendance.getArrivalTime().equals(attendance.getLeftTime())) {
-                        attendance.setArrivalTime(null);
-                        logger.warn("Two time are equal Arrival time: {} Movement In time {}", attendance.getArrivalTime(), movement.getInTime());
-                    }
-                    break;
-                case OFFICE_TO_HOME:
-                    if (movement.getOutTime() != null) {
-                        attendance.setLeftTime((movement.getOutTime()));
-                    }
-                    if (attendance.getLeftTime().equals(attendance.getArrivalTime())) {
-                        attendance.setLeftTime(null);
-                        logger.warn("Two time are equal Left time: {} Movement Out time {}", attendance.getLeftTime(), movement.getOutTime());
-                    }
-                    break;
-                case FULLDAY, REMOTEWORK:
-                    if (movement.getInTime() != null) {
-                        attendance.setArrivalTime(movement.getInTime());
-                    }
-                    if (movement.getOutTime() != null) {
-                        attendance.setLeftTime(movement.getOutTime());
-                    }
-                    if (Objects.equals(attendance.getArrivalTime(), attendance.getLeftTime())) {
-                        logger.warn("Both times are equal - Arrival time and Left time: {} : {}",
-                                attendance.getArrivalTime(), attendance.getLeftTime());
-                        attendance.setArrivalTime(null);
-                        attendance.setLeftTime(null);
-                    }
-                    break;
-                default:
-                    logger.warn("Unknown movement type: {}", movement.getMovementType());
-            }
-
             if (attendance.getLeaveStatus() != null && attendance.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) {
                 attendance.setLeaveStatus(null);
             }
+            recalculateAttendanceFromApprovedMovement(attendance, movement);
 
             attendance.setArrivalTimeRaw(movement.getInTimeRaw());
             attendance.setLeftTimeRaw(movement.getOutTimeRaw());
@@ -696,7 +661,285 @@ public class Check_Service_Impl implements Check_Service {
 
             // Link InOut records with the attendance
             updateAttendanceWithInOutRecords(movement, savedAttendance);
+
+            if ((savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getIsUnauthorized() == false))
+                helper.handleLateAndUnsuccessful(movement.getEmployee().getSltId(), savedAttendance, true);
         }
+    }
+
+    @Override
+    public void recalculateAttendanceFromApprovedMovement(AttendanceEntity attendance, MovementsEntity movement) {
+        try {
+            String employeeId = movement.getEmployee().getSltId();
+
+            // Create InOut entities from movement data for calculation
+            InOutEntity inPunch = createInOutFromMovement(movement, true);
+            InOutEntity outPunch = createInOutFromMovement(movement, false);
+
+            // Analyze the movement pattern using similar logic to your attendance analyzer
+            AttendanceAnalysis analysis = analyzeMovementPattern(movement, inPunch, outPunch);
+
+            // Update attendance times based on movement type
+            updateAttendanceTimesFromMovement(attendance, movement);
+
+            // Apply the analysis results
+            attendance.setAttendanceType(analysis.attendanceType);
+            attendance.setIsLate(analysis.isLate);
+            attendance.setIsUnSuccessful(analysis.isUnsuccessful);
+
+            // Since movement is approved, override authorization issues
+            attendance.setIsUnauthorized(false);
+            attendance.setHasIssues(false);
+            attendance.setDueDateForUA(null);
+
+            // Set appropriate leave status and issue description
+            updateLeaveStatusFromAnalysis(attendance, analysis, movement);
+
+            // Set final issue description
+            String movementDesc = String.format("Movement %s approved - %s",
+                    movement.getPublicId(), movement.getMovementType());
+            if (analysis.issueDescription != null && !analysis.issueDescription.isEmpty()) {
+                attendance.setIssueDescription(movementDesc + " :: " + analysis.issueDescription);
+            } else {
+                attendance.setIssueDescription(movementDesc);
+            }
+            /* if (attendance != null && attendance.getAttendanceType() != null) {
+                handleAttendanceTypeAndIssues(
+                    inPunch, 
+                    outPunch, 
+                    attendance, 
+                    null, 
+                    attendance.getAttendanceType().equals(AttendanceType.FULL_DAY), 
+                    attendance.getAttendanceType().equals(AttendanceType.HALF_DAY),
+                    false, 
+                    attendance.getIsUnSuccessful(), 
+                    attendance.getAttendanceType().equals(AttendanceType.ABSENT), 
+                    employeeId
+                );
+            } */
+
+            logger.info("Movement recalculation completed for {}: Type={}, Late={}, Issues={}",
+                    employeeId, attendance.getAttendanceType(), attendance.getIsLate(), attendance.getHasIssues());
+
+        } catch (Exception e) {
+            logger.error("Error recalculating attendance for movement {}: {}", movement.getPublicId(), e.getMessage(), e);
+            setFallbackAttendanceValues(attendance, movement);
+        }
+    }
+
+    public AttendanceAnalysis analyzeMovementPattern(MovementsEntity movement, InOutEntity inPunch, InOutEntity outPunch) {
+
+        // Define time thresholds (same as your system)
+        LocalTime standardStart = LocalTime.of(8, 30);
+        LocalTime standardStartWaiver = LocalTime.of(9, 0);
+        LocalTime lateThreshold = LocalTime.of(10, 0);
+        LocalTime halfDayThreshold = LocalTime.of(12, 30);
+        LocalTime fullLeaveThreshold = LocalTime.of(13, 0);
+        LocalTime standardEnd = LocalTime.of(17, 0);
+
+        AttendanceType attendanceType = AttendanceType.FULL_DAY;
+        boolean isLate = false;
+        boolean isUnsuccessful = false;
+        StringBuilder issueDescription = new StringBuilder();
+
+        switch (movement.getMovementType()) {
+            case FULLDAY:
+            case REMOTEWORK:
+                attendanceType = AttendanceType.FULL_DAY;
+                issueDescription.append("Full day movement approved");
+
+                // If times are provided, validate them
+                if (inPunch != null && outPunch != null) {
+                    LocalTime arrivalTime = inPunch.getPunchTypeTime().toLocalTime();
+                    LocalTime departureTime = outPunch.getPunchTypeTime().toLocalTime();
+
+                    isLate = arrivalTime.isAfter(standardStart);
+
+                    // Calculate working hours
+                    Duration workDuration = Duration.between(arrivalTime, departureTime);
+                    long workHours = workDuration.toHours();
+
+                    if (workHours < 8) {
+                        if (workHours >= 4) {
+                            attendanceType = AttendanceType.HALF_DAY;
+                            issueDescription.append(" - Worked ").append(workHours).append(" hours (Half Day)");
+                        } else {
+                            issueDescription.append(" - Insufficient hours worked (").append(workHours).append(")");
+                        }
+                    }
+
+                    if (isLate) {
+                        issueDescription.append(" - Late arrival at ").append(arrivalTime);
+                    }
+                }
+                break;
+
+            case HOME_TO_OFFICE:
+                // Only IN time provided - check for late arrival
+                if (inPunch != null) {
+                    LocalTime arrivalTime = inPunch.getPunchTypeTime().toLocalTime();
+                    isLate = arrivalTime.isAfter(standardStart);
+
+                    if (arrivalTime.isAfter(fullLeaveThreshold)) {
+                        attendanceType = AttendanceType.HALF_DAY;
+                        issueDescription.append("Very late arrival - Half day");
+                    } else if (arrivalTime.isAfter(halfDayThreshold)) {
+                        attendanceType = AttendanceType.HALF_DAY;
+                        issueDescription.append("Late arrival - Half day consideration");
+                    } else {
+                        issueDescription.append("Home to office movement approved");
+                        if (isLate) {
+                            issueDescription.append(" - Late arrival at ").append(arrivalTime);
+                        }
+                    }
+                }
+                break;
+
+            case OFFICE_TO_HOME:
+                // Only OUT time provided - check for early departure
+                if (outPunch != null) {
+                    LocalTime departureTime = outPunch.getPunchTypeTime().toLocalTime();
+
+                    if (departureTime.isBefore(halfDayThreshold)) {
+                        attendanceType = AttendanceType.HALF_DAY;
+                        issueDescription.append("Early departure - Half day");
+                    } else {
+                        issueDescription.append("Office to home movement approved");
+                    }
+                }
+                break;
+
+            default:
+                issueDescription.append("Movement type ").append(movement.getMovementType()).append(" approved");
+        }
+
+        return new AttendanceAnalysis(attendanceType, true, isLate, isUnsuccessful, issueDescription.toString());
+    }
+
+    private void updateAttendanceTimesFromMovement(AttendanceEntity attendance, MovementsEntity movement) {
+        switch (movement.getMovementType()) {
+            case HOME_TO_OFFICE:
+                if (movement.getInTime() != null) {
+                    attendance.setArrivalTime(movement.getInTime());
+                }
+                if (attendance.getArrivalTime().equals(attendance.getLeftTime())) {
+                    attendance.setArrivalTime(null);
+                    logger.warn("Two time are equal Arrival time: {} Movement In time {}", attendance.getArrivalTime(), movement.getInTime());
+                }
+                break;
+            case OFFICE_TO_HOME:
+                if (movement.getOutTime() != null) {
+                    attendance.setLeftTime((movement.getOutTime()));
+                }
+                if (attendance.getLeftTime().equals(attendance.getArrivalTime())) {
+                    attendance.setLeftTime(null);
+                    logger.warn("Two time are equal Left time: {} Movement Out time {}", attendance.getLeftTime(), movement.getOutTime());
+                }
+                break;
+            case FULLDAY, REMOTEWORK:
+                if (movement.getInTime() != null) {
+                    attendance.setArrivalTime(movement.getInTime());
+                }
+                if (movement.getOutTime() != null) {
+                    attendance.setLeftTime(movement.getOutTime());
+                }
+                if (Objects.equals(attendance.getArrivalTime(), attendance.getLeftTime())) {
+                    logger.warn("Both times are equal - Arrival time and Left time: {} : {}",
+                            attendance.getArrivalTime(), attendance.getLeftTime());
+                    attendance.setArrivalTime(null);
+                    attendance.setLeftTime(null);
+                }
+                break;
+            default:
+                logger.warn("Unknown movement type: {}", movement.getMovementType());
+        }
+    }
+
+    private void updateLeaveStatusFromAnalysis(AttendanceEntity attendance, AttendanceAnalysis analysis, MovementsEntity movement) {
+        // Clear existing full leave status since movement is approved
+        if (attendance.getLeaveStatus() != null && attendance.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) {
+            attendance.setLeaveStatus(null);
+        }
+
+        // Set leave status based on analysis
+        if (analysis.attendanceType == AttendanceType.HALF_DAY) {
+            // Only set short leave if there might be compensation issues
+            if (analysis.isUnsuccessful) {
+                attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
+            }
+            // Otherwise leave it null for approved half day
+        }
+
+        // For full day movements, ensure no leave status unless there are issues
+        if (movement.getMovementType() == MovementType.FULLDAY ||
+                movement.getMovementType() == MovementType.REMOTEWORK) {
+            if (analysis.attendanceType == AttendanceType.FULL_DAY) {
+                attendance.setLeaveStatus(null);
+            }
+        }
+    }
+
+    private InOutEntity createInOutFromMovement(MovementsEntity movement, boolean isInPunch) {
+        if ((isInPunch && movement.getInTime() == null) || (!isInPunch && movement.getOutTime() == null)) {
+            return null;
+        }
+
+        InOutEntity inOut = new InOutEntity();
+
+        try {
+            if (isInPunch && movement.getInTime() != null) {
+                inOut.setPunchTime(movement.getHappenDate());
+                inOut.setPunchTypeTime(movement.getInTime());
+                inOut.setInOutValue(1); // IN punch
+            } else if (!isInPunch && movement.getOutTime() != null) {
+                inOut.setPunchTime(movement.getHappenDate());
+                inOut.setPunchTypeTime( movement.getOutTime());
+                inOut.setInOutValue(0); // OUT punch
+            }
+
+            inOut.setEmployeeId(movement.getEmployee().getSltId());
+            return inOut;
+        } catch (Exception e) {
+            logger.warn("Error creating InOut entity from movement: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Timestamp createTimestampFromDateAndTime(Date date, Time time) {
+        if (date == null || time == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        Calendar timeCalendar = Calendar.getInstance();
+        timeCalendar.setTime(time);
+
+        calendar.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY));
+        calendar.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE));
+        calendar.set(Calendar.SECOND, timeCalendar.get(Calendar.SECOND));
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return new Timestamp(calendar.getTimeInMillis());
+    }
+
+    private void setFallbackAttendanceValues(AttendanceEntity attendance, MovementsEntity movement) {
+        // Set safe fallback values in case of calculation error
+        switch (movement.getMovementType()) {
+            case FULLDAY:
+            case REMOTEWORK:
+                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+                break;
+            default:
+                attendance.setAttendanceType(AttendanceType.FULL_DAY);
+        }
+
+        attendance.setHasIssues(false);
+        attendance.setIsUnauthorized(false);
+        attendance.setDueDateForUA(null);
+        attendance.setLeaveStatus(null);
+        attendance.setIssueDescription("Movement approved with calculation fallback");
     }
 
 
@@ -881,6 +1124,14 @@ public class Check_Service_Impl implements Check_Service {
         if (allApproved || admins.isEmpty()) {
             leave.setRequestStatus(RequestStatus.APPROVED);
             leaveRepo.save(leave);
+        }
+
+        if (((leave.getComponentBehavior() != null) & (leave.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED ||
+                leave.getComponentBehavior() == ComponentBehavior.ABSENT ||
+                leave.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL))) {
+            EmployeeEntity employee = attendance.getEmployee();
+            if(employee != null)
+                processUnauthorizedLeave(leave, attendance.getEmployee().getSltId());
         }
     }
 
@@ -2148,15 +2399,16 @@ public class Check_Service_Impl implements Check_Service {
             lmsService.saveLeave(leaveEntity);
         }
 
-        if (req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED ||
+        /*if (req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED ||
                 req.getComponentBehavior() == ComponentBehavior.ABSENT ||
                 req.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL) {
             processUnauthorizedLeave(leaveEntity, employeeId);
-        }
+        }*/
     }
 
 
-    private void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId) {
+    @Override
+    public void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId) {
         if (leaveEntity == null) {
             throw new IllegalArgumentException("LeaveEntity cannot be null");
         }

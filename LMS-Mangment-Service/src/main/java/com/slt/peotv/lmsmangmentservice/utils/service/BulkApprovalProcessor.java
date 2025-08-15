@@ -4,11 +4,14 @@ import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.BulkApprovalException;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.repository.*;
+import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,10 +38,13 @@ public class BulkApprovalProcessor {
     private final ComponetAdminsRepo componetAdminsRepo;
     private final AttendanceRepo attendanceRepo;
     private final InOutRepo inOutRepo;
+    private final UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     private final Helper helper;
     private final ExecutorService executorService;
     private final ConcurrentHashMap<String, Long> processingCache;
     private final ScheduledExecutorService cacheCleanupScheduler;
+    private final ServiceEvent serviceEvent;
+    private final Check_Service checkService;
 
     @Autowired
     public BulkApprovalProcessor(
@@ -47,15 +53,20 @@ public class BulkApprovalProcessor {
             ComponetAdminsRepo componetAdminsRepo,
             AttendanceRepo attendanceRepo,
             InOutRepo inOutRepo,
+            UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo,
             Helper helper,
-            @Value("${bulk.approval.thread.pool.size:5}") int threadPoolSize) {
+            Check_Service checkService,
+            @Value("${bulk.approval.thread.pool.size:5}") int threadPoolSize, ServiceEvent serviceEvent) {
 
         this.movementsRepo = movementsRepo;
         this.leaveRepo = leaveRepo;
         this.componetAdminsRepo = componetAdminsRepo;
         this.attendanceRepo = attendanceRepo;
         this.inOutRepo = inOutRepo;
+        this.userLeaveTypeRemainingRepo = userLeaveTypeRemainingRepo;
         this.helper = helper;
+        this.checkService = checkService;
+        this.serviceEvent = serviceEvent;
 
         int poolSize = threadPoolSize > 0 ? threadPoolSize : DEFAULT_THREAD_POOL_SIZE;
         this.executorService = Executors.newFixedThreadPool(poolSize);
@@ -99,6 +110,17 @@ public class BulkApprovalProcessor {
             validateEmployeeMatch(movement.getEmployee().getEmployeeId(), employeeId, "Movement", movementId);
             approvedMoveInternal(movement, approverId);
 
+            // Call recalculateAttendanceFromApprovedMovement after movement approval
+            if (movement.getRequestStatus() == RequestStatus.APPROVED) {
+                try {
+                    checkService.recalculateAttendanceFromApprovedMovement(movement.getAttendance(),movement);
+                    logger.info("Successfully recalculated attendance for approved movement: {}", movementId);
+                } catch (Exception e) {
+                    logger.error("Error recalculating attendance for movement: {}", movementId, e);
+                    // Don't fail the entire transaction, just log the error
+                }
+            }
+
             logger.debug("Processed movement approval for ID: {}, Employee: {}", movementId, employeeId);
         } catch (Exception e) {
             logger.error("Error in movement approval for ID: {}", movementId, e);
@@ -112,8 +134,21 @@ public class BulkApprovalProcessor {
             LeaveEntity leave = leaveRepo.findByPublicId(leaveId)
                     .orElseThrow(() -> new BulkApprovalException("Leave not found: " + leaveId));
 
-            /*validateEmployeeMatch(leave.getEmployee().getEmployeeId(), employeeId, "Leave", leaveId);*/
+            // Validate employee match if needed (commented out in original code)
+            // validateEmployeeMatch(leave.getEmployee().getEmployeeId(), employeeId, "Leave", leaveId);
+
             approvedLeaveInternal(leave, approverId);
+
+            // Process unauthorized leave if leave is approved
+            if (leave.getRequestStatus() == RequestStatus.APPROVED) {
+                try {
+                    processUnauthorizedLeave(leave, employeeId);
+                    logger.info("Successfully processed unauthorized leave for: {}", leaveId);
+                } catch (Exception e) {
+                    logger.error("Error processing unauthorized leave for ID: {}", leaveId, e);
+                    // Don't fail the entire transaction, just log the error
+                }
+            }
 
             logger.debug("Processed leave approval for ID: {}, Employee: {}", leaveId, employeeId);
         } catch (Exception e) {
@@ -167,6 +202,83 @@ public class BulkApprovalProcessor {
         } catch (Exception e) {
             logger.error("Error in approvedLeave: {}", leave.getPublicId(), e);
             throw new BulkApprovalException("Leave approval failed", e);
+        }
+    }
+
+    /**
+     * Process unauthorized leave - handles leave-specific post-approval logic
+     */
+    private void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId) {
+        if (leaveEntity == null) {
+            throw new IllegalArgumentException("LeaveEntity cannot be null");
+        }
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new IllegalArgumentException("EmployeeId cannot be null or empty");
+        }
+
+        if (leaveEntity.getEmployee() == null) {
+            throw new IllegalArgumentException("LeaveEntity employee cannot be null");
+        }
+        if (leaveEntity.getHappenDate() == null) {
+            throw new IllegalArgumentException("LeaveEntity happenDate cannot be null");
+        }
+        if (leaveEntity.getLeaveType() == null || leaveEntity.getLeaveType().getName() == null) {
+            throw new IllegalArgumentException("LeaveType and its name cannot be null");
+        }
+
+        if (attendanceRepo == null) {
+            throw new IllegalStateException("Attendance repository is not initialized");
+        }
+        if (leaveRepo == null) {
+            throw new IllegalStateException("Leave repository is not initialized");
+        }
+        if (userLeaveTypeRemainingRepo == null) {
+            throw new IllegalStateException("UserLeaveTypeRemaining repository is not initialized");
+        }
+
+        Optional<AttendanceEntity> attendanceEntityOp = attendanceRepo.findByEmployeeAndDate(
+                leaveEntity.getEmployee(), leaveEntity.getHappenDate());
+
+        if (attendanceEntityOp.isPresent()) {
+            AttendanceEntity attendanceEntity = attendanceEntityOp.get();
+
+            attendanceEntity.setIsResolved(true);
+            attendanceEntity.setHasIssues(false);
+            attendanceEntity.setResolve(ResolveType.VIA_LEAVE);
+            attendanceRepo.save(attendanceEntity);
+
+            leaveEntity.setRequestStatus(RequestStatus.APPROVED);
+            leaveRepo.save(leaveEntity);
+
+            UserLeaveTypeRemainingEntity userLeaveTypeRemaining = getUserLeaveTypeRemaining(
+                    leaveEntity.getLeaveType().getName(), employeeId);
+
+            if (userLeaveTypeRemaining != null) {
+                if (userLeaveTypeRemaining.getRemainingLeaves() == null) {
+                    throw new IllegalStateException("Remaining leaves cannot be null");
+                }
+                if (userLeaveTypeRemaining.getRemainingLeaves() > 0) {
+                    userLeaveTypeRemaining.setRemainingLeaves(userLeaveTypeRemaining.getRemainingLeaves() - 1);
+                    userLeaveTypeRemainingRepo.save(userLeaveTypeRemaining);
+                    logger.info("Decremented remaining leaves for employee: {}, Leave type: {}, Remaining: {}",
+                            employeeId, leaveEntity.getLeaveType().getName(), userLeaveTypeRemaining.getRemainingLeaves());
+                }
+            }
+        } else {
+            throw new IllegalArgumentException("Failed to process leave request: No attendance record found");
+        }
+    }
+
+    /**
+     * Get user leave type remaining entity
+     */
+    private UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String leaveTypeName, String employeeId) {
+        try {
+            return serviceEvent.getUserLeaveTypeRemaining(employeeId, leaveTypeName);
+        } catch (Exception e) {
+            logger.error("Error fetching user leave type remaining for employee: {}, leave type: {}",
+                    employeeId, leaveTypeName, e);
+            return null;
         }
     }
 
@@ -242,7 +354,7 @@ public class BulkApprovalProcessor {
         }
     }
 
-    // Helper methods
+    // Helper methods (keeping all existing helper methods as they were)
     private List<CompletableFuture<Void>> createApprovalFutures(BulkApprovedReq bulkApprovedReq,
                                                                 String approverId, boolean isMovement) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();

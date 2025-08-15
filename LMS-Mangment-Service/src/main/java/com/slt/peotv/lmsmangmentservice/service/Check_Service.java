@@ -2,6 +2,8 @@ package com.slt.peotv.lmsmangmentservice.service;
 
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
+import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
@@ -69,4 +71,7 @@ public interface Check_Service {
     public List<InOutDTO> getAllInOut(String employeeID, Date date);
 
     public Check_Service_Impl.NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
+
+    public void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId);
+    public void recalculateAttendanceFromApprovedMovement(AttendanceEntity attendance, MovementsEntity movement);
 }
