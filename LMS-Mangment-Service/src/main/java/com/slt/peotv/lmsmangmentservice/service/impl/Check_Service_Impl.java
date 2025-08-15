@@ -1373,7 +1373,7 @@ public class Check_Service_Impl implements Check_Service {
         inOutRepo.save(inout);
 
         List<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, helper.getYesterdayDate(), helper.getYesterdayDate());
-        if (!leave.isEmpty()) handleLeave(leave);
+        if (!leave.isEmpty()) handleLeave(leave, attendance);
 
         if (nopay)
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(inout.getPunchTime()));
@@ -1472,7 +1472,7 @@ public class Check_Service_Impl implements Check_Service {
             savedAttendance = attendanceRepo.save(attendance);
 
         List<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDateLessThanEqualAndToDateGreaterThanEqual(employee, helper.getYesterdayDate(), helper.getYesterdayDate());
-        if (!leave.isEmpty()) handleLeave(leave);
+        if (!leave.isEmpty()) handleLeave(leave, attendance);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
         updateInOutRelationships(moa, eve, savedAttendance);
@@ -1545,27 +1545,70 @@ public class Check_Service_Impl implements Check_Service {
             helper.handleLateAndUnsuccessful(employeeID, savedAttendance, swap);
     }
 
-    public void handleLeave(List<LeaveEntity> leave) {
+    public void handleLeave(List<LeaveEntity> leave, AttendanceEntity attendance) {
         if (leave == null || leave.isEmpty()) {
             logger.warn("Null or empty leave list provided to handleLeave");
             return;
         }
-
+        
         for (LeaveEntity leaveEntity : leave) {
             if (leaveEntity == null) {
                 logger.warn("Null leave entity encountered in handleLeave");
                 continue;
             }
-
+            
             try {
-                leaveEntity.setNotUsed(true);
-                leaveEntity.setRequestStatus(RequestStatus.CANCELLED);
-                leaveEntity.setDescription("CAME TO WORK EVEN THOUGH TODAY YOU MAKE A LEAVE BUT YOU CAME TO WORK IN FORM OF A HALF DAY");
-                leaveRepo.save(leaveEntity);
+                processLeaveEntity(leaveEntity, attendance);
             } catch (Exception e) {
-                logger.error("Error processing leave entity: {}", leaveEntity.getId(), e);
+                logger.error("Error processing leave entity with ID: {}", 
+                            leaveEntity.getId(), e);
             }
         }
+    }
+
+    private void processLeaveEntity(LeaveEntity leaveEntity, AttendanceEntity attendance) {
+        boolean isHalfDayLeave = isHalfDayLeave(leaveEntity);
+        
+        boolean isNonHalfDayAttendance = isNonHalfDayAttendance(attendance);
+        
+        if (isHalfDayLeave && isNonHalfDayAttendance) {
+            markLeaveAsUsed(leaveEntity);
+        } else {
+            markLeaveAsCancelled(leaveEntity);
+        }
+        
+        leaveRepo.save(leaveEntity);
+    }
+
+    private boolean isHalfDayLeave(LeaveEntity leaveEntity) {
+        return leaveEntity.getComponentBehavior() != null && 
+            leaveEntity.getComponentBehavior().equals(ComponentBehavior.HALF_DAY);
+    }
+
+    private boolean isNonHalfDayAttendance(AttendanceEntity attendance) {
+        if (attendance == null || attendance.getAttendanceType() == null) {
+            return true;
+        }
+        
+        return !attendance.getAttendanceType().equals(AttendanceType.HALF_DAY);
+    }
+
+    private void markLeaveAsUsed(LeaveEntity leaveEntity) {
+        leaveEntity.setNotUsed(false);
+        leaveEntity.setRequestStatus(RequestStatus.SUBMITTED);
+        leaveEntity.setDescription("Half day leave applied - attendance recorded as full day");
+        
+        logger.info("Leave ID {} marked as used - half day leave with non-half-day attendance", 
+                    leaveEntity.getId());
+    }
+
+    private void markLeaveAsCancelled(LeaveEntity leaveEntity) {
+        leaveEntity.setNotUsed(true);
+        leaveEntity.setRequestStatus(RequestStatus.CANCELLED);
+        leaveEntity.setDescription("Leave cancelled - employee attendance does not require leave usage");
+        
+        logger.info("Leave ID {} cancelled - attendance matches leave request or employee worked full day", 
+                    leaveEntity.getId());
     }
 
     private AttendanceEntity createBaseAttendance(EmployeeEntity employee, Date date) {

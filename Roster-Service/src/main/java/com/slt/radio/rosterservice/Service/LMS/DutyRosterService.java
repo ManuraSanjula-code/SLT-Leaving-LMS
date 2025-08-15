@@ -76,6 +76,11 @@ public class DutyRosterService {
                 DutyRoster roster_ = latestActiveRoster.get();
                 roster_.setActive(false);
                 dutyRosterRepository.save(roster_);
+            }else{
+                dutyRosterRepository.findAll().forEach(roster_->{
+                    roster_.setActive(false);
+                    dutyRosterRepository.save(roster_);
+                });
             }
             return saveRoster(roster);
         }
@@ -94,13 +99,13 @@ public class DutyRosterService {
         // 2. Check if morning shift is in row 1 and evening in row 2 without additional row
         for (Row row : sheet) {
             for (Cell cell : row) {
-                if (cell.getCellType() == CellType.STRING && 
-                    cell.getStringCellValue().contains("This roster is effective from")) {
+                if (cell.getCellType() == CellType.STRING &&
+                        cell.getStringCellValue().contains("This roster is effective from")) {
                     return true;
                 }
             }
         }
-        
+
         // Additional check based on structure
         if (sheet.getPhysicalNumberOfRows() >= 3) {
             Row row3 = sheet.getRow(3);
@@ -281,7 +286,7 @@ public class DutyRosterService {
         if (cell == null) {
             return "";
         }
-        
+
         switch (cell.getCellType()) {
             case STRING:
                 return cell.getStringCellValue().trim();

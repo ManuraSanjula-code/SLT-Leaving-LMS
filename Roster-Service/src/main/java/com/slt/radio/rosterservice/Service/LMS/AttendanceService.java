@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.slt.radio.rosterservice.messaging.MessageProducerService;
 import org.springframework.beans.factory.annotation.Value;
 import com.slt.radio.rosterservice.Model.Enum.LeaveStatus;
+
+import java.time.format.DateTimeParseException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.time.temporal.TemporalAdjusters;
 import java.sql.Time;
@@ -41,6 +43,7 @@ import java.util.stream.Collectors;
 import java.time.temporal.ChronoUnit;
 import com.slt.radio.rosterservice.Model.Enum.RosterType;
 import com.slt.radio.rosterservice.messaging.AttendanceJSM;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -84,8 +87,8 @@ public class AttendanceService {
         List<EmployeeArchive> roasterAbsent = employeeArchiveRepository.findByRoaster(true);
         roasterAbsent.forEach(employee -> {
 
-            if(attendanceRepository.existsByEmployeeIdAndDate(employee.getEmployeeId(), helper.getYesterdayDate()) || 
-               attendanceRepository.existsByEmployeeIdAndArrivalDate(employee.getEmployeeId(), helper.getYesterdayDate())) return;
+            if(attendanceRepository.existsByEmployeeIdAndDate(employee.getEmployeeId(), helper.getYesterdayDate()) ||
+                    attendanceRepository.existsByEmployeeIdAndArrivalDate(employee.getEmployeeId(), helper.getYesterdayDate())) return;
 
             Attendance attendance = new Attendance();
             attendance.setPublicId(UUID.randomUUID().toString());
@@ -115,10 +118,17 @@ public class AttendanceService {
         if (duty_ != null){
             duty_.setActive(true);
             mainDuty = dutyRosterRepository.save(duty_);
-            dutyRosterRepository.findLatestActiveRoster().ifPresent(roster -> {
-                roster.setActive(false);
-                dutyRosterRepository.save(roster);
-            });
+            Optional<DutyRoster> latestActiveRoster = dutyRosterRepository.findLatestActiveRoster();
+            if (latestActiveRoster.isPresent()) {
+                DutyRoster roster_ = latestActiveRoster.get();
+                roster_.setActive(false);
+                dutyRosterRepository.save(roster_);
+            }else{
+                dutyRosterRepository.findAll().forEach(roster_->{
+                    roster_.setActive(false);
+                    dutyRosterRepository.save(roster_);
+                });
+            }
         }
         else{
             mainDuty = duty;
@@ -130,7 +140,7 @@ public class AttendanceService {
         List<Attendance> attendancesToSave = new CopyOnWriteArrayList<>();
 
         mainDuty.getDailyDuties().forEach(dailyDuty -> {
-    
+
             if (!dailyDuty.getDayOfWeek().equals(today.getDayOfWeek())) {
                 return;
             }
@@ -169,7 +179,7 @@ public class AttendanceService {
 
                         Optional<InOut> latestPunchOut = punches.stream()
                                 .filter(inOut -> inOut.getInOutValue() == 0)
-                                .max(Comparator.comparing(InOut::getPunchTypeTime));        
+                                .max(Comparator.comparing(InOut::getPunchTypeTime));
 
                         Attendance attendance = new Attendance();
                         attendance.setIsManual(true);
@@ -194,7 +204,7 @@ public class AttendanceService {
                                 attendance.setAttendanceType(AttendanceType.NONE);
                             } else {
                                 attendance.setIssueDescription(
-                                    "GOING ABSENT DUE TO NO SYSTEM RECORDS FOUND. PLEASE RESOLVE BEFORE THE DUE DATE.");
+                                        "GOING ABSENT DUE TO NO SYSTEM RECORDS FOUND. PLEASE RESOLVE BEFORE THE DUE DATE.");
                             }
 
                             attendancesToSave.add(attendance);
@@ -239,11 +249,11 @@ public class AttendanceService {
                             attendance.setIsUnauthorized(true);
                             attendance.setHasIssues(true);
                             attendance.setIssueDescription(
-                                "GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
+                                    "GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
                         }
 
-                        if (!attendance.getIsLate() && timeIn.isAfter(startTime) && 
-                            timeOut != null && timeOut.isBefore(endTime)) {
+                        if (!attendance.getIsLate() && timeIn.isAfter(startTime) &&
+                                timeOut != null && timeOut.isBefore(endTime)) {
                             attendance.setAttendanceType(AttendanceType.FULL_DAY);
                         }
 
@@ -702,12 +712,12 @@ public class AttendanceService {
             List<InOut> punches = inOutRepository.findByEmployeeIdAndPunchTime(employeeArchive.getSltId(), processDate);
 
             Optional<InOut> earliestPunchIn = punches.stream()
-                .filter(inOut -> inOut.getInOutValue() == 1)
-                .min(Comparator.comparing(InOut::getPunchTypeTime));
+                    .filter(inOut -> inOut.getInOutValue() == 1)
+                    .min(Comparator.comparing(InOut::getPunchTypeTime));
 
             Optional<InOut> latestPunchOut = punches.stream()
-                .filter(inOut -> inOut.getInOutValue() == 0)
-                .max(Comparator.comparing(InOut::getPunchTypeTime));   
+                    .filter(inOut -> inOut.getInOutValue() == 0)
+                    .max(Comparator.comparing(InOut::getPunchTypeTime));
 
             InOut inOut = earliestPunchIn.orElse(null);
             InOut inOutLatest = latestPunchOut.orElse(null);
@@ -923,7 +933,18 @@ public class AttendanceService {
     }
 
     public RosterAttendance getRoster(String dateStr, int page, int size) {
-        Optional<RosterAttendance> rosterOpt = rosterAttendanceRepository.findByDate(dateStr);
-        return rosterOpt.orElse(null);
+        try {
+            LocalDate date = LocalDate.parse(dateStr);
+            String formattedDate = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+            Optional<RosterAttendance> rosterOpt = rosterAttendanceRepository.findByDate(formattedDate);
+            return rosterOpt.orElse(null);
+        } catch (DateTimeParseException e) {
+            logger.error("Invalid date format: {}. Expected format: yyyy-MM-dd", dateStr, e);
+            return null;
+        } catch (Exception e) {
+            logger.error("Error retrieving roster for date: {}", dateStr, e);
+            return null;
+        }
     }
 }
