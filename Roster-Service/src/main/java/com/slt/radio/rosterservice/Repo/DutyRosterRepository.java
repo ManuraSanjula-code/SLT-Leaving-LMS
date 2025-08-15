@@ -11,8 +11,7 @@ import java.util.Optional;
 @Repository
 public interface DutyRosterRepository extends MongoRepository<DutyRoster, String> {
 
-    Optional<DutyRoster> findByIsActive(Boolean isActive);
-    // Find roster by week starting date
+    List<DutyRoster> findByIsActive(Boolean isActive);    // Find roster by week starting date
     Optional<DutyRoster> findByWeekStartingDate(LocalDate weekStartingDate);
 
     // Find roster by name and week

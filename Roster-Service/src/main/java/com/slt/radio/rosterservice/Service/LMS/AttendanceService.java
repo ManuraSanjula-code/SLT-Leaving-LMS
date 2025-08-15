@@ -113,26 +113,24 @@ public class AttendanceService {
 
         DutyRoster mainDuty = null;
         DutyRoster duty_ = dutyRosterRepository.findByWeekStartingDate(startOfWeek).orElse(null);
-        DutyRoster duty = dutyRosterRepository.findByIsActive(true).orElse(null);
 
-        if (duty_ != null){
+        if (duty_ != null) {
+            List<DutyRoster> allActiveRosters = dutyRosterRepository.findByIsActive(true);
+            allActiveRosters.forEach(roster -> {
+                roster.setActive(false);
+                dutyRosterRepository.save(roster);
+            });
+
+            // Then activate the target roster
             duty_.setActive(true);
             mainDuty = dutyRosterRepository.save(duty_);
-            Optional<DutyRoster> latestActiveRoster = dutyRosterRepository.findLatestActiveRoster();
-            if (latestActiveRoster.isPresent()) {
-                DutyRoster roster_ = latestActiveRoster.get();
-                roster_.setActive(false);
-                dutyRosterRepository.save(roster_);
-            }else{
-                dutyRosterRepository.findAll().forEach(roster_->{
-                    roster_.setActive(false);
-                    dutyRosterRepository.save(roster_);
-                });
-            }
+        } else {
+            // If no roster found for the week, try to find any active roster
+            Optional<DutyRoster> activeRosterOpt = dutyRosterRepository.findByIsActive(true)
+                    .stream()
+                    .findFirst(); // Get the first one if multiple exist
+            mainDuty = activeRosterOpt.orElse(null);
         }
-        else{
-            mainDuty = duty;
-        };
 
         if (mainDuty == null) return;
 
@@ -140,7 +138,6 @@ public class AttendanceService {
         List<Attendance> attendancesToSave = new CopyOnWriteArrayList<>();
 
         mainDuty.getDailyDuties().forEach(dailyDuty -> {
-
             if (!dailyDuty.getDayOfWeek().equals(today.getDayOfWeek())) {
                 return;
             }
@@ -160,16 +157,6 @@ public class AttendanceService {
                         }
 
                         EmployeeArchive employee = employeeOpt.get();
-
-                        /* List<InOut> morningPunches = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
-                                employee.getSltId(), processDate, InOutType.MORNING_IN);
-                        Optional<InOut> earliestPunchIn = morningPunches.stream()
-                                .min(Comparator.comparing(InOut::getPunchTypeTime));
-
-                        List<InOut> eveningPunches = inOutRepository.findByEmployeeIdAndPunchTimeAndInOutType(
-                                employee.getSltId(), processDate, InOutType.EVENING_OUT);
-                        Optional<InOut> latestPunchOut = eveningPunches.stream()
-                                .max(Comparator.comparing(InOut::getPunchTypeTime)) */;
 
                         List<InOut> punches = inOutRepository.findByEmployeeIdAndPunchTime(employee.getSltId(), processDate);
 
