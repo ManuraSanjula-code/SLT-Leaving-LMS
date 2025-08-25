@@ -19,7 +19,7 @@ public class LmsMangmentServiceApplicationTests {
     @Autowired
     private Helper helper;
 
-    private static final String[] EMPLOYEE_IDS = {"A00120", "A00012", "A00007", "A00016", "A00017", "A00019", "A00022","A00025","A00029","A00015","A00212","A00020","A00036"};
+    private static final String[] EMPLOYEE_IDS = {"A0012","A0500","A0501","A00130","A0008", "A00015","A0009","1422","A800","A00120","A00016","14158"};
     private static final String[] TERMINALS = {"SLT-HQ01", "SLT-HQ02", "SLT-HQ03"};
     private static final Random random = new Random();
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");

@@ -7,7 +7,7 @@ import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.security.TokenCreator;
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
 import feign.FeignException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,7 +41,7 @@ public class CommandLine implements CommandLineRunner {
     private LocalDateTime lastRetryTime;
 
     @Autowired private AccessLogService accessLogService;
-    @Autowired private Check_Service checkService;
+    @Autowired private Main_Service checkService;
     @Autowired private EmployeeRepo employeeRepo;
     @Autowired private UserClient userClient;
     @Autowired private TokenCreator tokenCreator;

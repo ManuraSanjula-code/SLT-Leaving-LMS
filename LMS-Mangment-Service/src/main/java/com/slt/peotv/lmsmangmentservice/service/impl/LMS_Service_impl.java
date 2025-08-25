@@ -20,7 +20,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
 import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import com.slt.peotv.lmsmangmentservice.repository.*;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
@@ -69,7 +69,7 @@ public class LMS_Service_impl implements LMS_Service {
     @Autowired
     private Helper helper;
     @Autowired
-    private Check_Service check_Service;
+    private Main_Service main_Service;
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
 
@@ -322,7 +322,7 @@ public class LMS_Service_impl implements LMS_Service {
                     employee, req.getHappenDate());
             if(attendanceEntity.isPresent()){
                 AttendanceEntity attendanceEntity_ = attendanceEntity.get();
-                if(attendanceEntity_.getIsUnauthorized() && !attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()){
+                if(!attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()){
                     movementsEntity.setAttendance(attendanceEntity_);
                     movementsEntity.setHappenDate(req.getHappenDate());
                     if(req.getHappenDateRaw() != null)
@@ -666,7 +666,7 @@ public class LMS_Service_impl implements LMS_Service {
         EmployeeEntity employee = saved.getEmployee();
         if (saved.getPayStatus() != null) {
             if (saved.getPayStatus().equals(PayStatus.NO_PAY)) {
-                check_Service.saveNoPayEntity(employee, attendanceEntity, check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
+                main_Service.saveNoPayEntity(employee, attendanceEntity, main_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
                         req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
             }
         }
@@ -692,8 +692,8 @@ public class LMS_Service_impl implements LMS_Service {
                 if ((originalPayStatus == null || !originalPayStatus.equals(PayStatus.NO_PAY))
                         && saved.getPayStatus().equals(PayStatus.NO_PAY)) {
 
-                    check_Service.saveNoPayEntity(employee, saved,
-                            check_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(),
+                    main_Service.saveNoPayEntity(employee, saved,
+                            main_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(),
                                     req.getIsUnAuthorized(), req.getIsLate(), req.getLateCover(), req.getIsAbsent()),
                             saved.getArrivalDate() == null ? saved.getDate() : req.getArrivalDate());
                 }

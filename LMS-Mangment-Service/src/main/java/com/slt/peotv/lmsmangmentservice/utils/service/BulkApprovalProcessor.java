@@ -10,7 +10,7 @@ import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.BulkApprovalException;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.repository.*;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -38,13 +38,11 @@ public class BulkApprovalProcessor {
     private final ComponetAdminsRepo componetAdminsRepo;
     private final AttendanceRepo attendanceRepo;
     private final InOutRepo inOutRepo;
-    private final UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     private final Helper helper;
     private final ExecutorService executorService;
     private final ConcurrentHashMap<String, Long> processingCache;
     private final ScheduledExecutorService cacheCleanupScheduler;
-    private final ServiceEvent serviceEvent;
-    private final Check_Service checkService;
+    private final Main_Service mainService;
 
     @Autowired
     public BulkApprovalProcessor(
@@ -53,20 +51,17 @@ public class BulkApprovalProcessor {
             ComponetAdminsRepo componetAdminsRepo,
             AttendanceRepo attendanceRepo,
             InOutRepo inOutRepo,
-            UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo,
             Helper helper,
-            Check_Service checkService,
-            @Value("${bulk.approval.thread.pool.size:5}") int threadPoolSize, ServiceEvent serviceEvent) {
+            Main_Service mainService,
+            @Value("${bulk.approval.thread.pool.size:5}") int threadPoolSize) {
 
         this.movementsRepo = movementsRepo;
         this.leaveRepo = leaveRepo;
         this.componetAdminsRepo = componetAdminsRepo;
         this.attendanceRepo = attendanceRepo;
         this.inOutRepo = inOutRepo;
-        this.userLeaveTypeRemainingRepo = userLeaveTypeRemainingRepo;
         this.helper = helper;
-        this.checkService = checkService;
-        this.serviceEvent = serviceEvent;
+        this.mainService = mainService;
 
         int poolSize = threadPoolSize > 0 ? threadPoolSize : DEFAULT_THREAD_POOL_SIZE;
         this.executorService = Executors.newFixedThreadPool(poolSize);
@@ -113,7 +108,7 @@ public class BulkApprovalProcessor {
             // Call recalculateAttendanceFromApprovedMovement after movement approval
             if (movement.getRequestStatus() == RequestStatus.APPROVED) {
                 try {
-                    checkService.recalculateAttendanceFromApprovedMovement(movement.getAttendance(),movement);
+                    mainService.recalculateAttendanceFromApprovedMovement(movement.getAttendance(),movement);
                     logger.info("Successfully recalculated attendance for approved movement: {}", movementId);
                 } catch (Exception e) {
                     logger.error("Error recalculating attendance for movement: {}", movementId, e);
@@ -142,7 +137,7 @@ public class BulkApprovalProcessor {
             // Process unauthorized leave if leave is approved
             if (leave.getRequestStatus() == RequestStatus.APPROVED) {
                 try {
-                    processUnauthorizedLeave(leave, employeeId);
+                    mainService.processUnauthorizedLeave(leave, employeeId);
                     logger.info("Successfully processed unauthorized leave for: {}", leaveId);
                 } catch (Exception e) {
                     logger.error("Error processing unauthorized leave for ID: {}", leaveId, e);
@@ -205,83 +200,6 @@ public class BulkApprovalProcessor {
         }
     }
 
-    /**
-     * Process unauthorized leave - handles leave-specific post-approval logic
-     */
-    private void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId) {
-        if (leaveEntity == null) {
-            throw new IllegalArgumentException("LeaveEntity cannot be null");
-        }
-        if (employeeId == null || employeeId.trim().isEmpty()) {
-            throw new IllegalArgumentException("EmployeeId cannot be null or empty");
-        }
-
-        if (leaveEntity.getEmployee() == null) {
-            throw new IllegalArgumentException("LeaveEntity employee cannot be null");
-        }
-        if (leaveEntity.getHappenDate() == null) {
-            throw new IllegalArgumentException("LeaveEntity happenDate cannot be null");
-        }
-        if (leaveEntity.getLeaveType() == null || leaveEntity.getLeaveType().getName() == null) {
-            throw new IllegalArgumentException("LeaveType and its name cannot be null");
-        }
-
-        if (attendanceRepo == null) {
-            throw new IllegalStateException("Attendance repository is not initialized");
-        }
-        if (leaveRepo == null) {
-            throw new IllegalStateException("Leave repository is not initialized");
-        }
-        if (userLeaveTypeRemainingRepo == null) {
-            throw new IllegalStateException("UserLeaveTypeRemaining repository is not initialized");
-        }
-
-        Optional<AttendanceEntity> attendanceEntityOp = attendanceRepo.findByEmployeeAndDate(
-                leaveEntity.getEmployee(), leaveEntity.getHappenDate());
-
-        if (attendanceEntityOp.isPresent()) {
-            AttendanceEntity attendanceEntity = attendanceEntityOp.get();
-
-            attendanceEntity.setIsResolved(true);
-            attendanceEntity.setHasIssues(false);
-            attendanceEntity.setResolve(ResolveType.VIA_LEAVE);
-            attendanceRepo.save(attendanceEntity);
-
-            leaveEntity.setRequestStatus(RequestStatus.APPROVED);
-            leaveRepo.save(leaveEntity);
-
-            UserLeaveTypeRemainingEntity userLeaveTypeRemaining = getUserLeaveTypeRemaining(
-                    leaveEntity.getLeaveType().getName(), employeeId);
-
-            if (userLeaveTypeRemaining != null) {
-                if (userLeaveTypeRemaining.getRemainingLeaves() == null) {
-                    throw new IllegalStateException("Remaining leaves cannot be null");
-                }
-                if (userLeaveTypeRemaining.getRemainingLeaves() > 0) {
-                    userLeaveTypeRemaining.setRemainingLeaves(userLeaveTypeRemaining.getRemainingLeaves() - 1);
-                    userLeaveTypeRemainingRepo.save(userLeaveTypeRemaining);
-                    logger.info("Decremented remaining leaves for employee: {}, Leave type: {}, Remaining: {}",
-                            employeeId, leaveEntity.getLeaveType().getName(), userLeaveTypeRemaining.getRemainingLeaves());
-                }
-            }
-        } else {
-            throw new IllegalArgumentException("Failed to process leave request: No attendance record found");
-        }
-    }
-
-    /**
-     * Get user leave type remaining entity
-     */
-    private UserLeaveTypeRemainingEntity getUserLeaveTypeRemaining(String leaveTypeName, String employeeId) {
-        try {
-            return serviceEvent.getUserLeaveTypeRemaining(employeeId, leaveTypeName);
-        } catch (Exception e) {
-            logger.error("Error fetching user leave type remaining for employee: {}, leave type: {}",
-                    employeeId, leaveTypeName, e);
-            return null;
-        }
-    }
-
     @PreDestroy
     public void shutdown() {
         shutdownExecutor(cacheCleanupScheduler, "Cache Cleanup Scheduler");
@@ -331,7 +249,7 @@ public class BulkApprovalProcessor {
         }
 
         try {
-            if (!leave.getIsManualRequest()) {
+            if (leave.getIsManualRequest()) {
                 validateAttendanceForLeave(leave);
             }
 
@@ -574,50 +492,13 @@ public class BulkApprovalProcessor {
         attendance.setHasIssues(false);
         attendance.setIsUnauthorized(false);
         attendance.setResolve(ResolveType.VIA_MOVEMENT);
-        attendance.setAttendanceType(AttendanceType.FULL_DAY);
         attendance.setIssueDescription("none :: Movement approved");
-
-        switch (movement.getMovementType()) {
-            case HOME_TO_OFFICE:
-                if (movement.getInTime() != null) {
-                    attendance.setArrivalTime(movement.getInTime());
-                }
-                if(attendance.getArrivalTime().equals(attendance.getLeftTime())){
-                    attendance.setArrivalTime(null);
-                    logger.warn("Two time are equal Arrival time: {} Movement In time {}", attendance.getArrivalTime(), movement.getInTime());
-
-                }
-                break;
-            case OFFICE_TO_HOME:
-                if (movement.getOutTime() != null) {
-                    attendance.setLeftTime((movement.getOutTime()));
-                }
-                if(attendance.getLeftTime().equals(attendance.getArrivalTime())){
-                    attendance.setLeftTime(null);
-                    logger.warn("Two time are equal Left time: {} Movement Out time {}", attendance.getLeftTime(), movement.getOutTime());
-                }
-                break;
-            case FULLDAY, REMOTEWORK:
-                if (movement.getInTime() != null) {
-                    attendance.setArrivalTime(movement.getInTime());
-                }
-                if (movement.getOutTime() != null) {
-                    attendance.setLeftTime(movement.getOutTime());
-                }
-                if (Objects.equals(attendance.getArrivalTime(), attendance.getLeftTime())) {
-                    logger.warn("Both times are equal - Arrival time and Left time: {} : {}",
-                            attendance.getArrivalTime(), attendance.getLeftTime());
-                    attendance.setArrivalTime(null);
-                    attendance.setLeftTime(null);
-                }
-                break;
-            default:
-                logger.warn("Unknown movement type: {}", movement.getMovementType());
-        }
 
         if(attendance.getLeaveStatus() != null && attendance.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) {
             attendance.setLeaveStatus(null);
         }
+
+        mainService.recalculateAttendanceFromApprovedMovement(attendance, movement);
 
         attendance.setArrivalTimeRaw(movement.getInTimeRaw());
         attendance.setLeftTimeRaw(movement.getOutTimeRaw());
@@ -627,6 +508,9 @@ public class BulkApprovalProcessor {
 
         // Link InOut records with the attendance
         updateAttendanceWithInOutRecords(movement, savedAttendance);
+
+        if ((savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getIsUnauthorized() == false))
+            helper.handleLateAndUnsuccessful(movement.getEmployee().getSltId(), savedAttendance, true);
 
         logger.info("Movement {} fully approved and linked with InOut records", movement.getPublicId());
     }

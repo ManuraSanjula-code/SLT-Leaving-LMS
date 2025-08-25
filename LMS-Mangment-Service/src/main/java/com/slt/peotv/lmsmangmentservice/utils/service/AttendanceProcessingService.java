@@ -7,7 +7,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class AttendanceProcessingService {
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired
-    private Check_Service checkService;
+    private Main_Service mainService;
     @Autowired
     private Helper helper;
 
@@ -103,7 +103,7 @@ public class AttendanceProcessingService {
                 return;
             }
 
-            checkService.reportAttendance(
+            mainService.reportAttendance(
                     employeeId,
                     true, false, false, false,
                     false, false, false, true,

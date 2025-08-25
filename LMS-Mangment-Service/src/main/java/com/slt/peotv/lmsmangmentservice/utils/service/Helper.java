@@ -10,16 +10,13 @@ import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.UserLeaveTypeRemainingRepo;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Time;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -30,7 +27,7 @@ public class Helper {
     @Autowired
     private ServiceEvent serviceEvent;
     @Autowired
-    private Check_Service checkService;
+    private Main_Service checkService;
     @Autowired
     private UserLeaveTypeRemainingRepo userLeaveTypeRemainingRepo;
     @Autowired

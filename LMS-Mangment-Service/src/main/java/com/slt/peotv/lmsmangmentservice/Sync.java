@@ -1,7 +1,7 @@
 package com.slt.peotv.lmsmangmentservice;
 
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,25 +16,25 @@ import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 @Slf4j
 public class Sync {
 
-    private final Check_Service check_Service;
+    private final Main_Service main_Service;
     private final AccessLogService accessLogService;
     private final AttendanceRepo attendanceRepo;
 
     @Scheduled(cron = "0 0 * * * ?")
     public void getLogs_YES_() throws ParseException {
-        check_Service.getAllTheInOutRecordsFromSLT_YES();
+        main_Service.getAllTheInOutRecordsFromSLT_YES();
         accessLogService.main(false);
     }
 
     @Scheduled(cron = "0 0 */2 * * ?")
     public void getLogs_TOD_() throws ParseException {
-        check_Service.getAllTheInOutRecordsFromSLT_TOD();
+        main_Service.getAllTheInOutRecordsFromSLT_TOD();
         accessLogService.main(true);
     }
 
     @Scheduled(cron = "00 00 02  * * ?")
     public void getLogs() throws ParseException {
-        check_Service.main();
+        main_Service.main();
     }
 
     @Scheduled(cron = "0 0 6 1 * ?")

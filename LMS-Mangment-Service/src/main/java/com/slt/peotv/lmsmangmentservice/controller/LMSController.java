@@ -3,7 +3,7 @@ package com.slt.peotv.lmsmangmentservice.controller;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.AccessLogRest;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
 import com.slt.peotv.lmsmangmentservice.model.dto.*;
-import com.slt.peotv.lmsmangmentservice.service.Check_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.HolidayService;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.utils.service.ApprovalProcessor;
@@ -36,7 +36,7 @@ public class LMSController {
     public LMS_Service lmsService;
 
     @Autowired
-    private Check_Service checkService;
+    private Main_Service checkService;
 
     @Autowired
     private ExelUtils exelUtils;

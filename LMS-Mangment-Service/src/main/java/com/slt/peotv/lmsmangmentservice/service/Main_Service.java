@@ -11,16 +11,17 @@ import com.slt.peotv.lmsmangmentservice.model.dto.InOutDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.model.req.LeaveReq;
 import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
-import com.slt.peotv.lmsmangmentservice.service.impl.Check_Service_Impl;
+import com.slt.peotv.lmsmangmentservice.model.req.NoPayRequest;
+import com.slt.peotv.lmsmangmentservice.service.impl.Main_Service_Impl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
-import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-public interface Check_Service {
+public interface Main_Service {
 
     public void allApproved(BulkApprovedReq bulkApprovedReq, boolean swap);
 
@@ -63,14 +64,14 @@ public interface Check_Service {
 
     public NoPayEntity saveNoPayEntity(EmployeeEntity employee,
                                 AttendanceEntity attendanceEntity,
-                                Check_Service_Impl.NoPayRequest noPayRequest,
+                                NoPayRequest noPayRequest,
                                 Date actualDate);
 
     public Page<InOutDTO> getAllInOut(String employeeID, int pageNumber, int pageSize);
 
     public List<InOutDTO> getAllInOut(String employeeID, Date date);
 
-    public Check_Service_Impl.NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
+    public NoPayRequest createNoPayRequest(Boolean isHalfDay, Boolean unSuccessful, Boolean unAuthorized, Boolean isLate, Boolean isLateCover, Boolean isAbsent);
 
     public void processUnauthorizedLeave(LeaveEntity leaveEntity, String employeeId);
     public void recalculateAttendanceFromApprovedMovement(AttendanceEntity attendance, MovementsEntity movement);
