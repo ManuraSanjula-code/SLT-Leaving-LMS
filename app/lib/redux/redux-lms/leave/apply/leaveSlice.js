@@ -54,7 +54,7 @@ export const submitLeaveRequest = createAsyncThunk(
                 componentBehavior: formData.componentBehavior,
                 requestStatus: 'DRAFT',
                 notUsed: false,
-                isManualRequest: formData.isManualRequest || false,
+                isManualRequest: false,
                 isEdited: false,
                 adminId: null,
                 adminComment: null
@@ -98,17 +98,26 @@ export const submitLeaveRequest = createAsyncThunk(
     }
 );
 
-const calculateDayDifference = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
 
-    // Normalize to midnight to avoid timezone issues
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
+const calculateBusinessDays = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
 
-    const diffTime = Math.abs(end - start);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
+        let count = 0;
+        const current = new Date(start);
+
+        while (current <= end) {
+            const day = current.getDay();
+            if (day !== 0 && day !== 6) { // Skip weekends (0=Sunday, 6=Saturday)
+                count++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+
+        return count;
+    };
 
 const leaveApplicationSlice = createSlice({
     name: 'leaveApplication',
@@ -155,7 +164,7 @@ const leaveApplicationSlice = createSlice({
 
         calculateDays: (state) => {
             if (state.formData.fromDate && state.formData.toDate) {
-                const diffDays = calculateDayDifference(
+                const diffDays = calculateBusinessDays(
                     state.formData.fromDate,
                     state.formData.toDate
                 );
@@ -186,7 +195,7 @@ const leaveApplicationSlice = createSlice({
             }
 
             if (state.formData.fromDate && state.formData.toDate) {
-                const diffDays = calculateDayDifference(
+                const diffDays = calculateBusinessDays(
                     state.formData.fromDate,
                     state.formData.toDate
                 );
@@ -379,9 +388,6 @@ export const leaveHelpers = {
     componentBehaviors: [
         { value: "FULL_DAY", label: "Full Day Leave", type: "leave", allowsManualRequest: true },
         { value: "HALF_DAY", label: "Half Day Leave", type: "leave", allowsManualRequest: true },
-        { value: "ABSENT", label: "Absent", type: "attendance", allowsManualRequest: false },
-        { value: "UNSUCCESSFUL", label: "Unsuccessful", type: "attendance", allowsManualRequest: false },
-        { value: "UNAUTHORIZED", label: "Unauthorized", type: "attendance", allowsManualRequest: false }
     ],
 
     getCategoryType: (componentBehavior) => {
@@ -396,7 +402,7 @@ export const leaveHelpers = {
 
     allowedManualCategories: ['FULL_DAY', 'HALF_DAY'],
     restrictedCategories: ['UNAUTHORIZED', 'ABSENT', 'UNSUCCESSFUL'],
-    calculateDayDifference
+    calculateBusinessDays
 };
 
 export default leaveApplicationSlice.reducer;

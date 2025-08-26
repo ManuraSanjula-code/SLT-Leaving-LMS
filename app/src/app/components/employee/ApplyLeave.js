@@ -355,18 +355,6 @@ const ApplyLeave = () => {
 
             <TextField
                 margin="normal"
-                fullWidth
-                id="happenDate"
-                label="Event Date (if applicable)"
-                name="happenDate"
-                type="date"
-                value={formData.happenDate}
-                onChange={handleChange}
-                InputLabelProps={{ shrink: true }}
-            />
-
-            <TextField
-                margin="normal"
                 required
                 fullWidth
                 id="description"

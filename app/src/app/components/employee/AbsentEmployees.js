@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import {
@@ -30,6 +30,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
+import ApplyLeaveModal from './ApplyLeaveModal';
 
 import {
   fetchAbsentEmployees,
@@ -37,12 +38,16 @@ import {
   clearFilters,
   setPageSize,
   setCurrentPage,
-  clearError
+  clearError,
+  resolveAbsenceOptimistic
 } from '../../../../lib/redux/redux-lms/absent/absentEmployeesSlice';
 
 const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
   const dispatch = useDispatch();
   const router = useRouter();
+
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const isAdmin = propIsAdmin !== undefined ? propIsAdmin :
     (sessionStorage.getItem('userRole') === 'ADMIN' || sessionStorage.getItem('isAdmin') === 'true');
@@ -197,33 +202,25 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
   };
 
   const handleApplyLeave = (employee) => {
-    const date = new Date(employee.date);
+    setSelectedEmployee(employee);
+    setShowLeaveModal(true);
+  };
 
-    date.setDate(date.getDate() + 1);
+  const handleLeaveSuccess = (result) => {
+    handleRefresh();
+    if (selectedEmployee) {
+      dispatch(resolveAbsenceOptimistic(selectedEmployee.id));
+    }
+  };
 
-    const formattedDate = date.toISOString().split('T')[0];
-
-    const { publicId } = employee;
-
-    const params = new URLSearchParams();
-    params.append('fromDate', formattedDate);
-    params.append('toDate', formattedDate);
-    params.append('happenDate', formattedDate);
-    params.append('componentBehavior', 'ABSENT');
-    params.append('publicId', publicId);
-
-    router.push(`/apply-leave?${params.toString()}`);
+  const handleCloseLeaveModal = () => {
+    setShowLeaveModal(false);
+    setSelectedEmployee(null);
   };
 
   const handleRetry = () => {
     dispatch(clearError());
     handleRefresh();
-  };
-
-  const formatAttendanceType = (attendanceType) => {
-    if (!attendanceType) return '';
-    return attendanceType.replace('_', ' ').toLowerCase()
-      .replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatResolveType = (resolveType) => {
@@ -548,6 +545,13 @@ const AbsentEmployees = ({ isAdmin: propIsAdmin = true }) => {
             </Box>
           </Box>
         )}
+
+        <ApplyLeaveModal
+          open={showLeaveModal}
+          onClose={handleCloseLeaveModal}
+          employee={selectedEmployee}
+          onSuccess={handleLeaveSuccess}
+        />
       </Box>
     </Container>
   );

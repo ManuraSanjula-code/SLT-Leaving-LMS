@@ -124,15 +124,24 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
         adminComment: "",
     });
 
-    // Helper function to calculate days difference
-    const calculateDayDifference = (startDate, endDate) => {
-        if (!startDate || !endDate) return 0;
+    const calculateBusinessDays = (startDate, endDate) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
         start.setHours(0, 0, 0, 0);
         end.setHours(0, 0, 0, 0);
-        const diffTime = Math.abs(end - start);
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        let count = 0;
+        const current = new Date(start);
+
+        while (current <= end) {
+            const day = current.getDay();
+            if (day !== 0 && day !== 6) { // Skip weekends (0=Sunday, 6=Saturday)
+                count++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+
+        return count;
     };
 
     useEffect(() => {
@@ -175,7 +184,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
                 name === "componentBehavior"
             ) {
                 if (newData.startDate && newData.endDate) {
-                    const diffDays = calculateDayDifference(
+                    const diffDays = calculateBusinessDays(
                         newData.startDate,
                         newData.endDate
                     );
@@ -195,7 +204,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
         if (!currentLeave) return;
 
         try {
-            const diffDays = calculateDayDifference(
+            const diffDays = calculateBusinessDays(
                 editFormData.startDate,
                 editFormData.endDate
             );
