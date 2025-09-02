@@ -4,7 +4,7 @@ nohup: ignoring input
 > next start
 
    ▲ Next.js 15.2.0
-   - Local:        http://localhost:80
+   - Local:        http://192.168.3.20:80
    - Network:      http://10.96.220.18:80
 
  ✓ Starting...

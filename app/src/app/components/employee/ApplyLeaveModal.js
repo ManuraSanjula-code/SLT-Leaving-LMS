@@ -142,7 +142,7 @@ const ApplyLeaveModal = ({
         leaveTypeUUID: selectedLeaveType.uuid,
         description: formData.description,
         userId: formData.userId,
-        numOfDays: formData.numOfDays,
+        numOfDays: 1,
         happenDate: new Date(formData.happenDate).toISOString(),
         componentBehavior: formData.componentBehavior,
         requestStatus: 'DRAFT',
@@ -162,8 +162,8 @@ const ApplyLeaveModal = ({
       );
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+        const errorData = await response.json();
+        throw new Error(`${errorData.message}`);
       }
 
       setSuccess(true);

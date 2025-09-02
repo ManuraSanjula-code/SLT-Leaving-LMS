@@ -19,8 +19,8 @@ import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 import com.slt.peotv.lmsmangmentservice.model.dto.InOutDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
 import com.slt.peotv.lmsmangmentservice.repository.*;
-import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
@@ -403,9 +403,7 @@ public class Main_Service_Impl implements Main_Service {
 
             Optional<MovementsEntity> reqDate = movementsRepo.findAllByEmployeeAndHappenDate(employee, helper.removeTimeFromDate(req.getHappenDate()));
 
-            if (reqDate.isPresent() && reqDate.get().getRequestStatus() != null &&
-                    reqDate.get().getRequestStatus() != RequestStatus.EXPIRED &&
-                    reqDate.get().getRequestStatus() != RequestStatus.REJECTED)
+            if (reqDate.get().getRequestStatus() != null && (reqDate.get().getRequestStatus() == RequestStatus.EXPIRED || reqDate.get().getRequestStatus() == RequestStatus.REJECTED))
                 throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
 
@@ -744,7 +742,7 @@ public class Main_Service_Impl implements Main_Service {
                 inOut.setInOutValue(1); // IN punch
             } else if (!isInPunch && movement.getOutTime() != null) {
                 inOut.setPunchTime(movement.getHappenDate());
-                inOut.setPunchTypeTime( movement.getOutTime());
+                inOut.setPunchTypeTime(movement.getOutTime());
                 inOut.setInOutValue(0); // OUT punch
             }
 
@@ -959,7 +957,7 @@ public class Main_Service_Impl implements Main_Service {
                     leave.getComponentBehavior() == ComponentBehavior.ABSENT ||
                     leave.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL))) {
                 EmployeeEntity employee = attendance.getEmployee();
-                if(employee != null)
+                if (employee != null)
                     processUnauthorizedLeave(leave, attendance.getEmployee().getSltId());
             }
 
@@ -982,17 +980,17 @@ public class Main_Service_Impl implements Main_Service {
                 .toList();
 
         overdueEntities_filter.forEach(entity -> {
-            if(entity == null) return;
+            if (entity == null) return;
 
             if (entity.getIsResolved())
                 return;
 
             EmployeeEntity employee = entity.getEmployee();
-            if(employee == null) return;
+            if (employee == null) return;
             if (Objects.isNull(employee.getRoaster())) {
                 employee.setRoaster(false);
             }
-            if(employee.getRoaster()) return;
+            if (employee.getRoaster()) return;
 
             Optional<MovementsEntity> movement = movementsRepo.findAllByEmployeeAndHappenDate(entity.getEmployee(), entity.getArrivalDate());
             Optional<LeaveEntity> leave = leaveRepo.findByEmployeeAndFromDate(entity.getEmployee(), entity.getArrivalDate());
@@ -1878,7 +1876,7 @@ public class Main_Service_Impl implements Main_Service {
                             attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                             attendance.setIssueDescription(String.format("LATE ARRIVAL PARTIALLY COMPENSATED - WORKED %d HOURS", workHours));
                             attendance.setHasIssues(true);
-                        } else if(arrivalTime.isBefore(tenAm)) {
+                        } else if (arrivalTime.isBefore(tenAm)) {
                             attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                             attendance.setIssueDescription(String.format("MODERATE LATE ARRIVAL - INSUFFICIENT COMPENSATION", workHours));
                             attendance.setHasIssues(true);
@@ -2106,6 +2104,11 @@ public class Main_Service_Impl implements Main_Service {
         if ((userLeaveTypeRemaining == null || userLeaveTypeRemaining.getRemainingLeaves() == null || userLeaveTypeRemaining.getRemainingLeaves() <= 0) && (userLeaveTypeRemaining.getRemainingLeaves() != -1)) {
             throw new IllegalArgumentException("No remaining leaves available for this leave type");
         }
+        Optional<LeaveEntity> leave = leaveRepo.findByEmployeeAndHappenDate(employee, helper.removeTimeFromDate(req.getHappenDate()));
+        if (leave.isPresent() && leave.get().getRequestStatus() != null &&
+                (leave.get().getRequestStatus() == RequestStatus.EXPIRED || leave.get().getRequestStatus() == RequestStatus.REJECTED || leave.get().getRequestStatus() == RequestStatus.APPROVED))
+            throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
+
         final String leaveId = utils.generateId(10);
         LeaveEntity leaveEntity = transformToEntity(req, employee.getSltId(), leaveId, leaveTypeRepository);
         leaveEntity.setRequestStatus(RequestStatus.PENDING_APPROVAL);
@@ -2113,10 +2116,6 @@ public class Main_Service_Impl implements Main_Service {
         if (req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED ||
                 req.getComponentBehavior() == ComponentBehavior.ABSENT ||
                 req.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL) {
-
-            Optional<LeaveEntity> leave = leaveRepo.findByEmployeeAndHappenDate(employee, helper.removeTimeFromDate(req.getHappenDate()));
-            if (leave.isPresent())
-                throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
             Optional<AttendanceEntity> attendanceEntityOp = attendanceRepo.findByEmployeeAndArrivalDateAndIsActiveTrue(
                     employee, leaveEntity.getHappenDate());

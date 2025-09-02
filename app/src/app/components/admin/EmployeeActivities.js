@@ -675,6 +675,7 @@ const EmployeeActivities = () => {
                     <TableHead>
                         <TableRow>
                             <TableCell><strong>Employee ID</strong></TableCell>
+                            <TableCell><strong>PEO-TV ID</strong></TableCell>
                             <TableCell><strong>Date</strong></TableCell>
                             <TableCell><strong>In Time</strong></TableCell>
                             <TableCell><strong>Out Time</strong></TableCell>
@@ -690,7 +691,12 @@ const EmployeeActivities = () => {
                             <TableRow key={activity.id} hover>
                                 <TableCell>
                                     <Typography variant="body1" fontWeight="medium">
-                                        {activity.userId || activity.employeeId}
+                                        {activity.userId}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body1" fontWeight="medium">
+                                        {activity.employeeId}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>

@@ -311,9 +311,6 @@ public class LMS_Service_impl implements LMS_Service {
         MovementsEntity movementsEntity = movementsRepo.findByPublicId(publicId)
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        if (movementsEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || movementsEntity.getRequestStatus().equals(RequestStatus.REJECTED)
-                || movementsEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
-
         EmployeeEntity employee = movementsEntity.getEmployee();
 
         if(req.getHappenDate() != null && employee != null){
@@ -586,9 +583,6 @@ public class LMS_Service_impl implements LMS_Service {
             throw new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
 
         LeaveEntity leaveEntity = byPublicId.get();
-
-        if (leaveEntity.getRequestStatus().equals(RequestStatus.CANCELLED) || leaveEntity.getRequestStatus().equals(RequestStatus.REJECTED)
-                || leaveEntity.getRequestStatus().equals(RequestStatus.APPROVED)) return;
 
         if (req.getLeaveType() != null && !req.getLeaveType().trim().isEmpty()) {
             LeaveTypeEntity type = leaveTypeRepository.findByName(req.getLeaveType())
