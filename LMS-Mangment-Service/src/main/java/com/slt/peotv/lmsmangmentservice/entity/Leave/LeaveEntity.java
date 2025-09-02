@@ -14,7 +14,8 @@ import java.util.Date;
 import java.util.List;
 
 @Entity
-@Table(name = "leave_requests")
+@Table(name = "leave_requests",
+        uniqueConstraints = @UniqueConstraint(columnNames = "publicId", name = "UK_leave_public_id"))
 @Setter
 @Getter
 @EqualsAndHashCode
@@ -24,8 +25,9 @@ import java.util.List;
 @ToString
 public class LeaveEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = false,unique = true)
     public String publicId;
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;

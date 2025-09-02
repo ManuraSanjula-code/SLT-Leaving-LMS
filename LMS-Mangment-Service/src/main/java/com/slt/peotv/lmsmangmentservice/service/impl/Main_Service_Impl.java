@@ -403,9 +403,8 @@ public class Main_Service_Impl implements Main_Service {
 
             Optional<MovementsEntity> reqDate = movementsRepo.findAllByEmployeeAndHappenDate(employee, helper.removeTimeFromDate(req.getHappenDate()));
 
-            if (reqDate.get().getRequestStatus() != null && (reqDate.get().getRequestStatus() == RequestStatus.EXPIRED || reqDate.get().getRequestStatus() == RequestStatus.REJECTED))
+            if (reqDate.isPresent() && reqDate.get().getRequestStatus() != null && (reqDate.get().getRequestStatus() == RequestStatus.EXPIRED || reqDate.get().getRequestStatus() == RequestStatus.REJECTED || reqDate.get().getRequestStatus() == RequestStatus.APPROVED))
                 throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
-
 
             String token = "Bearer " + extractJwtTokenFromCookie(request);
             if (token == null || token.trim().isEmpty())
@@ -422,7 +421,7 @@ public class Main_Service_Impl implements Main_Service {
             if (userMap == null || userMap.isEmpty())
                 throw new NoSuchElementException("NO ADMINS FOUND");
 
-            final String movementId = utils.generateId(10);
+            final String movementId = "MV-" + utils.generateId(10);
 
             MovementsEntity movementsEntity = mapToEntity(req, employee, movementId);
 
@@ -2109,7 +2108,7 @@ public class Main_Service_Impl implements Main_Service {
                 (leave.get().getRequestStatus() == RequestStatus.EXPIRED || leave.get().getRequestStatus() == RequestStatus.REJECTED || leave.get().getRequestStatus() == RequestStatus.APPROVED))
             throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
 
-        final String leaveId = utils.generateId(10);
+        final String leaveId = "LV-" + utils.generateId(10);
         LeaveEntity leaveEntity = transformToEntity(req, employee.getSltId(), leaveId, leaveTypeRepository);
         leaveEntity.setRequestStatus(RequestStatus.PENDING_APPROVAL);
 
@@ -2180,7 +2179,22 @@ public class Main_Service_Impl implements Main_Service {
         leaveEntity.setAdmins(adminEntities);
 
         synchronized (this) {
-            lmsService.saveLeave(leaveEntity);
+            try {
+                lmsService.saveLeave(leaveEntity);
+            } catch (DataIntegrityViolationException e) {
+                if (e.getMessage().contains("Duplicate entry") && e.getMessage().contains("publicId")) {
+                    final String newLeaveId = "LV-" + utils.generateId(10);
+                    leaveEntity.setPublicId(newLeaveId);
+
+                    for (ComponetAdminsEntity admin : leaveEntity.getAdmins()) {
+                        admin.setComponetID(newLeaveId);
+                    }
+                    lmsService.saveLeave(leaveEntity);
+                } else {
+                    logger.error("Error saving leave record for employee: {}", employeeId, e);
+                    throw e;
+                }
+            }
         }
     }
 

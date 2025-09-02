@@ -552,7 +552,7 @@ const PendingLeaves = ({ isAdmin = false, userAdmin = false, userId = null }) =>
                                         <Tooltip title="Edit">
                                             <IconButton
                                                 onClick={() => openEditDialog(leave)}
-                                              /*   disabled={!isLeaveEditable(leave)} */
+                                                disabled={!isLeaveEditable(leave)}
                                             >
                                                 <EditIcon />
                                             </IconButton>

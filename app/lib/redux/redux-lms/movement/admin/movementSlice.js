@@ -46,7 +46,6 @@ export const processMovementRequest = createAsyncThunk(
     'movement/processMovementRequest',
     async ({ movementId, approved }, { rejectWithValue }) => {
         try {
-            // Get userId from session storage
             const storedUserId = sessionStorage.getItem('userId');
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -60,7 +59,6 @@ export const processMovementRequest = createAsyncThunk(
                 ? `http://192.168.3.20:8080/lms/movement/process/${movementId}/${storedUserId}/${empId}`
                 : `http://192.168.3.20:8080/lms/movement/reject/${movementId}/${storedUserId}/${empId}`;
 
-            // Send the approval/rejection request
             const response = await fetch(endpoint, {
                 method: 'POST',
                 credentials: 'include',
@@ -84,80 +82,10 @@ export const processMovementRequest = createAsyncThunk(
     }
 );
 
-/*
 export const processBulkMovementRequests = createAsyncThunk(
     'movement/processBulkMovementRequests',
     async ({ movementIds, approved }, { getState, rejectWithValue }) => {
         try {
-            // Get userId from session storage
-            const storedUserId = sessionStorage.getItem('userId');
-            const empId = sessionStorage.getItem('userId');
-            if (!empId) {
-                return rejectWithValue('Employee ID not found in session storage');
-            }
-            if (!storedUserId) {
-                throw new Error('User ID not found in session storage');
-            }
-
-            // Get the movement requests from the state
-            const state = getState();
-            const movementRequests = state.movement.requests;
-
-            // Extract employee IDs from the selected movement requests
-            const approvedEmployeesToday = [];
-
-            movementRequests.forEach(request => {
-                if (request && request.publicId && movementIds.includes(request.publicId) && request.employeeID) {
-                    approvedEmployeesToday.push(request.employeeID);
-                }
-            });
-
-            // Create the request body
-            const requestBody = {
-                approvedEmployeesToday,
-                approvedIds: movementIds
-            };
-
-            const endpoint = approved
-                ? `http://192.168.3.20:8080/lms/bulk/approved/movement/${empId}`
-                : `http://192.168.3.20:8080/lms/bulk/reject/movement/${empId}`;
-
-            const response = await fetch(
-                endpoint,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody),
-                    credentials: 'include'
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            return {
-                movementIds,
-                approvedEmployeesToday,
-                approved,
-                response: data
-            };
-        } catch (error) {
-            return rejectWithValue(error.message || 'An unknown error occurred');
-        }
-    }
-);
-*/
-
-export const processBulkMovementRequests = createAsyncThunk(
-    'movement/processBulkMovementRequests',
-    async ({ movementIds, approved }, { getState, rejectWithValue }) => {
-        try {
-            // Get userId from session storage
             const storedUserId = sessionStorage.getItem('userId');
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -215,6 +143,73 @@ export const processBulkMovementRequests = createAsyncThunk(
         } catch (error) {
             console.error('Bulk movement processing error:', error);
             return rejectWithValue(error.message || 'An unknown error occurred');
+        }
+    }
+);
+
+// New updateMovementRequest action
+export const updateMovementRequest = createAsyncThunk(
+    'movement/updateMovementRequest',
+    async ({ updatePayload, isAdmin, useAdmin }, { rejectWithValue }) => {
+        try {
+            const empId = sessionStorage.getItem('userId');
+            if (!empId) {
+                return rejectWithValue('Employee ID not found in session storage');
+            }
+
+            const cleanPayload = {
+                employeeId: updatePayload.employeeId,
+                userId: updatePayload.userId,
+                destination: updatePayload.destination,
+                movementType: updatePayload.movementType,
+                comment: updatePayload.comment,
+                category: updatePayload.category,
+                inTime: updatePayload.inTime,
+                outTime: updatePayload.outTime,
+                componentBehavior: updatePayload.componentBehavior,
+                requestStatus: updatePayload.requestStatus,
+                attSync: updatePayload.attSync || 0,
+                attendance: updatePayload.attendance || '',
+                isEdited: true
+            };
+
+            if (updatePayload.happenDate) {
+                cleanPayload.happenDate = updatePayload.happenDate;
+            }
+            if (updatePayload.reqDate) {
+                cleanPayload.reqDate = updatePayload.reqDate;
+            }
+            if (updatePayload.logTime) {
+                cleanPayload.logTime = updatePayload.logTime;
+            }
+
+            Object.keys(cleanPayload).forEach(key => {
+                if (cleanPayload[key] === undefined || cleanPayload[key] === null || cleanPayload[key] === '') {
+                    delete cleanPayload[key];
+                }
+            });
+
+            cleanPayload.inTimeRaw = updatePayload.inTime;
+            cleanPayload.outTimeRaw = updatePayload.outTime;
+            cleanPayload.happenDateRaw = updatePayload.happenDate;
+
+            const response = await fetch(`http://192.168.3.20:8080/lms/management/movement/${updatePayload.publicId}/${empId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(cleanPayload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.json();
+                throw new Error(`ERROR: ${errorText.message}`);
+            }
+
+            return updatePayload;
+        } catch (err) {
+            return rejectWithValue(err.message);
         }
     }
 );
@@ -285,9 +280,11 @@ const movementSlice = createSlice({
                     if (action.payload.approved) {
                         state.requests[index].accepted = true;
                         state.requests[index].pending = false;
+                        state.requests[index].requestStatus = 'APPROVED';
                     } else {
                         state.requests[index].unAuthorized = true;
                         state.requests[index].pending = false;
+                        state.requests[index].requestStatus = 'REJECTED';
                     }
                 }
             })
@@ -295,7 +292,6 @@ const movementSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-
             .addCase(processBulkMovementRequests.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -308,15 +304,38 @@ const movementSlice = createSlice({
                         if (action.payload.approved) {
                             state.requests[index].accepted = true;
                             state.requests[index].pending = false;
+                            state.requests[index].requestStatus = 'APPROVED';
                         } else {
                             state.requests[index].unAuthorized = true;
                             state.requests[index].pending = false;
+                            state.requests[index].requestStatus = 'REJECTED';
                         }
                     }
                 });
                 state.selected = [];
             })
             .addCase(processBulkMovementRequests.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            // Update movement request cases
+            .addCase(updateMovementRequest.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(updateMovementRequest.fulfilled, (state, action) => {
+                state.loading = false;
+                const index = state.requests.findIndex(request => request.publicId === action.payload.publicId);
+                if (index !== -1) {
+                    // Merge the updated data
+                    state.requests[index] = {
+                        ...state.requests[index],
+                        ...action.payload,
+                        isEdited: true
+                    };
+                }
+            })
+            .addCase(updateMovementRequest.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });

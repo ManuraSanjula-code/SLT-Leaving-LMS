@@ -42,14 +42,20 @@ import {
   ListItemText,
   ListItemAvatar,
   Avatar,
-  Divider
+  Divider,
+  TextField,
+  Grid,
+  Alert
 } from "@mui/material";
 import { format } from "date-fns";
 
 const ManageMovementRequests = () => {
   const dispatch = useDispatch();
   const [openDetails, setOpenDetails] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
 
   const movementRequests = useSelector(state => state.movement.requests);
   const selected = useSelector(state => state.movement.selected);
@@ -64,18 +70,27 @@ const ManageMovementRequests = () => {
     }));
   }, [dispatch, pagination.currentPage, pagination.pageSize]);
 
+  // Check if movement can be approved/rejected
+  const canProcessRequest = (request) => {
+    const nonProcessableStatuses = ['APPROVED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
+    return !nonProcessableStatuses.includes(request.requestStatus);
+  };
+
+  // Check if movement is selectable for bulk operations
   const isNonSelectable = (request) => {
-    return request.accepted ||
-        request.expired ||
-        request.isCanceled ||
-        request.canceled ||
-        request.reject ||
-        request.rejected;
+    return !canProcessRequest(request);
   };
 
   const selectableRequests = movementRequests.filter(request =>
       request && request.publicId && !isNonSelectable(request)
   );
+
+  const handleRefresh = () => {
+    dispatch(fetchMovementRequests({
+      page: pagination.currentPage,
+      size: pagination.pageSize
+    }));
+  };
 
   const handlePageChange = (event, value) => {
     dispatch(fetchMovementRequests({
@@ -97,20 +112,17 @@ const ManageMovementRequests = () => {
     dispatch(selectMovementRequest(id));
   };
 
-  // Modified handleSelectAll to only select selectable requests
   const handleSelectAll = () => {
     const selectableIds = selectableRequests.map(req => req.publicId);
     const allSelectableSelected = selectableIds.every(id => selected.includes(id));
 
     if (allSelectableSelected) {
-      // If all selectable items are selected, deselect only the selectable ones
       selectableIds.forEach(id => {
         if (selected.includes(id)) {
           dispatch(selectMovementRequest(id));
         }
       });
     } else {
-      // Select all selectable items that aren't already selected
       selectableIds.forEach(id => {
         if (!selected.includes(id)) {
           dispatch(selectMovementRequest(id));
@@ -120,10 +132,9 @@ const ManageMovementRequests = () => {
   };
 
   const handleBulkApprove = () => {
-    // Filter out any non-selectable items from selected array
     const validSelectedIds = selected.filter(id => {
       const request = movementRequests.find(req => req.publicId === id);
-      return request && !isNonSelectable(request);
+      return request && canProcessRequest(request);
     });
 
     if (validSelectedIds.length === 0) return;
@@ -140,10 +151,9 @@ const ManageMovementRequests = () => {
   };
 
   const handleBulkReject = () => {
-    // Filter out any non-selectable items from selected array
     const validSelectedIds = selected.filter(id => {
       const request = movementRequests.find(req => req.publicId === id);
-      return request && !isNonSelectable(request);
+      return request && canProcessRequest(request);
     });
 
     if (validSelectedIds.length === 0) return;
@@ -193,6 +203,101 @@ const ManageMovementRequests = () => {
     setSelectedMovement(null);
   };
 
+  const handleOpenEdit = (movement) => {
+    setSelectedMovement(movement);
+    setEditFormData({
+      inTime: movement.inTime || '',
+      outTime: movement.outTime || '',
+      comment: movement.comment || '',
+      destination: movement.destination || '',
+      movementType: movement.movementType || '',
+      category: movement.category || '',
+      requestStatus: movement.requestStatus || 'SUBMITTED'
+    });
+    setOpenEdit(true);
+  };
+
+  const handleCloseEdit = () => {
+    setOpenEdit(false);
+    setSelectedMovement(null);
+    setEditFormData({});
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedMovement) return;
+
+    setEditLoading(true);
+    try {
+      const empId = sessionStorage.getItem('userId');
+      if (!empId) {
+        throw new Error('Employee ID not found in session storage');
+      }
+
+      const updatePayload = {
+        publicId: selectedMovement.publicId,
+        employeeId: selectedMovement.employeeId,
+        userId: selectedMovement.userId,
+        destination: editFormData.destination,
+        movementType: editFormData.movementType,
+        comment: editFormData.comment,
+        category: editFormData.category,
+        requestStatus: editFormData.requestStatus,
+        inTime: editFormData.inTime,
+        outTime: editFormData.outTime,
+        componentBehavior: selectedMovement.componentBehavior,
+        attSync: selectedMovement.attSync || 0,
+        attendance: selectedMovement.attendance || '',
+        happenDate: selectedMovement.happenDate,
+        reqDate: selectedMovement.reqDate,
+        logTime: selectedMovement.logTime,
+        isEdited: true
+      };
+
+      Object.keys(updatePayload).forEach(key => {
+        if (updatePayload[key] === undefined || updatePayload[key] === null) {
+          delete updatePayload[key];
+        }
+      });
+
+      updatePayload.inTimeRaw = editFormData.inTime;
+      updatePayload.outTimeRaw = editFormData.outTime;
+      updatePayload.happenDateRaw = selectedMovement.happenDate;
+
+      const response = await fetch(`http://192.168.3.20:8080/lms/management/movement/${selectedMovement.publicId}/${empId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(updatePayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.json();
+        throw new Error(`ERROR: ${errorText.message}`);
+      }
+
+      await dispatch(fetchMovementRequests({
+        page: pagination.currentPage,
+        size: pagination.pageSize
+      }));
+
+      handleCloseEdit();
+    } catch (error) {
+      console.error('Failed to update movement:', error);
+      alert(`Failed to update movement: ${error.message}`);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -202,12 +307,19 @@ const ManageMovementRequests = () => {
     }
   };
 
-  const formatTime = (dateString) => {
-    if (!dateString) return "N/A";
+  const formatTime = (timeString) => {
+    if (!timeString) return "N/A";
     try {
-      return format(new Date(dateString), "h:mm a");
+      if (timeString.includes('T')) {
+        return format(new Date(timeString), "h:mm a");
+      } else {
+        const [hours, minutes] = timeString.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes), 0);
+        return format(date, "h:mm a");
+      }
     } catch (e) {
-      return dateString;
+      return timeString;
     }
   };
 
@@ -222,53 +334,42 @@ const ManageMovementRequests = () => {
 
   const getMovementTypeDisplay = (movement) => {
     if (!movement) return "Unknown";
-
-    if (movement.movementType) {
-      return movement.movementType;
-    } else if (movement.late) {
-      return "Late Arrival";
-    } else if (movement.halfDay) {
-      return "Half Day";
-    } else if (movement.fullDay) {
-      return "Full Day";
-    } else if (movement.absent) {
-      return "Absent";
-    } else {
-      return "General Movement";
-    }
+    return movement.movementType || movement.category || "General Movement";
   };
 
   const getStatusChip = (movement) => {
     if (!movement) return <Chip label="Unknown" color="default" size="small" />;
 
-    if (movement.isCanceled || movement.canceled) {
-      return <Chip label="Canceled" color="error" size="small" />;
+    switch (movement.requestStatus) {
+      case 'APPROVED':
+        return <Chip label="Approved" color="success" size="small" />;
+      case 'REJECTED':
+        return <Chip label="Rejected" color="error" size="small" />;
+      case 'CANCELLED':
+        return <Chip label="Cancelled" color="error" size="small" />;
+      case 'EXPIRED':
+        return <Chip label="Expired" color="error" size="small" />;
+      case 'PENDING_APPROVAL':
+        return <Chip label="Pending Approval" color="warning" size="small" />;
+      case 'SUBMITTED':
+        return <Chip label="Submitted" color="info" size="small" />;
+      case 'DRAFT':
+        return <Chip label="Draft" color="default" size="small" />;
+      default:
+        if (movement.accepted) {
+          return <Chip label="Approved" color="success" size="small" />;
+        }
+        if (movement.reject || movement.rejected) {
+          return <Chip label="Rejected" color="error" size="small" />;
+        }
+        if (movement.isCanceled || movement.canceled) {
+          return <Chip label="Cancelled" color="error" size="small" />;
+        }
+        if (movement.pending) {
+          return <Chip label="Pending" color="warning" size="small" />;
+        }
+        return <Chip label="Submitted" color="default" size="small" />;
     }
-    if (movement.reject || movement.rejected) {
-      return <Chip label="Rejected" color="error" size="small" />;
-    }
-
-    if (movement.expired) {
-      return <Chip label="Expired" color="error" size="small" />;
-    }
-
-    if (movement.accepted) {
-      return <Chip label="Approved" color="success" size="small" />;
-    }
-
-    if (movement.pending) {
-      return <Chip label="Pending" color="warning" size="small" />;
-    }
-
-    if (movement.unAuthorized) {
-      return <Chip label="Unauthorized" color="error" size="small" />;
-    }
-
-    if (movement.lateCover) {
-      return <Chip label="Late Cover" color="info" size="small" />;
-    }
-
-    return <Chip label="Submitted" color="default" size="small" />;
   };
 
   const getAdminApprovalStatus = (movement) => {
@@ -288,17 +389,16 @@ const ManageMovementRequests = () => {
     }
   };
 
-  // Calculate counts for display
   const selectedSelectableCount = selected.filter(id => {
     const request = movementRequests.find(req => req.publicId === id);
-    return request && !isNonSelectable(request);
+    return request && canProcessRequest(request);
   }).length;
 
   const allSelectableSelected = selectableRequests.length > 0 &&
       selectableRequests.every(req => selected.includes(req.publicId));
 
   return (
-      <Container maxWidth="lg">
+      <Container maxWidth="xl">
         <CssBaseline />
         <Box sx={{ mt: 4, mb: 4 }}>
           <Typography variant="h4" gutterBottom>
@@ -306,12 +406,12 @@ const ManageMovementRequests = () => {
           </Typography>
 
           {error && (
-              <Box sx={{ mb: 2, p: 2, bgcolor: "error.light", borderRadius: 1 }}>
-                <Typography color="error">Error: {error}</Typography>
-              </Box>
+              <Alert severity="error" sx={{ mb: 2 }}>
+                Error: {error}
+              </Alert>
           )}
 
-          <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between" }}>
+          <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
               <Button
                   variant="contained"
@@ -330,6 +430,15 @@ const ManageMovementRequests = () => {
                   sx={{ mr: 1 }}
               >
                 Reject Selected ({selectedSelectableCount})
+              </Button>
+              <Button
+                  variant="outlined"
+                  color="info"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  sx={{ mr: 1 }}
+              >
+                {loading ? <CircularProgress size={20} /> : 'Refresh'}
               </Button>
             </Box>
             <FormControl sx={{ minWidth: 120 }}>
@@ -392,7 +501,7 @@ const ManageMovementRequests = () => {
                           </TableRow>
                       ) : (
                           movementRequests.map((request) => {
-                            const isRequestNonSelectable = isNonSelectable(request);
+                            const canProcess = canProcessRequest(request);
 
                             return (
                                 <TableRow key={request.publicId}>
@@ -400,7 +509,8 @@ const ManageMovementRequests = () => {
                                     <Checkbox
                                         checked={selected.includes(request.publicId)}
                                         onChange={() => handleSelect(request.publicId)}
-                                        disabled={isRequestNonSelectable}                                    />
+                                        disabled={!canProcess}
+                                    />
                                   </TableCell>
                                   <TableCell>
                                     {request.employeeId}
@@ -413,7 +523,7 @@ const ManageMovementRequests = () => {
                                     </Tooltip>
                                   </TableCell>
                                   <TableCell>
-                                    {request.inTime ? formatTime(request.inTime) : "N/A"} - {request.outTime ? formatTime(request.outTime) : "N/A"}
+                                    {formatTime(request.inTime)} - {formatTime(request.outTime)}
                                   </TableCell>
                                   <TableCell>
                                     {getAdminApprovalStatus(request)}
@@ -421,36 +531,36 @@ const ManageMovementRequests = () => {
                                   <TableCell>{getStatusChip(request)}</TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                      <Tooltip
-                                          title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
+                                      {canProcess && (
+                                          <>
+                                            <Button
+                                                variant="contained"
+                                                color="primary"
+                                                size="small"
+                                                disabled={loading}
+                                                onClick={() => handleApprove(request.publicId)}
+                                            >
+                                              Approve
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                size="small"
+                                                disabled={loading}
+                                                onClick={() => handleReject(request.publicId)}
+                                            >
+                                              Reject
+                                            </Button>
+                                          </>
+                                      )}
+                                      <Button
+                                          variant="outlined"
+                                          color="warning"
+                                          size="small"
+                                          onClick={() => handleOpenEdit(request)}
                                       >
-                                <span>
-                                  <Button
-                                      variant="contained"
-                                      color="primary"
-                                      size="small"
-                                      disabled={isRequestNonSelectable || loading}
-                                      onClick={() => handleApprove(request.publicId)}
-                                  >
-                                    Approve
-                                  </Button>
-                                </span>
-                                      </Tooltip>
-                                      <Tooltip
-                                          title={isRequestNonSelectable ? "This movement request cannot be processed" : ""}
-                                      >
-                                <span>
-                                  <Button
-                                      variant="outlined"
-                                      color="error"
-                                      size="small"
-                                      disabled={isRequestNonSelectable || loading}
-                                      onClick={() => handleReject(request.publicId)}
-                                  >
-                                    Reject
-                                  </Button>
-                                </span>
-                                      </Tooltip>
+                                        Edit
+                                      </Button>
                                       <Button
                                           variant="outlined"
                                           size="small"
@@ -488,7 +598,6 @@ const ManageMovementRequests = () => {
           )}
         </Box>
 
-        {/* Movement Details Dialog */}
         <Dialog open={openDetails} onClose={handleCloseDetails} maxWidth="md" fullWidth>
           {selectedMovement && (
               <>
@@ -497,52 +606,56 @@ const ManageMovementRequests = () => {
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>Basic Information</Typography>
                     <Divider sx={{ mb: 2 }} />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                      <div>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Employee ID:</Typography>
                         <Typography>{selectedMovement.employeeId}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Movement Type:</Typography>
                         <Typography>{getMovementTypeDisplay(selectedMovement)}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Movement Date:</Typography>
                         <Typography>{formatDate(selectedMovement.happenDate)}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Request Date:</Typography>
                         <Typography>{formatDateTime(selectedMovement.reqDate)}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">In Time:</Typography>
-                        <Typography>{formatTime(selectedMovement.inTime) || "N/A"}</Typography>
-                      </div>
-                      <div>
+                        <Typography>{formatTime(selectedMovement.inTime)}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Out Time:</Typography>
-                        <Typography>{formatTime(selectedMovement.outTime) || "N/A"}</Typography>
-                      </div>
-                      <div>
+                        <Typography>{formatTime(selectedMovement.outTime)}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Duration:</Typography>
                         <Typography>
                           {selectedMovement.movementDurationMinutes !== undefined
                               ? `${selectedMovement.movementDurationMinutes} minutes`
                               : "N/A"}
                         </Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Same Day Movement:</Typography>
                         <Typography>{selectedMovement.sameDayMovement ? "Yes" : "No"}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Category:</Typography>
                         <Typography>{selectedMovement.category || "N/A"}</Typography>
-                      </div>
-                      <div>
+                      </Grid>
+                      <Grid item xs={6}>
                         <Typography variant="subtitle2">Destination:</Typography>
                         <Typography>{selectedMovement.destination || "N/A"}</Typography>
-                      </div>
-                    </Box>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2">Status:</Typography>
+                        {getStatusChip(selectedMovement)}
+                      </Grid>
+                    </Grid>
                   </Box>
 
                   <Box sx={{ mb: 3 }}>
@@ -570,14 +683,14 @@ const ManageMovementRequests = () => {
                                     secondary={
                                       <>
                                         <Typography component="span" variant="body2" color="text.primary">
-                                          {admin.email}
+                                          {admin.email} - {admin.employeeId}
                                         </Typography>
                                         <br />
-                                        {admin.accepted ? (
-                                            <Chip label="Approved" color="success" size="small" />
-                                        ) : (
-                                            <Chip label="Pending" color="warning" size="small" />
-                                        )}
+                                        Status: {admin.accepted ? (
+                                          <Chip label={`Approved on ${admin.approvedDate ? formatDateTime(admin.approvedDate) : 'N/A'}`} color="success" size="small" />
+                                      ) : (
+                                          <Chip label="Pending" color="warning" size="small" />
+                                      )}
                                       </>
                                     }
                                 />
@@ -591,6 +704,122 @@ const ManageMovementRequests = () => {
                 </DialogContent>
                 <DialogActions>
                   <Button onClick={handleCloseDetails}>Close</Button>
+                </DialogActions>
+              </>
+          )}
+        </Dialog>
+
+        <Dialog open={openEdit} onClose={handleCloseEdit} maxWidth="sm" fullWidth>
+          {selectedMovement && (
+              <>
+                <DialogTitle>Edit Movement Request</DialogTitle>
+                <DialogContent dividers>
+                  <Box sx={{ pt: 1 }}>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      Editing movement for Employee ID: {selectedMovement.employeeId}
+                    </Alert>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            label="In Time"
+                            type="time"
+                            value={editFormData.inTime}
+                            onChange={(e) => handleEditFormChange('inTime', e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            label="Out Time"
+                            type="time"
+                            value={editFormData.outTime}
+                            onChange={(e) => handleEditFormChange('outTime', e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Destination"
+                            value={editFormData.destination}
+                            onChange={(e) => handleEditFormChange('destination', e.target.value)}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Movement Type</InputLabel>
+                          <Select
+                              value={editFormData.movementType}
+                              label="Movement Type"
+                              onChange={(e) => handleEditFormChange('movementType', e.target.value)}
+                          >
+                            <MenuItem value="FULLDAY">Full Day</MenuItem>
+                            <MenuItem value="OFFICE_TO_HOME">Office to Home</MenuItem>
+                            <MenuItem value="HOME_TO_OFFICE">Home to Office</MenuItem>
+                            <MenuItem value="REMOTEWORK">Remote Work</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Request Status</InputLabel>
+                          <Select
+                              value={editFormData.requestStatus}
+                              label="Request Status"
+                              onChange={(e) => handleEditFormChange('requestStatus', e.target.value)}
+                          >
+                            <MenuItem value="DRAFT">Draft</MenuItem>
+                            <MenuItem value="SUBMITTED">Submitted</MenuItem>
+                            <MenuItem value="PENDING_APPROVAL">Pending Approval</MenuItem>
+                            <MenuItem value="APPROVED">Approved</MenuItem>
+                            <MenuItem value="REJECTED">Rejected</MenuItem>
+                            <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                            <MenuItem value="EXPIRED">Expired</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel>Category</InputLabel>
+                          <Select
+                              value={editFormData.category}
+                              label="Category"
+                              onChange={(e) => handleEditFormChange('category', e.target.value)}
+                          >
+                            <MenuItem value="AUTHORIZED">Authorized</MenuItem>
+                            <MenuItem value="UN-AUTHORIZED">Unauthorized</MenuItem>
+                            <MenuItem value="LATE">Late</MenuItem>
+                            <MenuItem value="EARLY">Early</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Comments"
+                            multiline
+                            rows={4}
+                            value={editFormData.comment}
+                            onChange={(e) => handleEditFormChange('comment', e.target.value)}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseEdit} disabled={editLoading}>
+                    Cancel
+                  </Button>
+                  <Button
+                      onClick={handleSaveEdit}
+                      variant="contained"
+                      disabled={editLoading}
+                  >
+                    {editLoading ? <CircularProgress size={20} /> : 'Save Changes'}
+                  </Button>
                 </DialogActions>
               </>
           )}

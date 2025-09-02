@@ -13,6 +13,7 @@ import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainin
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeTotalEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
+import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.exceptions.LMSServiceException_AllReadyExits;
@@ -20,21 +21,24 @@ import com.slt.peotv.lmsmangmentservice.model.dto.*;
 import com.slt.peotv.lmsmangmentservice.model.req.*;
 import com.slt.peotv.lmsmangmentservice.model.res.DashBoardRes;
 import com.slt.peotv.lmsmangmentservice.repository.*;
-import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
+import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 
 @Service
 public class LMS_Service_impl implements LMS_Service {
@@ -72,6 +76,7 @@ public class LMS_Service_impl implements LMS_Service {
     private Main_Service main_Service;
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
+    private static final Logger logger = LoggerFactory.getLogger(LMS_Service_impl.class);
 
     @Override
     public List<InOutDTO> getAllInOuts(String id, boolean swap) {
@@ -147,7 +152,7 @@ public class LMS_Service_impl implements LMS_Service {
 
         DashBoardRes dashBoardRes = new DashBoardRes();
 
-        if (today.getDayOfWeek() == DayOfWeek.MONDAY){
+        if (today.getDayOfWeek() == DayOfWeek.MONDAY) {
 
             LocalDate lastFriday = today.minusDays(3);
             Date fridayDate = Date.from(lastFriday.atStartOfDay(ZoneId.systemDefault()).toInstant());
@@ -156,15 +161,15 @@ public class LMS_Service_impl implements LMS_Service {
             Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), fridayDate);
 
             earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
-            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "": dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "" : dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
 
-        }else{
+        } else {
 
             Optional<InOutEntity> earliestByEmployeeIdAndDateLast = inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate());
             Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate());
 
             earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch(inOutEntity.getPunchTypeTimeAsString()));
-            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "": dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
+            latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setLastPunch((dashBoardRes.getLastPunch().isEmpty() || dashBoardRes.getLastPunch() == null ? "" : dashBoardRes.getLastPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
         }
 
         /* AccessLogEntity todayEarliestAccessLogsByEmployee = check_Service.getTodayEarliestAccessLogsByEmployee(employeeEntity.getSltId());
@@ -182,10 +187,10 @@ public class LMS_Service_impl implements LMS_Service {
         Optional<InOutEntity> latestByEmployeeIdAndDateLast = inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.removeTimeFromDate(new Date()));
 
         earliestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch(inOutEntity.getPunchTypeTimeAsString()));
-        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch((dashBoardRes.getNowPunch().isEmpty() || dashBoardRes.getNowPunch() == null ? "": dashBoardRes.getNowPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
+        latestByEmployeeIdAndDateLast.ifPresent(inOutEntity -> dashBoardRes.setNowPunch((dashBoardRes.getNowPunch().isEmpty() || dashBoardRes.getNowPunch() == null ? "" : dashBoardRes.getNowPunch() + " - " + inOutEntity.getPunchTypeTimeAsString()).trim()));
 
-        if(dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
-        if(dashBoardRes.getLastPunch() == null) dashBoardRes.setLastPunch("NOT FOUND");
+        if (dashBoardRes.getNowPunch() == null) dashBoardRes.setNowPunch("NOT FOUND");
+        if (dashBoardRes.getLastPunch() == null) dashBoardRes.setLastPunch("NOT FOUND");
 
         dashBoardRes.setTotalAttendance(total);
         dashBoardRes.setRemainLeaveDistribution(remainLeaveDistribution);
@@ -244,7 +249,18 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public void createMovements(MovementsEntity entity) {
         entity.setUpdateDate(new Date());
-        MovementsEntity movementsEntity = movementsRepo.save(entity);
+        try {
+            MovementsEntity movementsEntity = movementsRepo.save(entity);
+        } catch (DataIntegrityViolationException e) {
+            if (e.getMessage().contains("Duplicate entry") && e.getMessage().contains("publicId")) {
+                final String newLeaveId = "MV-" + utils.generateId(10);
+                entity.setPublicId(newLeaveId);
+                movementsRepo.save(entity);
+            }else{
+                logger.error("Error saving movement record");
+                throw e;
+            }
+        }
     }
 
     @Override
@@ -313,16 +329,16 @@ public class LMS_Service_impl implements LMS_Service {
 
         EmployeeEntity employee = movementsEntity.getEmployee();
 
-        if(req.getHappenDate() != null && employee != null){
+        if (req.getHappenDate() != null && employee != null) {
             req.setHappenDate(helper.removeTimeFromDate(req.getHappenDate()));
             Optional<AttendanceEntity> attendanceEntity = attendanceRepo.findByEmployeeAndArrivalDateAndIsActiveTrue(
                     employee, req.getHappenDate());
-            if(attendanceEntity.isPresent()){
+            if (attendanceEntity.isPresent()) {
                 AttendanceEntity attendanceEntity_ = attendanceEntity.get();
-                if(!attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()){
+                if (!attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()) {
                     movementsEntity.setAttendance(attendanceEntity_);
                     movementsEntity.setHappenDate(req.getHappenDate());
-                    if(req.getHappenDateRaw() != null)
+                    if (req.getHappenDateRaw() != null)
                         movementsEntity.setHappenDateRaw(req.getHappenDateRaw());
                 }
             }
@@ -350,10 +366,10 @@ public class LMS_Service_impl implements LMS_Service {
         if (req.getRequestStatus() != null)
             movementsEntity.setRequestStatus(req.getRequestStatus());
 
-        if(req.getInTimeRaw() != null)
+        if (req.getInTimeRaw() != null)
             movementsEntity.setInTimeRaw(req.getInTimeRaw());
-        if(req.getOutTimeRaw() != null)
-            movementsEntity.setOutTimeRaw(req.getOutTimeRaw());    
+        if (req.getOutTimeRaw() != null)
+            movementsEntity.setOutTimeRaw(req.getOutTimeRaw());
 
         movementsEntity.setUpdateDate(new Date());
         movementsRepo.save(movementsEntity);
@@ -382,7 +398,8 @@ public class LMS_Service_impl implements LMS_Service {
         EmployeeEntity employeeEntity = helper.getEmployeeByIdV2(employeeId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate")
                 .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
-        Pageable pageable = PageRequest.of(page, size, sort);        Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
         return byUser.map(lmsUtils::toNopayDTO);
     }
 
@@ -390,7 +407,8 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<NopayDTO> getAllNoPays(int page, int size) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate")
                 .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
-        Pageable pageable = PageRequest.of(page, size, sort);        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
     }
 
     @Override
@@ -404,7 +422,7 @@ public class LMS_Service_impl implements LMS_Service {
         NoPayReasonEntity noPayReasonEntitiesByNoPay = noPayReasonRepo.findNoPayReasonEntitiesByNoPay(noPayEntity)
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         AttendanceEntity attendance = noPayEntity.getAttendance();
-        if(attendance != null) {
+        if (attendance != null) {
             attendance.setPayStatus(null);
             attendanceRepo.save(attendance);
         }
@@ -641,10 +659,12 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public AttendanceDTO createAttendance(AttendanceReq req) {
         AttendanceEntity attendanceEntity = lmsUtils.toAttendanceEntity(req);
-        if(attendanceEntity == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+        if (attendanceEntity == null)
+            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
         EmployeeEntity employee_ = attendanceEntity.getEmployee();
-        if(employee_ == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+        if (employee_ == null)
+            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
         if (attendanceRepo.existsByEmployeeAndDate(employee_, helper.removeTimeFromDate(req.getDate()))) {
             throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
@@ -652,10 +672,10 @@ public class LMS_Service_impl implements LMS_Service {
 
         if (attendanceRepo.existsByEmployeeAndArrivalDateAndArrivalTime(employee_, helper.removeTimeFromDate(req.getArrivalDate()), req.getArrivalTime())) {
             throw new IllegalArgumentException(ErrorMessages.RECORD_ALREADY_EXISTS.getErrorMessage());
-        } 
-        if(!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend())
-            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());       
-        
+        }
+        if (!employee_.getRoaster() && attendanceEntity.isArrivalOnWeekend())
+            throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
+
         AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
         EmployeeEntity employee = saved.getEmployee();
         if (saved.getPayStatus() != null) {
@@ -664,7 +684,8 @@ public class LMS_Service_impl implements LMS_Service {
                         req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
             }
         }
-        if (saved.getIsUnSuccessful()) helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, true);
+        if (saved.getIsUnSuccessful())
+            helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, true);
         return lmsUtils.toAttendanceDTO(saved);
     }
 
