@@ -6,6 +6,7 @@ import {
   fetchLeaveRequests,
   processLeaveRequest,
   processBulkLeaveRequests,
+  updateLeaveRequest,
   selectLeaveRequest,
   selectAllLeaveRequests,
   clearNotification,
@@ -42,13 +43,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  AlertTitle
+  AlertTitle,
+  TextField,
+  Grid
 } from "@mui/material";
 import { format } from "date-fns";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import EditIcon from '@mui/icons-material/Edit';
 
 const ManageLeaveRequests = () => {
   const dispatch = useDispatch();
@@ -57,6 +61,20 @@ const ManageLeaveRequests = () => {
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [lastError, setLastError] = useState(null);
   const [processingRequests, setProcessingRequests] = useState(new Set());
+  
+  // Update dialog state
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [selectedRequestForUpdate, setSelectedRequestForUpdate] = useState(null);
+  const [updateFormData, setUpdateFormData] = useState({
+    fromDate: '',
+    toDate: '',
+    leaveType: '',
+    description: '',
+    numOfDays: '',
+    componentBehavior: '',
+    requestStatus: ''
+  });
+  const [updating, setUpdating] = useState(false);
 
   const leaveRequests = useSelector(state => state.leave.requests);
   const selected = useSelector(state => state.leave.selected);
@@ -68,6 +86,36 @@ const ManageLeaveRequests = () => {
   // Error boundary state
   const [hasError, setHasError] = useState(false);
   const [errorInfo, setErrorInfo] = useState(null);
+
+  // Available leave types and component behaviors (you might want to fetch these from your backend)
+  const leaveTypes = [
+    { id: 1, name: "Annual Leave" },
+    { id: 2, name: "Sick Leave" },
+    { id: 3, name: "Casual Leave" },
+    { id: 4, name: "Maternity Leave" },
+    { id: 5, name: "Emergency Leave" }
+  ];
+
+  const componentBehaviors = [
+    { value: "HALF_DAY", label: "Half Day" },
+    { value: "FULL_DAY", label: "Full Day" },
+    { value: "SHORT_LEAVE", label: "Short Leave" },
+    { value: "LATE", label: "Late" },
+    { value: "LATE_COVER", label: "Late Cover" },
+    { value: "UNSUCCESSFUL", label: "Unsuccessful" },
+    { value: "UNAUTHORIZED", label: "Unauthorized" },
+    { value: "ABSENT", label: "Absent" }
+  ];
+
+  const requestStatuses = [
+    { value: "DRAFT", label: "Draft" },
+    { value: "SUBMITTED", label: "Submitted" },
+    { value: "PENDING_APPROVAL", label: "Pending Approval" },
+    { value: "APPROVED", label: "Approved" },
+    { value: "REJECTED", label: "Rejected" },
+    { value: "CANCELLED", label: "Cancelled" },
+    { value: "EXPIRED", label: "Expired" }
+  ];
 
   // Helper function to check if error is internal server error
   const isInternalServerError = (error) => {
@@ -181,6 +229,19 @@ const ManageLeaveRequests = () => {
     } catch (error) {
       handleError(error, 'Checking request selectability');
       return true; // Fail safe - make non-selectable if error
+    }
+  };
+
+  // Check if a request can be updated by admin - Fix: Always allow admin to edit
+  const canUpdateRequest = (request) => {
+    try {
+      if (!request || typeof request !== 'object') return false;
+      
+      // Admin can always edit leave requests (no restrictions)
+      return true;
+    } catch (error) {
+      handleError(error, 'Checking request editability');
+      return false;
     }
   };
 
@@ -355,6 +416,109 @@ const ManageLeaveRequests = () => {
       } else {
         console.warn('Non-critical error in bulk reject:', error);
       }
+    }
+  };
+
+  // Handle opening update dialog
+  const handleOpenUpdateDialog = (request) => {
+    try {
+      setSelectedRequestForUpdate(request);
+      setUpdateFormData({
+        fromDate: request.fromDate ? format(new Date(request.fromDate), 'yyyy-MM-dd') : '',
+        toDate: request.toDate ? format(new Date(request.toDate), 'yyyy-MM-dd') : '',
+        leaveType: request.leaveType?.name || '',
+        description: request.description || '',
+        numOfDays: request.numOfDays || '',
+        componentBehavior: request.componentBehavior || '',
+        requestStatus: request.requestStatus || ''
+      });
+      setShowUpdateDialog(true);
+    } catch (error) {
+      handleError(error, 'Opening update dialog');
+    }
+  };
+
+  // Handle closing update dialog
+  const handleCloseUpdateDialog = () => {
+    setShowUpdateDialog(false);
+    setSelectedRequestForUpdate(null);
+    setUpdateFormData({
+      fromDate: '',
+      toDate: '',
+      leaveType: '',
+      description: '',
+      numOfDays: '',
+      componentBehavior: '',
+      requestStatus: ''
+    });
+  };
+
+  // Handle form field changes
+  const handleUpdateFormChange = (field, value) => {
+    setUpdateFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // Auto-calculate days when dates change
+    if (field === 'fromDate' || field === 'toDate') {
+      const fromDate = field === 'fromDate' ? new Date(value) : new Date(updateFormData.fromDate);
+      const toDate = field === 'toDate' ? new Date(value) : new Date(updateFormData.toDate);
+      
+      if (fromDate && toDate && !isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+        const timeDiff = Math.abs(toDate.getTime() - fromDate.getTime());
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        setUpdateFormData(prev => ({
+          ...prev,
+          numOfDays: daysDiff * 2 // Assuming 2 units per day
+        }));
+      }
+    }
+  };
+
+  // Handle update submission
+  const handleSubmitUpdate = async () => {
+    try {
+      setUpdating(true);
+      
+      if (!selectedRequestForUpdate) {
+        throw new Error('No request selected for update');
+      }
+
+      const updatePayload = {
+        publicId: selectedRequestForUpdate.publicId,
+        fromDate: new Date(updateFormData.fromDate).toISOString(),
+        toDate: new Date(updateFormData.toDate).toISOString(),
+        leaveType: updateFormData.leaveType,
+        description: updateFormData.description,
+        numOfDays: parseInt(updateFormData.numOfDays),
+        componentBehavior: updateFormData.componentBehavior,
+        requestStatus: updateFormData.requestStatus,
+        userId: selectedRequestForUpdate.userId,
+        employeeID: selectedRequestForUpdate.employeeID,
+        happenDate: new Date().toISOString(),
+        isEdited: true
+      };
+
+      await dispatch(updateLeaveRequest({
+        updatePayload,
+        userAdmin: true,
+        isAdmin: true
+      })).unwrap();
+
+      handleCloseUpdateDialog();
+      
+      // Refresh the data
+      await fetchWithRetry();
+      
+    } catch (error) {
+      if (isInternalServerError(error)) {
+        handleError(error, 'Updating leave request');
+      } else {
+        console.warn('Non-critical error in update:', error);
+      }
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -635,6 +799,122 @@ const ManageLeaveRequests = () => {
             </DialogActions>
           </Dialog>
 
+          {/* Update Dialog */}
+          <Dialog
+              open={showUpdateDialog}
+              onClose={handleCloseUpdateDialog}
+              maxWidth="md"
+              fullWidth
+          >
+            <DialogTitle>
+              Update Leave Request - {selectedRequestForUpdate?.employeeID}
+            </DialogTitle>
+            <DialogContent>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                      fullWidth
+                      label="From Date"
+                      type="date"
+                      value={updateFormData.fromDate}
+                      onChange={(e) => handleUpdateFormChange('fromDate', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                      fullWidth
+                      label="To Date"
+                      type="date"
+                      value={updateFormData.toDate}
+                      onChange={(e) => handleUpdateFormChange('toDate', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Leave Type</InputLabel>
+                    <Select
+                        value={updateFormData.leaveType}
+                        label="Leave Type"
+                        onChange={(e) => handleUpdateFormChange('leaveType', e.target.value)}
+                    >
+                      {leaveTypes.map((type) => (
+                          <MenuItem key={type.id} value={type.name}>
+                            {type.name}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Component Behavior</InputLabel>
+                    <Select
+                        value={updateFormData.componentBehavior}
+                        label="Component Behavior"
+                        onChange={(e) => handleUpdateFormChange('componentBehavior', e.target.value)}
+                    >
+                      {componentBehaviors.map((behavior) => (
+                          <MenuItem key={behavior.value} value={behavior.value}>
+                            {behavior.label}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Request Status</InputLabel>
+                    <Select
+                        value={updateFormData.requestStatus}
+                        label="Request Status"
+                        onChange={(e) => handleUpdateFormChange('requestStatus', e.target.value)}
+                    >
+                      {requestStatuses.map((status) => (
+                          <MenuItem key={status.value} value={status.value}>
+                            {status.label}
+                          </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                      fullWidth
+                      label="Number of Days (Units)"
+                      type="number"
+                      value={updateFormData.numOfDays}
+                      onChange={(e) => handleUpdateFormChange('numOfDays', e.target.value)}
+                      helperText="2 units = 1 full day, 1 unit = half day"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                      fullWidth
+                      label="Description"
+                      multiline
+                      rows={3}
+                      value={updateFormData.description}
+                      onChange={(e) => handleUpdateFormChange('description', e.target.value)}
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseUpdateDialog} disabled={updating}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitUpdate} 
+                variant="contained" 
+                disabled={updating || !updateFormData.fromDate || !updateFormData.toDate || !updateFormData.leaveType}
+              >
+                {updating ? <CircularProgress size={20} /> : 'Update Request'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Snackbar
               open={notification.open}
               autoHideDuration={6000}
@@ -741,6 +1021,7 @@ const ManageLeaveRequests = () => {
                             const isRequestNonSelectable = isNonSelectable(request);
                             const isExpanded = expandedRequest === request.publicId;
                             const isProcessing = processingRequests.has(request.publicId);
+                            const canUpdate = canUpdateRequest(request);
 
                             return (
                                 <React.Fragment key={request.publicId || index}>
@@ -795,6 +1076,20 @@ const ManageLeaveRequests = () => {
                                     </Button>
                                   </span>
                                         </Tooltip>
+                                        <Tooltip title={canUpdate ? "Edit this leave request" : "Cannot edit finalized requests"}>
+                                  <span>
+                                    <Button
+                                        variant="outlined"
+                                        color="info"
+                                        size="small"
+                                        startIcon={<EditIcon />}
+                                        disabled={!canUpdate || loading}
+                                        onClick={() => handleOpenUpdateDialog(request)}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </span>
+                                        </Tooltip>
                                       </Box>
                                     </TableCell>
                                     <TableCell>
@@ -838,6 +1133,9 @@ const ManageLeaveRequests = () => {
                                               </Typography>
                                               <Typography variant="body2">
                                                 <strong>Description:</strong> {request.description || 'N/A'}
+                                              </Typography>
+                                              <Typography variant="body2">
+                                                <strong>Edited:</strong> {request.isEdited ? 'Yes' : 'No'}
                                               </Typography>
                                             </div>
                                           </Box>

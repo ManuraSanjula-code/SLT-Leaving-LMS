@@ -20,7 +20,7 @@ import java.util.List;
 import lombok.*;
 
 @Entity
-@Table(name = "movements", uniqueConstraints = @UniqueConstraint(columnNames = "publicId", name = "UK_movement_public_id"))
+@Table(name = "movements")
 @Setter
 @Getter
 @EqualsAndHashCode
@@ -33,7 +33,6 @@ public class MovementsEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(nullable = false,unique = true)
     private String publicId;
 
     @Column(name = "In_Time", length = 45)
@@ -84,7 +83,7 @@ public class MovementsEntity {
     private AttendanceEntity attendance;
 
     @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List admins;
+    private List<ComponetAdminsEntity> admins;
 
     @Builder.Default
     private Date createDate = new Date();
@@ -92,4 +91,5 @@ public class MovementsEntity {
 
     @Builder.Default
     private Boolean isEdited = false;
+
 }

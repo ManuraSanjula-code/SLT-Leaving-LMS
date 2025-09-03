@@ -4,7 +4,6 @@ export const fetchLeaveRequests = createAsyncThunk(
     'leave/fetchLeaveRequests',
     async ({ page = 0, size = 10 }, { rejectWithValue }) => {
         try {
-            // Get userId from session storage
             const storedUserId = sessionStorage.getItem('userId');
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -14,7 +13,6 @@ export const fetchLeaveRequests = createAsyncThunk(
                 return rejectWithValue('User ID not found in session storage');
             }
 
-            // Make API call to fetch leave requests
             const response = await fetch(`http://192.168.3.20:8080/lms/leave/admin/${storedUserId}/${empId}?page=${page}&size=${size}`, {
                 method: 'GET',
                 credentials: 'include',
@@ -28,8 +26,9 @@ export const fetchLeaveRequests = createAsyncThunk(
             }
 
             const data = await response.json();
+            console.log(data)
             return {
-                content: data.content || [], // Ensure we always have an array even if content is null
+                content: data.content || [],
                 pagination: {
                     currentPage: data.number,
                     totalPages: data.totalPages,
@@ -43,11 +42,61 @@ export const fetchLeaveRequests = createAsyncThunk(
     }
 );
 
+export const updateLeaveRequest = createAsyncThunk(
+    'leave/updateLeaveRequest',
+    async ({ updatePayload, userAdmin, isAdmin }, { rejectWithValue }) => {
+        try {
+            const empId = sessionStorage.getItem('userId');
+            if (!empId) return rejectWithValue('Employee ID not found');
+
+            const cleanPayload = {
+                fromDate: updatePayload.fromDate,
+                toDate: updatePayload.toDate,
+                leaveType: updatePayload.leaveType,
+                description: updatePayload.description,
+                numOfDays: updatePayload.numOfDays,
+                happenDate: updatePayload.happenDate,
+                userId: updatePayload.userId,
+                employeeID: updatePayload.employeeID,
+                componentBehavior: updatePayload.componentBehavior,
+                requestStatus: updatePayload.requestStatus,
+                notUsed: updatePayload.notUsed || false,
+                isManualRequest: updatePayload.isManualRequest || false,
+                isEdited: updatePayload.isEdited || false
+            };
+
+            Object.keys(cleanPayload).forEach(key => {
+                if (cleanPayload[key] === undefined || cleanPayload[key] === null || cleanPayload[key] === '') {
+                    delete cleanPayload[key];
+                }
+            });
+
+            const response = await fetch(
+                `http://192.168.3.20:8080/lms/management/leave/${updatePayload.publicId}/${empId}`,
+                {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(cleanPayload)
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.json();
+                throw new Error(`${response.status} Message: ${errorText.error || errorText.message}`);
+            }
+
+            return cleanPayload;
+        } catch (err) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
 export const processLeaveRequest = createAsyncThunk(
     'leave/processLeaveRequest',
     async ({ publicId, approved }, { rejectWithValue }) => {
         try {
-            // Get userId from session storage
             const storedUserId = sessionStorage.getItem('userId');
             const empId = sessionStorage.getItem('userId');
             if (!empId) {
@@ -96,7 +145,6 @@ export const processBulkLeaveRequests = createAsyncThunk(
             const state = getState();
             const leaveRequests = state.leave.requests;
 
-            // Extract employee IDs from the selected leave requests
             const approvedEmployeesToday = [];
 
             leaveRequests.forEach(request => {
@@ -128,13 +176,9 @@ export const processBulkLeaveRequests = createAsyncThunk(
             );
 
 
-            // Check if response is ok
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-
-            // Handle void response - API doesn't return data
-            // We'll return the data we need for the fulfilled case
             return {
                 leaveIds,
                 approvedEmployeesToday,
@@ -146,7 +190,6 @@ export const processBulkLeaveRequests = createAsyncThunk(
     }
 );
 
-// Create the leave slice
 const leaveSlice = createSlice({
     name: 'leave',
     initialState: {
@@ -167,7 +210,6 @@ const leaveSlice = createSlice({
         }
     },
     reducers: {
-        // Select a single leave request
         selectLeaveRequest: (state, action) => {
             const id = action.payload;
             if (state.selected.includes(id)) {
@@ -177,7 +219,6 @@ const leaveSlice = createSlice({
             }
         },
 
-        // Select all leave requests
         selectAllLeaveRequests: (state) => {
             if (state.selected.length === state.requests.filter(req => req && req.publicId).length) {
                 state.selected = [];
@@ -186,17 +227,14 @@ const leaveSlice = createSlice({
             }
         },
 
-        // Clear selected leave requests
         clearSelectedLeaveRequests: (state) => {
             state.selected = [];
         },
 
-        // Set notification state
         setNotification: (state, action) => {
             state.notification = action.payload;
         },
 
-        // Clear notification
         clearNotification: (state) => {
             state.notification = {
                 open: false,
@@ -204,15 +242,38 @@ const leaveSlice = createSlice({
                 severity: 'info'
             };
         },
-
-        // Set page size
         setPageSize: (state, action) => {
             state.pagination.pageSize = action.payload;
         }
     },
     extraReducers: (builder) => {
         builder
-            // Handle fetchLeaveRequests
+            .addCase(updateLeaveRequest.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(updateLeaveRequest.fulfilled, (state, action) => {
+                state.loading = false;
+                state.notification = {
+                    open: true,
+                    message: 'Leave request updated successfully',
+                    severity: 'success'
+                };
+
+                const index = state.requests.findIndex(req => req.publicId === action.payload.publicId);
+                if (index !== -1) {
+                    state.requests[index] = { ...state.requests[index], ...action.payload };
+                }
+            })
+            .addCase(updateLeaveRequest.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+                state.notification = {
+                    open: true,
+                    message: `Failed to update leave request: ${action.payload}`,
+                    severity: 'error'
+                };
+            })
             .addCase(fetchLeaveRequests.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -225,7 +286,6 @@ const leaveSlice = createSlice({
             .addCase(fetchLeaveRequests.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
-                // Set notification for missing user ID
                 if (action.payload === 'User ID not found in session storage') {
                     state.notification = {
                         open: true,
@@ -235,14 +295,12 @@ const leaveSlice = createSlice({
                 }
             })
 
-            // Handle processLeaveRequest
             .addCase(processLeaveRequest.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(processLeaveRequest.fulfilled, (state, action) => {
                 state.loading = false;
-                // Update the status of the processed request in the state
                 const index = state.requests.findIndex(req => req && req.publicId === action.payload.publicId);
                 if (index !== -1) {
                     if (action.payload.approved) {
@@ -250,13 +308,11 @@ const leaveSlice = createSlice({
                         state.requests[index].pending = false;
                         state.requests[index].reject = false;
                     } else {
-                        // When rejected, set reject to true and pending to false
                         state.requests[index].reject = true;
                         state.requests[index].pending = false;
                         state.requests[index].accepted = false;
                     }
                 }
-                // Set success notification
                 state.notification = {
                     open: true,
                     message: `Request ${action.payload.approved ? 'approved' : 'rejected'} successfully`,
@@ -266,7 +322,6 @@ const leaveSlice = createSlice({
             .addCase(processLeaveRequest.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
-                // Set error notification
                 state.notification = {
                     open: true,
                     message: `Failed to process request: ${action.payload}`,
@@ -274,14 +329,12 @@ const leaveSlice = createSlice({
                 };
             })
 
-            // Handle processBulkLeaveRequests
             .addCase(processBulkLeaveRequests.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(processBulkLeaveRequests.fulfilled, (state, action) => {
                 state.loading = false;
-                // Update status for all processed requests
                 action.payload.leaveIds.forEach(id => {
                     const index = state.requests.findIndex(req => req && req.publicId === id);
                     if (index !== -1) {
@@ -290,16 +343,13 @@ const leaveSlice = createSlice({
                             state.requests[index].pending = false;
                             state.requests[index].reject = false;
                         } else {
-                            // When rejected, set reject to true and pending to false
                             state.requests[index].reject = true;
                             state.requests[index].pending = false;
                             state.requests[index].accepted = false;
                         }
                     }
                 });
-                // Clear selection after bulk processing
                 state.selected = [];
-                // Set success notification
                 state.notification = {
                     open: true,
                     message: `${action.payload.leaveIds.length} requests ${action.payload.approved ? 'approved' : 'rejected'} successfully`,
@@ -309,7 +359,6 @@ const leaveSlice = createSlice({
             .addCase(processBulkLeaveRequests.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
-                // Set error notification
                 state.notification = {
                     open: true,
                     message: `Failed to process requests: ${action.payload}`,
@@ -319,7 +368,6 @@ const leaveSlice = createSlice({
     }
 });
 
-// Export actions
 export const {
     selectLeaveRequest,
     selectAllLeaveRequests,
@@ -329,5 +377,4 @@ export const {
     setPageSize
 } = leaveSlice.actions;
 
-// Export reducer
 export default leaveSlice.reducer;
