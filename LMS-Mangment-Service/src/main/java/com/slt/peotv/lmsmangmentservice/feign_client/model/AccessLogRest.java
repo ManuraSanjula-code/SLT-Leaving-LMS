@@ -19,8 +19,11 @@ public class AccessLogRest {
     private String readStatus;
     private Integer processed;
     private Date etlRunTime;
+    @Builder.Default
     private Boolean isManual = false;
+    @Builder.Default
     private Date createdDate = new Date();
     private Date updatedDate;
+    @Builder.Default
     private Boolean isActive = true;
 }

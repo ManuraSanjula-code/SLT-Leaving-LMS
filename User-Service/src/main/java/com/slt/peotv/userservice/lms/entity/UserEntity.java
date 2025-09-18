@@ -17,7 +17,7 @@ import java.util.*;
 @Table(name = "users")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
-@EqualsAndHashCode(exclude = {"administratives", "adminUser"})
+@EqualsAndHashCode(exclude = {"addresses", "sections", "profiles", "roles", "myAdmins", "mySubordinates"})
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 5313493413859894403L;
     @Id
@@ -76,26 +76,25 @@ public class UserEntity implements Serializable {
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Column(nullable = false)
     @JoinTable(name = "user_sections", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "section_id"))
-    private Collection<SectionEntity> sections =  new ArrayList<>();;
+    private Collection<SectionEntity> sections = new ArrayList<>();
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "user_profiles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
     @Column(nullable = false)
-    private Collection<ProfilesEntity> profiles =  new ArrayList<>();;
+    private Collection<ProfilesEntity> profiles = new ArrayList<>();
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @Column(nullable = false)
-    private Collection<RoleEntity> roles =  new ArrayList<>();;
+    private Collection<RoleEntity> roles = new ArrayList<>();
 
     @Column(nullable = false)
     private Date join_date;
 
     @Column(nullable = false)
     private Boolean roaster;
-
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(name = "user_admins",
@@ -138,6 +137,7 @@ public class UserEntity implements Serializable {
             subordinate.getMyAdmins().remove(this);
         }
     }
+
     public void addSection(SectionEntity section) {
         if (section != null) {
             if (this.sections == null) {

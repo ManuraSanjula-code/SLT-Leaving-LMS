@@ -43,6 +43,7 @@ public class NoPayEntity {
     @Column(name = "created_date")
     private Date createdDate = new Date();
 
+    @Builder.Default
     @Column(name = "updated_date")
     private Date updatedDate = new Date();
 

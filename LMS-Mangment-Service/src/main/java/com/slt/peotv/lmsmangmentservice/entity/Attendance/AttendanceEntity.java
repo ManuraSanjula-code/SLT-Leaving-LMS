@@ -96,6 +96,7 @@ public class AttendanceEntity {
     private Date createdDate = new Date();
 
     @Column(name = "updated_date")
+    @Builder.Default
     private Date updatedDate = new Date();
 
     @Builder.Default
