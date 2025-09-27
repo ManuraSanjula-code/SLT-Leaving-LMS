@@ -7,6 +7,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Arrays;
 import java.util.List;
 
 @FeignClient(name = "lMS-management-service")
@@ -20,7 +22,7 @@ public interface LMSClient {
     default List<AccessLogArchiveRest> getLms(String date, String token, Throwable exception){
         AccessLogArchiveRest accessLogArchiveRest = new AccessLogArchiveRest();
         accessLogArchiveRest.setEmployeeId("A0000");
-        return List.of(accessLogArchiveRest);
+        return Arrays.asList(accessLogArchiveRest);
     }
 
 }

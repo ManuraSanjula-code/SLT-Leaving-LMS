@@ -13,16 +13,6 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        /*corsConfig.addAllowedOrigin("https://localhost");
-        corsConfig.addAllowedOrigin("http://localhost");
-        corsConfig.addAllowedOrigin("http://localhost:8080");
-        corsConfig.addAllowedOrigin("http://localhost:3000");
-
-        corsConfig.addAllowedOrigin("https://192.168.3.20");
-        corsConfig.addAllowedOrigin("http://192.168.3.20");
-        corsConfig.addAllowedOrigin("http://192.168.3.20:8080");
-        corsConfig.addAllowedOrigin("http://192.168.3.20:3000");*/
-
         corsConfig.addAllowedOriginPattern("*");
         corsConfig.addAllowedMethod("*");
         corsConfig.addAllowedHeader("*");

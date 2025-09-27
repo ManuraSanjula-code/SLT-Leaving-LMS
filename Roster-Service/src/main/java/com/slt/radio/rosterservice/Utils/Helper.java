@@ -1,11 +1,11 @@
 package com.slt.radio.rosterservice.Utils;
 
-import com.slt.radio.rosterservice.Model.One.LMS.AccessLog;
-import com.slt.radio.rosterservice.Model.One.LMS.Attendance;
-import com.slt.radio.rosterservice.Model.One.LMS.InOut;
-import com.slt.radio.rosterservice.Repo.AccessLogRepository;
-import com.slt.radio.rosterservice.Repo.AttendanceRepository;
-import com.slt.radio.rosterservice.Repo.InOutRepository;
+import com.slt.radio.rosterservice.model.one.lms.AccessLog;
+import com.slt.radio.rosterservice.model.one.lms.Attendance;
+import com.slt.radio.rosterservice.model.one.lms.InOut;
+import com.slt.radio.rosterservice.repo.AccessLogRepository;
+import com.slt.radio.rosterservice.repo.AttendanceRepository;
+import com.slt.radio.rosterservice.repo.InOutRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

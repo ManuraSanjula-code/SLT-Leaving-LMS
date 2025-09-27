@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.Utils;
 
-import com.slt.radio.rosterservice.Model.One.LMS.InOut;
+import com.slt.radio.rosterservice.model.one.lms.InOut;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -33,9 +33,7 @@ public class ShiftBasedInOutFilter {
         }
     }
 
-    /**
-     * Parse time string (HH:mm:ss format) to LocalTime
-     */
+
     private static LocalTime parseTime(String timeStr) {
         if (timeStr == null || timeStr.trim().isEmpty()) {
             return null;
@@ -47,9 +45,7 @@ public class ShiftBasedInOutFilter {
         }
     }
 
-    /**
-     * Determine which shift a time belongs to
-     */
+
     private static Shift determineShift(LocalTime time) {
         if (time == null) return null;
 
@@ -126,9 +122,7 @@ public class ShiftBasedInOutFilter {
     }
 
 
-    /**
-     * Filter InOut records by specific shift
-     */
+
     public static List<InOut> filterByShift(List<InOut> inOuts, Shift targetShift) {
         return inOuts.stream()
                 .filter(inOut -> {
@@ -153,9 +147,7 @@ public class ShiftBasedInOutFilter {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Group InOut records by shift
-     */
+
     public static Map<Shift, List<InOut>> groupByShift(List<InOut> inOuts) {
         Map<Shift, List<InOut>> shiftGroups = new EnumMap<>(Shift.class);
 
@@ -194,37 +186,6 @@ public class ShiftBasedInOutFilter {
         return shiftGroups;
     }
 
-    /**
-     * Usage example with your existing code
-     */
-    /*public static void processEmployeeInOuts(String cleanId) {
-        // Your existing code
-        List<InOut> inOuts = inOutRepository.findByEmployeeIDAndDate(cleanId, getYesterdayDate());
-
-        System.out.println("=== ALL RECORDS ===");
-        inOuts.forEach(System.out::println);
-
-        // Filter by specific shifts
-        System.out.println("\n=== NIGHT SHIFT (00:00-08:00) ===");
-        List<InOut> nightShift = filterByShift(inOuts, Shift.NIGHT);
-        nightShift.forEach(System.out::println);
-
-        System.out.println("\n=== DAY SHIFT (08:00-16:00) ===");
-        List<InOut> dayShift = filterByShift(inOuts, Shift.DAY);
-        dayShift.forEach(System.out::println);
-
-        System.out.println("\n=== EVENING SHIFT (16:00-24:00) ===");
-        List<InOut> eveningShift = filterByShift(inOuts, Shift.EVENING);
-        eveningShift.forEach(System.out::println);
-
-        // Or group all at once
-        System.out.println("\n=== GROUPED BY SHIFT ===");
-        Map<Shift, List<InOut>> groupedByShift = groupByShift(inOuts);
-        groupedByShift.forEach((shift, records) -> {
-            System.out.println(shift.name() + " " + shift.getTimeRange() + ": " + records.size() + " records");
-            records.forEach(record -> System.out.println("  " + record));
-        });
-    }*/
 
     // Alternative: Simple stream filter approach for your specific use case
     public static void simpleFilterExample(List<InOut> inOuts) {
@@ -234,7 +195,7 @@ public class ShiftBasedInOutFilter {
                     return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "00:00:00", "07:59:59")) ||
                             (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "00:00:00", "07:59:59"));
                 })
-                .toList();
+                .collect(Collectors.toList());
 
         // Filter for day shift (08:00-16:00)
         List<InOut> dayShiftRecords = inOuts.stream()
@@ -242,7 +203,7 @@ public class ShiftBasedInOutFilter {
                     return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "08:00:00", "15:59:59")) ||
                             (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "08:00:00", "15:59:59"));
                 })
-                .toList();
+                .collect(Collectors.toList());
 
         // Filter for evening shift (16:00-24:00)
         List<InOut> eveningShiftRecords = inOuts.stream()
@@ -250,7 +211,7 @@ public class ShiftBasedInOutFilter {
                     return (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "16:00:00", "23:59:59")) ||
                             (inOut.getPunchTypeTime() != null && isInTimeRange(inOut.getPunchTypeTime(), "16:00:00", "23:59:59"));
                 })
-                .toList();
+                .collect(Collectors.toList());
     }
 
     private static boolean isInTimeRange(String timeStr, String startTime, String endTime) {

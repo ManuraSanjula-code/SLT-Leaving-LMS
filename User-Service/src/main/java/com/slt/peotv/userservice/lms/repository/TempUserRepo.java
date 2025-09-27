@@ -17,33 +17,31 @@ public interface TempUserRepo extends CrudRepository<TempUser, Long> {
     TempUser findTempUserByUserId(String userId);
     TempUser findByEmail(String email);
 
-    @Query(nativeQuery = true, value = """
-    SELECT 
-        * -- Required for entity mapping
-    FROM temp_user 
-    WHERE email = :email 
-    AND (
-        (admin = TRUE 
-         AND password = CONCAT(
-             SUBSTRING_INDEX(password, ':', 1), 
-             ':', 
-             SHA2(CONCAT(:password, SUBSTRING_INDEX(password, ':', 1)), 512))
-        ) 
-        OR 
-        (admin = FALSE 
-         AND password = :password)
-    )""")
+    @Query(nativeQuery = true, value =
+            "SELECT " +
+                    "    * " +
+                    "FROM temp_user " +
+                    "WHERE email = :email " +
+                    "AND ( " +
+                    "    (admin = TRUE " +
+                    "     AND password = CONCAT( " +
+                    "         SUBSTRING_INDEX(password, ':', 1), " +
+                    "         ':', " +
+                    "         SHA2(CONCAT(:password, SUBSTRING_INDEX(password, ':', 1)), 512)) " +
+                    "    ) " +
+                    "    OR " +
+                    "    (admin = FALSE " +
+                    "     AND password = :password) " +
+                    ")")
     Optional<TempUser> findValidUser(@Param("email") String email,
                                      @Param("password") String password);
 
     List<TempUser> findByExpireTimeBefore(Date currentTime);
 
-    // New method to delete expired users
     @Modifying
     @Transactional
     @Query("DELETE FROM TempUser t WHERE t.expireTime < ?1")
     int deleteExpiredUsers(Date currentTime);
 
-    // Find users with future expiration time
     List<TempUser> findByExpireTimeAfter(Date currentTime);
 }

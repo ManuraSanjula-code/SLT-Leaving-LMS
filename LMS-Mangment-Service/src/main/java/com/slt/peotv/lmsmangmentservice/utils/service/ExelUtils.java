@@ -9,6 +9,7 @@ import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayEntity;
 import com.slt.peotv.lmsmangmentservice.entity.NoPay.NoPayReasonEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
+import com.slt.peotv.lmsmangmentservice.exceptions.ErrorMessages;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -23,8 +24,11 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class ExelUtils {
@@ -49,15 +53,17 @@ public class ExelUtils {
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
 
-    public byte[] generateEmployeeExcelReport(String id) throws IOException {
-        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
-                .or(() -> employeeRepo.findBySltId(id))
-                .or(() -> employeeRepo.findByPublicId(id));
+    public byte[] generateEmployeeExcelReport(String employeeID) throws IOException {
+        EmployeeEntity employee = Stream.of(
+                        employeeRepo.findByEmployeeId(employeeID),
+                        employeeRepo.findBySltId(employeeID),
+                        employeeRepo.findByPublicId(employeeID)
+                )
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        if (employeeEntity.isEmpty())
-            throw new RuntimeException("Employee not found with ID: " + id);
-
-        EmployeeEntity employee = employeeEntity.get();
         List<AttendanceEntity> attendance = attendanceRepo.findByEmployee(employee);
         List<LeaveEntity> leaves = leaveRepo.findByEmployee(employee);
         List<MovementsEntity> movements = movementsRepo.findAllByEmployee(employee);
@@ -83,11 +89,16 @@ public class ExelUtils {
     }
 
     public byte[] generateEmployeeExcelReportByDate(String id, Date date) throws IOException {
-        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
-                .or(() -> employeeRepo.findBySltId(id))
-                .or(() -> employeeRepo.findByPublicId(id));
+        Optional<EmployeeEntity> employeeEntity = Stream.of(
+                        employeeRepo.findByEmployeeId(id),
+                        employeeRepo.findBySltId(id),
+                        employeeRepo.findByPublicId(id)
+                )
+                .filter(Optional::isPresent)
+                .findFirst()
+                .flatMap(opt -> opt);
 
-        if (employeeEntity.isEmpty())
+        if (!employeeEntity.isPresent())
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();
@@ -122,11 +133,16 @@ public class ExelUtils {
     }
 
     public byte[] generateEmployeeExcelReportByDateRange(String id, Date startDate, Date endDate) throws IOException {
-        Optional<EmployeeEntity> employeeEntity = employeeRepo.findByEmployeeId(id)
-                .or(() -> employeeRepo.findBySltId(id))
-                .or(() -> employeeRepo.findByPublicId(id));
+        Optional<EmployeeEntity> employeeEntity = Stream.of(
+                        employeeRepo.findByEmployeeId(id),
+                        employeeRepo.findBySltId(id),
+                        employeeRepo.findByPublicId(id)
+                )
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
 
-        if (employeeEntity.isEmpty())
+        if (!employeeEntity.isPresent())
             throw new RuntimeException("Employee not found with ID: " + id);
 
         EmployeeEntity employee = employeeEntity.get();

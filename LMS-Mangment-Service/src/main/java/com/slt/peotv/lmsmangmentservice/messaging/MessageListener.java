@@ -25,6 +25,8 @@ import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
+
 import com.slt.peotv.lmsmangmentservice.utils.service.AttendanceProcessingService;
 
 @Component
@@ -55,9 +57,14 @@ public class MessageListener {
     @JmsListener(destination = "user.queue")
     public void receiveMessage(@Payload LMSUser message) throws JMSException {
         try {
-            Optional<EmployeeEntity> employeeOptional = employeeRepo.findBySltId(message.getSltId())
-                    .or(() -> employeeRepo.findByEmployeeId(message.getEmployeeId()))
-                    .or(()-> employeeRepo.findByEmail(message.getEmail()));
+            Optional<EmployeeEntity> employeeOptional = Stream.of(
+                            employeeRepo.findBySltId(message.getSltId()),
+                            employeeRepo.findByEmployeeId(message.getEmployeeId()),
+                            employeeRepo.findByEmail(message.getEmail())
+                    )
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .findFirst();
 
             if (employeeOptional.isPresent()) {
                 EmployeeEntity employeeEntity = employeeOptional.get();

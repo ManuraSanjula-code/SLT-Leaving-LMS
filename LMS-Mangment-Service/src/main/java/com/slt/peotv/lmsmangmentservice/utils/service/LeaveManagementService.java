@@ -98,7 +98,7 @@ public class LeaveManagementService {
         for (String type : types) {
             try {
                 Optional<LeaveTypeEntity> leaveTypeOp = leaveTypeRepository.findByName(type);
-                if (leaveTypeOp.isEmpty()) {
+                if (!leaveTypeOp.isPresent()) {
                     LeaveTypeEntity leaveType = new LeaveTypeEntity();
                     leaveType.setName(type);
                     leaveType.setPublicId(UUID.randomUUID().toString());

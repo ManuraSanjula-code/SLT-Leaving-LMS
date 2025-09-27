@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.Utils;
 
-import com.slt.radio.rosterservice.Model.One.LMS.InOut;
-import com.slt.radio.rosterservice.Repo.InOutRepository;
+import com.slt.radio.rosterservice.model.one.lms.InOut;
+import com.slt.radio.rosterservice.repo.InOutRepository;
 
 import java.util.*;
 import java.time.LocalTime;

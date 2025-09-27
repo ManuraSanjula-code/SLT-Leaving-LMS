@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 public class Helper {
@@ -162,14 +163,22 @@ public class Helper {
             System.err.println("Error updating attendance with leave time: " + e.getMessage());
         }
     }
-    
+
     public EmployeeEntity getEmployeeById(String employeeId) {
         try {
             if (employeeId == null || employeeId.isEmpty()) {
                 return null;
             }
 
-            return employeeRepo.findByPublicId(employeeId).or(() -> employeeRepo.findByEmployeeId(employeeId)).or(() -> employeeRepo.findBySltId(employeeId)).orElse(null);
+            return Stream.of(
+                            employeeRepo.findByPublicId(employeeId),
+                            employeeRepo.findByEmployeeId(employeeId),
+                            employeeRepo.findBySltId(employeeId)
+                    )
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .findFirst()
+                    .orElse(null);
         } catch (Exception e) {
             System.err.println("Error getting employee by ID: " + e.getMessage());
             return null;
@@ -182,7 +191,14 @@ public class Helper {
                 return Optional.empty();
             }
 
-            return employeeRepo.findByPublicId(id).or(() -> employeeRepo.findBySltId(id)).or(() -> employeeRepo.findByEmployeeId(id));
+            return Stream.of(
+                            employeeRepo.findByPublicId(id),
+                            employeeRepo.findBySltId(id),
+                            employeeRepo.findByEmployeeId(id)
+                    )
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .findFirst();
         } catch (Exception e) {
             System.err.println("Error in getEmployeeByIdV2: " + e.getMessage());
             return Optional.empty();

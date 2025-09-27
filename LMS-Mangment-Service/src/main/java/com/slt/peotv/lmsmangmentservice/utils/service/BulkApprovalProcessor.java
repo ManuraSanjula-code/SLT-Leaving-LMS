@@ -530,9 +530,7 @@ public class BulkApprovalProcessor {
         logger.info("Leave {} fully approved", leave.getPublicId());
     }
 
-    /**
-     * Updates attendance by linking it with corresponding InOut records based on movement data
-     */
+    //Updates attendance by linking it with corresponding InOut records based on movement data
     private void updateAttendanceWithInOutRecords(MovementsEntity movement, AttendanceEntity attendance) {
         try {
             String employeeId = movement.getEmployee().getSltId();
@@ -574,9 +572,7 @@ public class BulkApprovalProcessor {
         }
     }
 
-    /**
-     * Links only IN records (inOutValue = 1) with attendance
-     */
+    //Links only IN records (inOutValue = 1) with attendance
     private void linkInRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
         // Find earliest IN record (inOutValue = 1)
         Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
@@ -593,9 +589,7 @@ public class BulkApprovalProcessor {
         }
     }
 
-    /**
-     * Links only OUT records (inOutValue = 0) with attendance
-     */
+    //Links only OUT records (inOutValue = 0) with attendance
     private void linkOutRecordsOnly(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
         // Find latest OUT record (inOutValue = 0)
         Optional<InOutEntity> latestOutRecord = inOutRecords.stream()
@@ -612,9 +606,7 @@ public class BulkApprovalProcessor {
         }
     }
 
-    /**
-     * Links both earliest IN and latest OUT records with attendance
-     */
+    //Links both earliest IN and latest OUT records with attendance
     private void linkAllInOutRecords(List<InOutEntity> inOutRecords, AttendanceEntity attendance, MovementsEntity movement) {
         // Find earliest IN record (inOutValue = 1)
         Optional<InOutEntity> earliestInRecord = inOutRecords.stream()
@@ -639,7 +631,7 @@ public class BulkApprovalProcessor {
         if (latestOutRecord.isPresent()) {
             InOutEntity outRecord = latestOutRecord.get();
             // Avoid linking the same record twice if IN and OUT are the same
-            if (earliestInRecord.isEmpty() || !earliestInRecord.get().getId().equals(outRecord.getId())) {
+            if (!earliestInRecord.isPresent() || !earliestInRecord.get().getId().equals(outRecord.getId())) {
                 outRecord.setAttendance(attendance);
                 inOutRepo.save(outRecord);
                 linkedCount++;

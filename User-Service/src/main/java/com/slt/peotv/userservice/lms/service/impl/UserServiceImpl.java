@@ -259,7 +259,7 @@ public class UserServiceImpl implements UserService {
             userEntity.setEmailVerificationStatus(false);
 
             RoleEntity role = UserMapper.mapRoleToRoleEntity(userEntity);
-            userEntity.setRoles(Set.of(role));
+            userEntity.setRoles(Collections.singleton(role));
 
             return new UserPrincipal(userEntity);
         } else {
@@ -306,8 +306,7 @@ public class UserServiceImpl implements UserService {
                             Integer.MAX_VALUE;
                     userDto.setHighestRolePriority(highestRolePriority);
                     return userDto;
-                })
-                .toList();
+                }).collect(Collectors.toList());
     }
 
     @Override
@@ -318,7 +317,7 @@ public class UserServiceImpl implements UserService {
         userRest.setFirstName(tempUser.getFirstName());
         userRest.setLastName(tempUser.getLastName());
         userRest.setEmail(tempUser.getEmail());
-        userRest.setRoles(List.of("ROLE_TEMP"));
+        userRest.setRoles(Arrays.asList("ROLE_TEMP"));
         return userRest;
     }
 
@@ -1146,7 +1145,7 @@ public class UserServiceImpl implements UserService {
                 userEntity.setEmailVerificationStatus(false);
 
                 RoleEntity role = UserMapper.mapRoleToRoleEntity(userEntity);
-                userEntity.setRoles(List.of(role));
+                userEntity.setRoles(Arrays.asList(role));
 
                 return new UserPrincipal(userEntity);
             } else if("LMS".equalsIgnoreCase(loginType)) {
@@ -1160,7 +1159,7 @@ public class UserServiceImpl implements UserService {
                 userEntity.setEmailVerificationStatus(true);
 
                 RoleEntity role = UserMapper.mapRoleToRoleEntityForLms(userEntity);
-                userEntity.setRoles(List.of(role));
+                userEntity.setRoles(Arrays.asList(role));
 
                 return new UserPrincipal(userEntity);
                 
@@ -1358,7 +1357,7 @@ public class UserServiceImpl implements UserService {
     public List<LMSUser> getAllUsersForService() {
         return userRepository.findAll().stream()
                 .map(this::convertToLMSUser)
-                .toList();
+                .collect(Collectors.toList());
     }
 
    

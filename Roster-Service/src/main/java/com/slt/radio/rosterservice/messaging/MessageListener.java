@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.messaging;
 
-import com.slt.radio.rosterservice.Model.One.Employeee.EmployeeArchive;
-import com.slt.radio.rosterservice.Repo.EmployeeArchiveRepository;
+import com.slt.radio.rosterservice.model.one.employeee.EmployeeArchive;
+import com.slt.radio.rosterservice.repo.EmployeeArchiveRepository;
 import jakarta.jms.JMSException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +10,9 @@ import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+import java.util.stream.Stream;
 
 @Component
 public class MessageListener {
@@ -28,10 +31,15 @@ public class MessageListener {
 
         try {
             logger.debug("Processing message for employee: {}", message.getEmployeeId());
-            
-            EmployeeArchive employeeEntity = employeeRepo.findBySltId(message.getSltId())
-                    .or(() -> employeeRepo.findByEmployeeId(message.getEmployeeId()))
-                    .or(() -> employeeRepo.findByEmail(message.getEmail()))
+
+            EmployeeArchive employeeEntity = Stream.of(
+                            employeeRepo.findBySltId(message.getSltId()),
+                            employeeRepo.findByEmployeeId(message.getEmployeeId()),
+                            employeeRepo.findByEmail(message.getEmail())
+                    )
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .findFirst()
                     .orElseGet(() -> {
                         EmployeeArchive newEmployee = new EmployeeArchive();
                         newEmployee.setActive(1);
