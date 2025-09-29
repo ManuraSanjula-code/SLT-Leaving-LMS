@@ -17,7 +17,7 @@ import com.slt.peotv.userservice.lms.shared.dto.AddressDTO;
 import com.slt.peotv.userservice.lms.shared.dto.UserDto;
 import com.slt.peotv.userservice.lms.shared.model.request.UserReq;
 import com.slt.peotv.userservice.lms.shared.model.response.ErrorMessages;
-import jakarta.transaction.Transactional;
+import javax.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,7 +73,7 @@ public class UpdateUtils {
         updateFieldIfNotNull(userReq.getSltId(), userEntity::setSltId);
         updateFieldIfNotNull(userReq.getEmployeeId(), userEntity::setEmployeeId);
         updateFieldIfNotNull(userReq.getActive(), userEntity::setActive);
-        updateFieldIfNotNull(userReq.getJoiningDate(), userEntity::setJoin_date);
+        updateFieldIfNotNull(userReq.getJoiningDate(), userEntity::setJoinDate);
         updateFieldIfNotNull(userReq.getRoaster(), userEntity::setRoaster);
 
         if (userReq.getPassword() != null && !userReq.getPassword().trim().isEmpty()) {
@@ -101,7 +101,7 @@ public class UpdateUtils {
         lmsUser.setEmployeeId(updatedUserEntity.getEmployeeId());
         lmsUser.setSltId(updatedUserEntity.getSltId());
         lmsUser.setPublicId(updatedUserEntity.getUserId());
-        lmsUser.setJoin_date(updatedUserEntity.getJoin_date());
+        lmsUser.setJoin_date(updatedUserEntity.getJoinDate());
         lmsUser.setRoaster(updatedUserEntity.getRoaster());
         lmsUser.setGender(updatedUserEntity.getGender());
 

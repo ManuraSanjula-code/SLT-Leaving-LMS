@@ -1,14 +1,13 @@
 package com.slt.radio.rosterservice.controller;
 
-import com.slt.radio.rosterservice.model.one.dto.RosterDto;
-import com.slt.radio.rosterservice.model.one.Roster;
-import com.slt.radio.rosterservice.model.one.shift.ShiftRoster;
+import com.slt.radio.rosterservice.models.dto.RosterDto;
+import com.slt.radio.rosterservice.documents.one.Roster;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftRoster;
 import com.slt.radio.rosterservice.service.employee.ExcelProcessingService;
 import com.slt.radio.rosterservice.service.lms.AttendanceService;
 import com.slt.radio.rosterservice.service.RosterServiceE;
 import com.slt.radio.rosterservice.service.RosterServiceM;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,14 +18,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/roster")
-@RequiredArgsConstructor
-@Slf4j
+
 public class RosterController {
 
-    private final RosterServiceM rosterServiceM;
-    private final RosterServiceE rosterServiceE;
-    private final ExcelProcessingService excelProcessingService;
-    private final AttendanceService attendanceService;
+    @Autowired
+    private RosterServiceM rosterServiceM;
+    @Autowired
+    private RosterServiceE rosterServiceE;
+    @Autowired
+    private ExcelProcessingService excelProcessingService;
+    @Autowired
+    private AttendanceService attendanceService;
 
     @GetMapping("/shift-roster/{year}/{month}")
     public ResponseEntity<ShiftRoster> getShiftRosterByDay(@PathVariable int year, @PathVariable String month) {
@@ -52,7 +54,6 @@ public class RosterController {
             ShiftRoster processedRoster = rosterServiceM.processRosterFile(file);
             return ResponseEntity.ok(processedRoster);
         } catch (IOException e) {
-            log.error("Error processing roster file", e);
             return ResponseEntity.badRequest().build();
         }
     }

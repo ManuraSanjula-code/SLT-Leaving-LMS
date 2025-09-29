@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService {
 
     private void enrichUserEntity(UserReq user, UserEntity entity) {
         entity.setUserId(idUtils.generateId(30));
-        entity.setJoin_date(user.getJoiningDate() != null ? user.getJoiningDate() : new Date());
+        entity.setJoinDate(user.getJoiningDate() != null ? user.getJoiningDate() : new Date());
         entity.setRoaster(user.getRoaster());
         entity.setEncryptedPassword(bCryptPasswordEncoder.encode(user.getPassword()));
 
@@ -1282,7 +1282,7 @@ public class UserServiceImpl implements UserService {
             userDto.setPhone(user.getPhone());
             userDto.setGender(user.getGender());
             userDto.setRoaster(user.getRoaster());
-            userDto.setJoin_date(user.getJoin_date());
+            userDto.setJoin_date(user.getJoinDate());
 
             if (user.getRoles() != null) {
                 List<String> roleNames = user.getRoles().stream()
@@ -1368,7 +1368,7 @@ public class UserServiceImpl implements UserService {
         lmsUser.setFirstName(userEntity.getFirstName());
         lmsUser.setLastName(userEntity.getLastName());
         lmsUser.setEmail(userEntity.getEmail());
-        lmsUser.setJoin_date(userEntity.getJoin_date());
+        lmsUser.setJoin_date(userEntity.getJoinDate());
         lmsUser.setPublicId(userEntity.getUserId());
         return lmsUser;
     }

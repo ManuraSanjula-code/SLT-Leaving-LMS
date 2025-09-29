@@ -1,8 +1,8 @@
 package com.slt.radio.rosterservice.service.lms;
 
-import com.slt.radio.rosterservice.model.second.DailyDuty;
-import com.slt.radio.rosterservice.model.second.DutyRoster;
-import com.slt.radio.rosterservice.model.second.TimeSlot;
+import com.slt.radio.rosterservice.documents.second.DailyDuty;
+import com.slt.radio.rosterservice.documents.second.DutyRoster;
+import com.slt.radio.rosterservice.documents.second.TimeSlot;
 import com.slt.radio.rosterservice.repo.DutyRosterRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

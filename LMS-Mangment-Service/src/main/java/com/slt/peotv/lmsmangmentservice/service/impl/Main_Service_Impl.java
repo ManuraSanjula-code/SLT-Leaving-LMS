@@ -27,8 +27,8 @@ import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LMSMapper;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -222,19 +222,19 @@ public class Main_Service_Impl implements Main_Service {
 
         AttendanceEntity attendance = attendanceEntity;
         if (attendance == null) {
-            attendance = AttendanceEntity.builder()
-                    .publicId(utils.generateId(ID_LENGTH))
-                    .date(actualDate != null ? actualDate : helper.getYesterdayDate())
-                    .employee(employee)
-                    .updatedDate(new Date())
-                    .isUnSuccessful(request.isUnsuccessful())
-                    .isLateCovered(request.isLateCover())
-                    .isLate(request.isLate())
-                    .isUnauthorized(request.isUnAuthorized())
-                    .attendanceType(request.isAbsent() ? AttendanceType.ABSENT :
-                            request.isHalfDay() ? AttendanceType.HALF_DAY : AttendanceType.FULL_DAY)
-                    .payStatus(PayStatus.NO_PAY)
-                    .build();
+            attendance = new AttendanceEntity(
+                    utils.generateId(ID_LENGTH),
+                    employee,
+                    actualDate != null ? actualDate : helper.getYesterdayDate()
+            );
+            attendance.setUpdatedDate(new Date());
+            attendance.setUnSuccessful(request.isUnsuccessful());
+            attendance.setLateCovered(request.isLateCover());
+            attendance.setLate(request.isLate());
+            attendance.setUnauthorized(request.isUnAuthorized());
+            attendance.setAttendanceType(request.isAbsent() ? AttendanceType.ABSENT :
+                    request.isHalfDay() ? AttendanceType.HALF_DAY : AttendanceType.FULL_DAY);
+            attendance.setPayStatus(PayStatus.NO_PAY);
 
             if (!attendanceRepo.existsByEmployeeAndDate(employee, attendance.getDate()))
                 attendance = attendanceRepo.save(attendance);
@@ -270,21 +270,18 @@ public class Main_Service_Impl implements Main_Service {
                 " - Reasons: " + String.join(", ", reasons);
 
         try {
-            NoPayEntity noPayEntity = NoPayEntity.builder()
-                    .publicId(utils.generateId(ID_LENGTH))
-                    .employee(employee)
-                    .attendance(attendance)
-                    .submissionDate(helper.getDateWithoutTime())
-                    .date(actualDate != null ? actualDate : new Date())
-                    .comment(comment)
-                    .build();
+            NoPayEntity noPayEntity = new NoPayEntity(
+                    utils.generateId(ID_LENGTH),
+                    employee,
+                    attendance,
+                    helper.getDateWithoutTime(),
+                    actualDate != null ? actualDate : new Date(),
+                    comment
+            );
 
             NoPayEntity savedEntity = noPayRepo.save(noPayEntity);
 
-            NoPayReasonEntity noPayReason = NoPayReasonEntity.builder()
-                    .reason(reason)
-                    .noPay(savedEntity)
-                    .build();
+            NoPayReasonEntity noPayReason = NoPayReasonEntity.create(savedEntity, reason);
             noPayReasonRepo.save(noPayReason);
 
             logger.info("No-pay record created for employee: {} with reason: {}",
@@ -424,7 +421,7 @@ public class Main_Service_Impl implements Main_Service {
 
             final String movementId = "MV-" + utils.generateId(10);
 
-            MovementsEntity movementsEntity = mapToEntity(req, employee, movementId);
+            MovementsEntity movementsEntity = lMSMapper.mapToEntity(req, employee, movementId);
 
             Optional<AttendanceEntity> attendanceEntity = attendanceRepo.findByEmployeeAndArrivalDateAndIsActiveTrue(
                     employee, movementsEntity.getHappenDate());
@@ -439,7 +436,7 @@ public class Main_Service_Impl implements Main_Service {
                 throw new IllegalArgumentException(" This Attendance not unauthorized");
 
 
-            if (!Boolean.TRUE.equals(attendance.getHasIssues()) || Boolean.TRUE.equals(attendance.getIsResolved())) {
+            if (!Boolean.TRUE.equals(attendance.getHasIssues()) || Boolean.TRUE.equals(attendance.getResolved())) {
                 throw new IllegalArgumentException("Attendance has no issues OR Attendance is Resolved ");
             }
 
@@ -520,32 +517,6 @@ public class Main_Service_Impl implements Main_Service {
         return entity;
     }
 
-    public MovementsEntity mapToEntity(MovementReq movementReq, EmployeeEntity employee, String movementId) {
-        if (movementReq == null) {
-            return null;
-        }
-
-        return MovementsEntity.builder()
-                .publicId(movementId)
-                .reqDate(new Date())
-                .requestStatus(RequestStatus.PENDING_APPROVAL)
-                .updateDate(new Date())
-                .createDate(new Date())
-                .employee(employee)
-                .movementType(movementReq.getMovementType())
-                .comment(movementReq.getComment())
-                .destination(movementReq.getDestination())
-                .category(movementReq.getCategory())
-                .happenDate(helper.removeTimeFromDate(movementReq.getHappenDate()))
-                .logTime(movementReq.getLogTime() == null ? new Date() : movementReq.getLogTime())
-                .inTime(movementReq.getInTime())
-                .outTime(movementReq.getOutTime())
-                .inTimeRaw(movementReq.getInTimeRaw())
-                .outTimeRaw(movementReq.getOutTimeRaw())
-                .happenDateRaw(movementReq.getHappenDateRaw())
-                .build();
-    }
-
     private void logError(String message, Exception e) {
         System.err.println(message + ": " + e.getMessage());
         e.printStackTrace();
@@ -570,7 +541,7 @@ public class Main_Service_Impl implements Main_Service {
             return;
 
         AttendanceEntity attendance = movement.getAttendance();
-        if (attendance == null || attendance.getIsResolved()) {
+        if (attendance == null || attendance.getResolved()) {
             return;
         }
         if (movement.getAdmins() == null || movement.getAdmins().isEmpty())
@@ -631,11 +602,11 @@ public class Main_Service_Impl implements Main_Service {
         if (allApproved || admins.isEmpty()) {
             movement.setRequestStatus(RequestStatus.APPROVED);
 
-            attendance.setIsResolved(true);
+            attendance.setResolved(true);
             attendance.setDueDateForUA(null);
             attendance.setHasIssues(false);
             attendance.setResolve(ResolveType.VIA_MOVEMENT);
-            attendance.setIsUnauthorized(false);
+            attendance.setUnauthorized(false);
             attendance.setIssueDescription("none :: Movement approved");
 
             if (attendance.getLeaveStatus() != null && attendance.getLeaveStatus().equals(LeaveStatus.FULL_LEAVE)) {
@@ -652,7 +623,7 @@ public class Main_Service_Impl implements Main_Service {
             // Link InOut records with the attendance
             updateAttendanceWithInOutRecords(movement, savedAttendance);
 
-            if ((savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getIsUnauthorized() == false))
+            if ((savedAttendance.getUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getUnauthorized() == false))
                 helper.handleLateAndUnsuccessful(movement.getEmployee().getSltId(), savedAttendance, true);
         }
     }
@@ -681,7 +652,7 @@ public class Main_Service_Impl implements Main_Service {
             );
 
             logger.info("Movement recalculation completed for {}: Type={}, Late={}, Issues={}",
-                    employeeId, attendance.getAttendanceType(), attendance.getIsLate(), attendance.getHasIssues());
+                    employeeId, attendance.getAttendanceType(), attendance.getLate(), attendance.getHasIssues());
 
         } catch (Exception e) {
             logger.error("Error recalculating attendance for movement {}: {}", movement.getPublicId(), e.getMessage(), e);
@@ -757,7 +728,6 @@ public class Main_Service_Impl implements Main_Service {
 
 
     private void setFallbackAttendanceValues(AttendanceEntity attendance, MovementsEntity movement) {
-        // Set safe fallback values in case of calculation error
         switch (movement.getMovementType()) {
             case FULLDAY:
             case REMOTEWORK:
@@ -768,7 +738,7 @@ public class Main_Service_Impl implements Main_Service {
         }
 
         attendance.setHasIssues(false);
-        attendance.setIsUnauthorized(false);
+        attendance.setUnauthorized(false);
         attendance.setDueDateForUA(null);
         attendance.setLeaveStatus(null);
         attendance.setIssueDescription("Movement approved with calculation fallback");
@@ -976,14 +946,14 @@ public class Main_Service_Impl implements Main_Service {
 
         List<AttendanceEntity> attendanceEntities = attendanceRepo.findByDueDateForUA(helper.getDateWithoutTime());
         List<AttendanceEntity> overdueEntities_filter = attendanceEntities.stream()
-                .filter(entity -> Boolean.TRUE.equals(entity.getIsUnauthorized())
-                        || Boolean.TRUE.equals(entity.getIsUnSuccessful()) || entity.getAttendanceType().equals(AttendanceType.ABSENT))
+                .filter(entity -> Boolean.TRUE.equals(entity.getUnauthorized())
+                        || Boolean.TRUE.equals(entity.getUnSuccessful()) || entity.getAttendanceType().equals(AttendanceType.ABSENT))
                 .collect(Collectors.toList());
 
         overdueEntities_filter.forEach(entity -> {
             if (entity == null) return;
 
-            if (entity.getIsResolved())
+            if (entity.getResolved())
                 return;
 
             EmployeeEntity employee = entity.getEmployee();
@@ -1005,7 +975,7 @@ public class Main_Service_Impl implements Main_Service {
             AttendanceEntity attendanceEntity = attendanceRepo.save(entity);
 
             saveNoPayEntity(entity.getEmployee(), attendanceEntity,
-                    createNoPayRequest(entity.getAttendanceType().equals(AttendanceType.HALF_DAY), entity.getIsUnSuccessful(), entity.getIsUnauthorized(), entity.getIsLate(), entity.getIsLateCovered(), entity.getAttendanceType().equals(AttendanceType.ABSENT))
+                    createNoPayRequest(entity.getAttendanceType().equals(AttendanceType.HALF_DAY), entity.getUnSuccessful(), entity.getUnauthorized(), entity.getLate(), entity.getLateCovered(), entity.getAttendanceType().equals(AttendanceType.ABSENT))
                     , entity.getDate());
         });
 
@@ -1021,7 +991,7 @@ public class Main_Service_Impl implements Main_Service {
                 AttendanceEntity attendance = new AttendanceEntity();
                 attendance.setEmployee(employee);
                 attendance.setPublicId(utils.generateId(10));
-                attendance.setIsHoliday(true);
+                attendance.setHoliday(true);
                 attendance.setDate(yesterdayDate);
                 attendance.setArrivalDate(yesterdayDate);
                 attendances.add(attendance);
@@ -1396,11 +1366,11 @@ public class Main_Service_Impl implements Main_Service {
             attendance.setLeftTime(inout.getPunchTypeTime());
         else
             attendance.setArrivalTime(inout.getPunchTypeTime());
-        attendance.setIsActive(active);
-        attendance.setIsLate(late);
-        attendance.setIsLateCovered(late_cover);
-        attendance.setIsUnSuccessful(unSuccessful);
-        attendance.setIsUnauthorized(unAuthorized);
+        attendance.setActive(active);
+        attendance.setLate(late);
+        attendance.setLateCovered(late_cover);
+        attendance.setUnSuccessful(unSuccessful);
+        attendance.setUnauthorized(unAuthorized);
 
         utils.handleAttendanceTypeAndIssues(
                 swap ? null : inout,
@@ -1430,7 +1400,7 @@ public class Main_Service_Impl implements Main_Service {
         if (nopay)
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(inout.getPunchTime()));
 
-        if ((unSuccessful || savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
+        if ((unSuccessful || savedAttendance.getUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
 
         logger.info("Attendance saved successfully for employee: {}", employee.getEmployeeId());
@@ -1497,11 +1467,11 @@ public class Main_Service_Impl implements Main_Service {
         attendance.setArrivalDate(helper.removeTimeFromDate(arrivalDate));
         attendance.setArrivalTime(moa.getPunchTypeTime());
         attendance.setLeftTime(eve.getPunchTypeTime());
-        attendance.setIsActive(active);
-        attendance.setIsLate(late);
-        attendance.setIsLateCovered(late_cover);
-        attendance.setIsUnSuccessful(unSuccessful);
-        attendance.setIsUnauthorized(unAuthorized);
+        attendance.setActive(active);
+        attendance.setLate(late);
+        attendance.setLateCovered(late_cover);
+        attendance.setUnSuccessful(unSuccessful);
+        attendance.setUnauthorized(unAuthorized);
 
         utils.handleAttendanceTypeAndIssues(moa, eve, attendance,
                 false, fullday, half_day, unAuthorized, unSuccessful, absent, employee.getEmployeeId());
@@ -1515,7 +1485,7 @@ public class Main_Service_Impl implements Main_Service {
                 (arrivalTime.isAfter(standardStart) && departureTime.isAfter(halfDayThreshold)) ||
                 (arrivalTime.isAfter(lateThreshold) && departureTime.isAfter(fullLeaveThreshold)) ||
                 departureTime.isAfter(LocalTime.of(13, 0)) && departureTime.isAfter(LocalTime.of(17, 0)))) {
-            attendance.setIsUnauthorized(true);
+            attendance.setUnauthorized(true);
             attendance.setAttendanceType(AttendanceType.NONE);
         }
 
@@ -1536,7 +1506,7 @@ public class Main_Service_Impl implements Main_Service {
         if (nopay)
             saveNoPayEntity(employee, savedAttendance, createNoPayRequest(half_day, unSuccessful, unAuthorized, late, late_cover, absent), helper.removeTimeFromDate(moa.getPunchTime()));
 
-        if ((unSuccessful || savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
+        if ((unSuccessful || savedAttendance.getUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (unAuthorized == false))
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), savedAttendance, swap);
     }
 
@@ -1579,11 +1549,11 @@ public class Main_Service_Impl implements Main_Service {
 
         AttendanceEntity attendance = createBaseAttendance(employee, date);
         attendance.setTerminalId("NONE");
-        attendance.setIsActive(active);
-        attendance.setIsLate(late);
-        attendance.setIsLateCovered(late_cover);
-        attendance.setIsUnSuccessful(unSuccessful);
-        attendance.setIsUnauthorized(unAuthorized);
+        attendance.setActive(active);
+        attendance.setLate(late);
+        attendance.setLateCovered(late_cover);
+        attendance.setUnSuccessful(unSuccessful);
+        attendance.setUnauthorized(unAuthorized);
         attendance.setHasIssues(true);
         attendance.setAttendanceType(AttendanceType.ABSENT);
 
@@ -1724,14 +1694,20 @@ public class Main_Service_Impl implements Main_Service {
 
         EmployeeEntity employee = helper.getEmployeeById(emp);
 
-        return LeaveEntity.builder().publicId(id)
-                .employee(employee).submitDate(helper.removeTimeFromDate(new Date()))
-                .fromDate(helper.removeTimeFromDate(leaveReq.getFromDate())).toDate(helper.removeTimeFromDate(leaveReq.getToDate()))
-                .happenDate(helper.removeTimeFromDate(leaveReq.getHappenDate())).leaveType(type)
-                .numOfDays(leaveReq.getNumOfDays()).description(leaveReq.getDescription())
-                .isManualRequest(leaveReq.getIsManualRequest() != null ? leaveReq.getIsManualRequest() : false)
-                .componentBehavior(leaveReq.getComponentBehavior())
-                .build();
+        LeaveEntity leaveEntity = new LeaveEntity();
+        leaveEntity.setPublicId(id);
+        leaveEntity.setEmployee(employee);
+        leaveEntity.setSubmitDate(helper.removeTimeFromDate(new Date()));
+        leaveEntity.setFromDate(helper.removeTimeFromDate(leaveReq.getFromDate()));
+        leaveEntity.setToDate(helper.removeTimeFromDate(leaveReq.getToDate()));
+        leaveEntity.setHappenDate(helper.removeTimeFromDate(leaveReq.getHappenDate()));
+        leaveEntity.setLeaveType(type);
+        leaveEntity.setNumOfDays(leaveReq.getNumOfDays());
+        leaveEntity.setDescription(leaveReq.getDescription());
+        leaveEntity.setIsManualRequest(leaveReq.getIsManualRequest() != null ? leaveReq.getIsManualRequest() : false);
+        leaveEntity.setComponentBehavior(leaveReq.getComponentBehavior());
+
+        return leaveEntity;
     }
 
     @Override
@@ -1777,16 +1753,16 @@ public class Main_Service_Impl implements Main_Service {
                 throw new IllegalArgumentException("No ATTENDANCE RECORD FOUND");
             }
             AttendanceEntity attendanceEntity = attendanceEntityOp.get();
-            if (attendanceEntity.getIsResolved() || !attendanceEntity.getHasIssues())
+            if (attendanceEntity.getResolved() || !attendanceEntity.getHasIssues())
                 throw new IllegalArgumentException("To this attendance you can not make leave");
 
             if (attendanceEntity.getAttendanceType() != null &&
                     (attendanceEntity.getAttendanceType() == AttendanceType.FULL_DAY || attendanceEntity.getAttendanceType() == AttendanceType.HALF_DAY))
                 throw new IllegalArgumentException(" This Attendance not unauthorized");
 
-            if ((req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED) && (!attendanceEntity.getIsUnauthorized())
+            if ((req.getComponentBehavior() == ComponentBehavior.UNAUTHORIZED) && (!attendanceEntity.getUnauthorized())
                     || (req.getComponentBehavior() == ComponentBehavior.ABSENT) && (!attendanceEntity.getAttendanceType().equals(AttendanceType.ABSENT))
-                    || (req.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL) && (!attendanceEntity.getIsUnSuccessful()))
+                    || (req.getComponentBehavior() == ComponentBehavior.UNSUCCESSFUL) && (!attendanceEntity.getUnSuccessful()))
 
                 throw new IllegalArgumentException("To this attendance you can not make leave");
 
@@ -1888,7 +1864,7 @@ public class Main_Service_Impl implements Main_Service {
         if (attendanceEntityOp.isPresent()) {
             AttendanceEntity attendanceEntity = attendanceEntityOp.get();
 
-            attendanceEntity.setIsResolved(true);
+            attendanceEntity.setResolved(true);
             attendanceEntity.setHasIssues(false);
             attendanceEntity.setResolve(ResolveType.VIA_LEAVE);
             attendanceRepo.save(attendanceEntity);
@@ -2014,16 +1990,16 @@ public class Main_Service_Impl implements Main_Service {
                 return null;
             }
 
-            return AccessLogEntity.builder()
-                    .employeeId(employeeId)
-                    .logDate(logDate)
-                    .logTime(logTime)
-                    .terminalId(terminalId)
-                    .inOut(inOut)
-                    .readStatus(readStatus)
-                    .processed(processed)
-                    .etlRunTime(etlRunTime)
-                    .build();
+            return AccessLogEntity.create(
+                    employeeId,
+                    logDate,
+                    logTime,
+                    terminalId,
+                    inOut,
+                    readStatus,
+                    processed,
+                    etlRunTime
+            );
         } catch (SQLException e) {
             logger.error("{}: Error building AccessLogEntity from ResultSet", methodName);
             throw e;

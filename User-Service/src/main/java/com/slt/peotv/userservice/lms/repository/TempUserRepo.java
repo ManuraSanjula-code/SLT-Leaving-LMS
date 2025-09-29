@@ -1,7 +1,7 @@
 package com.slt.peotv.userservice.lms.repository;
 
 import com.slt.peotv.userservice.lms.entity.TempUser;
-import jakarta.transaction.Transactional;
+import javax.transaction.Transactional;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;

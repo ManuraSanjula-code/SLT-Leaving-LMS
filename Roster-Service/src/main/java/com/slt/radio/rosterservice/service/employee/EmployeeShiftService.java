@@ -1,16 +1,15 @@
 package com.slt.radio.rosterservice.service.employee;
 
-import com.slt.radio.rosterservice.model.one.obj.EmployeeShift;
-import com.slt.radio.rosterservice.model.one.dto.EmployeeShiftDto;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.slt.radio.rosterservice.documents.one.obj.EmployeeShift;
+import com.slt.radio.rosterservice.models.dto.EmployeeShiftDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
-public class EmployeeShiftService {
 
+public class EmployeeShiftService {
+    private static final Logger log = LoggerFactory.getLogger(EmployeeShiftService.class);
 
     public EmployeeShift mapDtoToEntity(EmployeeShiftDto dto) {
         log.info("Mapping EmployeeShiftDto to entity: employeeId={}, totalShift={}, rotShift={}, offDay={}, dDuty={}",

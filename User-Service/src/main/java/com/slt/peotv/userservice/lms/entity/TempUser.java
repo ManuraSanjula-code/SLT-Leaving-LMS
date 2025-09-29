@@ -1,9 +1,7 @@
 package com.slt.peotv.userservice.lms.entity;
 
 import com.slt.peotv.userservice.lms.repository.TempUserRepo;
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import javax.persistence.*;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.io.Serializable;
 import java.security.MessageDigest;
@@ -12,8 +10,6 @@ import java.util.Date;
 
 @Entity
 @Table(name = "temp_user")
-@Data
-@EqualsAndHashCode
 public class TempUser implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -44,6 +40,88 @@ public class TempUser implements Serializable {
     private Date expireTime;
 
     private boolean admin;
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
+    }
+
+    public Date getExpireTime() {
+        return expireTime;
+    }
+
+    public void setExpireTime(Date expireTime) {
+        this.expireTime = expireTime;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPeoTvId() {
+        return peoTvId;
+    }
+
+    public void setPeoTvId(String peoTvId) {
+        this.peoTvId = peoTvId;
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
 
     public class AuthService {
 

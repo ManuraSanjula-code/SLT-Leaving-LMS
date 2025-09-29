@@ -3,10 +3,10 @@ package com.slt.radio.rosterservice.service.employee;
 import com.slt.radio.rosterservice.exception.ResourceAlreadyExistsException;
 import com.slt.radio.rosterservice.exception.ResourceNotFoundException;
 import com.slt.radio.rosterservice.mapper.RosterMapper;
-import com.slt.radio.rosterservice.model.one.dto.RosterDto;
-import com.slt.radio.rosterservice.model.one.Roster;
+import com.slt.radio.rosterservice.models.dto.RosterDto;
+import com.slt.radio.rosterservice.documents.one.Roster;
 import com.slt.radio.rosterservice.repo.RosterRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class RosterServiceForE {
-    private final RosterRepository rosterRepository;
-    private final RosterMapper rosterMapper;
+    @Autowired
+    private RosterRepository rosterRepository;
+    @Autowired
+    private RosterMapper rosterMapper;
 
     public List<Roster> getAllRosters() {
         return rosterRepository.findAll();

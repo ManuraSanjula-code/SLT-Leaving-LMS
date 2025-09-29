@@ -1,8 +1,7 @@
 package com.slt.radio.rosterservice.service.roster;
 
-import com.slt.radio.rosterservice.model.one.shift.ShiftAssignment;
-import com.slt.radio.rosterservice.model.one.shift.ShiftRoster;
-import lombok.extern.slf4j.Slf4j;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftAssignment;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftRoster;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -12,10 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
-@Slf4j
 public class ExcelParserService {
+
+    private static final Logger log = LoggerFactory.getLogger(ExcelParserService.class);
 
     // Define patterns for invalid cell content
     private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("\\d{10}|\\d{3}-\\d{7}|\\+\\d{11}");

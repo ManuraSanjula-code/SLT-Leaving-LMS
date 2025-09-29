@@ -3,7 +3,7 @@ package com.slt.peotv.userservice.lms.entity;
 import java.io.Serializable;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 @Entity(name="addresses")
 public class AddressEntity implements Serializable {

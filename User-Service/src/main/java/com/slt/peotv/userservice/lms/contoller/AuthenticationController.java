@@ -9,7 +9,7 @@ import com.slt.peotv.userservice.lms.repository.TempUserRepo;
 import com.slt.peotv.userservice.lms.security.SecurityConstants;
 import com.slt.peotv.userservice.lms.security.UserPrincipal;
 import com.slt.peotv.userservice.lms.security.jwt.token.creator.TokenCreator;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;

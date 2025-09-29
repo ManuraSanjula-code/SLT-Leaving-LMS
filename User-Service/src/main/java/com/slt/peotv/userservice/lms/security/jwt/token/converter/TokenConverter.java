@@ -9,8 +9,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.slt.peotv.userservice.lms.security.jwt.property.JwtConfiguration;
 import com.slt.peotv.userservice.lms.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -20,10 +19,10 @@ import java.util.Date;
 import java.util.Objects;
 
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class TokenConverter {
 
-    private final JwtConfiguration jwtConfiguration;
+    @Autowired
+    private JwtConfiguration jwtConfiguration;
 
     public String decryptToken(String encryptedToken) throws ParseException, JOSEException {
         JWEObject jweObject = JWEObject.parse(encryptedToken);

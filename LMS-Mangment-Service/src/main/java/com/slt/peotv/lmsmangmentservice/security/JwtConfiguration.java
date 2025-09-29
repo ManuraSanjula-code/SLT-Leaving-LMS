@@ -1,16 +1,10 @@
 package com.slt.peotv.lmsmangmentservice.security;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.context.annotation.Configuration;
 
 
 @Configuration
-@Getter
-@Setter
-@ToString
 public class JwtConfiguration {
     @NestedConfigurationProperty
     private Header header = new Header();
@@ -59,10 +53,24 @@ public class JwtConfiguration {
         this.type = type;
     }
 
-    @Getter
-    @Setter
     public static class Header {
         private String name = "Authorization";
         private String prefix = "Bearer ";
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getPrefix() {
+            return prefix;
+        }
+
+        public void setPrefix(String prefix) {
+            this.prefix = prefix;
+        }
     }
 }

@@ -1,12 +1,7 @@
 package com.slt.peotv.lmsmangmentservice.model;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.Date;
 
-@Setter
-@Getter
 public class AbsenteeReq {
     private String userId;
     private String employeeId;

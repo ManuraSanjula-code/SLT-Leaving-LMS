@@ -1,6 +1,5 @@
 package com.slt.peotv.userservice.lms.utils;
 
-import com.slt.peotv.userservice.lms.contoller.UserController;
 import com.slt.peotv.userservice.lms.entity.AddressEntity;
 import com.slt.peotv.userservice.lms.entity.AuthorityEntity;
 import com.slt.peotv.userservice.lms.entity.RoleEntity;
@@ -616,7 +615,7 @@ public class UserMapper {
         userRest.setIsSltEmp(userEntity.getIsSltEmp());
         userRest.setIsSltIntern(userEntity.getIsSltIntern());
         userRest.setActive(userEntity.getActive());
-        userRest.setJoiningDate(userEntity.getJoin_date());
+        userRest.setJoiningDate(userEntity.getJoinDate());
         userRest.setRoaster(userEntity.getRoaster());
 
         if (userEntity.getAddresses() != null) {

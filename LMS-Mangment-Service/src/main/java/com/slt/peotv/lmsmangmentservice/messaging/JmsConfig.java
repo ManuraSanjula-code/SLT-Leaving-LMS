@@ -11,14 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Configuration
 public class JmsConfig {
 
-   /*  @Bean
-    public MessageConverter jacksonJmsMessageConverter() {
-        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-        converter.setTargetType(MessageType.TEXT);
-        converter.setTypeIdPropertyName("_type"); // Optional: for type information
-        return converter;
-    } */
-
     @Bean
     public MessageConverter jacksonJmsMessageConverter(ObjectMapper objectMapper) {
         objectMapper.registerModule(new JavaTimeModule());

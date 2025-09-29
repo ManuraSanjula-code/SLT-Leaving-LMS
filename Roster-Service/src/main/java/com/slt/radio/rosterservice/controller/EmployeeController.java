@@ -1,21 +1,21 @@
 package com.slt.radio.rosterservice.controller;
 
-import com.slt.radio.rosterservice.model.one.dto.EmployeeDto;
+import com.slt.radio.rosterservice.models.dto.EmployeeDto;
 import com.slt.radio.rosterservice.service.employee.EmployeeService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/employees")
-@RequiredArgsConstructor
 public class EmployeeController {
 
-    private final EmployeeService employeeService;
+    @Autowired
+    private EmployeeService employeeService;
 
     @GetMapping
     public ResponseEntity<List<EmployeeDto>> getAllEmployees() {

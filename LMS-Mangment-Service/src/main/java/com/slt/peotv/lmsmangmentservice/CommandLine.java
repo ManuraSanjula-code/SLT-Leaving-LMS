@@ -152,7 +152,7 @@ public class CommandLine implements CommandLineRunner {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    void processBatch(List<UserRest> batch, AtomicInteger successCount, AtomicInteger errorCount) {
+    public void processBatch(List<UserRest> batch, AtomicInteger successCount, AtomicInteger errorCount) {
         batch.forEach(employee -> {
             try {
                 processSingleEmployee(employee);

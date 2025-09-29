@@ -3,19 +3,20 @@ package com.slt.radio.rosterservice.service.employee;
 import com.slt.radio.rosterservice.exception.ResourceAlreadyExistsException;
 import com.slt.radio.rosterservice.exception.ResourceNotFoundException;
 import com.slt.radio.rosterservice.mapper.EmployeeMapper;
-import com.slt.radio.rosterservice.model.one.dto.EmployeeDto;
-import com.slt.radio.rosterservice.model.one.employeee.Employee;
+import com.slt.radio.rosterservice.models.dto.EmployeeDto;
+import com.slt.radio.rosterservice.documents.one.employeee.Employee;
 import com.slt.radio.rosterservice.repo.EmployeeRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class EmployeeService {
-    private final EmployeeRepository employeeRepository;
-    private final EmployeeMapper employeeMapper;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private EmployeeMapper employeeMapper;
 
     public List<EmployeeDto> getAllEmployees() {
         return employeeMapper.toDtoList(employeeRepository.findAll());

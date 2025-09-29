@@ -3,8 +3,6 @@ package com.slt.peotv.lmsmangmentservice.messaging;
 import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Employee.EmployeeEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
@@ -13,7 +11,7 @@ import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
 import com.slt.peotv.lmsmangmentservice.repository.LeaveRepo;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
 import com.slt.peotv.lmsmangmentservice.utils.service.LeaveManagementService;
-import jakarta.jms.JMSException;
+import javax.jms.JMSException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,13 +155,13 @@ public class MessageListener {
                     attendanceEntity.setAttendanceType(attendance.getAttendanceType());
                 }
 
-                attendanceEntity.setIsLate(attendance.getLate());
-                attendanceEntity.setIsLateCovered(attendance.getLateCovered());
-                attendanceEntity.setIsResolved(attendance.getResolved());
+                attendanceEntity.setLate(attendance.getLate());
+                attendanceEntity.setLateCovered(attendance.getLateCovered());
+                attendanceEntity.setResolved(attendance.getResolved());
                 attendanceEntity.setHasIssues(attendance.getHasIssues());
-                attendanceEntity.setIsHoliday(attendance.getHoliday());
-                attendanceEntity.setIsUnSuccessful(attendance.getUnSuccessful());
-                attendanceEntity.setIsUnauthorized(attendance.getUnauthorized());
+                attendanceEntity.setHoliday(attendance.getHoliday());
+                attendanceEntity.setUnSuccessful(attendance.getUnSuccessful());
+                attendanceEntity.setUnauthorized(attendance.getUnauthorized());
 
                 if(attendance.getLate() || attendance.getLateCovered() || attendance.getHasIssues() ||
                         attendance.getUnSuccessful() || attendance.getUnauthorized() ||
@@ -223,7 +221,7 @@ public class MessageListener {
                 }
 
                 attendanceEntity.setEtlRunTime(new Date());
-                attendanceEntity.setIsManual(true);
+                attendanceEntity.setManual(true);
                 AttendanceEntity save = attendanceRepo.save(attendanceEntity);
 
                 updateInOutRelationships(employeeEntity.getSltId(), save);

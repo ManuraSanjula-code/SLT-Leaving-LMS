@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.controller.lms;
 
-import com.slt.radio.rosterservice.model.second.DutyRoster;
-import com.slt.radio.rosterservice.model.second.TimeSlot;
+import com.slt.radio.rosterservice.documents.second.DutyRoster;
+import com.slt.radio.rosterservice.documents.second.TimeSlot;
 import com.slt.radio.rosterservice.service.lms.DutyRosterService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;

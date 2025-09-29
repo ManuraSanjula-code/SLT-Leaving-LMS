@@ -12,7 +12,7 @@ import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
 import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.jms.ConnectionFactory;
+import javax.jms.ConnectionFactory;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 @Configuration

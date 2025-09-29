@@ -1,10 +1,11 @@
 package com.slt.radio.rosterservice.service;
 
-import com.slt.radio.rosterservice.model.one.shift.ShiftRoster;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftRoster;
 import com.slt.radio.rosterservice.repo.ShiftRosterRepository;
 import com.slt.radio.rosterservice.service.roster.ExcelParserService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -12,12 +13,14 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class RosterServiceM {
 
-    private final ExcelParserService excelParserService;
-    private final ShiftRosterRepository rosterRepository;
+    @Autowired
+    private ExcelParserService excelParserService;
+    @Autowired
+    private ShiftRosterRepository rosterRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(RosterServiceM.class);
 
     public ShiftRoster processRosterFile(MultipartFile file) throws IOException {
         log.info("Processing roster file: {}", file.getOriginalFilename());

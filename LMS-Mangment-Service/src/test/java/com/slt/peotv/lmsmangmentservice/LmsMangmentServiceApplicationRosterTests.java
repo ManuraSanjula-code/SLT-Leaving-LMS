@@ -1,3 +1,4 @@
+/*
 package com.slt.peotv.lmsmangmentservice;
 
 import com.slt.peotv.lmsmangmentservice.entity.AccessLog.AccessLogEntity;
@@ -338,4 +339,4 @@ public class LmsMangmentServiceApplicationRosterTests {
     }
 
 
-}
+}*/

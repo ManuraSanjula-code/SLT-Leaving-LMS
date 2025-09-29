@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.repo;
 
-import com.slt.radio.rosterservice.model.one.lms.RosterAttendance;
+import com.slt.radio.rosterservice.documents.one.lms.RosterAttendance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;

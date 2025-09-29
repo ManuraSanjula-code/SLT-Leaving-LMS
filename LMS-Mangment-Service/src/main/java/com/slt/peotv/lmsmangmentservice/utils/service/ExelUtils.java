@@ -213,12 +213,12 @@ public class ExelUtils {
                 createCell(row, colNum++, inOut.getInOutType() != null ? inOut.getInOutType().name() : "");
                 createCell(row, colNum++, inOut.getTerminalId() != null ? inOut.getTerminalId() : "");
                 createCell(row, colNum++, inOut.getInOutValue() != null ? inOut.getInOutValue().toString() : "");
-                createCell(row, colNum++, inOut.getIsManual() != null ? (inOut.getIsManual() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, inOut.getManual() != null ? (inOut.getManual() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, inOut.getEtlRunTime() != null ? dateTimeFormat.format(inOut.getEtlRunTime()) : "");
                 createCell(row, colNum++, inOut.getAttendance() != null ? inOut.getAttendance().getId().toString() : "");
                 createCell(row, colNum++, inOut.getCreatedDate() != null ? dateTimeFormat.format(inOut.getCreatedDate()) : "");
                 createCell(row, colNum++, inOut.getUpdatedDate() != null ? dateTimeFormat.format(inOut.getUpdatedDate()) : "");
-                createCell(row, colNum++, inOut.getIsActive() != null ? (inOut.getIsActive() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, inOut.getActive() != null ? (inOut.getActive() ? "Yes" : "No") : "No");
             }
         }
 
@@ -362,20 +362,20 @@ public class ExelUtils {
                 createCell(row, colNum++, attendance.getLeaveStatus() != null ? attendance.getLeaveStatus().getDescription() : "");
                 createCell(row, colNum++, attendance.getPayStatus() != null ? attendance.getPayStatus().getDescription() : "");
                 createCell(row, colNum++, attendance.getResolve() != null ? attendance.getResolve().getDescription() : "");
-                createCell(row, colNum++, attendance.getIsLate() != null ? (attendance.getIsLate() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsLateCovered() != null ? (attendance.getIsLateCovered() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsUnauthorized() != null ? (attendance.getIsUnauthorized() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsUnSuccessful() != null ? (attendance.getIsUnSuccessful() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsHoliday() != null ? (attendance.getIsHoliday() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsResolved() != null ? (attendance.getIsResolved() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getLate() != null ? (attendance.getLate() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getLateCovered() != null ? (attendance.getLateCovered() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getUnauthorized() != null ? (attendance.getUnauthorized() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getUnSuccessful() != null ? (attendance.getUnSuccessful() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getHoliday() != null ? (attendance.getHoliday() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getResolved() != null ? (attendance.getResolved() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getHasIssues() != null ? (attendance.getHasIssues() ? "Yes" : "No") : "No");
-                createCell(row, colNum++, attendance.getIsManual() != null ? (attendance.getIsManual() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getManual() != null ? (attendance.getManual() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getIssueDescription() != null ? attendance.getIssueDescription() : "");
                 createCell(row, colNum++, attendance.getDueDateForUA() != null ? dateFormat.format(attendance.getDueDateForUA()) : "");
                 createCell(row, colNum++, attendance.getEtlRunTime() != null ? dateTimeFormat.format(attendance.getEtlRunTime()) : "");
                 createCell(row, colNum++, attendance.getCreatedDate() != null ? dateTimeFormat.format(attendance.getCreatedDate()) : "");
                 createCell(row, colNum++, attendance.getUpdatedDate() != null ? dateTimeFormat.format(attendance.getUpdatedDate()) : "");
-                createCell(row, colNum++, attendance.getIsActive() != null ? (attendance.getIsActive() ? "Yes" : "No") : "No");
+                createCell(row, colNum++, attendance.getActive() != null ? (attendance.getActive() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getViaMovement() != null ? (attendance.getViaMovement() ? "Yes" : "No") : "No");
                 createCell(row, colNum++, attendance.getViaLeave() != null ? (attendance.getViaLeave() ? "Yes" : "No") : "No");
             }

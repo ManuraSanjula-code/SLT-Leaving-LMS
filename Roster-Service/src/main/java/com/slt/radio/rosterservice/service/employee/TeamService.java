@@ -4,19 +4,20 @@ package com.slt.radio.rosterservice.service.employee;
 import com.slt.radio.rosterservice.exception.ResourceAlreadyExistsException;
 import com.slt.radio.rosterservice.exception.ResourceNotFoundException;
 import com.slt.radio.rosterservice.mapper.TeamMapper;
-import com.slt.radio.rosterservice.model.one.dto.TeamDto;
-import com.slt.radio.rosterservice.model.one.team.Team;
+import com.slt.radio.rosterservice.models.dto.TeamDto;
+import com.slt.radio.rosterservice.documents.one.team.Team;
 import com.slt.radio.rosterservice.repo.TeamRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class TeamService {
-    private final TeamRepository teamRepository;
-    private final TeamMapper teamMapper;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private TeamMapper teamMapper;
 
     public List<TeamDto> getAllTeams() {
         return teamMapper.toDtoList(teamRepository.findAll());

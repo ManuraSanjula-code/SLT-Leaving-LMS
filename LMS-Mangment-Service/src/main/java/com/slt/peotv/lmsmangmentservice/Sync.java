@@ -2,8 +2,7 @@ package com.slt.peotv.lmsmangmentservice;
 
 import com.slt.peotv.lmsmangmentservice.service.AccessLogService;
 import com.slt.peotv.lmsmangmentservice.service.Main_Service;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.text.ParseException;
@@ -12,13 +11,14 @@ import java.util.Date;
 import com.slt.peotv.lmsmangmentservice.repository.AttendanceRepo;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class Sync {
 
-    private final Main_Service main_Service;
-    private final AccessLogService accessLogService;
-    private final AttendanceRepo attendanceRepo;
+    @Autowired
+    private Main_Service main_Service;
+    @Autowired
+    private AccessLogService accessLogService;
+    @Autowired
+    private AttendanceRepo attendanceRepo;
 
     @Scheduled(cron = "0 0 * * * ?")
     public void getLogs_YES_() throws ParseException {
@@ -46,7 +46,7 @@ public class Sync {
                 oneYearAgo.add(Calendar.YEAR, -1);
 
                 if (createdDate.before(oneYearAgo.getTime())) {
-                    attendance.setIsManual(false);
+                    attendance.setManual(false);
                     attendanceRepo.save(attendance);
                 }
             }

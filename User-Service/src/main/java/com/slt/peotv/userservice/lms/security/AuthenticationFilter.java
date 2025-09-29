@@ -21,10 +21,10 @@ import com.slt.peotv.userservice.lms.entity.UserEntity;
 import com.slt.peotv.userservice.lms.security.jwt.token.creator.TokenCreator;
 import com.slt.peotv.userservice.lms.service.impl.UserServiceImpl;
 import com.slt.peotv.userservice.lms.shared.model.request.UserLoginRequestModel;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 
 public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {

@@ -131,7 +131,7 @@ public class Helper {
     private void handleNoShortLeaveAvailable(AttendanceEntity attendanceEntity) {
         attendanceEntity.setAttendanceType(AttendanceType.HALF_DAY);
         attendanceEntity.setLeaveStatus(null);
-        attendanceEntity.setIsUnauthorized(true);
+        attendanceEntity.setUnauthorized(true);
         attendanceEntity.setIssueDescription("GOING HALF DAY AND SET AS UNAUTHORIZED BEFORE PASS THE DUE DATE PLEASE RESOLVE IT");
         attendanceEntity.setDueDateForUA(getDueDate());
         attendanceRepo.save(attendanceEntity);
@@ -153,7 +153,7 @@ public class Helper {
                 attendanceEntity.setLeftTime(inOutEntity.getPunchTypeTime());
                 attendanceRepo.save(attendanceEntity);
             } else {
-                attendanceEntity.setIsUnauthorized(true);
+                attendanceEntity.setUnauthorized(true);
                 attendanceEntity.setHasIssues(true);
                 attendanceEntity.setIssueDescription("GOING UNAUTHORIZED DUE TO SWIPE ERROR. PLEASE RESOLVE BEFORE THE DUE DATE.");
                 attendanceEntity.setDueDateForUA(getDueDate());

@@ -1,15 +1,17 @@
 package com.slt.radio.rosterservice.service.employee;
 
 import com.slt.radio.rosterservice.exception.ExcelProcessingException;
-import com.slt.radio.rosterservice.model.one.dto.*;
-import com.slt.radio.rosterservice.model.one.employeee.Employee;
-import com.slt.radio.rosterservice.model.one.team.Team;
+import com.slt.radio.rosterservice.documents.one.employeee.Employee;
+import com.slt.radio.rosterservice.documents.one.team.Team;
+import com.slt.radio.rosterservice.models.dto.*;
 import com.slt.radio.rosterservice.repo.EmployeeRepository;
 import com.slt.radio.rosterservice.repo.TeamRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.slt.radio.rosterservice.service.roster.ExcelParserService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,14 +23,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class ExcelProcessingService {
 
-    private final EmployeeRepository employeeRepository;
-    private final TeamRepository teamRepository;
-    private final EmployeeService employeeService;
-    private final TeamService teamService;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private TeamRepository teamRepository;
+    @Autowired
+    private EmployeeService employeeService;
+    @Autowired
+    private TeamService teamService;
+    private static final Logger log = LoggerFactory.getLogger(ExcelProcessingService.class);
 
     // Process Excel file and return RosterDto
     public RosterDto processExcelFile(MultipartFile file) {
@@ -182,8 +187,7 @@ public class ExcelProcessingService {
             }
         }
 
-        // If we didn't find a good match, create a default mapping
-        // This is a fallback for unusual formats
+
         log.warn("Could not find header row, using default column mapping");
         Map<String, Integer> defaultMapping = new HashMap<>();
         defaultMapping.put("Name", 2);         // Column C
@@ -288,7 +292,7 @@ public class ExcelProcessingService {
                         .totalShift(employee.getTotalShift())
                         .rotShift(employee.getRotShift())
                         .offDay(employee.getOffDay())
-                        .dDuty(employee.getDDuty())
+                        .dDuty(employee.getdDuty())
                         .build();
 
                 employeeShifts.add(employeeShift);
@@ -301,7 +305,6 @@ public class ExcelProcessingService {
                     .build();
 
             teamRosters.add(teamRosterDto);
-            log.info("Created team roster for team {} with {} employees", teamName, employeeShifts.size());
         }
 
         return teamRosters;
@@ -417,7 +420,6 @@ public class ExcelProcessingService {
             }
         }
 
-        log.info("Found {} employees in direct scan", employees.size());
         return employees;
     }
 
@@ -576,27 +578,86 @@ public class ExcelProcessingService {
         }
     }
 
-    // Helper class to store month and year information
-    @lombok.Data
-    @lombok.AllArgsConstructor
+
     private static class MonthYearInfo {
         private int month;
         private int year;
+
+        public MonthYearInfo() {
+        }
+
+        public MonthYearInfo(int month, int year) {
+            this.month = month;
+            this.year = year;
+        }
+
+        public int getMonth() {
+            return month;
+        }
+
+        public void setMonth(int month) {
+            this.month = month;
+        }
+
+        public int getYear() {
+            return year;
+        }
+
+        public void setYear(int year) {
+            this.year = year;
+        }
     }
 
-    // Helper class to store header row information
-    @lombok.Data
-    @lombok.AllArgsConstructor
+
     private static class HeaderRowInfo {
         private boolean found;
         private int rowIndex;
         private Map<String, Integer> headerMap;
         private int nameColumnIndex;
+
+        public HeaderRowInfo() {
+        }
+
+        public HeaderRowInfo(boolean found, int rowIndex, Map<String, Integer> headerMap, int nameColumnIndex) {
+            this.found = found;
+            this.rowIndex = rowIndex;
+            this.headerMap = headerMap;
+            this.nameColumnIndex = nameColumnIndex;
+        }
+
+        public boolean isFound() {
+            return found;
+        }
+
+        public void setFound(boolean found) {
+            this.found = found;
+        }
+
+        public int getRowIndex() {
+            return rowIndex;
+        }
+
+        public void setRowIndex(int rowIndex) {
+            this.rowIndex = rowIndex;
+        }
+
+        public Map<String, Integer> getHeaderMap() {
+            return headerMap;
+        }
+
+        public void setHeaderMap(Map<String, Integer> headerMap) {
+            this.headerMap = headerMap;
+        }
+
+        public int getNameColumnIndex() {
+            return nameColumnIndex;
+        }
+
+        public void setNameColumnIndex(int nameColumnIndex) {
+            this.nameColumnIndex = nameColumnIndex;
+        }
     }
 
-    // Helper class to store employee data
-    @lombok.Data
-    @lombok.AllArgsConstructor
     private static class EmployeeData {
         private String name;
         private String mobileNo;
@@ -606,5 +667,83 @@ public class ExcelProcessingService {
         private int rotShift;
         private int offDay;
         private int dDuty;
+
+        public EmployeeData() {
+        }
+
+        public EmployeeData(String name, String mobileNo, String srNo, String codeName, int totalShift, int rotShift, int offDay, int dDuty) {
+            this.name = name;
+            this.mobileNo = mobileNo;
+            this.srNo = srNo;
+            this.codeName = codeName;
+            this.totalShift = totalShift;
+            this.rotShift = rotShift;
+            this.offDay = offDay;
+            this.dDuty = dDuty;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getMobileNo() {
+            return mobileNo;
+        }
+
+        public void setMobileNo(String mobileNo) {
+            this.mobileNo = mobileNo;
+        }
+
+        public String getSrNo() {
+            return srNo;
+        }
+
+        public void setSrNo(String srNo) {
+            this.srNo = srNo;
+        }
+
+        public String getCodeName() {
+            return codeName;
+        }
+
+        public void setCodeName(String codeName) {
+            this.codeName = codeName;
+        }
+
+        public int getTotalShift() {
+            return totalShift;
+        }
+
+        public void setTotalShift(int totalShift) {
+            this.totalShift = totalShift;
+        }
+
+        public int getRotShift() {
+            return rotShift;
+        }
+
+        public void setRotShift(int rotShift) {
+            this.rotShift = rotShift;
+        }
+
+        public int getOffDay() {
+            return offDay;
+        }
+
+        public void setOffDay(int offDay) {
+            this.offDay = offDay;
+        }
+
+        public int getdDuty() {
+            return dDuty;
+        }
+
+        public void setdDuty(int dDuty) {
+            this.dDuty = dDuty;
+        }
     }
 }

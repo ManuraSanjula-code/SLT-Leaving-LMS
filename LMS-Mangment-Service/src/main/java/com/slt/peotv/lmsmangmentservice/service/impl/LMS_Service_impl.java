@@ -93,7 +93,7 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public void makeInAttendanceActive(String publicId) {
         AttendanceEntity attendanceEntity = attendanceRepo.findByPublicId(publicId).orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
-        attendanceEntity.setIsActive(false);
+        attendanceEntity.setActive(false);
         attendanceRepo.save(attendanceEntity);
     }
 
@@ -136,7 +136,7 @@ public class LMS_Service_impl implements LMS_Service {
 
         Map<String, Integer> monthlyAttendanceDistribution = attendanceThisYear.stream()
                 .filter(attendance -> Boolean.TRUE.equals(attendance.getIsFullDay()))
-                .filter(attendance -> Boolean.TRUE.equals(attendance.getIsActive()))
+                .filter(attendance -> Boolean.TRUE.equals(attendance.getActive()))
                 .collect(Collectors.groupingBy(
                         attendance -> {
                             LocalDate date = attendance.getDate().toInstant()
@@ -275,7 +275,7 @@ public class LMS_Service_impl implements LMS_Service {
     public void deleteAttendanceV1(String publicId) {
         AttendanceEntity entity = attendanceRepo.findByPublicId(publicId)
                 .orElseThrow(() -> new IllegalArgumentException("Attendance record not found or cannot be deleted"));
-        entity.setIsActive(false);
+        entity.setActive(false);
         attendanceRepo.save(entity);
     }
 
@@ -335,7 +335,7 @@ public class LMS_Service_impl implements LMS_Service {
                     employee, req.getHappenDate());
             if (attendanceEntity.isPresent()) {
                 AttendanceEntity attendanceEntity_ = attendanceEntity.get();
-                if (!attendanceEntity_.getIsResolved() && !attendanceEntity_.getIsUnSuccessful() && attendanceEntity_.getHasIssues()) {
+                if (!attendanceEntity_.getResolved() && !attendanceEntity_.getUnSuccessful() && attendanceEntity_.getHasIssues()) {
                     movementsEntity.setAttendance(attendanceEntity_);
                     movementsEntity.setHappenDate(req.getHappenDate());
                     if (req.getHappenDateRaw() != null)
@@ -360,8 +360,8 @@ public class LMS_Service_impl implements LMS_Service {
             movementsEntity.setInTime(req.getInTime());
         if (req.getOutTime() != null)
             movementsEntity.setOutTime(req.getOutTime());
-        if (req.getIsEdited() != null) {
-            movementsEntity.setIsEdited(req.getIsEdited());
+        if (req.getEdited() != null) {
+            movementsEntity.setIsEdited(req.getEdited());
         }
         if (req.getRequestStatus() != null)
             movementsEntity.setRequestStatus(req.getRequestStatus());
@@ -680,11 +680,11 @@ public class LMS_Service_impl implements LMS_Service {
         EmployeeEntity employee = saved.getEmployee();
         if (saved.getPayStatus() != null) {
             if (saved.getPayStatus().equals(PayStatus.NO_PAY)) {
-                main_Service.saveNoPayEntity(employee, attendanceEntity, main_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(), req.getIsUnAuthorized(),
-                        req.getIsLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
+                main_Service.saveNoPayEntity(employee, attendanceEntity, main_Service.createNoPayRequest(req.getIsHalfDay(), req.getUnSuccessful(), req.getIsUnAuthorized(),
+                        req.getLate(), req.getLateCover(), req.getIsAbsent()), attendanceEntity.getArrivalDate() == null ? attendanceEntity.getDate() : req.getArrivalDate());
             }
         }
-        if (saved.getIsUnSuccessful())
+        if (saved.getUnSuccessful())
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, true);
         return lmsMapper.toAttendanceDTO(saved);
     }
@@ -696,7 +696,7 @@ public class LMS_Service_impl implements LMS_Service {
             AttendanceEntity attendanceEntity = opt.get();
 
             PayStatus originalPayStatus = attendanceEntity.getPayStatus();
-            Boolean originalIsUnSuccessful = attendanceEntity.getIsUnSuccessful();
+            Boolean originalIsUnSuccessful = attendanceEntity.getUnSuccessful();
 
             lmsMapper.updateAttendanceEntityFromReq(attendanceEntity, req);
 
@@ -708,13 +708,13 @@ public class LMS_Service_impl implements LMS_Service {
                         && saved.getPayStatus().equals(PayStatus.NO_PAY)) {
 
                     main_Service.saveNoPayEntity(employee, saved,
-                            main_Service.createNoPayRequest(req.getIsHalfDay(), req.getIsUnSuccessful(),
-                                    req.getIsUnAuthorized(), req.getIsLate(), req.getLateCover(), req.getIsAbsent()),
+                            main_Service.createNoPayRequest(req.getIsHalfDay(), req.getUnSuccessful(),
+                                    req.getIsUnAuthorized(), req.getLate(), req.getLateCover(), req.getIsAbsent()),
                             saved.getArrivalDate() == null ? saved.getDate() : req.getArrivalDate());
                 }
             }
 
-            if ((originalIsUnSuccessful == null || !originalIsUnSuccessful) && saved.getIsUnSuccessful()) {
+            if ((originalIsUnSuccessful == null || !originalIsUnSuccessful) && saved.getUnSuccessful()) {
                 helper.handleLateAndUnsuccessful(employee.getEmployeeId(), saved, true);
             }
 
@@ -727,7 +727,7 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public void createAccessLog(AccessLogReq req) {
         AccessLogEntity accessLogEntity = lmsMapper.toAccessLogEntity(req);
-        accessLogEntity.setIsManual(true);
+        accessLogEntity.setManual(true);
         accessLogEntity.setUpdatedDate(new Date());
         AccessLogEntity saved = accessLogRepo.save(accessLogEntity);
     }

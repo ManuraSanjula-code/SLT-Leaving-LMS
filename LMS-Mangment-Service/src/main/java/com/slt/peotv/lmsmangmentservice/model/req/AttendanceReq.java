@@ -5,17 +5,11 @@ import com.slt.peotv.lmsmangmentservice.entity.Enum.AttendanceType;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.LeaveStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.PayStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.ResolveType;
-import lombok.Data;
-import lombok.ToString;
-
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.sql.Time;
 import java.util.Date;
-import java.util.Objects;
 
-@Data
-@ToString
 public class AttendanceReq {
 
     private String publicId;
@@ -243,5 +237,237 @@ public class AttendanceReq {
     }
     public void setIsUnAuthorized(Boolean isUnAuthorized) {
         this.isUnauthorized = isUnAuthorized;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmployeeID() {
+        return employeeID;
+    }
+
+    public void setEmployeeID(String employeeID) {
+        this.employeeID = employeeID;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public Date getArrivalDate() {
+        return arrivalDate;
+    }
+
+    public void setArrivalDate(Date arrivalDate) {
+        this.arrivalDate = arrivalDate;
+    }
+
+    public Time getArrivalTime() {
+        return arrivalTime;
+    }
+
+    public void setArrivalTime(Time arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
+
+    public Time getLeftTime() {
+        return leftTime;
+    }
+
+    public void setLeftTime(Time leftTime) {
+        this.leftTime = leftTime;
+    }
+
+    public String getTerminalID() {
+        return terminalID;
+    }
+
+    public void setTerminalID(String terminalID) {
+        this.terminalID = terminalID;
+    }
+
+    public AttendanceType getAttendanceType() {
+        return attendanceType;
+    }
+
+    public void setAttendanceType(AttendanceType attendanceType) {
+        this.attendanceType = attendanceType;
+    }
+
+    public LeaveStatus getLeaveStatus() {
+        return leaveStatus;
+    }
+
+    public void setLeaveStatus(LeaveStatus leaveStatus) {
+        this.leaveStatus = leaveStatus;
+    }
+
+    public PayStatus getPayStatus() {
+        return payStatus;
+    }
+
+    public void setPayStatus(PayStatus payStatus) {
+        this.payStatus = payStatus;
+    }
+
+    public ResolveType getResolve() {
+        return resolve;
+    }
+
+    public void setResolve(ResolveType resolve) {
+        this.resolve = resolve;
+    }
+
+    public Boolean getLate() {
+        return isLate;
+    }
+
+    public void setLate(Boolean late) {
+        isLate = late;
+    }
+
+    public Boolean getLateCovered() {
+        return isLateCovered;
+    }
+
+    public void setLateCovered(Boolean lateCovered) {
+        isLateCovered = lateCovered;
+    }
+
+    public Boolean getUnauthorized() {
+        return isUnauthorized;
+    }
+
+    public void setUnauthorized(Boolean unauthorized) {
+        isUnauthorized = unauthorized;
+    }
+
+    public Boolean getUnSuccessful() {
+        return isUnSuccessful;
+    }
+
+    public void setUnSuccessful(Boolean unSuccessful) {
+        isUnSuccessful = unSuccessful;
+    }
+
+    public Boolean getHoliday() {
+        return isHoliday;
+    }
+
+    public void setHoliday(Boolean holiday) {
+        isHoliday = holiday;
+    }
+
+    public Boolean getResolved() {
+        return isResolved;
+    }
+
+    public void setResolved(Boolean resolved) {
+        isResolved = resolved;
+    }
+
+    public Boolean getHasIssues() {
+        return hasIssues;
+    }
+
+    public void setHasIssues(Boolean hasIssues) {
+        this.hasIssues = hasIssues;
+    }
+
+    public Boolean getManual() {
+        return isManual;
+    }
+
+    public void setManual(Boolean manual) {
+        isManual = manual;
+    }
+
+    public String getIssueDescription() {
+        return issueDescription;
+    }
+
+    public void setIssueDescription(String issueDescription) {
+        this.issueDescription = issueDescription;
+    }
+
+    public Date getDueDateForUA() {
+        return dueDateForUA;
+    }
+
+    public void setDueDateForUA(Date dueDateForUA) {
+        this.dueDateForUA = dueDateForUA;
+    }
+
+    public Date getEtlRunTime() {
+        return etlRunTime;
+    }
+
+    public void setEtlRunTime(Date etlRunTime) {
+        this.etlRunTime = etlRunTime;
+    }
+
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Date getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Date updatedDate) {
+        this.updatedDate = updatedDate;
+    }
+
+    public Boolean getViaMovement() {
+        return viaMovement;
+    }
+
+    public void setViaMovement(Boolean viaMovement) {
+        this.viaMovement = viaMovement;
+    }
+
+    public Boolean getViaLeave() {
+        return viaLeave;
+    }
+
+    public void setViaLeave(Boolean viaLeave) {
+        this.viaLeave = viaLeave;
+    }
+
+    public String getArrivalTimeRaw() {
+        return arrivalTimeRaw;
+    }
+
+    public void setArrivalTimeRaw(String arrivalTimeRaw) {
+        this.arrivalTimeRaw = arrivalTimeRaw;
+    }
+
+    public String getLeftTimeRaw() {
+        return leftTimeRaw;
+    }
+
+    public void setLeftTimeRaw(String leftTimeRaw) {
+        this.leftTimeRaw = leftTimeRaw;
     }
 }

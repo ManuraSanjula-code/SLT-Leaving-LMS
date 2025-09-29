@@ -2,10 +2,8 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.slt.peotv.lmsmangmentservice.model.types.MovementType;
-import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
-import jakarta.persistence.*;
-
+import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;

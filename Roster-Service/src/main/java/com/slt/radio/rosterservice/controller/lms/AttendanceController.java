@@ -1,13 +1,13 @@
 package com.slt.radio.rosterservice.controller.lms;
 
-import com.slt.radio.rosterservice.model.one.lms.Attendance;
-import com.slt.radio.rosterservice.model.one.lms.EmployeeAttendanceDetail;
-import com.slt.radio.rosterservice.model.one.lms.RosterAttendance;
-import com.slt.radio.rosterservice.model.one.lms.TeamAttendanceSummary;
+import com.slt.radio.rosterservice.documents.one.lms.Attendance;
+import com.slt.radio.rosterservice.documents.one.lms.EmployeeAttendanceDetail;
+import com.slt.radio.rosterservice.documents.one.lms.RosterAttendance;
+import com.slt.radio.rosterservice.documents.one.lms.TeamAttendanceSummary;
 import com.slt.radio.rosterservice.service.lms.AccessLogSyncService;
 import com.slt.radio.rosterservice.service.lms.AttendanceService;
 import com.slt.radio.rosterservice.service.Service;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +19,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/attendance")
-@RequiredArgsConstructor
 public class AttendanceController {
 
-    private final AttendanceService attendanceService;
-    private final AccessLogSyncService accessLogSyncService;
-    private final Service service;
+    @Autowired
+    private AttendanceService attendanceService;
+    @Autowired
+    private AccessLogSyncService accessLogSyncService;
+    @Autowired
+    private Service service;
 
     @DeleteMapping("/{date}/roster")
     public void deleteRoster(@PathVariable("date") String dateStr) {

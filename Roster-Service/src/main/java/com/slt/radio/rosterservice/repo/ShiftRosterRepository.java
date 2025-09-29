@@ -1,6 +1,6 @@
 package com.slt.radio.rosterservice.repo;
 
-import com.slt.radio.rosterservice.model.one.shift.ShiftRoster;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftRoster;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

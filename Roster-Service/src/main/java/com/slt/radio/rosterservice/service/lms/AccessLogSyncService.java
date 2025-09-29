@@ -2,40 +2,44 @@ package com.slt.radio.rosterservice.service.lms;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.SignedJWT;
-import com.slt.radio.rosterservice.model.one.lms.AccessLog;
+import com.slt.radio.rosterservice.documents.one.lms.AccessLog;
 import com.slt.radio.rosterservice.repo.AccessLogRepository;
 import com.slt.radio.rosterservice.repo.DutyRosterRepository;
-import com.slt.radio.rosterservice.Utils.Helper;
-import com.slt.radio.rosterservice.Utils.TokenCreator;
+import com.slt.radio.rosterservice.utils.Helper;
+import com.slt.radio.rosterservice.utils.TokenCreator;
 import com.slt.radio.rosterservice.feign_client.LMSClient;
 import com.slt.radio.rosterservice.feign_client.model.AccessLogArchiveRest;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class AccessLogSyncService {
 
-    private final AccessLogRepository accessLogRepository;
-    private final AttendanceService attendanceService;
-    private final DutyRosterRepository dutyRosterRepository;
-    private final Helper helper;
-    private final TokenCreator tokenCreator;
+    @Autowired
+    private AccessLogRepository accessLogRepository;
+    @Autowired
+    private AttendanceService attendanceService;
+    @Autowired
+    private DutyRosterRepository dutyRosterRepository;
+    @Autowired
+    private Helper helper;
+    @Autowired
+    private TokenCreator tokenCreator;
 
     @Autowired
     private LMSClient lmsClient;
+
+    private static final Logger log = LoggerFactory.getLogger(AccessLogSyncService.class);
 
     private static final DateTimeFormatter DATE_FORMATTER_ = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");   

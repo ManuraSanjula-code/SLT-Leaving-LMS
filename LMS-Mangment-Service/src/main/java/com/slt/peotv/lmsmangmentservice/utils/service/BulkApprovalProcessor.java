@@ -4,15 +4,13 @@ import com.slt.peotv.lmsmangmentservice.entity.Attendance.AttendanceEntity;
 import com.slt.peotv.lmsmangmentservice.entity.ComponetAdminsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.*;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.LeaveEntity;
-import com.slt.peotv.lmsmangmentservice.entity.Leave.types.UserLeaveTypeRemainingEntity;
 import com.slt.peotv.lmsmangmentservice.entity.Movement.MovementsEntity;
 import com.slt.peotv.lmsmangmentservice.entity.card.InOutEntity;
 import com.slt.peotv.lmsmangmentservice.exceptions.BulkApprovalException;
 import com.slt.peotv.lmsmangmentservice.model.req.BulkApprovedReq;
 import com.slt.peotv.lmsmangmentservice.repository.*;
 import com.slt.peotv.lmsmangmentservice.service.Main_Service;
-import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
-import jakarta.annotation.PreDestroy;
+import javax.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -487,10 +485,10 @@ public class BulkApprovalProcessor {
         movement.setRequestStatus(RequestStatus.APPROVED);
         AttendanceEntity attendance = movement.getAttendance();
 
-        attendance.setIsResolved(true);
+        attendance.setResolved(true);
         attendance.setDueDateForUA(null);
         attendance.setHasIssues(false);
-        attendance.setIsUnauthorized(false);
+        attendance.setUnauthorized(false);
         attendance.setResolve(ResolveType.VIA_MOVEMENT);
         attendance.setIssueDescription("none :: Movement approved");
 
@@ -509,7 +507,7 @@ public class BulkApprovalProcessor {
         // Link InOut records with the attendance
         updateAttendanceWithInOutRecords(movement, savedAttendance);
 
-        if ((savedAttendance.getIsUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getIsUnauthorized() == false))
+        if ((savedAttendance.getUnSuccessful()) && ((savedAttendance.getAttendanceType() != null) && (!savedAttendance.getAttendanceType().equals(AttendanceType.HALF_DAY))) && (attendance.getUnauthorized() == false))
             helper.handleLateAndUnsuccessful(movement.getEmployee().getSltId(), savedAttendance, true);
 
         logger.info("Movement {} fully approved and linked with InOut records", movement.getPublicId());
@@ -520,7 +518,7 @@ public class BulkApprovalProcessor {
 
         if (leave.getAttendance() != null) {
             AttendanceEntity attendance = leave.getAttendance();
-            attendance.setIsResolved(true);
+            attendance.setResolved(true);
             attendance.setDueDateForUA(null);
             attendance.setHasIssues(false);
             attendanceRepo.save(attendance);

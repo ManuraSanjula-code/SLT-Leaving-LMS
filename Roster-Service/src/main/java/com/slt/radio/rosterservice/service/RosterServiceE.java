@@ -1,18 +1,19 @@
 package com.slt.radio.rosterservice.service;
 
-import com.slt.radio.rosterservice.model.one.dto.EmployeeShiftDto;
-import com.slt.radio.rosterservice.model.one.dto.RosterDto;
-import com.slt.radio.rosterservice.model.one.dto.TeamRosterDto;
-import com.slt.radio.rosterservice.model.one.employeee.Employee;
-import com.slt.radio.rosterservice.model.one.obj.EmployeeShift;
-import com.slt.radio.rosterservice.model.one.Roster;
-import com.slt.radio.rosterservice.model.one.team.TeamRoster;
+import com.slt.radio.rosterservice.models.dto.EmployeeShiftDto;
+import com.slt.radio.rosterservice.models.dto.RosterDto;
+import com.slt.radio.rosterservice.models.dto.TeamRosterDto;
+import com.slt.radio.rosterservice.documents.one.employeee.Employee;
+import com.slt.radio.rosterservice.documents.one.obj.EmployeeShift;
+import com.slt.radio.rosterservice.documents.one.Roster;
+import com.slt.radio.rosterservice.documents.one.team.TeamRoster;
 import com.slt.radio.rosterservice.repo.EmployeeArchiveRepository;
 import com.slt.radio.rosterservice.repo.EmployeeRepository;
 import com.slt.radio.rosterservice.repo.RosterRepository;
 import com.slt.radio.rosterservice.service.employee.EmployeeShiftService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,22 +22,24 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class RosterServiceE {
 
-    private final RosterRepository rosterRepository;
-    private final EmployeeShiftService employeeShiftService;
-    private final EmployeeRepository employeeRepository;
-    private final EmployeeArchiveRepository employeeArchiveRepository;
+    @Autowired
+    private RosterRepository rosterRepository;
+    @Autowired
+    private EmployeeShiftService employeeShiftService;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private EmployeeArchiveRepository employeeArchiveRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(RosterServiceE.class);
 
     public Roster createRoster(RosterDto rosterDto) {
 
-        // Log the input DTO
         log.info("Creating roster for month: {}, year: {}, with {} teams",
                 rosterDto.getMonth(), rosterDto.getYear(), rosterDto.getTeams().size());
 
-        // Map DTO to entity
         List<TeamRoster> teamRosters = new ArrayList<>();
 
         for (TeamRosterDto teamRosterDto : rosterDto.getTeams()) {
@@ -94,5 +97,4 @@ public class RosterServiceE {
         return rosterRepository.save(roster);
     }
 
-    // Other methods omitted for brevity
 }

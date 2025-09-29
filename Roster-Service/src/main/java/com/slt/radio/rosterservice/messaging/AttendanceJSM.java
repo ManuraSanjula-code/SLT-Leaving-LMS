@@ -1,8 +1,8 @@
 package com.slt.radio.rosterservice.messaging;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.slt.radio.rosterservice.model.enums.*;
-import com.slt.radio.rosterservice.model.enums.LeaveStatus;
+import com.slt.radio.rosterservice.documents.enums.*;
+import com.slt.radio.rosterservice.documents.enums.LeaveStatus;
 import java.time.LocalTime;
 import java.util.Date;
 

@@ -1,21 +1,20 @@
 package com.slt.radio.rosterservice.service.lms;
 
-import com.slt.radio.rosterservice.model.enums.AttendanceType;
-import com.slt.radio.rosterservice.model.enums.InOutType;
-import com.slt.radio.rosterservice.model.one.employeee.Employee;
-import com.slt.radio.rosterservice.model.one.employeee.EmployeeArchive;
-import com.slt.radio.rosterservice.model.one.lms.*;
-import com.slt.radio.rosterservice.model.one.Roster;
-import com.slt.radio.rosterservice.model.one.shift.ShiftAssignment;
-import com.slt.radio.rosterservice.model.one.shift.ShiftRoster;
-import com.slt.radio.rosterservice.model.one.team.Team;
-import com.slt.radio.rosterservice.model.second.DutyRoster;
+import com.slt.radio.rosterservice.documents.enums.AttendanceType;
+import com.slt.radio.rosterservice.documents.enums.InOutType;
+import com.slt.radio.rosterservice.documents.one.employeee.Employee;
+import com.slt.radio.rosterservice.documents.one.employeee.EmployeeArchive;
+import com.slt.radio.rosterservice.documents.one.lms.*;
+import com.slt.radio.rosterservice.documents.one.Roster;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftAssignment;
+import com.slt.radio.rosterservice.documents.one.shift.ShiftRoster;
+import com.slt.radio.rosterservice.documents.one.team.Team;
+import com.slt.radio.rosterservice.documents.second.DutyRoster;
 import com.slt.radio.rosterservice.repo.*;
-import com.slt.radio.rosterservice.Utils.Helper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.slt.radio.rosterservice.utils.Helper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.slt.radio.rosterservice.messaging.MessageProducerService;
 import org.springframework.beans.factory.annotation.Value;
-import com.slt.radio.rosterservice.model.enums.LeaveStatus;
+import com.slt.radio.rosterservice.documents.enums.LeaveStatus;
 
 import java.time.format.DateTimeParseException;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,14 +36,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.time.temporal.ChronoUnit;
-import com.slt.radio.rosterservice.model.enums.RosterType;
+import com.slt.radio.rosterservice.documents.enums.RosterType;
 import com.slt.radio.rosterservice.messaging.AttendanceJSM;
 import java.time.LocalDate;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class AttendanceService {
+    private static final Logger log = LoggerFactory.getLogger(AttendanceService.class);
 
     private static final LocalTime NOON = LocalTime.NOON;
 
@@ -74,6 +72,21 @@ public class AttendanceService {
     private final Helper helper;
     private final MessageProducerService messageProducerService;
     private final LocalTime fullDayLeaveTime = LocalTime.of(13, 0);
+
+    @Autowired
+    public AttendanceService(InOutRepository inOutRepository, AttendanceRepository attendanceRepository, RosterAttendanceRepository rosterAttendanceRepository, EmployeeRepository employeeRepository, TeamRepository teamRepository, ShiftRosterRepository shiftRosterRepository, RosterRepository rosterRepository, EmployeeArchiveRepository employeeArchiveRepository, DutyRosterRepository dutyRosterRepository, Helper helper, MessageProducerService messageProducerService) {
+        this.inOutRepository = inOutRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.rosterAttendanceRepository = rosterAttendanceRepository;
+        this.employeeRepository = employeeRepository;
+        this.teamRepository = teamRepository;
+        this.shiftRosterRepository = shiftRosterRepository;
+        this.rosterRepository = rosterRepository;
+        this.employeeArchiveRepository = employeeArchiveRepository;
+        this.dutyRosterRepository = dutyRosterRepository;
+        this.helper = helper;
+        this.messageProducerService = messageProducerService;
+    }
 
     @Value("${ROSTER_BEYOND_TwentyFour:false}")
     private boolean roster_beyond;

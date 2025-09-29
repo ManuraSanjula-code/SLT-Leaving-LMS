@@ -18,6 +18,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.NoPayReasonDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.AccessLogReq;
 import com.slt.peotv.lmsmangmentservice.model.req.AttendanceReq;
 import com.slt.peotv.lmsmangmentservice.model.req.HolidayReq;
+import com.slt.peotv.lmsmangmentservice.model.req.MovementReq;
 import com.slt.peotv.lmsmangmentservice.repository.NoPayReasonRepo;
 import com.slt.peotv.lmsmangmentservice.repository.EmployeeRepo;
 import com.slt.peotv.lmsmangmentservice.repository.InOutRepo;
@@ -47,23 +48,52 @@ public class LMSMapper {
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
 
+    public MovementsEntity mapToEntity(MovementReq movementReq, EmployeeEntity employee, String movementId) {
+        if (movementReq == null) {
+            return null;
+        }
+
+        MovementsEntity movement = MovementsEntity.create(
+                movementId,
+                employee,
+                helper.removeTimeFromDate(movementReq.getHappenDate()),
+                movementReq.getMovementType()
+        );
+
+        movement.setReqDate(new Date());
+        movement.setRequestStatus(RequestStatus.PENDING_APPROVAL);
+        movement.setUpdateDate(new Date());
+        movement.setComment(movementReq.getComment());
+        movement.setDestination(movementReq.getDestination());
+        movement.setCategory(movementReq.getCategory());
+        movement.setLogTime(movementReq.getLogTime() == null ? new Date() : movementReq.getLogTime());
+        movement.setInTime(movementReq.getInTime());
+        movement.setOutTime(movementReq.getOutTime());
+        movement.setInTimeRaw(movementReq.getInTimeRaw());
+        movement.setOutTimeRaw(movementReq.getOutTimeRaw());
+        movement.setHappenDateRaw(movementReq.getHappenDateRaw());
+
+        return movement;
+    }
+
     public AccessLogRest toRest(AccessLogEntity accessLog) {
         if (accessLog == null) return null;
 
-        return AccessLogRest.builder()
-                .employeeId(accessLog.getEmployeeId())
-                .logDate(accessLog.getLogDate())
-                .logTime(accessLog.getLogTime())
-                .terminalId(accessLog.getTerminalId())
-                .inOut(accessLog.getInOut())
-                .readStatus(accessLog.getReadStatus())
-                .processed(accessLog.getProcessed())
-                .etlRunTime(accessLog.getEtlRunTime())
-                .isManual(accessLog.getIsManual())
-                .createdDate(accessLog.getCreatedDate())
-                .updatedDate(accessLog.getUpdatedDate())
-                .isActive(accessLog.getIsActive())
-                .build();
+        AccessLogRest accessLogRest = new AccessLogRest();
+        accessLogRest.setEmployeeId(accessLog.getEmployeeId());
+        accessLogRest.setLogDate(accessLog.getLogDate());
+        accessLogRest.setLogTime(accessLog.getLogTime());
+        accessLogRest.setTerminalId(accessLog.getTerminalId());
+        accessLogRest.setInOut(accessLog.getInOut());
+        accessLogRest.setReadStatus(accessLog.getReadStatus());
+        accessLogRest.setProcessed(accessLog.getProcessed());
+        accessLogRest.setEtlRunTime(accessLog.getEtlRunTime());
+        accessLogRest.setIsManual(accessLog.getManual());
+        accessLogRest.setCreatedDate(accessLog.getCreatedDate());
+        accessLogRest.setUpdatedDate(accessLog.getUpdatedDate());
+        accessLogRest.setIsActive(accessLog.getActive());
+
+        return accessLogRest;
     }
 
     public AccessLogDTO accessLogToDTO(AccessLogEntity accessLogEntity) {
@@ -77,10 +107,10 @@ public class LMSMapper {
         accessLogDTO.setReadStatus(accessLogEntity.getReadStatus());
         accessLogDTO.setProcessed(accessLogEntity.getProcessed());
         accessLogDTO.setEtlRunTime(accessLogEntity.getEtlRunTime());
-        accessLogDTO.setIsManual(accessLogEntity.getIsManual());
+        accessLogDTO.setIsManual(accessLogEntity.getManual());
         accessLogDTO.setCreatedDate(accessLogEntity.getCreatedDate());
         accessLogDTO.setUpdatedDate(accessLogEntity.getUpdatedDate());
-        accessLogDTO.setIsActive(accessLogEntity.getIsActive());
+        accessLogDTO.setIsActive(accessLogEntity.getActive());
         return accessLogDTO;
     }
 
@@ -94,11 +124,11 @@ public class LMSMapper {
         inOutDTO.setInOutType(inOutEntity.getInOutType());
         inOutDTO.setTerminalID(inOutEntity.getTerminalId());
         inOutDTO.setInOutValue(inOutEntity.getInOutValue());
-        inOutDTO.setIsManual(inOutEntity.getIsManual());
+        inOutDTO.setIsManual(inOutEntity.getManual());
         inOutDTO.setEtlRunTime(inOutEntity.getEtlRunTime());
         inOutDTO.setCreatedDate(inOutEntity.getCreatedDate());
         inOutDTO.setUpdatedDate(inOutEntity.getUpdatedDate());
-        inOutDTO.setIsActive(inOutEntity.getIsActive());
+        inOutDTO.setIsActive(inOutEntity.getActive());
 
         if (inOutEntity.getAccessLog() != null) {
             inOutDTO.setAccessLog(accessLogToDTO(inOutEntity.getAccessLog()));
@@ -135,15 +165,15 @@ public class LMSMapper {
         dto.setResolve(entity.getResolve());
         dto.setRosterType(entity.getRosterType());
 
-        dto.setIsLate(entity.getIsLate());
-        dto.setIsLateCovered(entity.getIsLateCovered());
-        dto.setIsUnauthorized(entity.getIsUnauthorized());
-        dto.setIsUnSuccessful(entity.getIsUnSuccessful());
-        dto.setIsHoliday(entity.getIsHoliday());
-        dto.setIsResolved(entity.getIsResolved());
+        dto.setIsLate(entity.getLate());
+        dto.setIsLateCovered(entity.getLateCovered());
+        dto.setIsUnauthorized(entity.getUnauthorized());
+        dto.setIsUnSuccessful(entity.getUnSuccessful());
+        dto.setIsHoliday(entity.getHoliday());
+        dto.setIsResolved(entity.getResolved());
         dto.setHasIssues(entity.getHasIssues());
-        dto.setIsManual(entity.getIsManual());
-        dto.setIsActive(entity.getIsActive());
+        dto.setIsManual(entity.getManual());
+        dto.setIsActive(entity.getActive());
 
         dto.setIssueDescription(entity.getIssueDescription());
         dto.setDueDateForUA(entity.getDueDateForUA());
@@ -153,7 +183,6 @@ public class LMSMapper {
 
         dto.setViaMovement(entity.getViaMovement());
         dto.setViaLeave(entity.getViaLeave());
-
 
         List<InOutDTO> inOutDTOS = inOutRepo.findAllByAttendance(entity)
                 .parallelStream()
@@ -323,6 +352,7 @@ public class LMSMapper {
 
         return dto;
     }
+
     public AttendanceEntity toAttendanceEntity(AttendanceReq req) {
         if (req == null) throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
@@ -335,8 +365,9 @@ public class LMSMapper {
             throw new IllegalArgumentException("Date is required for AttendanceEntity");
         }
 
+        // Create using constructor instead of builder
         AttendanceEntity entity = new AttendanceEntity();
-        entity.setIsManual(true);
+        entity.setManual(true);
         entity.setEmployee(employeeEntity);
         entity.setPublicId(utils.generateId(10));
         entity.setEtlRunTime(new Date());
@@ -375,12 +406,12 @@ public class LMSMapper {
             entity.setResolve(ResolveType.VIA_LEAVE);
         }
 
-        entity.setIsLate(Boolean.TRUE.equals(req.getIsLate()));
-        entity.setIsLateCovered(Boolean.TRUE.equals(req.getLateCover()));
-        entity.setIsUnauthorized(Boolean.TRUE.equals(req.getIsUnAuthorized()));
-        entity.setIsUnSuccessful(Boolean.TRUE.equals(req.getIsUnSuccessful()));
+        entity.setLate(Boolean.TRUE.equals(req.getLate()));
+        entity.setLateCovered(Boolean.TRUE.equals(req.getLateCover()));
+        entity.setUnauthorized(Boolean.TRUE.equals(req.getIsUnAuthorized()));
+        entity.setUnSuccessful(Boolean.TRUE.equals(req.getUnSuccessful()));
         entity.setHasIssues(Boolean.TRUE.equals(req.getIssues()));
-        entity.setIsActive(Boolean.TRUE.equals(req.getActive()));
+        entity.setActive(Boolean.TRUE.equals(req.getActive()));
 
         return entity;
     }
@@ -423,27 +454,26 @@ public class LMSMapper {
         else entity.setLeaveStatus(null);
 
         if(req.getPayStatus() != null) entity.setPayStatus(req.getPayStatus());
-        
+
         if(req.getResolve() != null) entity.setResolve(req.getResolve());
         else entity.setResolve(null);
 
         if(req.getAttendanceType() != null) entity.setAttendanceType(req.getAttendanceType());
-
 
         if (req.getViaMovement() != null && Boolean.TRUE.equals(req.getViaMovement())) {
             entity.setResolve(ResolveType.VIA_MOVEMENT);
         } else if (req.getViaLeave() != null && Boolean.TRUE.equals(req.getViaLeave())) {
             entity.setResolve(ResolveType.VIA_LEAVE);
         }
-        entity.setIsLate(req.getIsLate());
-        entity.setIsLateCovered(req.getLateCover());
-        entity.setIsUnauthorized(req.getIsUnAuthorized());
-        entity.setIsUnSuccessful(req.getIsUnSuccessful());
+        entity.setLate(req.getLate());
+        entity.setLateCovered(req.getLateCover());
+        entity.setUnauthorized(req.getIsUnAuthorized());
+        entity.setUnSuccessful(req.getUnSuccessful());
         entity.setHasIssues(req.getIssues());
-        entity.setIsActive(req.getActive());
-        entity.setIsHoliday(req.getIsHoliday());
-        entity.setIsResolved(req.getIsResolved());
-        entity.setIsManual(req.getIsManual());
+        entity.setActive(req.getActive());
+        entity.setHoliday(req.getHoliday());
+        entity.setResolved(req.getResolved());
+        entity.setManual(req.getManual());
 
         entity.setUpdatedDate(new Date());
     }
@@ -461,16 +491,22 @@ public class LMSMapper {
     }
 
     public AccessLogEntity toAccessLogEntity(AccessLogReq req) {
-        if (req == null) throw new IllegalArgumentException("InOutReq cannot be null");
+        if (req == null) throw new IllegalArgumentException("AccessLogReq cannot be null");
 
+        // Replace builder with constructor
         AccessLogEntity entity = new AccessLogEntity();
-        req.setEmployeeID(req.getEmployeeID());
-        req.setLogDate(req.getLogDate());
-        req.setLogTime(req.getLogTime());
-        req.setTerminalID(req.getTerminalID());
-        req.setInOut(req.getInOut());
-        req.setReadStatus(req.getReadStatus());
-        req.setProcessed(req.getProcessed());
+        entity.setEmployeeId(req.getEmployeeID());
+        entity.setLogDate(req.getLogDate());
+        entity.setLogTime(req.getLogTime());
+        entity.setTerminalId(req.getTerminalID());
+        entity.setInOut(req.getInOut());
+        entity.setReadStatus(req.getReadStatus());
+        entity.setProcessed(req.getProcessed());
+        entity.setEtlRunTime(new Date());
+        entity.setManual(false);
+        entity.setCreatedDate(new Date());
+        entity.setActive(true);
+
         return entity;
     }
 

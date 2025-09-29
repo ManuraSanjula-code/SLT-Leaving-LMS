@@ -190,9 +190,9 @@ public class Utils {
                 attendance.setAttendanceType(AttendanceType.ABSENT);
                 attendance.setDueDateForUA(helper.getDueDate());
                 attendance.setHasIssues(true);
-                attendance.setIsUnauthorized(false);
-                attendance.setIsUnSuccessful(false);
-                attendance.setIsLate(false);
+                attendance.setUnauthorized(false);
+                attendance.setUnSuccessful(false);
+                attendance.setLate(false);
                 attendance.setLeaveStatus(null);
                 attendance.setIssueDescription("ABSENT - NO SYSTEM RECORDS FOUND. PLEASE RESOLVE BEFORE DUE DATE.");
                 logger.info("Employee {} marked as ABSENT", employeeId);
@@ -202,9 +202,9 @@ public class Utils {
             if (Boolean.TRUE.equals(unAuthorized)) {
                 // Unauthorized means missing IN or OUT punch or sequence error
                 attendance.setDueDateForUA(helper.getDueDate());
-                attendance.setIsUnauthorized(true);
+                attendance.setUnauthorized(true);
                 attendance.setHasIssues(true);
-                attendance.setIsUnSuccessful(false);
+                attendance.setUnSuccessful(false);
 
                 if (Boolean.TRUE.equals(swap)) {
                     attendance.setIssueDescription("UNAUTHORIZED - WRONG PUNCH SEQUENCE (OUT BEFORE IN). RESOLVE BEFORE DUE DATE.");
@@ -223,7 +223,7 @@ public class Utils {
             if (inPunch == null || inPunch.getPunchTypeTime() == null) {
                 logger.warn("No valid IN punch for employee: {}", employeeId);
                 // Treat as unauthorized if not explicitly handled above
-                attendance.setIsUnauthorized(true);
+                attendance.setUnauthorized(true);
                 attendance.setHasIssues(true);
                 attendance.setDueDateForUA(helper.getDueDate());
                 attendance.setIssueDescription("MISSING OR INVALID IN PUNCH DATA");
@@ -258,7 +258,7 @@ public class Utils {
                 // Explicitly marked as half day
                 attendance.setAttendanceType(AttendanceType.HALF_DAY);
                 attendance.setLeaveStatus(null);
-                attendance.setIsLate(arrivalTime.isAfter(standardArrival));
+                attendance.setLate(arrivalTime.isAfter(standardArrival));
 
                 if (hasValidOutPunch && workHours >= 4) {
                     attendance.setHasIssues(false);
@@ -267,18 +267,18 @@ public class Utils {
                 } else if (hasValidOutPunch) {
                     attendance.setHasIssues(true);
                     attendance.setIssueDescription(String.format("HALF DAY BUT INSUFFICIENT HOURS (%d) - VERIFY ATTENDANCE", workHours));
-                    attendance.setIsUnauthorized(true);
+                    attendance.setUnauthorized(true);
                 } else {
                     attendance.setHasIssues(true);
                     attendance.setIssueDescription("HALF DAY APPROVED BUT NO OUT PUNCH - VERIFY ATTENDANCE");
-                    attendance.setIsUnauthorized(true);
+                    attendance.setUnauthorized(true);
                     attendance.setDueDateForUA(helper.getDueDate());
                 }
 
             } else if (Boolean.TRUE.equals(fullday)) {
                 // Explicitly marked as full day
                 attendance.setAttendanceType(AttendanceType.FULL_DAY);
-                attendance.setIsLate(arrivalTime.isAfter(standardArrival));
+                attendance.setLate(arrivalTime.isAfter(standardArrival));
 
                 if (hasValidOutPunch && workHours >= 8) {
                     // Full day with adequate hours
@@ -295,19 +295,19 @@ public class Utils {
                     attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                     attendance.setHasIssues(true);
                     attendance.setIssueDescription(String.format("FULL DAY BUT ONLY WORKED %d HOURS - SHORT LEAVE APPLIED", workHours));
-                    attendance.setIsUnauthorized(true);
+                    attendance.setUnauthorized(true);
                 } else if (hasValidOutPunch) {
                     // Full day but very short hours
                     attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
                     attendance.setHasIssues(true);
                     attendance.setIssueDescription(String.format("FULL DAY MARKED BUT ONLY WORKED %d HOURS - FULL LEAVE", workHours));
-                    attendance.setIsUnauthorized(true);
+                    attendance.setUnauthorized(true);
                 } else {
                     // Full day but no out punch
                     attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                     attendance.setHasIssues(true);
                     attendance.setIssueDescription("FULL DAY MARKED BUT NO OUT PUNCH - VERIFY DEPARTURE TIME");
-                    attendance.setIsUnauthorized(true);
+                    attendance.setUnauthorized(true);
                 }
 
             } else {
@@ -316,8 +316,8 @@ public class Utils {
                 if (!hasValidOutPunch) {
                     // Only IN punch, no OUT punch - Unauthorized
                     attendance.setHasIssues(true);
-                    attendance.setIsUnauthorized(true);
-                    attendance.setIsLate(arrivalTime.isAfter(standardArrival));
+                    attendance.setUnauthorized(true);
+                    attendance.setLate(arrivalTime.isAfter(standardArrival));
                     attendance.setDueDateForUA(helper.getDueDate());
                     attendance.setIssueDescription(String.format("MISSING OUT PUNCH - ARRIVED AT %s BUT NO DEPARTURE RECORD", arrivalTime.toString()));
 
@@ -335,9 +335,9 @@ public class Utils {
                             attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
                             attendance.setIssueDescription(String.format("CRITICAL LATE ARRIVAL (%s) - INSUFFICIENT COMPENSATION", arrivalTime.toString()));
                             attendance.setHasIssues(true);
-                            attendance.setIsUnauthorized(true);
+                            attendance.setUnauthorized(true);
                         }
-                        attendance.setIsLate(true);
+                        attendance.setLate(true);
 
                     } else if (arrivalTime.isAfter(veryLateThreshold)) {
                         // Very late arrival (after noon)
@@ -351,9 +351,9 @@ public class Utils {
                             attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                             attendance.setIssueDescription(String.format("VERY LATE ARRIVAL - INSUFFICIENT HOURS (%d)", workHours));
                             attendance.setHasIssues(true);
-                            attendance.setIsUnauthorized(true);
+                            attendance.setUnauthorized(true);
                         }
-                        attendance.setIsLate(true);
+                        attendance.setLate(true);
 
                     } else if (arrivalTime.isAfter(lateThreshold)) {
                         // Moderate late arrival (after 9.00 AM)
@@ -366,7 +366,7 @@ public class Utils {
                             attendance.setIssueDescription(String.format("MODERATE LATE ARRIVAL - INSUFFICIENT COMPENSATION", workHours));
                             attendance.setHasIssues(true);
                         }
-                        attendance.setIsLate(true);
+                        attendance.setLate(true);
 
                     } else if (arrivalTime.isAfter(standardArrival)) {
                         // Minor late arrival (after 8:30 AM)
@@ -380,22 +380,22 @@ public class Utils {
                                 attendance.setIssueDescription("LATE ARRIVAL FULLY COMPENSATED WITH OVERTIME");
                                 attendance.setHasIssues(false);
                                 attendance.setDueDateForUA(null);
-                                attendance.setIsLateCovered(true);
+                                attendance.setLateCovered(true);
 
                             } else {
                                 attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                                 attendance.setIssueDescription("LATE ARRIVAL PARTIALLY COMPENSATED");
                                 attendance.setHasIssues(true);
-                                attendance.setIsUnSuccessful(true);
+                                attendance.setUnSuccessful(true);
                             }
                         } else {
                             attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                             attendance.setIssueDescription("LATE ARRIVAL WITHOUT COMPENSATION");
                             attendance.setHasIssues(true);
                             attendance.setDueDateForUA(helper.getDueDate());
-                            attendance.setIsUnauthorized(true);
+                            attendance.setUnauthorized(true);
                         }
-                        attendance.setIsLate(true);
+                        attendance.setLate(true);
 
                     } else {
                         // On-time or early arrival
@@ -404,7 +404,7 @@ public class Utils {
                             attendance.setAttendanceType(AttendanceType.FULL_DAY);
                             attendance.setLeaveStatus(null);
                             attendance.setHasIssues(false);
-                            attendance.setIsLate(false);
+                            attendance.setLate(false);
                             attendance.setDueDateForUA(null);
                             attendance.setIssueDescription(null);
                         } else if (workHours >= 6) {
@@ -412,21 +412,21 @@ public class Utils {
                             attendance.setLeaveStatus(LeaveStatus.SHORT_LEAVE);
                             attendance.setIssueDescription(String.format("EARLY DEPARTURE BUT WORKED %d HOURS", workHours));
                             attendance.setHasIssues(true);
-                            attendance.setIsLate(false);
+                            attendance.setLate(false);
                         } else if (workHours >= 4) {
                             // Half day scenario
                             attendance.setAttendanceType(AttendanceType.HALF_DAY);
                             attendance.setLeaveStatus(null);
                             attendance.setIssueDescription(String.format("HALF DAY - WORKED %d HOURS", workHours));
                             attendance.setHasIssues(false);
-                            attendance.setIsLate(false);
+                            attendance.setLate(false);
                         } else {
                             // Very early departure
                             attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);
                             attendance.setIssueDescription(String.format("VERY EARLY DEPARTURE - ONLY WORKED %d HOURS", workHours));
                             attendance.setHasIssues(true);
-                            attendance.setIsLate(false);
-                            attendance.setIsUnauthorized(true);
+                            attendance.setLate(false);
+                            attendance.setUnauthorized(true);
                             attendance.setDueDateForUA(helper.getDueDate());
                         }
                     }
@@ -435,7 +435,7 @@ public class Utils {
 
             // Apply unsuccessful flag if explicitly set
             if (Boolean.TRUE.equals(unSuccessful)) {
-                attendance.setIsUnSuccessful(true);
+                attendance.setUnSuccessful(true);
                 attendance.setHasIssues(true);
                 if (attendance.getIssueDescription() == null || attendance.getIssueDescription().isEmpty()) {
                     attendance.setIssueDescription("MARKED AS UNSUCCESSFUL DUE TO ATTENDANCE ISSUES");
@@ -445,19 +445,19 @@ public class Utils {
             }
 
             // Set default values for unset fields
-            if (attendance.getIsUnauthorized() == null) {
-                attendance.setIsUnauthorized(false);
+            if (attendance.getUnauthorized() == null) {
+                attendance.setUnauthorized(false);
             }
-            if (attendance.getIsUnSuccessful() == null) {
-                attendance.setIsUnSuccessful(attendance.getHasIssues() != null ? attendance.getHasIssues() : false);
+            if (attendance.getUnSuccessful() == null) {
+                attendance.setUnSuccessful(attendance.getHasIssues() != null ? attendance.getHasIssues() : false);
             }
-            if (attendance.getIsLate() == null) {
-                attendance.setIsLate(false);
+            if (attendance.getLate() == null) {
+                attendance.setLate(false);
             }
 
             logger.info("Employee {}: Final attendance - Type: {}, Leave: {}, Late: {}, Issues: {}, Unauthorized: {}, Description: {}",
                     employeeId, attendance.getAttendanceType(), attendance.getLeaveStatus(),
-                    attendance.getIsLate(), attendance.getHasIssues(), attendance.getIsUnauthorized(),
+                    attendance.getLate(), attendance.getHasIssues(), attendance.getUnauthorized(),
                     attendance.getIssueDescription());
 
         } catch (Exception e) {
@@ -465,7 +465,7 @@ public class Utils {
             // Set safe defaults in case of error
             attendance.setHasIssues(true);
             attendance.setIssueDescription("ERROR IN ATTENDANCE PROCESSING: " + e.getMessage());
-            attendance.setIsUnauthorized(true);
+            attendance.setUnauthorized(true);
             attendance.setDueDateForUA(helper.getDueDate());
             attendance.setAttendanceType(AttendanceType.NONE);
             attendance.setLeaveStatus(LeaveStatus.FULL_LEAVE);

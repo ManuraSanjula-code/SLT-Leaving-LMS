@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.nimbusds.jose.EncryptionMethod;
@@ -24,14 +25,12 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class TokenCreator {
-    private final JwtConfiguration jwtConfiguration;
 
-    
+    @Autowired
+    private JwtConfiguration jwtConfiguration;
+
     public SignedJWT createSignedJWT(String email) throws NoSuchAlgorithmException, JOSEException {
         JWTClaimsSet jwtClaimSet = createJWTClaimSet(email);
         KeyPair rsaKeys = generateKeyPair();

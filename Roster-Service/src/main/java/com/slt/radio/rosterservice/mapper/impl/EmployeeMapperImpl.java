@@ -1,8 +1,8 @@
 package com.slt.radio.rosterservice.mapper.impl;
 
 import com.slt.radio.rosterservice.mapper.EmployeeMapper;
-import com.slt.radio.rosterservice.model.one.dto.EmployeeDto;
-import com.slt.radio.rosterservice.model.one.employeee.Employee;
+import com.slt.radio.rosterservice.models.dto.EmployeeDto;
+import com.slt.radio.rosterservice.documents.one.employeee.Employee;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;

@@ -24,7 +24,6 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -217,8 +216,8 @@ public class AccessLogServiceImpl implements AccessLogService {
     @Retryable(value = {DataAccessException.class},
             maxAttempts = MAX_RETRY_ATTEMPTS,
             backoff = @Backoff(delay = 1000))
-    protected void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout,
-                                   String terminalId, AccessLogEntity log, boolean swap) {
+    public void saveInOutRecord(String logDate, Time punchTime, String employeeID, String inout,
+                                String terminalId, AccessLogEntity log, boolean swap) {
         if (StringUtils.isBlank(employeeID) || StringUtils.isBlank(inout) || StringUtils.isBlank(terminalId)) {
             errorLogger.error("Missing required fields for employee {}. EmployeeID: {}, Inout: {}, Terminal: {}",
                     employeeID, employeeID, inout, terminalId);

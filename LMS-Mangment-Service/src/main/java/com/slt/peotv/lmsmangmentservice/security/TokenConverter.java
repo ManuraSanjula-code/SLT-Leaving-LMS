@@ -10,29 +10,27 @@ import com.nimbusds.jwt.SignedJWT;
 import com.slt.peotv.lmsmangmentservice.feign_client.UserClient;
 import com.slt.peotv.lmsmangmentservice.feign_client.model.UserRest;
 import io.github.resilience4j.retry.annotation.Retry;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.retry.annotation.Backoff;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class TokenConverter {
 
-    private final JwtConfiguration jwtConfiguration;
-    private final UserClient userClient;
+    @Autowired
+    private JwtConfiguration jwtConfiguration;
+    @Autowired
+    private UserClient userClient;
 
     private final Object tokenDecryptionLock = new Object();
     private final Object tokenValidationLock = new Object();

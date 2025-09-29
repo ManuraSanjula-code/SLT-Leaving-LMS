@@ -1,14 +1,25 @@
 package com.slt.peotv.lmsmangmentservice.model.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+
 import java.util.List;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class UserLeaveDetailsDTO {
     private String employeeId;
     private List<LeaveDetailDTO> leaveDetails;
+
+    public String getEmployeeId() {
+        return employeeId;
+    }
+
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+    }
+
+    public List<LeaveDetailDTO> getLeaveDetails() {
+        return leaveDetails;
+    }
+
+    public void setLeaveDetails(List<LeaveDetailDTO> leaveDetails) {
+        this.leaveDetails = leaveDetails;
+    }
 }

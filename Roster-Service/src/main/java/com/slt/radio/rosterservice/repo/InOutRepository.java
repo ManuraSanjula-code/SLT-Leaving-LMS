@@ -1,10 +1,10 @@
 package com.slt.radio.rosterservice.repo;
 
-import com.slt.radio.rosterservice.model.one.lms.InOut;
+import com.slt.radio.rosterservice.documents.one.lms.InOut;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query; 
 import org.springframework.stereotype.Repository;
-import com.slt.radio.rosterservice.model.enums.InOutType;
+import com.slt.radio.rosterservice.documents.enums.InOutType;
 
 import java.time.LocalTime;
 import java.util.Date;

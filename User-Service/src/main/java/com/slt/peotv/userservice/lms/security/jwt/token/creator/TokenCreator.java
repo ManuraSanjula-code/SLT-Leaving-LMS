@@ -36,148 +36,198 @@ import com.slt.peotv.userservice.lms.security.SecurityConstants;
 import com.slt.peotv.userservice.lms.security.UserPrincipal;
 import com.slt.peotv.userservice.lms.security.jwt.property.JwtConfiguration;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class TokenCreator {
-    private final JwtConfiguration jwtConfiguration;
+    @Autowired
+    private JwtConfiguration jwtConfiguration;
+
 
     public SignedJWT createSignedJWT(Authentication auth) throws NoSuchAlgorithmException, JOSEException {
-
         UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
         JWTClaimsSet jwtClaimSet = createJWTClaimSet_(auth, applicationUser);
-        KeyPair rsaKeys = generateKeyPair();
-        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
-        SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
-        RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
-        signedJWT.sign(signer);
-        return signedJWT;
-
+        return createAndSignJWT(jwtClaimSet);
     }
+
 
     public SignedJWT createSignedJWTForTemp(Authentication auth, TempUser tempUser) throws NoSuchAlgorithmException, JOSEException {
-
         UserPrincipal applicationUser = (UserPrincipal) auth.getPrincipal();
         JWTClaimsSet jwtClaimSet = createJWTClaimSetForTemp(auth, applicationUser, tempUser);
-        KeyPair rsaKeys = generateKeyPair();
-        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
-        SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
-        RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
-        signedJWT.sign(signer);
-        return signedJWT;
-
+        return createAndSignJWT(jwtClaimSet);
     }
-    
+
+
     public SignedJWT createSignedJWTForLMS(String email) throws NoSuchAlgorithmException, JOSEException {
         JWTClaimsSet jwtClaimSet = createJWTClaimSetForLMS(email);
-        KeyPair rsaKeys = generateKeyPair();
-        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
-        SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
-        RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
-        signedJWT.sign(signer);
-        return signedJWT;
-
+        return createAndSignJWT(jwtClaimSet);
     }
+
 
     public SignedJWT createSignedJWT(String email) throws NoSuchAlgorithmException, JOSEException {
         JWTClaimsSet jwtClaimSet = createJWTClaimSet(email);
+        return createAndSignJWT(jwtClaimSet);
+    }
+
+
+    private SignedJWT createAndSignJWT(JWTClaimsSet jwtClaimSet) throws NoSuchAlgorithmException, JOSEException {
         KeyPair rsaKeys = generateKeyPair();
-        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic()).keyID(UUID.randomUUID().toString()).build();
+        JWK jwk = new RSAKey.Builder((RSAPublicKey) rsaKeys.getPublic())
+                .keyID(UUID.randomUUID().toString())
+                .build();
+
         SignedJWT signedJWT = new SignedJWT(
-                new JWSHeader.Builder(JWSAlgorithm.RS256).jwk(jwk).type(JOSEObjectType.JWT).build(), jwtClaimSet);
+                new JWSHeader.Builder(JWSAlgorithm.RS256)
+                        .jwk(jwk)
+                        .type(JOSEObjectType.JWT)
+                        .build(),
+                jwtClaimSet);
+
         RSASSASigner signer = new RSASSASigner(rsaKeys.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
-
     }
+
 
     private JWTClaimsSet createJWTClaimSet(String email) {
-        return new JWTClaimsSet.Builder().subject(email)
-                .issuer("SLT PEO TV").issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME)).build();
+        return new JWTClaimsSet.Builder()
+                .subject(email)
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME))
+                .build();
     }
-    
+
+
     private JWTClaimsSet createJWTClaimSetForLMS(String email) {
-        return new JWTClaimsSet.Builder().subject(email + " " + "LMS")
-                .issuer("SLT PEO TV").issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME)).build();
+        return new JWTClaimsSet.Builder()
+                .subject(email + " LMS")
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.PASSWORD_RESET_EXPIRATION_TIME))
+                .build();
     }
+
 
     private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser) {
-
-            return new JWTClaimsSet.Builder().subject(applicationUser.getUserId())
-                    .claim("authorities",
-                        auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
-                .issuer("SLT PEO TV").issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME)).build();
+        return new JWTClaimsSet.Builder()
+                .subject(applicationUser.getUserId())
+                .claim("authorities", auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(toList()))
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
+                .build();
     }
-    private JWTClaimsSet createJWTClaimSet_(Authentication auth, UserPrincipal applicationUser) {
 
+
+    private JWTClaimsSet createJWTClaimSet_(Authentication auth, UserPrincipal applicationUser) {
         JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
                 .subject(applicationUser.getUserId())
                 .claim("authorities", auth.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()))
-                .claim("highestPriority", applicationUser.getHighestRolePriority())
-                .claim("authorityWeights", applicationUser.getAuthorityWeights())
                 .issuer("SLT PEO TV")
                 .issueTime(new Date())
                 .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME));
 
+        // Add additional claims if available
+        if (applicationUser.getHighestRolePriority() != null) {
+            builder.claim("highestPriority", applicationUser.getHighestRolePriority());
+        }
+
+        if (applicationUser.getAuthorityWeights() != null) {
+            builder.claim("authorityWeights", applicationUser.getAuthorityWeights());
+        }
+
         return builder.build();
     }
 
+
     private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
-        return new JWTClaimsSet.Builder().subject(applicationUser.getUserId() + " " + "TEMP")
-                .claim("authorities",
-                        auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
-                .issuer("SLT PEO TV").issueTime(new Date())
-                .expirationTime(tempUser.getExpireTime()).build();
+        JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                .subject(applicationUser.getUserId() + " TEMP")
+                .claim("authorities", auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(toList()))
+                .issuer("SLT PEO TV")
+                .issueTime(new Date());
+
+        // Use the correct method name from TempUser entity
+        Date expirationTime;
+        if (tempUser.getExpireTime() != null) {
+            expirationTime = tempUser.getExpireTime();
+        } else {
+            // Fallback to standard expiration time if expireTime is null
+            expirationTime = new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME);
+        }
+
+        builder.expirationTime(expirationTime);
+        return builder.build();
     }
 
     private JWTClaimsSet createJWTClaimSetForTemp(Authentication auth, UserPrincipal applicationUser, TempUser tempUser) {
         JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
-                .subject(applicationUser.getUserId() + " " + "TEMP")
-                .claim("authorities",
-                        auth.getAuthorities().stream()
-                                .map(GrantedAuthority::getAuthority)
-                                .collect(Collectors.toList()))
+                .subject(applicationUser.getUserId() + " TEMP")
+                .claim("authorities", auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList()))
                 .issuer("SLT PEO TV")
-                .issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME));
+                .issueTime(new Date());
 
-        applicationUser.getClaims().forEach(builder::claim);
+        // Handle expiration time safely using the correct method name
+        Date expirationTime;
+        if (tempUser.getExpireTime() != null) {
+            expirationTime = tempUser.getExpireTime();
+        } else {
+            expirationTime = new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME);
+        }
+
+        builder.expirationTime(expirationTime);
+
+        // Add additional claims from UserPrincipal if available
+        if (applicationUser.getClaims() != null) {
+            applicationUser.getClaims().forEach(builder::claim);
+        }
 
         return builder.build();
     }
-    private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, List<String> roles) {
 
-        return new JWTClaimsSet.Builder().subject(applicationUser.getUsername())
-                .claim("authorities",
-                        auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(toList()))
-                .issuer("SLT PEO TV").issueTime(new Date())
-                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME)).build();
+
+    private JWTClaimsSet createJWTClaimSet(Authentication auth, UserPrincipal applicationUser, List<String> roles) {
+        return new JWTClaimsSet.Builder()
+                .subject(applicationUser.getUsername())
+                .claim("authorities", auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(toList()))
+                .claim("customRoles", roles)
+                .issuer("SLT PEO TV")
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
+                .build();
     }
+
 
     private KeyPair generateKeyPair() throws NoSuchAlgorithmException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-
         generator.initialize(2048);
         return generator.genKeyPair();
     }
 
+
     public String encryptToken(SignedJWT signedJWT) throws JOSEException {
-        DirectEncrypter directEncrypter = new DirectEncrypter(jwtConfiguration.getPrivateKey().getBytes());
+        try {
+            DirectEncrypter directEncrypter = new DirectEncrypter(jwtConfiguration.getPrivateKey().getBytes());
 
-        JWEObject jweObject = new JWEObject(
-                new JWEHeader.Builder(JWEAlgorithm.DIR, EncryptionMethod.A128CBC_HS256).contentType("JWT").build(),
-                new Payload(signedJWT));
-        jweObject.encrypt(directEncrypter);
+            JWEObject jweObject = new JWEObject(
+                    new JWEHeader.Builder(JWEAlgorithm.DIR, EncryptionMethod.A128CBC_HS256)
+                            .contentType("JWT")
+                            .build(),
+                    new Payload(signedJWT));
 
-        return jweObject.serialize();
+            jweObject.encrypt(directEncrypter);
+            return jweObject.serialize();
+        } catch (Exception e) {
+            throw new JOSEException("Failed to encrypt token", e);
+        }
     }
 }

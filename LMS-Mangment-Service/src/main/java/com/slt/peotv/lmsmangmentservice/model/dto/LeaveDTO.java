@@ -3,7 +3,7 @@ package com.slt.peotv.lmsmangmentservice.model.dto;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.ComponentBehavior;
 import com.slt.peotv.lmsmangmentservice.entity.Enum.RequestStatus;
 import com.slt.peotv.lmsmangmentservice.entity.Leave.types.LeaveTypeEntity;
-import jakarta.persistence.Transient;
+import javax.persistence.Transient;
 
 import java.util.Date;
 import java.util.List;
