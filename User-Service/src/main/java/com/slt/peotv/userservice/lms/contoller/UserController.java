@@ -17,6 +17,7 @@ import com.slt.peotv.userservice.lms.shared.dto.*;
 import com.slt.peotv.userservice.lms.shared.model.request.*;
 import com.slt.peotv.userservice.lms.shared.model.response.*;
 import com.slt.peotv.userservice.lms.utils.UpdateUtils;
+import com.slt.peotv.userservice.lms.utils.UserMapper;
 import com.slt.peotv.userservice.lms.utils.UserReqDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,14 +36,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.slt.peotv.userservice.lms.entity.company.ProfilesEntity;
-import com.slt.peotv.userservice.lms.entity.company.SectionEntity;
-import com.slt.peotv.userservice.lms.entity.RoleEntity;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/users")
@@ -429,223 +426,6 @@ public class UserController {
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
-        }
-    }
-
-    public class UserMapper {
-        
-        public static UserRest mapToUserRest(UserEntity userEntity) {
-            if (userEntity == null) {
-                return null;
-            }
-
-            UserRest userRest = new UserRest();
-            userRest.setUserId(userEntity.getUserId());
-            userRest.setEmployeeId(userEntity.getEmployeeId());
-            userRest.setSltId(userEntity.getSltId());
-            userRest.setFirstName(userEntity.getFirstName());
-            userRest.setLastName(userEntity.getLastName());
-            userRest.setEmail(userEntity.getEmail());
-            userRest.setProfilePic(userEntity.getProfilePic());
-            userRest.setGender(userEntity.getGender());
-            userRest.setPhone(userEntity.getPhone());
-            userRest.setIsSltEmp(userEntity.getIsSltEmp());
-            userRest.setIsSltIntern(userEntity.getIsSltIntern());
-            userRest.setActive(userEntity.getActive());
-            userRest.setJoiningDate(userEntity.getJoin_date());
-            userRest.setRoaster(userEntity.getRoaster());
-
-            if (userEntity.getAddresses() != null) {
-                userRest.setAddresses(userEntity.getAddresses().stream()
-                        .map(address -> {
-                            AddressesRest addressRest = new AddressesRest();
-                            addressRest.setAddressId(address.getAddressId());
-                            addressRest.setCity(address.getCity());
-                            addressRest.setCountry(address.getCountry());
-                            addressRest.setStreetName(address.getStreetName());
-                            addressRest.setPostalCode(address.getPostalCode());
-                            addressRest.setIsDefault(address.getIsDefault());
-                            return addressRest;
-                        })
-                        .collect(Collectors.toList()));
-            }
-
-            if (userEntity.getRoles() != null) {
-                userRest.setRoles(userEntity.getRoles().stream()
-                        .map(RoleEntity::getName)
-                        .collect(Collectors.toList()));
-            }
-
-            if (userEntity.getSections() != null) {
-                userRest.setSections(userEntity.getSections().stream()
-                        .map(SectionEntity::getSection)
-                        .collect(Collectors.toList()));
-            }
-
-            if (userEntity.getProfiles() != null) {
-                userRest.setProfiles(userEntity.getProfiles().stream()
-                        .map(ProfilesEntity::getName)
-                        .collect(Collectors.toList()));
-            }
-
-            return userRest;
-        }
-
-        public static UserDto mapToUserDto(UserDetailsRequestModel requestModel) {
-            UserDto userDto = new UserDto();
-
-            userDto.setUserId(requestModel.getUserId());
-            userDto.setFirstName(requestModel.getFirstName());
-            userDto.setLastName(requestModel.getLastName());
-            userDto.setEmail(requestModel.getEmail());
-            userDto.setPassword(requestModel.getPassword());
-            userDto.setProfilePic(requestModel.getProfilePic());
-            userDto.setIsSltEmp(requestModel.getIsSltEmp());
-            userDto.setIsSltIntern(requestModel.getIsSltIntern());
-            userDto.setActive(requestModel.getActive());
-            userDto.setPhone(requestModel.getPhone());
-            userDto.setGender(requestModel.getGender());
-            userDto.setRoles(requestModel.getRoles());
-            userDto.setSections(requestModel.getSections());
-            userDto.setProfiles(requestModel.getProfiles());
-
-            // Map AddressRequestModel list to AddressDTO list
-            List<AddressDTO> addressDTOs = requestModel.getAddresses().stream().map(UserMapper::mapToAddressDTO).collect(Collectors.toList());
-            userDto.setAddresses(addressDTOs);
-
-            return userDto;
-        }
-
-        private static AddressDTO mapToAddressDTO(AddressRequestModel addressRequestModel) {
-            AddressDTO addressDTO = new AddressDTO();
-            addressDTO.setCity(addressRequestModel.getCity());
-            addressDTO.setCountry(addressRequestModel.getCountry());
-            addressDTO.setStreetName(addressRequestModel.getStreetName());
-            addressDTO.setPostalCode(addressRequestModel.getPostalCode());
-            addressDTO.setIsDefault(addressRequestModel.getIsDefault());
-            addressDTO.setAddressId(addressRequestModel.getAddressId());
-            return addressDTO;
-        }
-
-        public static UserRest mapUserDtoToUserRest(UserDto userDto) {
-            if (userDto == null) {
-                return null;
-            }
-
-            UserRest userRest = new UserRest();
-            userRest.setUserId(userDto.getUserId());
-            userRest.setFirstName(userDto.getFirstName());
-            userRest.setLastName(userDto.getLastName());
-            userRest.setEmail(userDto.getEmail());
-            userRest.setProfilePic(userDto.getProfilePic());
-            userRest.setRoles(userDto.getRoles());
-            userRest.setSections(userDto.getSections());
-            userRest.setProfiles(userDto.getProfiles());
-            userRest.setIsSltEmp(userDto.getIsSltEmp());
-            userRest.setIsSltIntern(userDto.getIsSltIntern());
-            userRest.setActive(userDto.getActive());
-            userRest.setPhone(userDto.getPhone());
-            userRest.setGender(userDto.getGender());
-
-            // Convert List<AddressDto> to List<AddressesRest>
-            if (userDto.getAddresses() != null) {
-                List<AddressesRest> addressesRestList = userDto.getAddresses().stream()
-                        .map(addressDto -> {
-                            AddressesRest addressesRest = new AddressesRest();
-                            addressesRest.setAddressId(addressDto.getAddressId());
-                            addressesRest.setCity(addressDto.getCity());
-                            addressesRest.setCountry(addressDto.getCountry());
-                            addressesRest.setStreetName(addressDto.getStreetName());
-                            addressesRest.setPostalCode(addressDto.getPostalCode());
-                            addressesRest.setIsDefault(addressDto.getIsDefault());
-                            addressesRest.setAddressId(addressDto.getAddressId());
-                            return addressesRest;
-                        })
-                        .collect(Collectors.toList());
-
-                userRest.setAddresses(addressesRestList);
-            }
-
-            return userRest;
-        }
-
-        public static AddressesRest mapToAddressRest(AddressDTO addressDTO) {
-            AddressesRest addressRest = new AddressesRest();
-            addressRest.setAddressId(addressDTO.getAddressId());
-            addressRest.setCity(addressDTO.getCity());
-            addressRest.setCountry(addressDTO.getCountry());
-            addressRest.setStreetName(addressDTO.getStreetName());
-            addressRest.setPostalCode(addressDTO.getPostalCode());
-            addressRest.setIsDefault(addressDTO.getIsDefault());
-            return addressRest;
-        }
-
-        public static AddressDTO mapToAddressDTO(AddressesRest addressRest) {
-            AddressDTO addressDTO = new AddressDTO();
-            addressDTO.setAddressId(addressRest.getAddressId());
-            addressDTO.setCity(addressRest.getCity());
-            addressDTO.setCountry(addressRest.getCountry());
-            addressDTO.setStreetName(addressRest.getStreetName());
-            addressDTO.setPostalCode(addressRest.getPostalCode());
-            addressDTO.setIsDefault(addressRest.getIsDefault());
-            return addressDTO;
-        }
-
-        public static UserDto mapToUserDto(UserRest userRest) {
-            UserDto userDto = new UserDto();
-            userDto.setUserId(userRest.getUserId());
-            userDto.setFirstName(userRest.getFirstName());
-            userDto.setLastName(userRest.getLastName());
-            userDto.setEmail(userRest.getEmail());
-            userDto.setProfilePic(userRest.getProfilePic());
-            userDto.setRoles(userRest.getRoles());
-            userDto.setSections(userRest.getSections());
-            userDto.setProfiles(userRest.getProfiles());
-            userDto.setIsSltEmp(userRest.getIsSltEmp());
-            userDto.setIsSltIntern(userRest.getIsSltIntern());
-            userDto.setActive(userRest.getActive());
-            userDto.setPhone(userRest.getPhone());
-            userDto.setGender(userRest.getGender());
-
-            // Map AddressesRest to AddressDTO
-            if (userRest.getAddresses() != null) {
-                List<AddressDTO> addressesDto = userRest.getAddresses().stream()
-                        .map(UserMapper::mapToAddressDTO)
-                        .collect(Collectors.toList());
-                userDto.setAddresses(addressesDto);
-            }
-
-            return userDto;
-        }
-
-        public static UserRest mapToUserRest(UserDto userDto) {
-            UserRest userRest = new UserRest();
-            userRest.setUserId(userDto.getUserId());
-            userRest.setFirstName(userDto.getFirstName());
-            userRest.setLastName(userDto.getLastName());
-            userRest.setEmail(userDto.getEmail());
-            userRest.setProfilePic(userDto.getProfilePic());
-            userRest.setRoles(userDto.getRoles());
-            userRest.setSections(userDto.getSections());
-            userRest.setProfiles(userDto.getProfiles());
-            userRest.setIsSltEmp(userDto.getIsSltEmp());
-            userRest.setIsSltIntern(userDto.getIsSltIntern());
-            userRest.setActive(userDto.getActive());
-            userRest.setPhone(userDto.getPhone());
-            userRest.setGender(userDto.getGender());
-            userRest.setEmployeeId(userDto.getEmployeeId());
-            userRest.setSltId(userDto.getSltId());
-            userRest.setJoiningDate(userDto.getJoin_date());
-            userRest.setRoaster(userDto.getRoaster());
-
-            if (userDto.getAddresses() != null) {
-                List<AddressesRest> addressesRest = userDto.getAddresses().stream()
-                        .map(UserMapper::mapToAddressRest)
-                        .collect(Collectors.toList());
-                userRest.setAddresses(addressesRest);
-            }
-
-            return userRest;
         }
     }
 

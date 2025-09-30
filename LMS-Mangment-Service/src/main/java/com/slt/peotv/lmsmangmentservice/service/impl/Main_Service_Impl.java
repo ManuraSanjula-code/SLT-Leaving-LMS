@@ -24,7 +24,7 @@ import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.service.ServiceEvent;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
-import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
+import com.slt.peotv.lmsmangmentservice.utils.service.LMSMapper;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.servlet.http.Cookie;
@@ -96,7 +96,7 @@ public class Main_Service_Impl implements Main_Service {
     @Autowired
     private AttendanceRepo attendanceRepo;
     @Autowired
-    private LMSUtils lMSUtils;
+    private LMSMapper lMSMapper;
     @Autowired
     private NoPayReasonRepo noPayReasonRepo;
     @Autowired
@@ -201,12 +201,12 @@ public class Main_Service_Impl implements Main_Service {
 
     @Override
     public List<AccessLogRest> getAllAccessLogsToday(String date) {
-        return accessLogRepo.findByLogDate(date).stream().map(lMSUtils::toRest).toList();
+        return accessLogRepo.findByLogDate(date).stream().map(lMSMapper::toRest).toList();
     }
 
     @Override
     public List<AccessLogRest> getAllAccessLogs() {
-        return accessLogRepo.findAll().stream().map(lMSUtils::toRest).toList();
+        return accessLogRepo.findAll().stream().map(lMSMapper::toRest).toList();
     }
 
     @Override
@@ -301,14 +301,14 @@ public class Main_Service_Impl implements Main_Service {
         EmployeeEntity employee = helper.getEmployeeById(employeeID);
         Pageable pageableRequest = PageRequest.of(pageNumber, pageSize);
         Page<InOutEntity> entityPage = inOutRepo.findByEmployeeId(employee.getSltId(), pageableRequest);
-        return entityPage.map(lMSUtils::inOutDTO);
+        return entityPage.map(lMSMapper::inOutDTO);
     }
 
     @Override
     public List<InOutDTO> getAllInOut(String employeeID, Date date) {
         EmployeeEntity employeeEntity = helper.getEmployeeById(employeeID);
         return inOutRepo.findByEmployeeIdAndPunchTime(employeeEntity.getSltId(), date)
-                .stream().map(lMSUtils::inOutDTO).toList();
+                .stream().map(lMSMapper::inOutDTO).toList();
 
     }
 
@@ -328,7 +328,7 @@ public class Main_Service_Impl implements Main_Service {
             allInOut = inOutRepo.findByEmployeeIdAndPunchTime(employeeEntity.getSltId(), date)
                     .stream()
                     .filter(Objects::nonNull)
-                    .map(lMSUtils::inOutDTO)
+                    .map(lMSMapper::inOutDTO)
                     .filter(Objects::nonNull)
                     .toList();
         } catch (Exception e) {
@@ -358,14 +358,14 @@ public class Main_Service_Impl implements Main_Service {
     public List<InOutDTO> getEarliestInOutBetweenDate(String userId, Date date, Date date2) {
         EmployeeEntity employeeEntity = helper.getEmployeeById(userId);
         List<InOutEntity> records = inOutRepo.findByEmployeeIdAndDateBetween(employeeEntity.getSltId(), date, date2);
-        return records.stream().map(lMSUtils::inOutDTO).toList();
+        return records.stream().map(lMSMapper::inOutDTO).toList();
     }
 
     @Override
     public List<InOutDTO> getEarliestInOutByDate(String userId, Date date) {
         EmployeeEntity employeeEntity = helper.getEmployeeById(userId);
         List<InOutEntity> records = inOutRepo.findByEmployeeIdAndDate(employeeEntity.getSltId(), date);
-        return records.stream().map(lMSUtils::inOutDTO).toList();
+        return records.stream().map(lMSMapper::inOutDTO).toList();
     }
 
     public List<UserRest> fetchAdminsWithResilience(String userId, String token) {
@@ -423,7 +423,7 @@ public class Main_Service_Impl implements Main_Service {
 
             final String movementId = "MV-" + utils.generateId(10);
 
-            MovementsEntity movementsEntity = mapToEntity(req, employee, movementId);
+            MovementsEntity movementsEntity = lMSMapper.mapToEntity(req, employee, movementId);
 
             Optional<AttendanceEntity> attendanceEntity = attendanceRepo.findByEmployeeAndArrivalDateAndIsActiveTrue(
                     employee, movementsEntity.getHappenDate());
@@ -517,32 +517,6 @@ public class Main_Service_Impl implements Main_Service {
         }
 
         return entity;
-    }
-
-    public MovementsEntity mapToEntity(MovementReq movementReq, EmployeeEntity employee, String movementId) {
-        if (movementReq == null) {
-            return null;
-        }
-
-        return MovementsEntity.builder()
-                .publicId(movementId)
-                .reqDate(new Date())
-                .requestStatus(RequestStatus.PENDING_APPROVAL)
-                .updateDate(new Date())
-                .createDate(new Date())
-                .employee(employee)
-                .movementType(movementReq.getMovementType())
-                .comment(movementReq.getComment())
-                .destination(movementReq.getDestination())
-                .category(movementReq.getCategory())
-                .happenDate(helper.removeTimeFromDate(movementReq.getHappenDate()))
-                .logTime(movementReq.getLogTime() == null ? new Date() : movementReq.getLogTime())
-                .inTime(movementReq.getInTime())
-                .outTime(movementReq.getOutTime())
-                .inTimeRaw(movementReq.getInTimeRaw())
-                .outTimeRaw(movementReq.getOutTimeRaw())
-                .happenDateRaw(movementReq.getHappenDateRaw())
-                .build();
     }
 
     private void logError(String message, Exception e) {

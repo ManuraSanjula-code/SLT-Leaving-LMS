@@ -5,7 +5,7 @@ import com.slt.peotv.lmsmangmentservice.model.dto.HolidayDTO;
 import com.slt.peotv.lmsmangmentservice.model.req.HolidayReq;
 import com.slt.peotv.lmsmangmentservice.repository.HolidayRepository;
 import com.slt.peotv.lmsmangmentservice.service.HolidayService;
-import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
+import com.slt.peotv.lmsmangmentservice.utils.service.LMSMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
@@ -17,10 +17,10 @@ public class HolidayServiceImpl implements HolidayService {
     @Autowired
     private HolidayRepository holidayRepository;
     @Autowired
-    private LMSUtils lmsUtils;
+    private LMSMapper lmsMapper;
     @Override
     public List<HolidayDTO> getHolidays(int year) {
-        return holidayRepository.findByYear(year).stream().map(lmsUtils::maoHolidayToDTO).toList();
+        return holidayRepository.findByYear(year).stream().map(lmsMapper::maoHolidayToDTO).toList();
     }
 
     @Override
@@ -56,7 +56,7 @@ public class HolidayServiceImpl implements HolidayService {
 
     @Override
     public void saveHoliday(HolidayReq holidayReq) {
-        holidayRepository.save(lmsUtils.mapReqoHoliday(holidayReq));
+        holidayRepository.save(lmsMapper.mapReqoHoliday(holidayReq));
     }
 
     @Override

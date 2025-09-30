@@ -1,7 +1,7 @@
 package com.slt.radio.rosterservice.messaging;
 
-import com.slt.radio.rosterservice.Model.One.Employeee.EmployeeArchive;
-import com.slt.radio.rosterservice.Repo.EmployeeArchiveRepository;
+import com.slt.radio.rosterservice.document.one.employeee.EmployeeArchive;
+import com.slt.radio.rosterservice.repo.EmployeeArchiveRepository;
 import jakarta.jms.JMSException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -3,7 +3,6 @@ package com.slt.radio.rosterservice.messaging;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
-import com.slt.radio.rosterservice.Model.Enum.AttendanceType;
 
 @Service
 public class MessageProducerService {

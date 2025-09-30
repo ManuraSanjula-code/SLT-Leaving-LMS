@@ -25,7 +25,7 @@ import com.slt.peotv.lmsmangmentservice.service.LMS_Service;
 import com.slt.peotv.lmsmangmentservice.service.Main_Service;
 import com.slt.peotv.lmsmangmentservice.utils.Utils;
 import com.slt.peotv.lmsmangmentservice.utils.service.Helper;
-import com.slt.peotv.lmsmangmentservice.utils.service.LMSUtils;
+import com.slt.peotv.lmsmangmentservice.utils.service.LMSMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 @Service
 public class LMS_Service_impl implements LMS_Service {
     @Autowired
-    private LMSUtils lmsUtils;
+    private LMSMapper lmsMapper;
     @Autowired
     private AttendanceRepo attendanceRepo;
     @Autowired
@@ -87,7 +87,7 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<AttendanceDTO> getAllAttendance(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findAll(pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
@@ -205,35 +205,35 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<AttendanceDTO> getAllAttendanceByUserId(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByEmployee(helper.getEmployeeById(userId), pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUn(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrue(pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnA(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrue(pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnByUserId(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnSuccessfulTrueAndEmployee(helper.getEmployeeById(userId), pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAttendanceThatUnAByUserId(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
         Page<AttendanceEntity> attendanceEntityPage = attendanceRepo.findByIsUnauthorizedTrueAndEmployee(helper.getEmployeeById(userId), pageable);
-        return attendanceEntityPage.map(lmsUtils::toAttendanceDTO);
+        return attendanceEntityPage.map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
@@ -283,7 +283,7 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<MovementDTO> getAllMovementByUser(String employeeId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAllByEmployee(helper.getEmployeeById(employeeId), pageable);
-        return allByUser.map(lmsUtils::toMovementDTO);
+        return allByUser.map(lmsMapper::toMovementDTO);
     }
 
     @Override
@@ -299,7 +299,7 @@ public class LMS_Service_impl implements LMS_Service {
             List<MovementDTO> movementDTOs = coAdminsPage.getContent().stream()
                     .map(coAdminsEntity -> {
                         Optional<MovementsEntity> movement = movementsRepo.findByPublicId(coAdminsEntity.getComponetID());
-                        return movement.map(lmsUtils::toMovementDTO).orElse(null);
+                        return movement.map(lmsMapper::toMovementDTO).orElse(null);
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -312,7 +312,7 @@ public class LMS_Service_impl implements LMS_Service {
     public Page<MovementDTO> getAllMovements(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<MovementsEntity> allByUser = movementsRepo.findAll(pageable);
-        return allByUser.map(lmsUtils::toMovementDTO);
+        return allByUser.map(lmsMapper::toMovementDTO);
     }
 
     @Override
@@ -400,7 +400,7 @@ public class LMS_Service_impl implements LMS_Service {
                 .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<NoPayEntity> byUser = noPayRepo.findByEmployee(employeeEntity, pageable);
-        return byUser.map(lmsUtils::toNopayDTO);
+        return byUser.map(lmsMapper::toNopayDTO);
     }
 
     @Override
@@ -408,7 +408,7 @@ public class LMS_Service_impl implements LMS_Service {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate")
                 .and(Sort.by(Sort.Direction.DESC, "submissionDate"));
         Pageable pageable = PageRequest.of(page, size, sort);
-        return noPayRepo.findAll(pageable).map(lmsUtils::toNopayDTO);
+        return noPayRepo.findAll(pageable).map(lmsMapper::toNopayDTO);
     }
 
     @Override
@@ -442,14 +442,14 @@ public class LMS_Service_impl implements LMS_Service {
                 .orElseThrow(() -> new NoSuchElementException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
         Pageable pageable = PageRequest.of(page, size);
         Page<LeaveEntity> leaveEntityPage = leaveRepo.findByEmployee(employeeEntity, pageable);
-        return leaveEntityPage.map(lmsUtils::toLeaveDTO);
+        return leaveEntityPage.map(lmsMapper::toLeaveDTO);
     }
 
     @Override
     public Page<LeaveDTO> getAllLeaves(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<LeaveEntity> leaveEntityPage = leaveRepo.findAll(pageable);
-        return leaveEntityPage.map(lmsUtils::toLeaveDTO);
+        return leaveEntityPage.map(lmsMapper::toLeaveDTO);
 
     }
 
@@ -608,13 +608,13 @@ public class LMS_Service_impl implements LMS_Service {
             leaveEntity.setLeaveType(type);
         }
         if (req.getFromDate() != null) {
-            leaveEntity.setFromDate(lmsUtils.stripTimeFromDate(req.getFromDate()));
+            leaveEntity.setFromDate(lmsMapper.stripTimeFromDate(req.getFromDate()));
         }
         if (req.getToDate() != null) {
-            leaveEntity.setToDate(lmsUtils.stripTimeFromDate(req.getToDate()));
+            leaveEntity.setToDate(lmsMapper.stripTimeFromDate(req.getToDate()));
         }
         if (req.getHappenDate() != null) {
-            leaveEntity.setHappenDate(lmsUtils.stripTimeFromDate(req.getHappenDate()));
+            leaveEntity.setHappenDate(lmsMapper.stripTimeFromDate(req.getHappenDate()));
         }
         if (req.getDescription() != null && !req.getDescription().trim().isEmpty()) {
             leaveEntity.setDescription(req.getDescription());
@@ -652,13 +652,13 @@ public class LMS_Service_impl implements LMS_Service {
 
         return em.map(employeeEntity -> componetAdminsRepo.findByEmployee(employeeEntity, pageable).map(componetAdmins -> {
             Optional<LeaveEntity> publicId = leaveRepo.findByPublicId(componetAdmins.getComponetID());
-            return publicId.map(lmsUtils::toLeaveDTO).orElse(null);
+            return publicId.map(lmsMapper::toLeaveDTO).orElse(null);
         })).orElseGet(Page::empty);
     }
 
     @Override
     public AttendanceDTO createAttendance(AttendanceReq req) {
-        AttendanceEntity attendanceEntity = lmsUtils.toAttendanceEntity(req);
+        AttendanceEntity attendanceEntity = lmsMapper.toAttendanceEntity(req);
         if (attendanceEntity == null)
             throw new IllegalArgumentException(ErrorMessages.MISSING_REQUIRED_FIELD.getErrorMessage());
 
@@ -686,7 +686,7 @@ public class LMS_Service_impl implements LMS_Service {
         }
         if (saved.getIsUnSuccessful())
             helper.handleLateAndUnsuccessful(employee.getEmployeeId(), attendanceEntity, true);
-        return lmsUtils.toAttendanceDTO(saved);
+        return lmsMapper.toAttendanceDTO(saved);
     }
 
     @Override
@@ -698,7 +698,7 @@ public class LMS_Service_impl implements LMS_Service {
             PayStatus originalPayStatus = attendanceEntity.getPayStatus();
             Boolean originalIsUnSuccessful = attendanceEntity.getIsUnSuccessful();
 
-            lmsUtils.updateAttendanceEntityFromReq(attendanceEntity, req);
+            lmsMapper.updateAttendanceEntityFromReq(attendanceEntity, req);
 
             AttendanceEntity saved = attendanceRepo.save(attendanceEntity);
             EmployeeEntity employee = saved.getEmployee();
@@ -718,7 +718,7 @@ public class LMS_Service_impl implements LMS_Service {
                 helper.handleLateAndUnsuccessful(employee.getEmployeeId(), saved, true);
             }
 
-            return lmsUtils.toAttendanceDTO(saved);
+            return lmsMapper.toAttendanceDTO(saved);
         } else {
             return null;
         }
@@ -726,7 +726,7 @@ public class LMS_Service_impl implements LMS_Service {
 
     @Override
     public void createAccessLog(AccessLogReq req) {
-        AccessLogEntity accessLogEntity = lmsUtils.toAccessLogEntity(req);
+        AccessLogEntity accessLogEntity = lmsMapper.toAccessLogEntity(req);
         accessLogEntity.setIsManual(true);
         accessLogEntity.setUpdatedDate(new Date());
         AccessLogEntity saved = accessLogRepo.save(accessLogEntity);
@@ -750,27 +750,27 @@ public class LMS_Service_impl implements LMS_Service {
     @Override
     public Page<AttendanceDTO> getAllAbsent(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
-        return attendanceRepo.findByAttendanceType(AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
+        return attendanceRepo.findByAttendanceType(AttendanceType.ABSENT, pageable).map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Page<AttendanceDTO> getAllAbsentByUser(int page, int size, String user) {
         EmployeeEntity employee = helper.getEmployeeById(user);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
-        return attendanceRepo.findByEmployeeAndAttendanceType(employee, AttendanceType.ABSENT, pageable).map(lmsUtils::toAttendanceDTO);
+        return attendanceRepo.findByEmployeeAndAttendanceType(employee, AttendanceType.ABSENT, pageable).map(lmsMapper::toAttendanceDTO);
     }
 
     @Override
     public Optional<InOutDTO> getEarliestInOut(String employeeID) {
         EmployeeEntity employeeEntity = helper.getEmployeeById(employeeID);
         return inOutRepo.findEarliestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate())
-                .map(lmsUtils::inOutDTO);
+                .map(lmsMapper::inOutDTO);
     }
 
     @Override
     public Optional<InOutDTO> getLatestInOut(String employeeID) {
         EmployeeEntity employeeEntity = helper.getEmployeeById(employeeID);
         return inOutRepo.findLatestByEmployeeIdAndDate(employeeEntity.getSltId(), helper.getYesterdayDate())
-                .map(lmsUtils::inOutDTO);
+                .map(lmsMapper::inOutDTO);
     }
 }

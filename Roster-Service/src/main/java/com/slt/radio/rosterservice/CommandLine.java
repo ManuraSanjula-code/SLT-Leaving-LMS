@@ -1,9 +1,9 @@
 package com.slt.radio.rosterservice;
 
 import com.nimbusds.jwt.SignedJWT;
-import com.slt.radio.rosterservice.Model.One.Employeee.EmployeeArchive;
-import com.slt.radio.rosterservice.Repo.EmployeeArchiveRepository;
-import com.slt.radio.rosterservice.Utils.TokenCreator;
+import com.slt.radio.rosterservice.document.one.employeee.EmployeeArchive;
+import com.slt.radio.rosterservice.repo.EmployeeArchiveRepository;
+import com.slt.radio.rosterservice.utils.TokenCreator;
 import com.slt.radio.rosterservice.feign_client.UserClient;
 import com.slt.radio.rosterservice.feign_client.model.UserRest;
 import lombok.extern.slf4j.Slf4j;
